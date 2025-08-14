@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "dotenv": "^17.2.1",
+    "sequelize": "^6.37.7"
+  }
+}
