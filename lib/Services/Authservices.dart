@@ -1,43 +1,52 @@
-
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:glowhair/providers/app_providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../Models/User.dart';
 import '../Utils/Api_handler.dart';
 
+// Provider to make the AuthRepository available throughout the app
+final authRepositoryProvider = Provider((ref) {
+  final apiService = ref.read(apiServiceProvider);
+  final prefs = ref.read(sharedPreferencesProvider);
+  return AuthRepository(apiService, prefs, ref);
+});
+
+
 /// A repository dedicated to handling all authentication-related logic.
 class AuthRepository {
   final ApiService _apiService;
   final SharedPreferences _prefs;
+  final Ref _ref;
 
-  AuthRepository(this._apiService, this._prefs);
+  AuthRepository(this._apiService, this._prefs, this._ref);
 
   /// Attempts to log in the user with the provided credentials.
   /// Returns the User object on success. Throws an ApiException on failure.
   Future<User> login(String email, String password) async {
     try {
-      // 1. Make the API call to the /login endpoint.
+      // --- STEP 1: Perform the Login API Call ---
       final responseData = await _apiService.post(
         'auth/login',
-        body: {
-          'email': email,
-          'password': password,
-        },
+        body: {'email': email, 'password': password},
       );
 
-      // 2. Extract the token and user data from the response.
       final token = responseData['token'] as String;
       final userData = responseData['user'] as Map<String, dynamic>;
 
-      // 3. Save the authentication token securely to the device's storage.
       await _prefs.setString('x-auth-token', token);
-
-      // 4. Update the ApiService with the new token for subsequent requests.
       _apiService.setAuthToken(token);
 
-      // 5. Parse and return the User object.
-      return User.fromMap(userData);
+      final user = User.fromMap(userData);
+
+      // --- STEP 2 (On Success): Call "get data" again ---
+      // This tells the SplashPage to re-run its main data fetch,
+      // which will now find the logged-in user and navigate correctly.
+      _ref.invalidate(bootstrapProvider);
+
+      return user;
     } catch (e) {
-      // If the ApiService throws an ApiException, we re-throw it so the UI can handle it.
+      // Rethrow the error to be handled by the LoginPage UI.
       rethrow;
     }
   }

@@ -26,4 +26,5 @@ flutter:
   uses-material-design: true
   assets:
     - assets/loginbg.png
+    - assets/chatbotimg.png
 

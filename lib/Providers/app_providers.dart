@@ -1,11 +1,11 @@
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../Models/Doctor.dart';
 import '../Models/User.dart';
 import '../Services/Authservices.dart';
 import '../Utils/Api_handler.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // A simple class to hold all the initial data fetched at startup.
 // This mirrors the consolidated response from your server.
@@ -33,10 +33,12 @@ final connectivityProvider = StreamProvider<ConnectivityResult>((ref) {
 
 final apiServiceProvider = Provider((ref) => ApiService());
 
+// --- FIX APPLIED HERE ---
 final authRepositoryProvider = Provider((ref) {
   final apiService = ref.read(apiServiceProvider);
   final prefs = ref.read(sharedPreferencesProvider);
-  return AuthRepository(apiService, prefs);
+  // The 'ref' object is now correctly passed as the third argument.
+  return AuthRepository(apiService, prefs, ref);
 });
 
 
