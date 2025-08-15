@@ -2,6 +2,7 @@ import 'dart:math';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:glowhair/Modules/Doctor/RootPage.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:glowhair/providers/app_providers.dart';// UPDATED IMPORT
 import 'package:shared_preferences/shared_preferences.dart';
@@ -331,7 +332,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => AdminRootPage()),
+                  MaterialPageRoute(builder: (_) => DoctorRootPage()),
                 );
               },
               style: ElevatedButton.styleFrom(
