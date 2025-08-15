@@ -18,7 +18,7 @@ class ApiException implements Exception {
 /// It handles request creation, response processing, and centralized error handling.
 class ApiService {
   // We will use a real base URL for the Node.js server.
-  final String _baseUrl = "http://10.0.2.2:3000/api"; // 10.0.2.2 is localhost for Android emulator
+  final String _baseUrl = "http://10.75.171.132:3000/api"; // 10.0.2.2 is localhost for Android emulator
 
   // The http client should be passed in or created internally.
   final http.Client _client;

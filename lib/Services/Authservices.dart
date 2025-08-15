@@ -1,42 +1,62 @@
+
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../Models/User.dart';
 import '../Utils/Api_handler.dart';
 
-/// A repository dedicated to handling all authentication-related logic,
-/// such as logging in, logging out, and fetching the current user's data.
+/// A repository dedicated to handling all authentication-related logic.
 class AuthRepository {
   final ApiService _apiService;
   final SharedPreferences _prefs;
+
   AuthRepository(this._apiService, this._prefs);
+
+  /// Attempts to log in the user with the provided credentials.
+  /// Returns the User object on success. Throws an ApiException on failure.
+  Future<User> login(String email, String password) async {
+    try {
+      // 1. Make the API call to the /login endpoint.
+      final responseData = await _apiService.post(
+        'auth/login',
+        body: {
+          'email': email,
+          'password': password,
+        },
+      );
+
+      // 2. Extract the token and user data from the response.
+      final token = responseData['token'] as String;
+      final userData = responseData['user'] as Map<String, dynamic>;
+
+      // 3. Save the authentication token securely to the device's storage.
+      await _prefs.setString('x-auth-token', token);
+
+      // 4. Update the ApiService with the new token for subsequent requests.
+      _apiService.setAuthToken(token);
+
+      // 5. Parse and return the User object.
+      return User.fromMap(userData);
+    } catch (e) {
+      // If the ApiService throws an ApiException, we re-throw it so the UI can handle it.
+      rethrow;
+    }
+  }
+
   /// Checks for a stored auth token and verifies it with the backend.
   /// Returns a [User] object if the token is valid, otherwise returns null.
   Future<User?> getCurrentUser() async {
-    // 1. Check for a token in local storage.
     final token = _prefs.getString('x-auth-token');
     if (token == null || token.isEmpty) {
-      return null; // No token, so no user is logged in.
+      return null;
     }
 
     try {
-      // 2. Set the token for the ApiService to use in its headers for this request.
       _apiService.setAuthToken(token);
-
-      // 3. Make the API call to a new endpoint to verify the token and get user data.
-      //    This endpoint should be created on your Node.js server.
       final userData = await _apiService.get('auth/me');
-
-      // 4. If successful, parse the user data and return a User object.
       return User.fromMap(userData);
     } catch (e) {
-      // 5. If the token is invalid or any other API error occurs,
-      //    the user is not authenticated.
-      print('Token verification failed: $e');
-      // It's good practice to clear an invalid token so we don't retry with it.
       await _prefs.remove('x-auth-token');
       return null;
     }
   }
-
-
 }

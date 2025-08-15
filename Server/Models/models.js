@@ -1,5 +1,5 @@
 // Import the Sequelize instance from our config file and the DataTypes utility.
-const { sequelize } = require('../config/db');
+const { sequelize } = require('../Config/Dbconfig.js');
 const { DataTypes } = require('sequelize');
 
 /**

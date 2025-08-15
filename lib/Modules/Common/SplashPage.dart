@@ -1,11 +1,18 @@
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../Models/User.dart';
 import '../../Providers/app_providers.dart';
+import 'LoginPage.dart';
 import 'no_internet_screen.dart';
 
-// This will be our real login screen file.
-// import 'package:hms_project/screens/auth/login_screen.dart';
+// TODO: Import your actual screen files
+// import 'package:hms_project/screens/auth/login_page.dart';
+// import 'package:hms_project/screens/admin/admin_home_page.dart';
+// import 'package:hms_project/screens/doctor/doctor_home_page.dart';
+// import 'package:hms_project/screens/patient/patient_home_page.dart';
+
 
 /// An intelligent and visually appealing splash screen that acts as the
 /// main gatekeeper for the application.
@@ -14,18 +21,19 @@ class SplashPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Listen to the connectivity status to react in real-time.
-    final connectivityStatus = ref.watch(connectivityProvider);
+    // We now use the more reliable one-time future provider for the initial check.
+    final initialConnectivity = ref.watch(initialConnectivityProvider);
 
-    // The .when() builder provides a clean way to handle the different
-    // states of our async connectivity check.
-    return connectivityStatus.when(
+    return initialConnectivity.when(
       data: (status) {
-        // If there is no network connection, block the UI with our dedicated screen.
-        if (status == ConnectivityResult.none) {
+        // Check if the list of results contains mobile or wifi.
+        final isOnline = status.contains(ConnectivityResult.mobile) ||
+            status.contains(ConnectivityResult.wifi);
+
+        if (!isOnline) {
           return const NoInternetScreen();
         }
-        // If connection exists, proceed to the data loading phase.
+        // If connection exists, proceed to the authentication phase.
         return const InitialDataGate();
       },
       loading: () => const _LoadingScreen(message: 'Checking Connectivity...'),
@@ -34,28 +42,41 @@ class SplashPage extends ConsumerWidget {
   }
 }
 
-/// This widget handles the state of the initial data fetch.
+/// This widget handles the state of the authentication check.
 /// It is only shown after a successful connectivity check.
 class InitialDataGate extends ConsumerWidget {
   const InitialDataGate({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // This is the "get data" call. We watch the provider to trigger it.
-    final initialDataAsync = ref.watch(initialDataLoadProvider);
+    // We now watch our new, consolidated bootstrapProvider.
+    // This is the single "get data" call.
+    final bootstrapAsync = ref.watch(bootstrapProvider);
 
-    return initialDataAsync.when(
-      // State 1: Data has been successfully loaded.
-      // This is where we will add the routing logic based on user role.
-      data: (_) => const Scaffold(body: Center(child: Text("Login Screen Placeholder"))),
-      // TODO: Replace with the actual LoginScreen when it's built.
-      // data: (_) => const LoginScreen(),
-
-      // State 2: An error occurred during the data fetch.
-      error: (err, stack) => _ErrorScreen(message: 'Failed to load application data: $err'),
-
-      // State 3: We are currently fetching the data. Show the loading UI.
-      loading: () => const _LoadingScreen(message: 'Initializing HMS...'),
+    return bootstrapAsync.when(
+      data: (bootstrapData) {
+        final user = bootstrapData.user;
+        if (user != null) {
+          // Role-based redirection logic based on the bootstrapped data.
+          switch (user.role) {
+            case UserRole.admin:
+            // return const AdminHomePage();
+              return const Scaffold(body: Center(child: Text("Admin Home Page")));
+            case UserRole.doctor:
+            // return const DoctorHomePage();
+              return const Scaffold(body: Center(child: Text("Doctor Home Page")));
+            case UserRole.patient:
+            // return const PatientHomePage();
+              return const Scaffold(body: Center(child: Text("Patient Home Page")));
+            default:
+            return const LoginPage();
+          }
+        }
+        // If user is null, they are not logged in.
+         return const LoginPage();
+      },
+      error: (err, stack) => _ErrorScreen(message: 'Failed to load application: $err'),
+      loading: () => const _LoadingScreen(message: 'Initializing...'),
     );
   }
 }
@@ -74,13 +95,7 @@ class _LoadingScreen extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Placeholder for the hospital logo.
-            // Replace with your actual logo asset.
-            Icon(
-              Icons.local_hospital_rounded,
-              size: 80,
-              color: theme.colorScheme.primary,
-            ),
+            Icon(Icons.local_hospital_rounded, size: 80, color: theme.colorScheme.primary),
             const SizedBox(height: 40),
             SizedBox(
               width: 200,
@@ -117,18 +132,9 @@ class _ErrorScreen extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                Icons.error_outline_rounded,
-                size: 80,
-                color: theme.colorScheme.error,
-              ),
+              Icon(Icons.error_outline_rounded, size: 80, color: theme.colorScheme.error),
               const SizedBox(height: 24),
-              Text(
-                'An Error Occurred',
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              Text('An Error Occurred', style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
               const SizedBox(height: 12),
               Text(
                 message,
