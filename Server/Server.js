@@ -8,7 +8,7 @@ require('dotenv').config();
 const { sequelize, connectDB } = require('./Config/Dbconfig');
 const User = require('./Models/models');
 const authRoutes = require('./routes/auth');
-
+const path = require("path"); 
 // --- Initialization ---
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -16,9 +16,13 @@ const PORT = process.env.PORT || 3000;
 // --- Core Middleware ---
 app.use(cors());
 app.use(express.json());
-
+const webAppPath = path.join(__dirname, 'web');
 // --- API Route Definitions ---
 app.use('/api/auth', authRoutes);
+app.use(express.static(webAppPath));
+app.get('/', (req, res) => {
+  res.sendFile(path.join(webAppPath, 'index.html'));
+});
 
 // --- Root Endpoint ---
 app.get('/', (req, res) => {
