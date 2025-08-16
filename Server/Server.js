@@ -36,6 +36,7 @@ const createInitialAdmin = async () => {
   try {
     const adminEmail = process.env.ADMIN_EMAIL;
     const adminPassword = process.env.ADMIN_PASSWORD;
+    const adminRole = process.env.ADMIN_ROLE;
 
     if (!adminEmail || !adminPassword) {
       console.log('Initial admin user variables not found in .env, skipping creation.');
@@ -52,7 +53,7 @@ const createInitialAdmin = async () => {
         id: `admin_${Date.now()}`,
         email: adminEmail,
         password: hashedPassword,
-        role: 'admin', // Hardcoded role for safety
+        role: adminRole, // Hardcoded role for safety
         firstName: 'Admin',
         lastName: 'User',
       });
@@ -74,7 +75,7 @@ const startServer = async () => {
     // 2. Sync all defined models with the database.
     // Using { force: true } will drop existing tables and recreate them.
     // WARNING: This will delete all data in your tables. Use only in development.
-    await sequelize.sync({ force: true });
+    await sequelize.sync();
     console.log('All models were synchronized successfully.');
     
     // 3. Create the initial admin user if they don't exist.
