@@ -5,8 +5,6 @@ import 'dart:convert';
 enum UserRole {
   admin,
   doctor,
-  patient,
-  receptionist,
   unknown, // A fallback for safety
 }
 

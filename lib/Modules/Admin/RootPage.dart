@@ -11,6 +11,7 @@ import 'PharmacyPage.dart';
 import 'SettingsPage.dart';
 import 'StaffPage.dart';
 
+
 // --- App Theme Colors ---
 const Color primaryColor = Color(0xFFEF4444);
 const Color primaryColorLight = Color(0xFFFEE2E2);
@@ -112,29 +113,29 @@ class _AdminRootPageState extends State<AdminRootPage> {
                 onTap: _toggleChatbot,
                 child: Column(
                   children: [
-    Container(
-    width: 60,
-    height: 60,
-    decoration: BoxDecoration(
-    shape: BoxShape.circle,
-    color: primaryColor,
-    boxShadow: [
-    BoxShadow(
-    color: primaryColor.withOpacity(0.4),
-    blurRadius: 10,
-    offset: const Offset(0, 4),
-    )
-    ],
-    ),
-    child: ClipOval( // Ensures no overflow outside circle
-    child: Image.asset(
-    'assets/chatbotimg.png',
-    fit: BoxFit.cover, // Zooms in and fills circle
-    alignment: Alignment.center,
-    ),
-    ),
-    ),
-    const SizedBox(height: 8),
+                    Container(
+                      width: 60,
+                      height: 60,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: primaryColor,
+                        boxShadow: [
+                          BoxShadow(
+                            color: primaryColor.withOpacity(0.4),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          )
+                        ],
+                      ),
+                      child: ClipOval(
+                        child: Image.asset(
+                          'assets/chatbotimg.png', // Your asset path
+                          fit: BoxFit.cover,
+                          alignment: Alignment.center,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
                     Text(
                       'Ask Movi',
                       style: GoogleFonts.inter(
@@ -183,7 +184,7 @@ class SidebarNavigation extends StatelessWidget {
               style: GoogleFonts.inter(
                 fontWeight: FontWeight.bold,
                 fontSize: 20,
-                color: Theme.of(context).colorScheme.primary,
+                color: primaryColor,
               ),
             ),
           ),
@@ -222,15 +223,15 @@ class SidebarNavigation extends StatelessWidget {
   }
 
   Widget _buildNavItem(BuildContext context, {required IconData icon, required String label, required bool isSelected, required VoidCallback onTap}) {
-    final color = isSelected ? Theme.of(context).colorScheme.primary : textSecondaryColor;
+    final color = isSelected ? primaryColor : textSecondaryColor;
 
     return Material(
-      color: isSelected ? Theme.of(context).colorScheme.primary.withOpacity(0.1) : Colors.transparent,
+      color: isSelected ? primaryColorLight : Colors.transparent,
       child: InkWell(
         onTap: onTap,
         child: Container(
           decoration: BoxDecoration(
-            border: isSelected ? Border(left: BorderSide(color: Theme.of(context).colorScheme.primary, width: 4)) : null,
+            border: isSelected ? const Border(left: BorderSide(color: primaryColor, width: 4)) : null,
           ),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           child: Row(

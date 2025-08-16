@@ -1,55 +1,99 @@
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:glowhair/Modules/Common/SplashPage.dart';
-import 'package:glowhair/Providers/app_providers.dart';
+import 'package:provider/provider.dart';
+import 'Modules/Common/SplashPage.dart';
+import 'Modules/Common/no_internet_screen.dart';
+import 'Providers/app_providers.dart';
+import 'dart:async';
 
-void main() async {
-  // Ensure the Flutter engine is initialized before we run any async code.
-  WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize SharedPreferences once at startup.
-  final prefs = await SharedPreferences.getInstance();
-
-  runApp(
-    // This ProviderScope is our "provider switchboard".
-    // It is the root that makes all providers available to the entire app.
-    ProviderScope(
-      overrides: [
-        // We inject the SharedPreferences instance into our provider.
-        sharedPreferencesProvider.overrideWithValue(prefs),
-      ],
-      child: const MyApp(),
-    ),
-  );
+void main() {
+  runApp(const MyApp());
 }
 
-/// The root widget of the Hospital Management System application.
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Glow Skin & Gro Hair',
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFFff758c), // Using brand color
-          primary: const Color(0xFFff758c),
-          secondary: const Color(0xFFff7eb3),
-          background: Colors.grey[50],
-          error: const Color(0xFFD32F2F),
+    return ChangeNotifierProvider(
+      create: (context) => AppProvider(),
+      child: MaterialApp(
+        title: 'Glow Skin & Gro Hair',
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(
+          primarySwatch: Colors.red,
+          visualDensity: VisualDensity.adaptivePlatformDensity,
         ),
-        textTheme: const TextTheme(
-          displayLarge: TextStyle(fontSize: 57.0, fontWeight: FontWeight.bold),
-          titleLarge: TextStyle(fontSize: 22.0, fontWeight: FontWeight.w600),
-          bodyMedium: TextStyle(fontSize: 14.0),
-        ),
+        home: const ConnectivityWrapper(),
       ),
-      // The SplashPage is the intelligent entry point for the UI.
-      home: const SplashPage(),
     );
+  }
+}
+
+/// A wrapper widget that handles connectivity status for the entire app.
+class ConnectivityWrapper extends StatefulWidget {
+  const ConnectivityWrapper({super.key});
+
+  @override
+  State<ConnectivityWrapper> createState() => _ConnectivityWrapperState();
+}
+
+class _ConnectivityWrapperState extends State<ConnectivityWrapper> {
+  // Use a key to force the SplashPage to rebuild when connectivity is restored.
+  Key _splashPageKey = UniqueKey();
+  // Store the current connectivity status.
+  ConnectivityResult _connectivityResult = ConnectivityResult.none;
+  // A subscription to listen for network changes.
+  late StreamSubscription<List<ConnectivityResult>> _connectivitySubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    // Check the initial connectivity status.
+    _checkInitialConnectivity();
+    // Listen for subsequent changes.
+    _connectivitySubscription = Connectivity().onConnectivityChanged.listen(_updateConnectionStatus);
+  }
+
+  @override
+  void dispose() {
+    // It's crucial to cancel the subscription to prevent memory leaks.
+    _connectivitySubscription.cancel();
+    super.dispose();
+  }
+
+  /// Checks the initial network state when the widget is first built.
+  Future<void> _checkInitialConnectivity() async {
+    final result = await Connectivity().checkConnectivity();
+    _updateConnectionStatus(result);
+  }
+
+  /// Updates the state based on the new connectivity status.
+  void _updateConnectionStatus(List<ConnectivityResult> result) {
+    // The package returns a list, check if 'none' is present.
+    final hasConnection = !result.contains(ConnectivityResult.none);
+    setState(() {
+      _connectivityResult = hasConnection ? ConnectivityResult.wifi : ConnectivityResult.none;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_connectivityResult == ConnectivityResult.none) {
+      // If there is no connection, show the NoInternetPage.
+      return NoInternetPage(
+        onRetry: () {
+          // When connection is back, this will be called from the timer in NoInternetPage.
+          setState(() {
+            // Changing the key forces the SplashPage to be recreated.
+            _splashPageKey = UniqueKey();
+          });
+        },
+      );
+    } else {
+      // If there is a connection, show the SplashPage.
+      return SplashPage(key: _splashPageKey);
+    }
   }
 }

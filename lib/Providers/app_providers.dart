@@ -1,95 +1,62 @@
-import 'package:connectivity_plus/connectivity_plus.dart';
-
+import 'package:flutter/material.dart';
+import '../Models/Admin.dart';
 import '../Models/Doctor.dart';
-import '../Models/User.dart';
-import '../Services/Authservices.dart';
-import '../Utils/Api_handler.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
-// A simple class to hold all the initial data fetched at startup.
-// This mirrors the consolidated response from your server.
-class BootstrapData {
-  final User? user;
-  // final List<News> news; // Future: Add other data here
-  // final List<Plan> plans; // Future: Add other data here
-
-  BootstrapData({this.user});
-}
-
-// -- Service Providers --
-
-final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
-  throw UnimplementedError();
-});
-
-final initialConnectivityProvider = FutureProvider<List<ConnectivityResult>>((ref) {
-  return Connectivity().checkConnectivity();
-});
-
-final connectivityProvider = StreamProvider<ConnectivityResult>((ref) {
-  return Connectivity().onConnectivityChanged.map((results) => results.first);
-});
-
-final apiServiceProvider = Provider((ref) => ApiService());
-
-// --- FIX APPLIED HERE ---
-final authRepositoryProvider = Provider((ref) {
-  final apiService = ref.read(apiServiceProvider);
-  final prefs = ref.read(sharedPreferencesProvider);
-  // The 'ref' object is now correctly passed as the third argument.
-  return AuthRepository(apiService, prefs, ref);
-});
 
 
-// -- Core Bootstrap Provider --
+/// AppProvider: The central state management class for the application.
+///
+/// This class extends ChangeNotifier, allowing it to broadcast changes to any
+/// widget that is listening. It holds the authentication state and the profile
+/// of the currently logged-in user.
+class AppProvider extends ChangeNotifier {
+  // The user object can be an Admin, a Doctor, or null if logged out.
+  // Using 'dynamic' allows for this flexibility.
+  dynamic _user;
 
-/// This is now our main "get data" call, as you requested.
-/// It fetches all necessary data for the app to start in a single, consolidated operation.
-final bootstrapProvider = FutureProvider<BootstrapData>((ref) async {
-  final authRepository = ref.watch(authRepositoryProvider);
+  // The authentication token received from the backend.
+  String? _token;
 
-  // 1. Fetch the current user's authentication status.
-  final user = await authRepository.getCurrentUser();
+  // --- Getters ---
+  // These provide a safe, read-only way for the UI to access the current state.
 
-  // 2. In the future, fetch other essential data here (e.g., news, plans).
-  // final news = await ref.read(newsRepositoryProvider).fetchLatestNews();
-  // final plans = await ref.read(plansRepositoryProvider).fetchAllPlans();
+  /// Returns the current user object (Admin or Doctor).
+  /// Returns null if no user is logged in.
+  dynamic get user => _user;
 
-  // 3. Return all the data bundled together.
-  return BootstrapData(user: user);
-});
+  /// Returns the authentication token.
+  String? get token => _token;
 
+  /// A quick boolean check to see if a user is currently logged in.
+  bool get isLoggedIn => _user != null && _token != null;
 
-// -- State Notifier Providers (for UI state) --
+  /// A type-safe check to determine if the current user is an Admin.
+  bool get isAdmin => _user is Admin;
 
-final adminProvider = StateNotifierProvider<AdminNotifier, AdminState>((ref) {
-  return AdminNotifier();
-});
+  /// A type-safe check to determine if the current user is a Doctor.
+  bool get isDoctor => _user is Doctor;
 
-final doctorProvider = StateNotifierProvider<DoctorNotifier, DoctorState>((ref) {
-  return DoctorNotifier();
-});
+  // --- Methods ---
+  // These methods are used to modify the state.
 
-// --- State and Notifier Classes ---
+  /// Updates the provider with the logged-in user's data and token.
+  ///
+  /// This method should be called by the AuthService after a successful
+  /// login or when validating an existing session. It triggers a UI update.
+  void setUser(dynamic user, String token) {
+    _user = user;
+    _token = token;
+    // This is the most important call. It tells all listening widgets
+    // that the state has changed and they need to rebuild.
+    notifyListeners();
+  }
 
-class AdminState {
-  const AdminState();
-}
-
-class AdminNotifier extends StateNotifier<AdminState> {
-  AdminNotifier() : super(const AdminState());
-}
-
-class DoctorState {
-  final List<Doctor> doctors;
-  const DoctorState({this.doctors = const []});
-}
-
-class DoctorNotifier extends StateNotifier<DoctorState> {
-  DoctorNotifier() : super(const DoctorState());
-
-  void setDoctors(List<Doctor> doctors) {
-    state = DoctorState(doctors: doctors);
+  /// Clears the user session data.
+  ///
+  /// This should be called on logout. It resets the state and triggers a
+  /// UI update, which will typically navigate the user to the login screen.
+  void signOut() {
+    _user = null;
+    _token = null;
+    notifyListeners();
   }
 }

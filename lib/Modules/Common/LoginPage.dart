@@ -1,30 +1,33 @@
 import 'dart:math';
-import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:glowhair/Modules/Doctor/RootPage.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:glowhair/providers/app_providers.dart';// UPDATED IMPORT
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../Providers/app_providers.dart';
+import '../../Services/Authservices.dart';
 import '../../Utils/Api_handler.dart';
 import '../Admin/RootPage.dart';
+import '../Doctor/RootPage.dart';
+
 
 const String _prefsRememberMeKey = 'remember_me';
 const String _prefsEmailKey = 'saved_email';
 
-class LoginPage extends ConsumerStatefulWidget {
+class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
   @override
-  ConsumerState<LoginPage> createState() => _LoginPageState();
+  State<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginPageState extends ConsumerState<LoginPage> {
+class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _captchaController = TextEditingController();
+  final AuthService _authService = AuthService();
+
   bool _obscurePassword = true;
   bool _isLoading = false;
   bool _rememberMe = false;
@@ -34,13 +37,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   void initState() {
     super.initState();
     _refreshCaptcha();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadUserPreferences();
-    });
+    _loadUserPreferences();
   }
 
   void _loadUserPreferences() async {
-    final prefs = ref.read(sharedPreferencesProvider);
+    final prefs = await SharedPreferences.getInstance();
     final rememberMe = prefs.getBool(_prefsRememberMeKey) ?? false;
     if (rememberMe) {
       final savedEmail = prefs.getString(_prefsEmailKey) ?? '';
@@ -62,7 +63,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   }
 
   void _refreshCaptcha() {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     final random = Random();
     setState(() {
       _captchaText = String.fromCharCodes(Iterable.generate(
@@ -87,14 +88,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     });
 
     try {
-      // UPDATED LOGIC: Directly call the AuthRepository provider.
-      await ref.read(authRepositoryProvider).login(
-        _emailController.text,
-        _passwordController.text,
+      final authResult = await _authService.signIn(
+        email: _emailController.text,
+        password: _passwordController.text,
       );
 
-      // Handle "Remember Me" logic on successful login.
-      final prefs = ref.read(sharedPreferencesProvider);
+      // Handle "Remember Me" logic
+      final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_prefsRememberMeKey, _rememberMe);
       if (_rememberMe) {
         await prefs.setString(_prefsEmailKey, _emailController.text);
@@ -102,6 +102,24 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         await prefs.remove(_prefsEmailKey);
       }
 
+      if (!mounted) return;
+
+      // Update the AppProvider with user data
+      final appProvider = Provider.of<AppProvider>(context, listen: false);
+      appProvider.setUser(authResult.user, authResult.token);
+
+      // Navigate based on role
+      if (appProvider.isAdmin) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const AdminRootPage()),
+        );
+      } else if (appProvider.isDoctor) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const DoctorRootPage()),
+        );
+      }
     } on ApiException catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.message)),
@@ -133,7 +151,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       body: Container(
         decoration: const BoxDecoration(
           image: DecorationImage(
-            image: AssetImage("assets/loginbg.png"),
+            image: AssetImage("assets/loginbg.png"), // Make sure you have this asset
             fit: BoxFit.cover,
           ),
         ),
@@ -172,7 +190,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         Expanded(
           flex: 1,
           child: Container(
-            height: 650,
+            height: 590,
             decoration: BoxDecoration(gradient: brandGradient),
             padding: const EdgeInsets.all(40),
             child: Center(
@@ -192,7 +210,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         Expanded(
           flex: 1,
           child: Container(
-            height: 650,
+            height: 590,
             padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 30),
             color: Colors.white,
             child: _buildLoginForm(),
@@ -329,12 +347,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => DoctorRootPage()),
-                );
-              },
+              onPressed: _isLoading ? null : _handleLogin,
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -342,7 +355,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 shadowColor: Colors.pinkAccent.withOpacity(0.5),
                 elevation: 8,
               ),
-              child: Text(
+              child: _isLoading
+                  ? const CircularProgressIndicator(color: Colors.white)
+                  : Text(
                 "Login",
                 style: GoogleFonts.poppins(
                   fontSize: 16,

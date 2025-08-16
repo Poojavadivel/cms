@@ -1,95 +1,114 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
+import '../Services/Constants.dart';
+ // Your file with API constants
 
-// A custom exception class for our API errors.
-// This allows us to catch specific, meaningful errors in our UI.
+/// A custom exception class to handle API-specific errors.
+/// This allows the UI to catch and display friendly error messages.
 class ApiException implements Exception {
   final String message;
-  final int? statusCode;
-  ApiException(this.message, [this.statusCode]);
+  ApiException(this.message);
 
   @override
-  String toString() =>
-      'ApiException: $message ${statusCode != null ? "(Status code: $statusCode)" : ""}';
+  String toString() => message;
 }
 
-/// The core service responsible for all HTTP communication.
-/// It handles request creation, response processing, and centralized error handling.
-class ApiService {
-  // We will use a real base URL for the Node.js server.
-  final String _baseUrl = "http://10.75.171.132:3000/api"; // 10.0.2.2 is localhost for Android emulator
+/// ApiHandler: A singleton class to manage all network requests.
+///
+/// This class centralizes HTTP logic, including header management,
+/// request execution, and response/error handling.
+class ApiHandler {
+  // --- Singleton Setup ---
+  // This ensures that only one instance of ApiHandler exists in the app.
+  ApiHandler._privateConstructor();
+  static final ApiHandler _instance = ApiHandler._privateConstructor();
+  static ApiHandler get instance => _instance;
 
-  // The http client should be passed in or created internally.
-  final http.Client _client;
+  // --- Core Methods ---
 
-  // Private constructor for the singleton pattern
-  ApiService._internal(this._client);
-
-  // The single instance of the service
-  static final ApiService _instance = ApiService._internal(http.Client());
-
-  // Factory constructor to return the same instance
-  factory ApiService() {
-    return _instance;
-  }
-
-  // We can add a method to update the token later
-  String _authToken = "";
-  void setAuthToken(String token) {
-    _authToken = token;
-  }
-
-  Map<String, String> get _headers => {
-    'Content-Type': 'application/json; charset=UTF-8',
-    'x-auth-token': _authToken,
-  };
-
-  /// The primary GET request handler.
-  Future<dynamic> get(String endpoint) async {
-    final uri = Uri.parse('$_baseUrl/$endpoint');
+  /// Performs a GET request.
+  Future<dynamic> get(String endpoint, {String? token}) async {
     try {
-      final response = await _client.get(uri, headers: _headers);
+      final response = await http.get(
+        Uri.parse('${ApiConstants.baseUrl}$endpoint'),
+        headers: _getHeaders(token),
+      );
       return _handleResponse(response);
     } on SocketException {
-      throw ApiException('No Internet connection.');
-    } on HttpException {
-      throw ApiException('Could not find the resource.');
-    } on FormatException {
-      throw ApiException('Bad response format.');
+      throw ApiException('No Internet connection');
+    } catch (e) {
+      throw ApiException('An unexpected error occurred: $e');
     }
   }
 
-  /// The primary POST request handler.
-  Future<dynamic> post(String endpoint, {required Map<String, dynamic> body}) async {
-    final uri = Uri.parse('$_baseUrl/$endpoint');
+  /// Performs a POST request.
+  Future<dynamic> post(String endpoint, {Map<String, dynamic>? body, String? token}) async {
     try {
-      final response = await _client.post(uri, headers: _headers, body: json.encode(body));
+      final response = await http.post(
+        Uri.parse('${ApiConstants.baseUrl}$endpoint'),
+        headers: _getHeaders(token),
+        // CORRECTED: Only encode the body if it's not null.
+        body: body != null ? json.encode(body) : null,
+      );
       return _handleResponse(response);
     } on SocketException {
-      throw ApiException('No Internet connection.');
-    } on HttpException {
-      throw ApiException('Could not find the resource.');
-    } on FormatException {
-      throw ApiException('Bad response format.');
+      throw ApiException('No Internet connection');
+    } catch (e) {
+      throw ApiException('An unexpected error occurred: $e');
     }
   }
 
-  // We can add PUT, DELETE methods here following the same pattern.
+  // --- Private Helper Methods ---
 
-  /// Centralized response handler. It checks the status code and throws
-  /// an ApiException for any non-successful responses.
+  /// Constructs the standard headers for API requests.
+  /// Includes the authentication token if one is provided.
+  Map<String, String> _getHeaders(String? token) {
+    Map<String, String> headers = {
+      'Content-Type': 'application/json; charset=UTF-8',
+    };
+    // In a real app, you would get the token from your AppProvider.
+    // For now, we'll pass it in directly.
+    if (token != null) {
+      headers['x-auth-token'] = token;
+    }
+    return headers;
+  }
+
+  /// Processes the http.Response and handles success or error cases.
   dynamic _handleResponse(http.Response response) {
-    final decodedJson = json.decode(response.body);
+    // Handle cases where the response body might be empty
+    if (response.body.isEmpty) {
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return {}; // Return an empty map for successful but empty responses
+      } else {
+        throw ApiException('Received an empty response with status code: ${response.statusCode}');
+      }
+    }
 
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      // If the request was successful, return the decoded JSON body.
-      return decodedJson;
-    } else {
-      // If the server returned an error, extract the message from the body
-      // and throw our custom exception.
-      final errorMessage = decodedJson['message'] ?? 'An unknown error occurred.';
-      throw ApiException(errorMessage, response.statusCode);
+    final responseBody = json.decode(response.body);
+
+    switch (response.statusCode) {
+      case 200: // OK
+      case 201: // Created
+      // The request was successful, return the data.
+        return responseBody;
+      case 400: // Bad Request
+      case 401: // Unauthorized
+      case 403: // Forbidden
+      case 404: // Not Found
+      case 500: // Internal Server Error
+      // The server responded with an error. We extract the error code
+      // and throw our custom ApiException with a user-friendly message.
+        final errorCode = responseBody['errorCode'] as int?;
+        if (errorCode != null) {
+          throw ApiException(ApiErrors.getMessage(errorCode));
+        } else {
+          throw ApiException(responseBody['message'] ?? 'An unknown server error occurred.');
+        }
+      default:
+      // Handle other unexpected status codes.
+        throw ApiException('Received an unexpected status code: ${response.statusCode}');
     }
   }
 }

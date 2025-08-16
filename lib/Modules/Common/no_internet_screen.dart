@@ -1,121 +1,87 @@
+import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../Providers/app_providers.dart';
+import 'package:google_fonts/google_fonts.dart';
 
-/// A visually appealing screen shown when the user has no internet connection.
-/// It provides a clear message and a "Retry" button to re-check connectivity.
-class NoInternetScreen extends ConsumerStatefulWidget {
-  const NoInternetScreen({super.key});
+// --- App Theme Colors ---
+const Color primaryColor = Color(0xFFEF4444);
+const Color backgroundColor = Color(0xFFF8FAFC);
+const Color textPrimaryColor = Color(0xFF1F2937);
+const Color textSecondaryColor = Color(0xFF6B7280);
+
+/// A screen that is displayed when the user has no internet connection.
+/// It automatically checks for connectivity periodically and navigates
+/// back once the connection is restored.
+class NoInternetPage extends StatefulWidget {
+  final VoidCallback onRetry;
+  const NoInternetPage({super.key, required this.onRetry});
 
   @override
-  ConsumerState<NoInternetScreen> createState() => _NoInternetScreenState();
+  State<NoInternetPage> createState() => _NoInternetPageState();
 }
 
-class _NoInternetScreenState extends ConsumerState<NoInternetScreen> {
-  bool _isRetrying = false;
+class _NoInternetPageState extends State<NoInternetPage> {
+  Timer? _timer;
 
-  /// This function handles the logic for the "Retry" button.
-  Future<void> _handleRetry() async {
-    // Set the state to show a loading indicator on the button.
-    setState(() {
-      _isRetrying = true;
-    });
-
-    // Manually check the current connectivity status.
-    final connectivityResult = await Connectivity().checkConnectivity();
-
-    // Small delay to make the loading indicator visible and feel responsive.
-    await Future.delayed(const Duration(milliseconds: 500));
-
-    // If the device is now online...
-    if (connectivityResult.contains(ConnectivityResult.mobile) ||
-        connectivityResult.contains(ConnectivityResult.wifi)) {
-      // ...we invalidate the connectivityProvider. This is the correct
-      // Riverpod way to force it to re-evaluate. The SplashPage is
-      // listening to this provider and will automatically rebuild and
-      // move the user forward once it gets the new "online" state.
-      ref.invalidate(connectivityProvider);
-    } else {
-      // If still offline, show a feedback message to the user.
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Still offline. Please check your connection.'),
-            duration: Duration(seconds: 2),
-          ),
-        );
+  @override
+  void initState() {
+    super.initState();
+    // Start a periodic timer to check for connectivity every 2.5 seconds.
+    _timer = Timer.periodic(const Duration(milliseconds: 2500), (timer) async {
+      final connectivityResult = await Connectivity().checkConnectivity();
+      if (connectivityResult != ConnectivityResult.none) {
+        // If connection is found, stop the timer and trigger the retry callback.
+        _timer?.cancel();
+        widget.onRetry();
       }
-    }
+    });
+  }
 
-    // Reset the button's loading state.
-    if (mounted) {
-      setState(() {
-        _isRetrying = false;
-      });
-    }
+  @override
+  void dispose() {
+    // It's crucial to cancel the timer when the widget is disposed
+    // to prevent memory leaks.
+    _timer?.cancel();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Scaffold(
-      backgroundColor: theme.colorScheme.background,
+      backgroundColor: backgroundColor,
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // An appealing and universally understood icon for no connection.
-              Icon(
+              const Icon(
                 Icons.wifi_off_rounded,
-                size: 100,
-                color: theme.colorScheme.secondary.withOpacity(0.7),
+                size: 80,
+                color: textSecondaryColor,
               ),
-              const SizedBox(height: 32),
-
-              // Clear and concise title.
+              const SizedBox(height: 24),
               Text(
                 'No Internet Connection',
-                style: theme.textTheme.headlineSmall?.copyWith(
+                style: GoogleFonts.poppins(
+                  fontSize: 24,
                   fontWeight: FontWeight.bold,
-                  color: theme.colorScheme.onBackground,
+                  color: textPrimaryColor,
                 ),
+                textAlign: TextAlign.center,
               ),
               const SizedBox(height: 12),
-
-              // Helpful instruction for the user.
               Text(
-                'You are not connected to the internet. Make sure Wi-Fi or mobile data is on, then try again.',
+                'Please check your connection. We are automatically trying to reconnect.',
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  color: textSecondaryColor,
+                ),
                 textAlign: TextAlign.center,
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  color: theme.colorScheme.onBackground.withOpacity(0.7),
-                ),
               ),
-              const SizedBox(height: 48),
-
-              // The primary call-to-action button.
-              ElevatedButton.icon(
-                onPressed: _isRetrying ? null : _handleRetry,
-                icon: _isRetrying
-                    ? Container(
-                  width: 24,
-                  height: 24,
-                  padding: const EdgeInsets.all(2.0),
-                  child: const CircularProgressIndicator(
-                    color: Colors.white,
-                    strokeWidth: 3,
-                  ),
-                )
-                    : const Icon(Icons.refresh_rounded),
-                label: Text(_isRetrying ? 'Checking...' : 'Retry'),
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(200, 50),
-                  textStyle: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+              const SizedBox(height: 32),
+              const CircularProgressIndicator(
+                color: primaryColor,
               ),
             ],
           ),

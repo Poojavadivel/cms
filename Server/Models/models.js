@@ -1,27 +1,26 @@
 // Import the Sequelize instance from our config file and the DataTypes utility.
-const { sequelize } = require('../Config/Dbconfig.js');
+const { sequelize } = require('../Config/Dbconfig'); // Assuming dbconfig is in a 'config' folder
 const { DataTypes } = require('sequelize');
 
 /**
- * Defines the User model using Sequelize.
- * This object directly maps to the 'users' table in our database.
- * Sequelize will automatically manage the 'createdAt' and 'updatedAt' columns.
+ * Defines the comprehensive User model using Sequelize.
+ * This single model contains all possible fields for any user role (Admin, Doctor, etc.).
+ * Fields specific to certain roles (like specialization for doctors) are optional.
  */
 const User = sequelize.define('User', {
-  // The model's attributes are defined here.
+  // --- Core Attributes ---
   id: {
     type: DataTypes.STRING,
     primaryKey: true,
     allowNull: false,
   },
   role: {
-    type: DataTypes.ENUM('admin', 'doctor', 'patient', 'receptionist', 'unknown'),
+    type: DataTypes.ENUM('admin', 'doctor'), // Simplified to match our current app roles
     allowNull: false,
   },
   firstName: {
     type: DataTypes.STRING,
     allowNull: false,
-    // We map this field to the 'first_name' column in the database for consistency.
     field: 'first_name',
   },
   lastName: {
@@ -30,13 +29,20 @@ const User = sequelize.define('User', {
     field: 'last_name',
   },
   dateOfBirth: {
-    type: DataTypes.DATEONLY, // DATEONLY stores 'YYYY-MM-DD' without time.
+    type: DataTypes.DATEONLY,
     field: 'date_of_birth',
   },
   email: {
     type: DataTypes.STRING,
     allowNull: false,
-    unique: true, // Ensures no two users can have the same email.
+    unique: true,
+    validate: {
+      isEmail: true, // Add validation for email format
+    },
+  },
+  password: {
+    type: DataTypes.STRING,
+    allowNull: false,
   },
   phone: {
     type: DataTypes.STRING,
@@ -50,11 +56,27 @@ const User = sequelize.define('User', {
   city: {
     type: DataTypes.STRING,
   },
+
+  // --- Doctor-Specific Attributes ---
+  // These fields will be null for users who are not doctors.
+  specialization: {
+    type: DataTypes.STRING,
+    allowNull: true, // Optional field
+  },
+  licenseNumber: {
+    type: DataTypes.STRING,
+    allowNull: true, // Optional field
+    field: 'license_number',
+  },
+  department: {
+    type: DataTypes.STRING,
+    allowNull: true, // Optional field
+  },
 }, {
-  // Model options
-  tableName: 'users', // We explicitly tell Sequelize to use the table name 'users'.
-  timestamps: true, // Sequelize will automatically add createdAt and updatedAt fields.
-  updatedAt: 'updated_at', // Customize column names to use snake_case.
+  // --- Model Options ---
+  tableName: 'users',
+  timestamps: true,
+  updatedAt: 'updated_at',
   createdAt: 'created_at',
 });
 

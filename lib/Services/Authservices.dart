@@ -1,71 +1,125 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:glowhair/providers/app_providers.dart';
+import 'dart:convert';
+import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../Models/Admin.dart';
+import '../Models/Doctor.dart';
 import '../Models/User.dart';
 import '../Utils/Api_handler.dart';
-
-// Provider to make the AuthRepository available throughout the app
-final authRepositoryProvider = Provider((ref) {
-  final apiService = ref.read(apiServiceProvider);
-  final prefs = ref.read(sharedPreferencesProvider);
-  return AuthRepository(apiService, prefs, ref);
-});
+import 'constants.dart';
 
 
-/// A repository dedicated to handling all authentication-related logic.
-class AuthRepository {
-  final ApiService _apiService;
-  final SharedPreferences _prefs;
-  final Ref _ref;
+/// A result object to safely return data from authentication methods.
+class AuthResult {
+  final dynamic user;
+  final String token;
 
-  AuthRepository(this._apiService, this._prefs, this._ref);
+  AuthResult({required this.user, required this.token});
+}
 
-  /// Attempts to log in the user with the provided credentials.
-  /// Returns the User object on success. Throws an ApiException on failure.
-  Future<User> login(String email, String password) async {
+/// AuthService: Orchestrates the entire authentication flow.
+///
+/// This service acts as a bridge between the UI and the low-level ApiHandler.
+/// It contains the business logic for signing in, signing out, and validating
+/// a user's session on app startup.
+class AuthService {
+  final ApiHandler _apiHandler = ApiHandler.instance;
+
+  /// Signs in the user with their email and password.
+  ///
+  /// On success, it saves the auth token and returns an [AuthResult]
+  /// containing the user's profile (Admin or Doctor) and the token.
+  /// On failure, it throws an [ApiException] with a user-friendly message.
+  Future<AuthResult> signIn({
+    required String email,
+    required String password,
+  }) async {
     try {
-      // --- STEP 1: Perform the Login API Call ---
-      final responseData = await _apiService.post(
-        'auth/login',
-        body: {'email': email, 'password': password},
+      final response = await _apiHandler.post(
+        ApiEndpoints.login().url,
+        body: {
+          'email': email,
+          'password': password,
+        },
       );
 
-      final token = responseData['token'] as String;
-      final userData = responseData['user'] as Map<String, dynamic>;
+      // Extract token and user data from the successful response
+      final String token = response['token'];
+      final Map<String, dynamic> userData = response['user'];
 
-      await _prefs.setString('x-auth-token', token);
-      _apiService.setAuthToken(token);
+      // Save the token to persistent storage
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('x-auth-token', token);
 
-      final user = User.fromMap(userData);
+      // Create the appropriate user model based on the role
+      final user = _parseUserRole(userData);
 
-      // --- STEP 2 (On Success): Call "get data" again ---
-      // This tells the SplashPage to re-run its main data fetch,
-      // which will now find the logged-in user and navigate correctly.
-      _ref.invalidate(bootstrapProvider);
-
-      return user;
-    } catch (e) {
-      // Rethrow the error to be handled by the LoginPage UI.
+      return AuthResult(user: user, token: token);
+    } on ApiException catch (e) {
+      // --- ADDED FOR DEBUGGING ---
+      // This will print the user-friendly error message from your ApiHandler.
+      print('ApiException caught: ${e.message}');
+      // Re-throw the API exception to be handled by the UI
       rethrow;
+    } catch (e) {
+      // --- ADDED FOR DEBUGGING ---
+      // This will print any other unexpected errors (network issues, parsing errors, etc.).
+      print('An unexpected error occurred: $e');
+      // Catch any other unexpected errors
+      throw ApiException('An unexpected error occurred during login.');
     }
   }
 
-  /// Checks for a stored auth token and verifies it with the backend.
-  /// Returns a [User] object if the token is valid, otherwise returns null.
-  Future<User?> getCurrentUser() async {
-    final token = _prefs.getString('x-auth-token');
-    if (token == null || token.isEmpty) {
+  /// Retrieves and validates the user's data using a stored token.
+  ///
+  /// This is called on the SplashPage to check if a user is already logged in.
+  /// Returns an [AuthResult] if the token is valid, otherwise returns null.
+  Future<AuthResult?> getUserData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final String? token = prefs.getString('x-auth-token');
+
+      // If no token is found, the user is not logged in.
+      if (token == null) {
+        return null;
+      }
+
+      // Validate the token with the backend
+      final response = await _apiHandler.post(
+        ApiEndpoints.validateToken().url,
+        token: token,
+      );
+
+      // The token is valid, create the user model from the response
+      final user = _parseUserRole(response);
+
+      return AuthResult(user: user, token: token);
+    } catch (e) {
+      // Any exception (ApiException for invalid token, network error, etc.)
+      // means the session is not valid.
       return null;
     }
+  }
 
-    try {
-      _apiService.setAuthToken(token);
-      final userData = await _apiService.get('auth/me');
-      return User.fromMap(userData);
-    } catch (e) {
-      await _prefs.remove('x-auth-token');
-      return null;
+  /// Signs the user out by clearing their session token.
+  Future<void> signOut() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('x-auth-token');
+  }
+
+  /// A private helper to parse the user data map and create the correct
+  /// Admin or Doctor model based on the 'role' field.
+  dynamic _parseUserRole(Map<String, dynamic> userData) {
+    // First, create a base User to safely check the role
+    final baseUser = User.fromMap(userData);
+
+    if (baseUser.role == UserRole.admin) {
+      return Admin(userProfile: baseUser);
+    } else if (baseUser.role == UserRole.doctor) {
+      return Doctor.fromMap(userData);
+    } else {
+      // This should not happen with a well-formed API, but it's a safe fallback.
+      throw ApiException('Invalid user role received from server.');
     }
   }
 }
