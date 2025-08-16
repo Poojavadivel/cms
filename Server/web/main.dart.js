@@ -84199,7 +84199,7 @@ apb(a,b){return this.v4(a,null,b)},
 apc(a,b,c){var s=0,r=A.J(t.z),q,p=2,o,n=this,m,l,k,j,i,h,g
 var $async$v4=A.F(function(d,e){if(d===1){o=e
 s=p}while(true)switch(s){case 0:p=4
-k=A.ho("http://10.75.171.132:3000"+a,0,null)
+k=A.ho("https://glowhair-skin.onrender.com:3000"+a,0,null)
 j=t.N
 i=A.a2(["Content-Type","application/json; charset=UTF-8"],j,j)
 if(c!=null)i.n(0,"x-auth-token",c)
