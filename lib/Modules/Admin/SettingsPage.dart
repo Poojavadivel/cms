@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+
+import '../../Providers/app_providers.dart';
+import '../../Services/Authservices.dart';
+import '../Common/LoginPage.dart';
 
 // --- App Theme Colors ---
 const Color primaryColor = Color(0xFFEF4444);
@@ -21,6 +26,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String? _patientFileStatus;
   String? _staffFileStatus;
   String? _invoiceFileStatus;
+
+  final AuthService _authService = AuthService();
+
+  void _handleLogout() async {
+    // Clear the token from storage
+    await _authService.signOut();
+
+    if (!mounted) return;
+
+    // Clear the user state in the provider
+    Provider.of<AppProvider>(context, listen: false).signOut();
+
+    // Navigate to the LoginPage, removing all previous routes
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (context) => const LoginPage()),
+          (Route<dynamic> route) => false,
+    );
+  }
 
   // Simulates picking a file and updating the UI
   void _uploadFile(String category) {
@@ -90,9 +113,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ),
         TextButton.icon(
-          onPressed: () {
-            // Implement logout logic here
-          },
+          onPressed: _handleLogout,
           icon: const Icon(Icons.logout_rounded, color: primaryColor),
           label: Text('Logout', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: primaryColor)),
           style: TextButton.styleFrom(

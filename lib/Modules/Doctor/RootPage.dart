@@ -6,6 +6,7 @@ import 'AppoimentsPage.dart';
 import 'DashboardPage.dart';
 import 'PatientsPage.dart';
 import 'SchedulePage.dart';
+import 'SettingsPAge.dart';
 
 // --- App Theme Colors ---
 const Color primaryColor = Color(0xFFEF4444);
@@ -14,7 +15,6 @@ const Color backgroundColor = Color(0xFFF8FAFC);
 const Color cardBackgroundColor = Color(0xFFFFFFFF);
 const Color textPrimaryColor = Color(0xFF1F2937);
 const Color textSecondaryColor = Color(0xFF6B7280);
-
 // --- Main Doctor Root Page Widget ---
 class DoctorRootPage extends StatefulWidget {
   const DoctorRootPage({super.key});
@@ -87,7 +87,7 @@ class _DoctorRootPageState extends State<DoctorRootPage> {
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
                 curve: Curves.easeInOut,
-                width: _isChatbotMaximized ? 400 : 350,
+                width: _isChatbotMaximized ? 800 : 350,
                 height: _isChatbotMaximized ? screenSize.height * 0.79 : 500,
                 child: ChatbotWidget(
                   onClose: _toggleChatbot,
@@ -176,7 +176,7 @@ class DoctorSidebarNavigation extends StatelessWidget {
               style: GoogleFonts.inter(
                 fontWeight: FontWeight.bold,
                 fontSize: 20,
-                color: Theme.of(context).colorScheme.primary,
+                color: primaryColor,
               ),
             ),
           ),
@@ -215,22 +215,22 @@ class DoctorSidebarNavigation extends StatelessWidget {
   }
 
   Widget _buildNavItem(BuildContext context, {required IconData icon, required String label, required bool isSelected, required VoidCallback onTap}) {
-    final color = isSelected ? Theme.of(context).colorScheme.primary : textSecondaryColor;
+    final color = isSelected ? primaryColor : textSecondaryColor;
 
     return Material(
-      color: isSelected ? Theme.of(context).colorScheme.primary.withOpacity(0.1) : Colors.transparent,
+      color: isSelected ? primaryColorLight : Colors.transparent,
       child: InkWell(
         onTap: onTap,
         child: Container(
           decoration: BoxDecoration(
-            border: isSelected ? Border(left: BorderSide(color: Theme.of(context).colorScheme.primary, width: 4)) : null,
+            border: isSelected ? const Border(left: BorderSide(color: primaryColor, width: 4)) : null,
           ),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           child: Row(
             children: [
               Icon(icon, color: color),
               const SizedBox(width: 16),
-              Text(label, style: GoogleFonts.inter(color: color, fontWeight: FontWeight.w500, fontSize: 15)),
+              Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w500, fontSize: 15)),
             ],
           ),
         ),
@@ -414,15 +414,3 @@ class _ChatbotWidgetState extends State<ChatbotWidget> {
 //   }
 // }
 
-class DoctorSettingsScreen extends StatelessWidget {
-  const DoctorSettingsScreen({super.key});
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: backgroundColor,
-      body: Center(
-        child: Text('Doctor Settings', style: GoogleFonts.poppins(fontSize: 24, color: textPrimaryColor)),
-      ),
-    );
-  }
-}

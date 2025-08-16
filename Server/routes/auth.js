@@ -94,4 +94,17 @@ router.post('/validate-token', auth, async (req, res) => {
   }
 });
 
+// --- POST /api/auth/signout ---
+// A simple endpoint to acknowledge the sign-out request.
+// In more advanced setups, this is where you would blacklist the JWT.
+router.post('/signout', (req, res) => {
+  console.log('--- SIGNOUT REQUEST INITIATED ---');
+  console.log(`[${new Date().toISOString()}] /api/auth/signout route hit.`);
+  
+  // For this setup, we just acknowledge the request.
+  // The client is responsible for deleting the token.
+  res.status(200).json({ message: 'Sign-out successful.' });
+  
+  console.log('--- SIGNOUT REQUEST COMPLETED ---');
+});
 module.exports = router;

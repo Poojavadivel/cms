@@ -1,5 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+
+import '../../Models/Doctor.dart';
+import '../../Providers/app_providers.dart';
+import '../../Services/Authservices.dart';
+import '../Common/LoginPage.dart';
+
 
 // --- App Theme Colors ---
 const Color primaryColor = Color(0xFFEF4444);
@@ -21,10 +28,31 @@ class _DoctorSettingsScreenState extends State<DoctorSettingsScreen> {
   // State variables for settings
   bool _emailNotifications = true;
   bool _pushNotifications = true;
-  bool _smsNotifications = false;
+  String _currentStatus = 'Available';
+
+  final AuthService _authService = AuthService();
+
+  void _handleLogout() async {
+    // Clear the token from storage
+    await _authService.signOut();
+
+    if (!mounted) return;
+
+    // Clear the user state in the provider
+    Provider.of<AppProvider>(context, listen: false).signOut();
+
+    // Navigate to the LoginPage, removing all previous routes
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (context) => const LoginPage()),
+          (Route<dynamic> route) => false,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    // Access the doctor's profile from the AppProvider
+    final doctor = Provider.of<AppProvider>(context).user as Doctor?;
+
     return Scaffold(
       backgroundColor: backgroundColor,
       body: SingleChildScrollView(
@@ -34,9 +62,16 @@ class _DoctorSettingsScreenState extends State<DoctorSettingsScreen> {
           children: [
             _buildHeader(),
             const SizedBox(height: 32),
-            _buildProfileSection(),
+            _buildProfileSection(doctor),
             const SizedBox(height: 32),
-            _buildNotificationsSection(),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: _buildAvailabilitySection()),
+                const SizedBox(width: 32),
+                Expanded(child: _buildNotificationsSection()),
+              ],
+            ),
           ],
         ),
       ),
@@ -58,9 +93,7 @@ class _DoctorSettingsScreenState extends State<DoctorSettingsScreen> {
           ),
         ),
         TextButton.icon(
-          onPressed: () {
-            // Implement logout logic here
-          },
+          onPressed: _handleLogout,
           icon: const Icon(Icons.logout_rounded, color: primaryColor),
           label: Text('Logout', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: primaryColor)),
           style: TextButton.styleFrom(
@@ -75,16 +108,47 @@ class _DoctorSettingsScreenState extends State<DoctorSettingsScreen> {
     );
   }
 
-  Widget _buildProfileSection() {
+  Widget _buildProfileSection(Doctor? doctor) {
     return _buildSettingsCard(
-      title: 'Profile Information',
+      title: 'Professional Profile',
       child: Column(
         children: [
-          _buildProfileInfoRow('Full Name', 'Dr. Amelia Harper'),
-          _buildProfileInfoRow('Specialty', 'Cardiology'),
-          _buildProfileInfoRow('Contact Number', '+1-555-123-4567'),
-          _buildProfileInfoRow('Email Address', 'amelia.harper@careplus.com'),
+          _buildProfileInfoRow('Full Name', doctor?.userProfile.fullName ?? 'N/A'),
+          _buildProfileInfoRow('Specialty', doctor?.specialization ?? 'N/A'),
+          _buildProfileInfoRow('Department', doctor?.department ?? 'N/A'),
+          _buildProfileInfoRow('License Number', doctor?.licenseNumber ?? 'N/A'),
         ],
+      ),
+    );
+  }
+
+  Widget _buildAvailabilitySection() {
+    return _buildSettingsCard(
+      title: 'My Status',
+      child: DropdownButtonFormField<String>(
+        value: _currentStatus,
+        onChanged: (String? newValue) {
+          if (newValue != null) {
+            setState(() {
+              _currentStatus = newValue;
+            });
+          }
+        },
+        items: <String>['Available', 'In Surgery', 'On Leave', 'Unavailable']
+            .map<DropdownMenuItem<String>>((String value) {
+          return DropdownMenuItem<String>(
+            value: value,
+            child: Text(value, style: GoogleFonts.poppins()),
+          );
+        }).toList(),
+        decoration: InputDecoration(
+          filled: true,
+          fillColor: Colors.grey[50],
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
+          ),
+        ),
       ),
     );
   }
@@ -96,23 +160,14 @@ class _DoctorSettingsScreenState extends State<DoctorSettingsScreen> {
         children: [
           _buildSwitchTile(
             title: 'Email Notifications',
-            subtitle: 'Receive notifications via email',
             value: _emailNotifications,
             onChanged: (value) => setState(() => _emailNotifications = value),
           ),
           const Divider(),
           _buildSwitchTile(
             title: 'Push Notifications',
-            subtitle: 'Receive push notifications on your mobile device',
             value: _pushNotifications,
             onChanged: (value) => setState(() => _pushNotifications = value),
-          ),
-          const Divider(),
-          _buildSwitchTile(
-            title: 'SMS Notifications',
-            subtitle: 'Receive critical alerts via SMS',
-            value: _smsNotifications,
-            onChanged: (value) => setState(() => _smsNotifications = value),
           ),
         ],
       ),
@@ -179,7 +234,6 @@ class _DoctorSettingsScreenState extends State<DoctorSettingsScreen> {
 
   Widget _buildSwitchTile({
     required String title,
-    required String subtitle,
     required bool value,
     required ValueChanged<bool> onChanged,
   }) {
@@ -187,10 +241,6 @@ class _DoctorSettingsScreenState extends State<DoctorSettingsScreen> {
       title: Text(
         title,
         style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: textPrimaryColor),
-      ),
-      subtitle: Text(
-        subtitle,
-        style: GoogleFonts.poppins(color: textSecondaryColor),
       ),
       value: value,
       onChanged: onChanged,
