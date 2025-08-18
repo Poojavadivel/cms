@@ -28,4 +28,8 @@ flutter:
   assets:
     - assets/loginbg.png
     - assets/chatbotimg.png
+    - assets/boyicon.png
+    - assets/girlicon.png
+    - assets/sampledoctor.png
+
 

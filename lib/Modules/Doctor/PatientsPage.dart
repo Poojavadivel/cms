@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import 'widgets/PatientsDetails.dart';
+
 // --- App Theme Colors ---
 const Color primaryColor = Color(0xFFEF4444);
 const Color primaryColorLight = Color(0xFFFEE2E2);
@@ -258,103 +260,103 @@ class _DoctorPatientsScreenState extends State<DoctorPatientsScreen> with Single
 }
 
 // --- Patient Detail Screen ---
-class DoctorPatientDetailScreen extends StatelessWidget {
-  final DoctorPatient patient;
-
-  const DoctorPatientDetailScreen({super.key, required this.patient});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: backgroundColor,
-      appBar: AppBar(
-        title: Text('Patient Chart', style: GoogleFonts.poppins(color: textPrimaryColor)),
-        backgroundColor: cardBackgroundColor,
-        elevation: 1,
-        iconTheme: const IconThemeData(color: textPrimaryColor),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(32.0),
-        child: Container(
-          padding: const EdgeInsets.all(32.0),
-          decoration: BoxDecoration(
-            color: cardBackgroundColor,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 15,
-                offset: const Offset(0, 5),
-              )
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                patient.name,
-                style: GoogleFonts.poppins(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: textPrimaryColor,
-                ),
-              ),
-              const SizedBox(height: 24),
-              const Divider(),
-              const SizedBox(height: 24),
-              _buildDetailRow('Patient ID', patient.id),
-              _buildDetailRow('Age', '${patient.age} years'),
-              _buildDetailRow('Gender', patient.gender),
-              _buildDetailRow('Last Visit', patient.lastVisit),
-              _buildDetailRow('Primary Concern', patient.primaryConcern),
-              const SizedBox(height: 24),
-              Text(
-                'Medical History',
-                style: GoogleFonts.poppins(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: textPrimaryColor,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'No significant medical history. Patient is a non-smoker and consumes alcohol occasionally. No known allergies.',
-                style: GoogleFonts.poppins(
-                  fontSize: 16,
-                  color: textSecondaryColor,
-                  height: 1.5,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDetailRow(String title, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            title,
-            style: GoogleFonts.poppins(
-              fontSize: 16,
-              color: textSecondaryColor,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          Text(
-            value,
-            style: GoogleFonts.poppins(
-              fontSize: 16,
-              color: textPrimaryColor,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+// class DoctorPatientDetailScreen extends StatelessWidget {
+//   final DoctorPatient patient;
+//
+//   const DoctorPatientDetailScreen({super.key, required this.patient});
+//
+//   @override
+//   Widget build(BuildContext context) {
+//     return Scaffold(
+//       backgroundColor: backgroundColor,
+//       appBar: AppBar(
+//         title: Text('Patient Chart', style: GoogleFonts.poppins(color: textPrimaryColor)),
+//         backgroundColor: cardBackgroundColor,
+//         elevation: 1,
+//         iconTheme: const IconThemeData(color: textPrimaryColor),
+//       ),
+//       body: SingleChildScrollView(
+//         padding: const EdgeInsets.all(32.0),
+//         child: Container(
+//           padding: const EdgeInsets.all(32.0),
+//           decoration: BoxDecoration(
+//             color: cardBackgroundColor,
+//             borderRadius: BorderRadius.circular(20),
+//             boxShadow: [
+//               BoxShadow(
+//                 color: Colors.black.withOpacity(0.05),
+//                 blurRadius: 15,
+//                 offset: const Offset(0, 5),
+//               )
+//             ],
+//           ),
+//           child: Column(
+//             crossAxisAlignment: CrossAxisAlignment.start,
+//             children: [
+//               Text(
+//                 patient.name,
+//                 style: GoogleFonts.poppins(
+//                   fontSize: 28,
+//                   fontWeight: FontWeight.bold,
+//                   color: textPrimaryColor,
+//                 ),
+//               ),
+//               const SizedBox(height: 24),
+//               const Divider(),
+//               const SizedBox(height: 24),
+//               _buildDetailRow('Patient ID', patient.id),
+//               _buildDetailRow('Age', '${patient.age} years'),
+//               _buildDetailRow('Gender', patient.gender),
+//               _buildDetailRow('Last Visit', patient.lastVisit),
+//               _buildDetailRow('Primary Concern', patient.primaryConcern),
+//               const SizedBox(height: 24),
+//               Text(
+//                 'Medical History',
+//                 style: GoogleFonts.poppins(
+//                   fontSize: 18,
+//                   fontWeight: FontWeight.bold,
+//                   color: textPrimaryColor,
+//                 ),
+//               ),
+//               const SizedBox(height: 16),
+//               Text(
+//                 'No significant medical history. Patient is a non-smoker and consumes alcohol occasionally. No known allergies.',
+//                 style: GoogleFonts.poppins(
+//                   fontSize: 16,
+//                   color: textSecondaryColor,
+//                   height: 1.5,
+//                 ),
+//               ),
+//             ],
+//           ),
+//         ),
+//       ),
+//     );
+//   }
+//
+//   Widget _buildDetailRow(String title, String value) {
+//     return Padding(
+//       padding: const EdgeInsets.symmetric(vertical: 8.0),
+//       child: Row(
+//         mainAxisAlignment: MainAxisAlignment.spaceBetween,
+//         children: [
+//           Text(
+//             title,
+//             style: GoogleFonts.poppins(
+//               fontSize: 16,
+//               color: textSecondaryColor,
+//               fontWeight: FontWeight.w600,
+//             ),
+//           ),
+//           Text(
+//             value,
+//             style: GoogleFonts.poppins(
+//               fontSize: 16,
+//               color: textPrimaryColor,
+//             ),
+//           ),
+//         ],
+//       ),
+//     );
+//   }
+// }
