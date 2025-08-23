@@ -249,27 +249,63 @@ class _DoctorAppointmentPreviewState extends State<DoctorAppointmentPreview> wit
     return LayoutBuilder(
       builder: (context, constraints) {
         bool isWide = constraints.maxWidth > 800;
+
         return isWide
             ? IntrinsicHeight(
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Expanded(flex: 1, child: _buildPatientInfoCard(patient)),
+              Expanded(
+                flex: 1,
+                child: DefaultTextStyle.merge(
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xFF111827),
+                  ),
+                  child: _buildPatientInfoCard(patient),
+                ),
+              ),
               const SizedBox(width: 24),
-              Expanded(flex: 2, child: _buildContactAndInsuranceCard(patient)),
+              Expanded(
+                flex: 2,
+                child: DefaultTextStyle.merge(
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xFF111827),
+                  ),
+                  child: _buildContactAndInsuranceCard(patient),
+                ),
+              ),
             ],
           ),
         )
             : Column(
           children: [
-            _buildPatientInfoCard(patient),
+            DefaultTextStyle.merge(
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: const Color(0xFF111827),
+              ),
+              child: _buildPatientInfoCard(patient),
+            ),
             const SizedBox(height: 24),
-            _buildContactAndInsuranceCard(patient),
+            DefaultTextStyle.merge(
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: const Color(0xFF111827),
+              ),
+              child: _buildContactAndInsuranceCard(patient),
+            ),
           ],
         );
       },
     );
   }
+
 
   Widget _buildPatientInfoCard(PatientDetails patient) {
     return Container(
@@ -277,7 +313,13 @@ class _DoctorAppointmentPreviewState extends State<DoctorAppointmentPreview> wit
       decoration: BoxDecoration(
         color: red100,
         borderRadius: BorderRadius.circular(8),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 6, offset: const Offset(0, 4))],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 6,
+            offset: const Offset(0, 4),
+          )
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -294,6 +336,7 @@ class _DoctorAppointmentPreviewState extends State<DoctorAppointmentPreview> wit
                     image: NetworkImage(patient.avatarUrl),
                     fit: BoxFit.cover,
                   ),
+                  borderRadius: BorderRadius.circular(6),
                 ),
               ),
               const SizedBox(width: 12),
@@ -301,25 +344,83 @@ class _DoctorAppointmentPreviewState extends State<DoctorAppointmentPreview> wit
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text("Name: ${patient.name}", style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
-                    Text("Age: ${patient.age} yrs", style: const TextStyle(fontSize: 13)),
-                    Text("Gender: ${patient.gender}", style: const TextStyle(fontSize: 13)),
-                    Text("Blood Group: ${patient.bloodGroup}", style: const TextStyle(fontSize: 13)),
-                    Text("Weight: ${patient.weight}", style: const TextStyle(fontSize: 13)),
-                    Text("Height: ${patient.height}", style: const TextStyle(fontSize: 13)),
+                    Text(
+                      "Name: ${patient.name}",
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF111827),
+                      ),
+                    ),
+                    Text(
+                      "Age: ${patient.age} yrs",
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        color: const Color(0xFF374151),
+                      ),
+                    ),
+                    Text(
+                      "Gender: ${patient.gender}",
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        color: const Color(0xFF374151),
+                      ),
+                    ),
+                    Text(
+                      "Blood Group: ${patient.bloodGroup}",
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        color: const Color(0xFF374151),
+                      ),
+                    ),
+                    Text(
+                      "Weight: ${patient.weight}",
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        color: const Color(0xFF374151),
+                      ),
+                    ),
+                    Text(
+                      "Height: ${patient.height}",
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        color: const Color(0xFF374151),
+                      ),
+                    ),
                   ],
                 ),
               ),
             ],
           ),
           const SizedBox(height: 12),
-          const Text("Emergency contact", style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
-          Text(patient.emergencyContactName, style: const TextStyle(fontSize: 12)),
-          Text(patient.emergencyContactPhone, style: const TextStyle(color: Colors.green, fontSize: 12)),
+          Text(
+            "Emergency contact",
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF991B1B),
+            ),
+          ),
+          Text(
+            patient.emergencyContactName,
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              color: const Color(0xFF1F2937),
+            ),
+          ),
+          Text(
+            patient.emergencyContactPhone,
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: const Color(0xFF10B981), // professional green
+            ),
+          ),
         ],
       ),
     );
   }
+
 
   Widget _buildContactAndInsuranceCard(PatientDetails patient) {
     return Container(
@@ -327,56 +428,94 @@ class _DoctorAppointmentPreviewState extends State<DoctorAppointmentPreview> wit
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(8),
         color: Colors.white,
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 6, offset: const Offset(0, 4))],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 6,
+            offset: const Offset(0, 4),
+          )
+        ],
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // --- Contact Info ---
           Expanded(
             flex: 2,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text("Phone: ${patient.phone}"),
+                _buildContactText("Phone", patient.phone),
                 const SizedBox(height: 6),
-                Text("City: ${patient.city}"),
+                _buildContactText("City", patient.city),
                 const SizedBox(height: 6),
-                Text("Address: ${patient.address}"),
+                _buildContactText("Address", patient.address),
                 const SizedBox(height: 6),
-                Text("Pin Code: ${patient.pincode}"),
+                _buildContactText("Pin Code", patient.pincode),
               ],
             ),
           ),
           const SizedBox(width: 16),
+
+          // --- Insurance Card ---
           Expanded(
             flex: 1,
             child: Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(10),
                 gradient: const LinearGradient(
-                  colors: [Color(0xFF42A5F5), Color(0xFF90CAF9)],
+                  colors: [Color(0xFF2563EB), Color(0xFF60A5FA)], // professional blue
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.blueAccent.withOpacity(0.25),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
-                    children: const [
-                      CircleAvatar(
-                        radius: 12,
+                    children: [
+                      const CircleAvatar(
+                        radius: 14,
                         backgroundColor: Colors.green,
-                        child: Icon(Icons.local_hospital, size: 14, color: Colors.white),
+                        child: Icon(Icons.local_hospital, size: 16, color: Colors.white),
                       ),
-                      SizedBox(width: 8),
-                      Text("Assurance number", style: TextStyle(color: Colors.white70, fontSize: 12)),
+                      const SizedBox(width: 8),
+                      Text(
+                        "Insurance Number",
+                        style: GoogleFonts.inter(
+                          color: Colors.white70,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  Text(patient.insuranceNumber, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                  const SizedBox(height: 10),
+                  Text(
+                    patient.insuranceNumber,
+                    style: GoogleFonts.inter(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
                   const SizedBox(height: 12),
-                  Text("Expiry Date: ${patient.expiryDate}", style: const TextStyle(color: Colors.white, fontSize: 12)),
+                  Text(
+                    "Expiry Date: ${patient.expiryDate}",
+                    style: GoogleFonts.inter(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -386,15 +525,56 @@ class _DoctorAppointmentPreviewState extends State<DoctorAppointmentPreview> wit
     );
   }
 
+  /// Helper widget for consistent label-value styling
+  Widget _buildContactText(String label, String value) {
+    return RichText(
+      text: TextSpan(
+        children: [
+          TextSpan(
+            text: "$label: ",
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF374151), // darker for label
+            ),
+          ),
+          TextSpan(
+            text: value,
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              fontWeight: FontWeight.w400,
+              color: const Color(0xFF4B5563), // softer for value
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+
   Widget _buildTabs() {
     return TabBar(
       controller: _tabController,
-      labelStyle: GoogleFonts.roboto(fontWeight: FontWeight.bold, fontSize: 13),
-      unselectedLabelStyle: GoogleFonts.roboto(fontSize: 13),
+      isScrollable: true,
+      labelStyle: GoogleFonts.roboto(
+        fontWeight: FontWeight.w600,
+        fontSize: 14,
+        letterSpacing: 0.3,
+      ),
+      unselectedLabelStyle: GoogleFonts.roboto(
+        fontWeight: FontWeight.w400,
+        fontSize: 13,
+      ),
       labelColor: primaryColor,
       unselectedLabelColor: textSecondaryColor,
-      indicatorColor: primaryColor,
-      isScrollable: true,
+      indicator: UnderlineTabIndicator(
+        borderSide: BorderSide(
+          width: 3,
+          color: primaryColor,
+        ),
+        insets: const EdgeInsets.symmetric(horizontal: 16),
+      ),
+      indicatorSize: TabBarIndicatorSize.label,
       tabs: const [
         Tab(text: 'DOCTOR CHECK UP'),
         Tab(text: 'PATHOLOGY'),
@@ -407,34 +587,41 @@ class _DoctorAppointmentPreviewState extends State<DoctorAppointmentPreview> wit
 
 
 
+
   Widget _buildCheckupTable(List<CheckupRecord> records) {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 12),
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 6,
-            offset: const Offset(0, 3),
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: SizedBox(
         width: double.infinity,
         child: DataTable(
-          columnSpacing: 24,
-          headingRowColor: MaterialStateProperty.all(const Color(0xFFF5F6FA)),
+          columnSpacing: 28,
+          headingRowColor:
+          MaterialStateProperty.all(const Color(0xFFF3F4F6)),
           headingTextStyle: GoogleFonts.roboto(
             fontSize: 13,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w700,
             color: Colors.black87,
           ),
-          dataRowHeight: 52,
+          dataRowHeight: 54,
+          horizontalMargin: 12,
+          dividerThickness: 0.6,
           border: TableBorder(
-            horizontalInside: BorderSide(color: Colors.grey.shade300, width: 0.6),
+            horizontalInside: BorderSide(
+              color: Colors.grey.shade300,
+              width: 0.6,
+            ),
           ),
           columns: [
             DataColumn(label: Text('Doctor', style: GoogleFonts.roboto())),
@@ -463,28 +650,33 @@ class _DoctorAppointmentPreviewState extends State<DoctorAppointmentPreview> wit
                       backgroundColor: red500,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 6),
+                          horizontal: 18, vertical: 6),
                       textStyle: GoogleFonts.roboto(
-                          fontSize: 11, fontWeight: FontWeight.w500),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(18),
+                        borderRadius: BorderRadius.circular(20),
                       ),
                       elevation: 0,
                     ),
                     child: const Text('PDF'),
                   )
-                      : Text(record.reportStatus,
-                      style: GoogleFonts.roboto(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: primaryColor,
-                      )),
+                      : Text(
+                    record.reportStatus,
+                    style: GoogleFonts.roboto(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: primaryColor,
+                    ),
+                  ),
                 ),
                 DataCell(
                   IconButton(
                     icon: const Icon(Icons.expand_more, size: 20),
                     color: red600,
                     splashRadius: 20,
+                    tooltip: "View Details",
                     onPressed: () {},
                   ),
                 ),
@@ -495,6 +687,7 @@ class _DoctorAppointmentPreviewState extends State<DoctorAppointmentPreview> wit
       ),
     );
   }
+
 
 
 }

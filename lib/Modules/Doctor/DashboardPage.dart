@@ -221,8 +221,14 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
               children: [
                 Text(
                   'Good Morning',
-                  style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w500, color: const Color(0xFF991B1B)),
+                  style: GoogleFonts.montserrat(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.3,
+                    color: const Color(0xFF991B1B),
+                  ),
                 ),
+
                 Text(
                   'Dr. Renvord Atkinson',
                   style: GoogleFonts.poppins(fontSize: 22, fontWeight: FontWeight.bold, color: const Color(0xFF7F1D1D)),
@@ -230,8 +236,14 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
                 const SizedBox(height: 8),
                 Text(
                   'Here is your dashboard to manage consultations with ease',
-                  style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFFB91C1C)),
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w400,
+                    height: 1.4,
+                    color: const Color(0xFFB91C1C),
+                  ),
                 ),
+
               ],
             ),
           ),
@@ -293,7 +305,7 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
           Text(
             'Weekly appointments completed',
             textAlign: TextAlign.center,
-            style: GoogleFonts.poppins(color: const Color(0xFFB91C1C), fontSize: 12),
+            style: GoogleFonts.lexend(color: const Color(0xFFB91C1C), fontSize: 12),
           ),
         ],
       ),
@@ -328,7 +340,7 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
           Text(
             'Weekly hours completed',
             textAlign: TextAlign.center,
-            style: GoogleFonts.poppins(color: const Color(0xFFB91C1C), fontSize: 12),
+            style: GoogleFonts.lexend(color: const Color(0xFFB91C1C), fontSize: 12),
           ),
         ],
       ),
@@ -369,7 +381,8 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
               Row(
                 children: [
                   SizedBox(
-                    width: 200,
+                    width: 220,
+                    height: 48, // 🔹 fix height
                     child: TextField(
                       onChanged: (value) {
                         setState(() {
@@ -378,9 +391,10 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
                       },
                       decoration: InputDecoration(
                         hintText: 'Search patient name...',
+                        hintStyle: GoogleFonts.inter(fontSize: 14, color: const Color(0xFF9CA3AF)),
                         prefixIcon: const Icon(Icons.search, size: 20),
                         isDense: true,
-                        contentPadding: const EdgeInsets.all(10),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14), // balanced padding
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                           borderSide: const BorderSide(color: Color(0xFFFCA5A5)),
@@ -389,20 +403,26 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
                     ),
                   ),
                   const SizedBox(width: 16),
-                  ElevatedButton.icon(
-                    onPressed: () {},
-                    icon: const Icon(Icons.add, size: 18,color: Colors.white,),
-                    label: const Text('New Appointment'),
-                    style: ElevatedButton.styleFrom(
+                  SizedBox(
+                    height: 48, // 🔹 same height as TextField
+                    child: ElevatedButton.icon(
+                      onPressed: () {},
+                      icon: const Icon(Icons.add, size: 18, color: Colors.white),
+                      label: Text(
+                        'New Appointment',
+                        style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600),
+                      ),
+                      style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFDC2626),
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        textStyle: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600)
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                      ),
                     ),
                   ),
                 ],
-              ),
+              )
+
             ],
           ),
           const SizedBox(height: 16),

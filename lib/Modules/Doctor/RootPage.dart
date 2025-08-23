@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:ui';
-
+import 'package:iconsax/iconsax.dart';
 import 'AppoimentsPage.dart';
 import 'DashboardPage.dart';
 import 'PatientsPage.dart';
@@ -30,11 +30,11 @@ class _DoctorRootPageState extends State<DoctorRootPage> {
 
   // Navigation items specific to the doctor's view
   final List<Map<String, dynamic>> _navItems = [
-    {'icon': Icons.dashboard_rounded, 'label': 'Dashboard', 'screen': const DoctorDashboardScreen()},
-    {'icon': Icons.calendar_today_rounded, 'label': 'Appointments', 'screen': const DoctorAppointmentsScreen()},
-    {'icon': Icons.groups_rounded, 'label': 'Patients', 'screen': const DoctorPatientsScreen()},
-    {'icon': Icons.schedule_rounded, 'label': 'My Schedule', 'screen': const DoctorScheduleScreen()},
-    {'icon': Icons.settings_rounded, 'label': 'Settings', 'screen': const DoctorSettingsScreen()},
+    {'icon': Iconsax.category, 'label': 'Dashboard', 'screen': const DoctorDashboardScreen()},
+    {'icon': Iconsax.calendar, 'label': 'Appointments', 'screen': const DoctorAppointmentsScreen()},
+    {'icon': Iconsax.profile_2user, 'label': 'Patients', 'screen': const DoctorPatientsScreen()},
+    {'icon': Iconsax.task, 'label': 'My Schedule', 'screen': const DoctorScheduleScreen()},
+    {'icon': Iconsax.setting_2, 'label': 'Settings', 'screen': const DoctorSettingsScreen()},
   ];
 
   void _onItemTapped(int index) {
@@ -173,12 +173,14 @@ class DoctorSidebarNavigation extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
             child: Text(
               'Glow Skin & Gro Hair',
-              style: GoogleFonts.inter(
-                fontWeight: FontWeight.bold,
-                fontSize: 20,
+              style: GoogleFonts.lexend(
+                fontWeight: FontWeight.w700,
+                fontSize: 19,
+                letterSpacing: 0,
                 color: primaryColor,
               ),
             ),
+
           ),
           Divider(height: 1, color: Colors.grey[200]),
           Expanded(
@@ -214,7 +216,13 @@ class DoctorSidebarNavigation extends StatelessWidget {
     );
   }
 
-  Widget _buildNavItem(BuildContext context, {required IconData icon, required String label, required bool isSelected, required VoidCallback onTap}) {
+  Widget _buildNavItem(
+      BuildContext context, {
+        required IconData icon,
+        required String label,
+        required bool isSelected,
+        required VoidCallback onTap,
+      }) {
     final color = isSelected ? primaryColor : textSecondaryColor;
 
     return Material(
@@ -223,14 +231,26 @@ class DoctorSidebarNavigation extends StatelessWidget {
         onTap: onTap,
         child: Container(
           decoration: BoxDecoration(
-            border: isSelected ? const Border(left: BorderSide(color: primaryColor, width: 4)) : null,
+            border: isSelected
+                ? const Border(
+              left: BorderSide(color: primaryColor, width: 4),
+            )
+                : null,
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
           child: Row(
             children: [
-              Icon(icon, color: color),
+              Icon(icon, color: color, size: 22),
               const SizedBox(width: 16),
-              Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w500, fontSize: 15)),
+              Text(
+                label,
+                style: GoogleFonts.lexend(
+                  color: color,
+                  fontSize: 15,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                  letterSpacing: 0.2,
+                ),
+              ),
             ],
           ),
         ),

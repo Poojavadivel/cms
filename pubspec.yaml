@@ -16,6 +16,8 @@ dependencies:
   provider: ^6.1.5
   shared_preferences: ^2.2.3
   connectivity_plus: ^6.0.3
+  iconsax: ^0.0.8
+
   google_fonts: ^6.3.0
 
 dev_dependencies:
@@ -31,5 +33,6 @@ flutter:
     - assets/boyicon.png
     - assets/girlicon.png
     - assets/sampledoctor.png
+
 
 
