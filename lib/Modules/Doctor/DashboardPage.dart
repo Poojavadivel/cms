@@ -139,7 +139,7 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
         ),
         Row(
           children: [
-            const Icon(Icons.notifications, color: Color(0xFFDC2626)),
+            // const Icon(Icons.notifications, color: Color(0xFFDC2626)),
             const SizedBox(width: 16),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -394,7 +394,7 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
                         hintStyle: GoogleFonts.inter(fontSize: 14, color: const Color(0xFF9CA3AF)),
                         prefixIcon: const Icon(Icons.search, size: 20),
                         isDense: true,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14), // balanced padding
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 18), // balanced padding
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                           borderSide: const BorderSide(color: Color(0xFFFCA5A5)),

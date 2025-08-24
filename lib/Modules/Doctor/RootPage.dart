@@ -31,8 +31,8 @@ class _DoctorRootPageState extends State<DoctorRootPage> {
   // Navigation items specific to the doctor's view
   final List<Map<String, dynamic>> _navItems = [
     {'icon': Iconsax.category, 'label': 'Dashboard', 'screen': const DoctorDashboardScreen()},
-    {'icon': Iconsax.calendar, 'label': 'Appointments', 'screen': const DoctorAppointmentsScreen()},
-    {'icon': Iconsax.profile_2user, 'label': 'Patients', 'screen': const DoctorPatientsScreen()},
+    {'icon': Iconsax.calendar, 'label': 'Appointments', 'screen': const AppointmentsScreen()},
+    {'icon': Iconsax.profile_2user, 'label': 'Patients', 'screen': const PatientsScreen()},
     {'icon': Iconsax.task, 'label': 'My Schedule', 'screen': const DoctorScheduleScreen()},
     {'icon': Iconsax.setting_2, 'label': 'Settings', 'screen': const DoctorSettingsScreen()},
   ];
