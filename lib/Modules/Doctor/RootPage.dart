@@ -146,7 +146,7 @@ class _DoctorRootPageState extends State<DoctorRootPage> {
 }
 
 // --- Sidebar Navigation for Doctor ---
-class DoctorSidebarNavigation extends StatelessWidget {
+class DoctorSidebarNavigation extends StatefulWidget {
   final int selectedIndex;
   final Function(int) onItemTapped;
   final List<Map<String, dynamic>> navItems;
@@ -159,70 +159,148 @@ class DoctorSidebarNavigation extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final mainNavItems = navItems.take(4).toList();
-    final bottomNavItems = navItems.skip(4).toList();
+  State<DoctorSidebarNavigation> createState() =>
+      _DoctorSidebarNavigationState();
+}
 
-    return Container(
-      width: 256,
-      color: cardBackgroundColor,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
-            child: Text(
-              'Glow Skin & Gro Hair',
-              style: GoogleFonts.lexend(
-                fontWeight: FontWeight.w700,
-                fontSize: 19,
-                letterSpacing: 0,
-                color: primaryColor,
-              ),
-            ),
+class _DoctorSidebarNavigationState extends State<DoctorSidebarNavigation> with SingleTickerProviderStateMixin {
+  bool _isCollapsed = false;
+  late AnimationController _animationController;
+  late Animation<double> _widthAnimation;
 
-          ),
-          Divider(height: 1, color: Colors.grey[200]),
-          Expanded(
-            child: ListView.builder(
-              itemCount: mainNavItems.length,
-              itemBuilder: (context, index) {
-                final item = mainNavItems[index];
-                return _buildNavItem(
-                  context,
-                  icon: item['icon'] as IconData,
-                  label: item['label'] as String,
-                  isSelected: selectedIndex == index,
-                  onTap: () => onItemTapped(index),
-                );
-              },
-            ),
-          ),
-          Divider(height: 1, color: Colors.grey[200]),
-          ...List.generate(bottomNavItems.length, (index) {
-            final item = bottomNavItems[index];
-            final actualIndex = index + mainNavItems.length;
-            return _buildNavItem(
-              context,
-              icon: item['icon'] as IconData,
-              label: item['label'] as String,
-              isSelected: selectedIndex == actualIndex,
-              onTap: () => onItemTapped(actualIndex),
-            );
-          }),
-          const SizedBox(height: 20),
-        ],
-      ),
+  final double expandedWidth = 256;
+  final double collapsedWidth = 72;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    _widthAnimation = Tween<double>(
+      begin: expandedWidth,
+      end: collapsedWidth,
+    ).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
     );
   }
 
-  Widget _buildNavItem(
-      BuildContext context, {
-        required IconData icon,
-        required String label,
-        required bool isSelected,
-        required VoidCallback onTap,
-      }) {
+  void _toggleSidebar() {
+    setState(() {
+      _isCollapsed = !_isCollapsed;
+      if (_isCollapsed) {
+        _animationController.forward();
+      } else {
+        _animationController.reverse();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final mainNavItems = widget.navItems.take(4).toList();
+    final bottomNavItems = widget.navItems.skip(4).toList();
+
+    return AnimatedBuilder(
+      animation: _widthAnimation,
+      builder: (context, child) {
+        return Container(
+          width: _widthAnimation.value,
+          color: cardBackgroundColor,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Hamburger & Logo (overflow-proof)
+              Padding(
+                padding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 28),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      InkWell(
+                        onTap: _toggleSidebar,
+                        child: Container(
+                          width: 30,
+                          alignment: Alignment.center,
+                          child: Icon(
+                            _isCollapsed ? Icons.menu_open : Icons.menu,
+                            size: 30,
+                            color: primaryColor,
+                          ),
+                        ),
+                      ),
+                      if (!_isCollapsed) ...[
+                        const SizedBox(width: 12),
+                        ConstrainedBox(
+                          constraints:
+                          BoxConstraints(maxWidth: expandedWidth - 60),
+                          child: Text(
+                            'Glow Skin & Gro Hair',
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.lexend(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 16,
+                              color: primaryColor,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+              Divider(height: 1, color: Colors.grey[200]),
+              // Main Nav Items
+              Expanded(
+                child: ListView.builder(
+                  itemCount: mainNavItems.length,
+                  itemBuilder: (context, index) {
+                    final item = mainNavItems[index];
+                    return _buildNavItem(
+                      icon: item['icon'] as IconData,
+                      label: item['label'] as String,
+                      isSelected: widget.selectedIndex == index,
+                      onTap: () => widget.onItemTapped(index),
+                    );
+                  },
+                ),
+              ),
+              Divider(height: 1, color: Colors.grey[200]),
+              // Bottom Nav Items
+              ...List.generate(bottomNavItems.length, (index) {
+                final item = bottomNavItems[index];
+                final actualIndex = index + mainNavItems.length;
+                return _buildNavItem(
+                  icon: item['icon'] as IconData,
+                  label: item['label'] as String,
+                  isSelected: widget.selectedIndex == actualIndex,
+                  onTap: () => widget.onItemTapped(actualIndex),
+                );
+              }),
+              const SizedBox(height: 20),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildNavItem({
+    required IconData icon,
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
     final color = isSelected ? primaryColor : textSecondaryColor;
 
     return Material(
@@ -232,25 +310,31 @@ class DoctorSidebarNavigation extends StatelessWidget {
         child: Container(
           decoration: BoxDecoration(
             border: isSelected
-                ? const Border(
-              left: BorderSide(color: primaryColor, width: 4),
-            )
+                ? const Border(left: BorderSide(color: primaryColor, width: 4))
                 : null,
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           child: Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
               Icon(icon, color: color, size: 22),
-              const SizedBox(width: 16),
-              Text(
-                label,
-                style: GoogleFonts.lexend(
-                  color: color,
-                  fontSize: 15,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                  letterSpacing: 0.2,
+              if (!_isCollapsed) ...[
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Text(
+                    label,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.lexend(
+                      color: color,
+                      fontSize: 15,
+                      fontWeight:
+                      isSelected ? FontWeight.w600 : FontWeight.w500,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
                 ),
-              ),
+              ],
+              if (_isCollapsed) const Spacer(), // center icon when collapsed
             ],
           ),
         ),
@@ -393,44 +477,5 @@ class _ChatbotWidgetState extends State<ChatbotWidget> {
 }
 
 
-// --- Placeholder Screens for Doctor's Pages ---
 
-// class DoctorAppointmentsScreen extends StatelessWidget {
-//   const DoctorAppointmentsScreen({super.key});
-//   @override
-//   Widget build(BuildContext context) {
-//     return Scaffold(
-//       backgroundColor: backgroundColor,
-//       body: Center(
-//         child: Text('Doctor Appointments', style: GoogleFonts.poppins(fontSize: 24, color: textPrimaryColor)),
-//       ),
-//     );
-//   }
-// }
-
-// class DoctorPatientsScreen extends StatelessWidget {
-//   const DoctorPatientsScreen({super.key});
-//   @override
-//   Widget build(BuildContext context) {
-//     return Scaffold(
-//       backgroundColor: backgroundColor,
-//       body: Center(
-//         child: Text('Doctor Patients', style: GoogleFonts.poppins(fontSize: 24, color: textPrimaryColor)),
-//       ),
-//     );
-//   }
-// }
-
-// class DoctorScheduleScreen extends StatelessWidget {
-//   const DoctorScheduleScreen({super.key});
-//   @override
-//   Widget build(BuildContext context) {
-//     return Scaffold(
-//       backgroundColor: backgroundColor,
-//       body: Center(
-//         child: Text('Doctor Schedule', style: GoogleFonts.poppins(fontSize: 24, color: textPrimaryColor)),
-//       ),
-//     );
-//   }
-// }
 

@@ -2,7 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:math';
 
-import 'widgets/doctor_appointment_preview.dart';
+// Import the centralized DashboardAppointments model
+// Ensure this path correctly points to your models folder from DashboardPage.dart
+
+// Import the AppointmentTable widget
+import '../../Models/dashboardmodels.dart';
+import 'widgets/Appoimentstable.dart';
+import 'widgets/doctor_appointment_preview.dart'; // Assuming this widget exists for previewing appointments
 
 // --- App Theme Colors ---
 const Color primaryColor = Color(0xFFCF1717);
@@ -12,47 +18,30 @@ const Color textPrimaryColor = Color(0xFF333333);
 const Color textSecondaryColor = Color(0xFF666666);
 
 // --- Data Models ---
-class DashboardAppointment {
-  final String patientName;
-  final int patientAge;
-  final String date;
-  final String time;
-  final String reason;
-  final String doctor;
-  final String status;
-  final String gender; // Used to select the correct local asset icon
+// The DashboardAppointments class definition is now in '../../../models/dashboard_appointment.dart';
+// REMOVED the DashboardAppointment class definition from here to avoid type conflicts.
 
-  DashboardAppointment({
-    required this.patientName,
-    required this.patientAge,
-    required this.date,
-    required this.time,
-    required this.reason,
-    required this.doctor,
-    required this.status,
-    required this.gender,
-  });
-}
-
+/// A container class to hold a list of [DashboardAppointments].
+/// This is typically used to represent the overall data fetched for a dashboard or list view.
 class DoctorDashboardData {
-  final List<DashboardAppointment> appointments;
+  final List<DashboardAppointments> appointments; // Changed to DashboardAppointments
   DoctorDashboardData({required this.appointments});
 }
 
 // --- Simulated API Data ---
 final _dashboardApiData = DoctorDashboardData(
   appointments: [
-    DashboardAppointment(patientName: 'Arthur', patientAge: 32, date: '05/12/2022', time: '9:30 AM', reason: 'Fever', doctor: 'Dr. John', status: 'Completed', gender: 'Male'),
-    DashboardAppointment(patientName: 'John', patientAge: 28, date: '05/12/2022', time: '9:30 AM', reason: 'Injury', doctor: 'Dr. Joel', status: 'Completed', gender: 'Male'),
-    DashboardAppointment(patientName: 'Bhavana', patientAge: 20, date: '19/08/2025', time: '10:30 AM', reason: 'Head Ache', doctor: 'Dr. Joel', status: 'Completed', gender: 'Female'),
-    DashboardAppointment(patientName: 'David', patientAge: 26, date: '05/12/2022', time: '11:00 AM', reason: 'Fever', doctor: 'Dr. John', status: 'Completed', gender: 'Male'),
-    DashboardAppointment(patientName: 'Joseph', patientAge: 77, date: '05/12/2022', time: '11:30 AM', reason: 'Throat pain', doctor: 'Dr. John', status: 'Incomplete', gender: 'Male'),
-    DashboardAppointment(patientName: 'Lakesh', patientAge: 45, date: '05/12/2022', time: '12:00 PM', reason: 'Cold', doctor: 'Dr. John', status: 'Completed', gender: 'Male'),
-    DashboardAppointment(patientName: 'Sophia', patientAge: 38, date: '05/12/2022', time: '12:30 PM', reason: 'Check-up', doctor: 'Dr. Amelia', status: 'Completed', gender: 'Female'),
-    DashboardAppointment(patientName: 'Ethan', patientAge: 52, date: '05/12/2022', time: '1:00 PM', reason: 'Follow-up', doctor: 'Dr. Amelia', status: 'Incomplete', gender: 'Male'),
-    DashboardAppointment(patientName: 'Olivia', patientAge: 29, date: '05/12/2022', time: '2:00 PM', reason: 'Consultation', doctor: 'Dr. John', status: 'Completed', gender: 'Female'),
-    DashboardAppointment(patientName: 'Liam', patientAge: 35, date: '05/12/2022', time: '2:30 PM', reason: 'Headache', doctor: 'Dr. Joel', status: 'Incomplete', gender: 'Male'),
-    DashboardAppointment(patientName: 'Ava', patientAge: 41, date: '05/12/2022', time: '3:00 PM', reason: 'Back Pain', doctor: 'Dr. Amelia', status: 'Completed', gender: 'Female'),
+    DashboardAppointments(patientName: 'Arthur', patientAge: 32, date: '05/12/2022', time: '9:30 AM', reason: 'Fever', doctor: 'Dr. John', status: 'Completed', gender: 'Male', patientId: 'P001', service: 'General Checkup', patientAvatarUrl: 'https://placehold.co/100x100/A0AEC0/FFFFFF?text=A', isSelected: false),
+    DashboardAppointments(patientName: 'John', patientAge: 28, date: '05/12/2022', time: '9:30 AM', reason: 'Injury', doctor: 'Dr. Joel', status: 'Completed', gender: 'Male', patientId: 'P002', service: 'Emergency', patientAvatarUrl: 'https://placehold.co/100x100/A0AEC0/FFFFFF?text=J', isSelected: false),
+    DashboardAppointments(patientName: 'Bhavana', patientAge: 20, date: '19/08/2025', time: '10:30 AM', reason: 'Head Ache', doctor: 'Dr. Joel', status: 'Completed', gender: 'Female', patientId: 'P003', service: 'Neurology Consult', patientAvatarUrl: 'https://placehold.co/100x100/A0AEC0/FFFFFF?text=B', isSelected: false),
+    DashboardAppointments(patientName: 'David', patientAge: 26, date: '05/12/2022', time: '11:00 AM', reason: 'Fever', doctor: 'Dr. John', status: 'Completed', gender: 'Male', patientId: 'P004', service: 'General Checkup', patientAvatarUrl: 'https://placehold.co/100x100/A0AEC0/FFFFFF?text=D', isSelected: false),
+    DashboardAppointments(patientName: 'Joseph', patientAge: 77, date: '05/12/2022', time: '11:30 AM', reason: 'Throat pain', doctor: 'Dr. John', status: 'Incomplete', gender: 'Male', patientId: 'P005', service: 'ENT Consult', patientAvatarUrl: 'https://placehold.co/100x100/A0AEC0/FFFFFF?text=P', isSelected: false),
+    DashboardAppointments(patientName: 'Lakesh', patientAge: 45, date: '05/12/2022', time: '12:00 PM', reason: 'Cold', doctor: 'Dr. John', status: 'Completed', gender: 'Male', patientId: 'P006', service: 'General Checkup', patientAvatarUrl: 'https://placehold.co/100x100/A0AEC0/FFFFFF?text=L', isSelected: false),
+    DashboardAppointments(patientName: 'Sophia', patientAge: 38, date: '05/12/2022', time: '12:30 PM', reason: 'Check-up', doctor: 'Dr. Amelia', status: 'Completed', gender: 'Female', patientId: 'P007', service: 'Pediatrics', patientAvatarUrl: 'https://placehold.co/100x100/A0AEC0/FFFFFF?text=S', isSelected: false),
+    DashboardAppointments(patientName: 'Ethan', patientAge: 52, date: '05/12/2022', time: '1:00 PM', reason: 'Follow-up', doctor: 'Dr. Amelia', status: 'Incomplete', gender: 'Male', patientId: 'P008', service: 'Cardiology', patientAvatarUrl: 'https://placehold.co/100x100/A0AEC0/FFFFFF?text=E', isSelected: false),
+    DashboardAppointments(patientName: 'Olivia', patientAge: 29, date: '05/12/2022', time: '2:00 PM', reason: 'Consultation', doctor: 'Dr. John', status: 'Completed', gender: 'Female', patientId: 'P009', service: 'Dermatology', patientAvatarUrl: 'https://placehold.co/100x100/A0AEC0/FFFFFF?text=O', isSelected: false),
+    DashboardAppointments(patientName: 'Liam', patientAge: 35, date: '05/12/2022', time: '2:30 PM', reason: 'Headache', doctor: 'Dr. Joel', status: 'Incomplete', gender: 'Male', patientId: 'P010', service: 'General Consult', patientAvatarUrl: 'https://placehold.co/100x100/A0AEC0/FFFFFF?text=L', isSelected: false),
+    DashboardAppointments(patientName: 'Ava', patientAge: 41, date: '05/12/2022', time: '3:00 PM', reason: 'Back Pain', doctor: 'Dr. Amelia', status: 'Completed', gender: 'Female', patientId: 'P011', service: 'Orthopedics', patientAvatarUrl: 'https://placehold.co/100x100/A0AEC0/FFFFFF?text=A', isSelected: false),
   ],
 );
 
@@ -66,22 +55,30 @@ class DoctorDashboardScreen extends StatefulWidget {
 
 class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
   late Future<DoctorDashboardData> _dashboardFuture;
-  String _searchQuery = '';
+  String _searchQuery = ''; // State for search query is now managed directly here for the dashboard content
 
   @override
   void initState() {
     super.initState();
     _dashboardFuture = _fetchDashboardData();
   }
-  void _showAppointmentDetails(DashboardAppointment appointment) {
+
+  void _showAppointmentDetails(DashboardAppointments appointment) { // Changed to DashboardAppointments
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        // Assuming you have a widget named DoctorAppointmentPreview
+        // Assuming you have a widget named DoctorAppointmentPreview in widgets/doctor_appointment_preview.dart
         return DoctorAppointmentPreview(appointment: appointment);
       },
     );
   }
+
+  void _onNewAppointmentPressed() {
+    // Implement logic for creating a new appointment
+    print('New Appointment button pressed from Dashboard!');
+    // You might navigate to a new screen or show a form here.
+  }
+
   Future<DoctorDashboardData> _fetchDashboardData() async {
     await Future.delayed(const Duration(seconds: 1));
     return _dashboardApiData;
@@ -121,7 +118,14 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
           const SizedBox(height: 24),
           _buildStatsAndWelcomeCards(),
           const SizedBox(height: 24),
-          Expanded(child: _buildAppointmentsSection(filteredAppointments)),
+          // Directly use AppointmentTable here
+          Expanded(
+            child: AppointmentTable(
+              appointments: filteredAppointments,
+              onShowAppointmentDetails: _showAppointmentDetails,
+              onNewAppointmentPressed: _onNewAppointmentPressed,
+            ),
+          ),
         ],
       ),
     );
@@ -251,12 +255,12 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
             width: 100,
             height: 100, // add height here
 
-              // color: Colors.white, // background color
-              child: Image.asset(
-                'assets/sampledoctor.png',
-                fit: BoxFit.contain, height: 250,width: 1000,
-              ),
+            // color: Colors.white, // background color
+            child: Image.asset(
+              'assets/sampledoctor.png',
+              fit: BoxFit.contain, height: 250,width: 1000,
             ),
+          ),
 
         ],
       ),
@@ -356,143 +360,6 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
           color: color,
           borderRadius: BorderRadius.circular(4),
         ),
-      ),
-    );
-  }
-
-  Widget _buildAppointmentsSection(List<DashboardAppointment> appointments) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: cardBackgroundColor,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'APPOINTMENTS',
-                style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFFB91C1C)),
-              ),
-              Row(
-                children: [
-                  SizedBox(
-                    width: 220,
-                    height: 48, // 🔹 fix height
-                    child: TextField(
-                      onChanged: (value) {
-                        setState(() {
-                          _searchQuery = value;
-                        });
-                      },
-                      decoration: InputDecoration(
-                        hintText: 'Search patient name...',
-                        hintStyle: GoogleFonts.inter(fontSize: 14, color: const Color(0xFF9CA3AF)),
-                        prefixIcon: const Icon(Icons.search, size: 20),
-                        isDense: true,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 18), // balanced padding
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: const BorderSide(color: Color(0xFFFCA5A5)),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  SizedBox(
-                    height: 48, // 🔹 same height as TextField
-                    child: ElevatedButton.icon(
-                      onPressed: () {},
-                      icon: const Icon(Icons.add, size: 18, color: Colors.white),
-                      label: Text(
-                        'New Appointment',
-                        style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFDC2626),
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                      ),
-                    ),
-                  ),
-                ],
-              )
-
-            ],
-          ),
-          const SizedBox(height: 16),
-          Expanded(
-            child: SingleChildScrollView(
-              child: SizedBox(
-                width: double.infinity,
-                child: DataTable(
-                  horizontalMargin: 0,
-                  columnSpacing: 16,
-                  columns: [
-                    DataColumn(label: Text('Patient Name', style: GoogleFonts.poppins(fontWeight: FontWeight.w800, color: const Color(0xFF991B1B), fontSize: 16))),
-                    DataColumn(label: Padding(padding: EdgeInsets.only(left: 26), child: Text('Age', style: GoogleFonts.poppins(fontWeight: FontWeight.w800, color: Color(0xFF991B1B), fontSize: 16),),),),
-                    DataColumn(label: Padding(padding: EdgeInsets.only(left: 36),child: Text('Date', style: GoogleFonts.poppins(fontWeight: FontWeight.w800, color: const Color(0xFF991B1B), fontSize: 16)))),
-                    DataColumn(label: Padding(padding: EdgeInsets.only(left: 36),child: Text('Time', style: GoogleFonts.poppins(fontWeight: FontWeight.w800, color: const Color(0xFF991B1B), fontSize: 16)))),
-                    DataColumn(label: Padding(padding: EdgeInsets.only(left: 36),child: Text('Reason', style: GoogleFonts.poppins(fontWeight: FontWeight.w800, color: const Color(0xFF991B1B), fontSize: 16)))),
-                    DataColumn(label: Padding(padding: EdgeInsets.only(left: 36),child: Text('Status', style: GoogleFonts.poppins(fontWeight: FontWeight.w800, color: const Color(0xFF991B1B), fontSize: 16)))),
-                     DataColumn(label: Padding(padding: EdgeInsets.only(left: 76),child: Text('Actions', style: GoogleFonts.poppins(fontWeight: FontWeight.w800, color: const Color(0xFF991B1B), fontSize: 16)))),
-                  ],
-                  rows: appointments.map((appt) => DataRow(
-                      color: MaterialStateProperty.resolveWith<Color?>((Set<MaterialState> states) {
-                        return appointments.indexOf(appt) % 2 == 0 ? null : const Color(0xFFFEF2F2);
-                      }),
-                      cells: [
-                        DataCell(
-                            Row(
-                              children: [
-                                CircleAvatar(
-                                  backgroundImage: AssetImage(
-                                      appt.gender == 'Male' ? 'assets/boyicon.png' : 'assets/girlicon.png'
-                                  ),
-                                  radius: 16,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(appt.patientName, style: const TextStyle(fontSize: 14)),
-                              ],
-                            )
-                        ),
-                        DataCell(Center(child: Text(appt.patientAge.toString(), style: const TextStyle(fontSize: 14)))),
-                        DataCell(Center(child: Text(appt.date, style: const TextStyle(fontSize: 14)))),
-                        DataCell(Center(child: Text(appt.time, style: const TextStyle(fontSize: 14)))),
-                        DataCell(Center(child: Text(appt.reason, style: const TextStyle(fontSize: 14)))),
-                        DataCell(Center(child: Text(appt.status, style: GoogleFonts.poppins(color: appt.status == 'Incomplete' ? const Color(0xFFDC2626) : textSecondaryColor, fontWeight: FontWeight.w600, fontSize: 14)))),
-                        DataCell(
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                ElevatedButton(
-                                  onPressed: () {},
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFFF87171),
-                                    foregroundColor: Colors.white,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                                    minimumSize: const Size(0, 24),
-                                  ),
-                                  child: const Text('Intake', style: TextStyle(fontSize: 12)),
-                                ),
-                                IconButton(icon: const Icon(Icons.edit, size: 18, color: Color(0xFFDC2626)), onPressed: () {}),
-                                IconButton(icon: const Icon(Icons.delete, size: 18, color: Color(0xFFDC2626)), onPressed: () {}),
-                                IconButton(icon: const Icon(Icons.remove_red_eye_outlined, size: 18, color: Color(0xFFDC2626)), onPressed: () => _showAppointmentDetails(appt)),
-                              ],
-                            )
-                        ),
-                      ])).toList(),
-                ),
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }

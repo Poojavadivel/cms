@@ -1,19 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../DashboardPage.dart';
+import 'dart:math';
 
-// --- App Theme Colors from HTML ---
-const Color primaryColor = Color(0xFFCF1717);
-const Color backgroundColor = Color(0xFFF8F9FA);
-const Color cardBackgroundColor = Color(0xFFFFFFFF);
-const Color textPrimaryColor = Color(0xFF333333);
-const Color textSecondaryColor = Color(0xFF666666);
-const Color red100 = Color(0xFFFEE2E2);
-const Color red500 = Color(0xFFEF4444);
-const Color red600 = Color(0xFFDC2626);
-const Color red800 = Color(0xFF991B1B);
+// Import the centralized DashboardAppointments model
+// Adjust this path based on your exact file structure
+
+import '../../../Models/dashboardmodels.dart'; // Corrected import path
+
+// --- App Theme Colors ---
+const Color primaryColor = Color(0xFFCF1717); // Used for general primary actions, indicators
+const Color backgroundColor = Color(0xFFF8F9FA); // General background
+const Color cardBackgroundColor = Color(0xFFFFFFFF); // Background for cards
+const Color textPrimaryColor = Color(0xFF333333); // Main text color
+const Color textSecondaryColor = Color(0xFF666666); // Secondary text color, unselected tabs
+
+const Color red100 = Color(0xFFFEE2E2); // Light red for backgrounds (e.g., welcome card)
+const Color red500 = Color(0xFFEF4444); // Red for buttons, accents
+const Color red600 = Color(0xFFDC2626); // Darker red for icons
+const Color red800 = Color(0xFF991B1B); // Even darker red for prominent text, headers
 
 // --- Data Models ---
+// REMOVED DashboardAppointment definition from here.
+// It is now imported from '../../../../models/dashboard_models.dart';
+
 class PatientDetails {
   final String patientId;
   final String name;
@@ -129,7 +138,7 @@ final List<Map<String, dynamic>> _checkupApiData = [
 
 // --- Main Preview Widget ---
 class DoctorAppointmentPreview extends StatefulWidget {
-  final DashboardAppointment appointment;
+  final DashboardAppointments appointment; // Changed to DashboardAppointments
   const DoctorAppointmentPreview({super.key, required this.appointment});
 
   @override
@@ -234,7 +243,7 @@ class _DoctorAppointmentPreviewState extends State<DoctorAppointmentPreview> wit
           style: GoogleFonts.lexend(
             fontSize: 22,
             fontWeight: FontWeight.w700,
-            color: const Color.fromRGBO(213, 84, 55, 1),
+            color: red600, // Using red600 from new color palette
           ),
         ),
         IconButton(
@@ -261,7 +270,7 @@ class _DoctorAppointmentPreviewState extends State<DoctorAppointmentPreview> wit
                   style: GoogleFonts.inter(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
-                    color: const Color(0xFF111827),
+                    color: textPrimaryColor, // Using textPrimaryColor
                   ),
                   child: _buildPatientInfoCard(patient),
                 ),
@@ -273,7 +282,7 @@ class _DoctorAppointmentPreviewState extends State<DoctorAppointmentPreview> wit
                   style: GoogleFonts.inter(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
-                    color: const Color(0xFF111827),
+                    color: textPrimaryColor, // Using textPrimaryColor
                   ),
                   child: _buildContactAndInsuranceCard(patient),
                 ),
@@ -287,7 +296,7 @@ class _DoctorAppointmentPreviewState extends State<DoctorAppointmentPreview> wit
               style: GoogleFonts.inter(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
-                color: const Color(0xFF111827),
+                color: textPrimaryColor, // Using textPrimaryColor
               ),
               child: _buildPatientInfoCard(patient),
             ),
@@ -296,7 +305,7 @@ class _DoctorAppointmentPreviewState extends State<DoctorAppointmentPreview> wit
               style: GoogleFonts.inter(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
-                color: const Color(0xFF111827),
+                color: textPrimaryColor, // Using textPrimaryColor
               ),
               child: _buildContactAndInsuranceCard(patient),
             ),
@@ -311,7 +320,7 @@ class _DoctorAppointmentPreviewState extends State<DoctorAppointmentPreview> wit
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: red100,
+        color: red100, // Using red100 from new color palette
         borderRadius: BorderRadius.circular(8),
         boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 6, offset: const Offset(0, 4))],
       ),
