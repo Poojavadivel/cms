@@ -4,8 +4,6 @@ import 'dart:math';
 
 // Import the centralized DashboardAppointments model
 // Ensure this path correctly points to your models folder from DashboardPage.dart
-
-// Import the AppointmentTable widget
 import '../../Models/dashboardmodels.dart';
 import 'widgets/Appoimentstable.dart';
 import 'widgets/doctor_appointment_preview.dart'; // Assuming this widget exists for previewing appointments
@@ -17,16 +15,23 @@ const Color cardBackgroundColor = Color(0xFFFFFFFF);
 const Color textPrimaryColor = Color(0xFF333333);
 const Color textSecondaryColor = Color(0xFF666666);
 
+// Specific colors used in the table
+const Color _appointmentsHeaderColor = Color(0xFFB91C1C);
+const Color _tableHeaderColor = Color(0xFF991B1B);
+const Color _searchBorderColor = Color(0xFFFCA5A5);
+const Color _buttonBgColor = Color(0xFFDC2626);
+const Color _statusIncompleteColor = Color(0xFFDC2626);
+const Color _rowAlternateColor = Color(0xFFFEF2F2);
+const Color _intakeButtonColor = Color(0xFFF87171);
+
+
 // --- Data Models ---
 // The DashboardAppointments class definition is now in '../../../models/dashboard_appointment.dart';
 // REMOVED the DashboardAppointment class definition from here to avoid type conflicts.
 
 /// A container class to hold a list of [DashboardAppointments].
 /// This is typically used to represent the overall data fetched for a dashboard or list view.
-class DoctorDashboardData {
-  final List<DashboardAppointments> appointments; // Changed to DashboardAppointments
-  DoctorDashboardData({required this.appointments});
-}
+
 
 // --- Simulated API Data ---
 final _dashboardApiData = DoctorDashboardData(
@@ -56,6 +61,7 @@ class DoctorDashboardScreen extends StatefulWidget {
 class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
   late Future<DoctorDashboardData> _dashboardFuture;
   String _searchQuery = ''; // State for search query is now managed directly here for the dashboard content
+  int _currentPage = 0;
 
   @override
   void initState() {
@@ -82,6 +88,25 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
   Future<DoctorDashboardData> _fetchDashboardData() async {
     await Future.delayed(const Duration(seconds: 1));
     return _dashboardApiData;
+  }
+
+  void _updateSearchQuery(String value) {
+    setState(() {
+      _searchQuery = value;
+      _currentPage = 0; // Reset page on new search
+    });
+  }
+
+  void _goToNextPage() {
+    setState(() {
+      _currentPage++;
+    });
+  }
+
+  void _goToPreviousPage() {
+    setState(() {
+      _currentPage--;
+    });
   }
 
   @override
@@ -124,6 +149,11 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
               appointments: filteredAppointments,
               onShowAppointmentDetails: _showAppointmentDetails,
               onNewAppointmentPressed: _onNewAppointmentPressed,
+              searchQuery: _searchQuery,
+              onSearchChanged: _updateSearchQuery,
+              currentPage: _currentPage,
+              onNextPage: _goToNextPage,
+              onPreviousPage: _goToPreviousPage,
             ),
           ),
         ],

@@ -1,8 +1,3 @@
-// lib/models/dashboard_models.dart
-
-/// Represents a single appointment entry in the dashboard.
-/// Contains details about the patient, date, time, reason, doctor, status,
-/// gender (for icon selection), patient ID, service, and an optional avatar URL.
 class DashboardAppointments {
   final String patientName;
   final int patientAge;
@@ -15,7 +10,22 @@ class DashboardAppointments {
   final String patientId;
   final String service;
   final String patientAvatarUrl; // Optional: for network images if needed
-  bool isSelected; // Added for checkbox functionality
+  bool isSelected;
+
+
+  // Extended fields for detailed preview
+  final String diabetesType;
+  final String location;
+  final String occupation;
+  final String dob;
+  final double bmi;
+  final int weight;
+  final int height;
+  final String bp;
+  final List<String> diagnosis;
+  final List<String> barriers;
+  final List<Map<String, String>> timeline;
+  final Map<String, String> history;
 
   DashboardAppointments({
     required this.patientName,
@@ -28,11 +38,24 @@ class DashboardAppointments {
     required this.gender,
     required this.patientId,
     required this.service,
-    this.patientAvatarUrl = '', // Default empty string
-    this.isSelected = false, // Default to false
+    this.patientAvatarUrl = '',
+    this.isSelected = false,
+
+    // New fields
+    this.diabetesType = 'Type 2',
+    this.location = '',
+    this.occupation = '',
+    this.dob = '',
+    this.bmi = 0.0,
+    this.weight = 0,
+    this.height = 0,
+    this.bp = '',
+    this.diagnosis = const [],
+    this.barriers = const [],
+    this.timeline = const [],
+    this.history = const {},
   });
 
-  // Added a copyWith method to easily create a new instance with updated properties
   DashboardAppointments copyWith({
     String? patientName,
     int? patientAge,
@@ -46,6 +69,20 @@ class DashboardAppointments {
     String? service,
     String? patientAvatarUrl,
     bool? isSelected,
+
+    // New fields
+    String? diabetesType,
+    String? location,
+    String? occupation,
+    String? dob,
+    double? bmi,
+    int? weight,
+    int? height,
+    String? bp,
+    List<String>? diagnosis,
+    List<String>? barriers,
+    List<Map<String, String>>? timeline,
+    Map<String, String>? history,
   }) {
     return DashboardAppointments(
       patientName: patientName ?? this.patientName,
@@ -60,12 +97,23 @@ class DashboardAppointments {
       service: service ?? this.service,
       patientAvatarUrl: patientAvatarUrl ?? this.patientAvatarUrl,
       isSelected: isSelected ?? this.isSelected,
+
+      diabetesType: diabetesType ?? this.diabetesType,
+      location: location ?? this.location,
+      occupation: occupation ?? this.occupation,
+      dob: dob ?? this.dob,
+      bmi: bmi ?? this.bmi,
+      weight: weight ?? this.weight,
+      height: height ?? this.height,
+      bp: bp ?? this.bp,
+      diagnosis: diagnosis ?? this.diagnosis,
+      barriers: barriers ?? this.barriers,
+      timeline: timeline ?? this.timeline,
+      history: history ?? this.history,
     );
   }
 }
 
-/// A container class to hold a list of [DashboardAppointments].
-/// This is typically used to represent the overall data fetched for a dashboard or list view.
 class DoctorDashboardData {
   final List<DashboardAppointments> appointments;
 
