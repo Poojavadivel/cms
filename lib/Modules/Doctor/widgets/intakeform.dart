@@ -11,6 +11,80 @@ const Color badgeColor = Color(0xFFD97706);
 const Color badgeBgColor = Color(0xFFFEF3C7);
 const Color borderColor = Color(0xFFE5E7EB);
 
+/// =========================
+/// 1) CALL THIS FOR POPUP
+/// =========================
+Future<void> showIntakeFormDialog(
+    BuildContext context,
+    DashboardAppointments appt,
+    ) {
+  return showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (ctx) {
+      final size = MediaQuery.of(ctx).size;
+      // responsive max sizes for desktop/tablet/phone
+      final maxW = size.width.clamp(360, 920).toDouble();
+      final maxH = size.height.clamp(420, 760).toDouble();
+
+      return Dialog(
+        insetPadding: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: SafeArea(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: maxW, maxHeight: maxH),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Material(
+                color: backgroundColor,
+                child: Column(
+                  children: [
+                    // Header (acts like AppBar in dialog)
+                    Container(
+                      height: 56,
+                      color: primaryColor,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Row(
+                        children: [
+                          const Text(
+                            'Patient Intake',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const Spacer(),
+                          IconButton(
+                            onPressed: () => Navigator.of(ctx).pop(),
+                            icon: const Icon(Icons.close, color: Colors.white),
+                            tooltip: 'Close',
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Body
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: IntakeFormBody(appt: appt),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    },
+  );
+}
+
+/// =========================
+/// 2) KEEP YOUR PAGE ROUTE
+/// =========================
 class IntakeFormPage extends StatelessWidget {
   final DashboardAppointments appt;
   const IntakeFormPage({super.key, required this.appt});
@@ -24,194 +98,219 @@ class IntakeFormPage extends StatelessWidget {
         backgroundColor: primaryColor,
         foregroundColor: Colors.white,
       ),
-      body: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // LEFT: patient details
-          Expanded(
-            flex: 1,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Card(
-                color: cardBackgroundColor,
-                elevation: 3,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: ListView(
-                    children: [
-                      CircleAvatar(
-                        radius: 40,
-                        backgroundColor: const Color(0xFFF1F5F9),
-                        child: Icon(
-                          appt.gender.toLowerCase() == 'female'
-                              ? Icons.person_2
-                              : Icons.person,
-                          size: 48,
-                          color: textSecondaryColor,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(appt.patientName,
-                          style: const TextStyle(
-                              fontSize: 18, fontWeight: FontWeight.w700, color: textPrimaryColor)),
-                      const SizedBox(height: 6),
-                      Text('Age ${appt.patientAge} • ${appt.gender}',
-                          style: const TextStyle(color: textSecondaryColor)),
-                      const Divider(height: 24),
-                      _row('Date', appt.date),
-                      _row('Time', appt.time),
-                      _row('Reason', appt.reason),
-                      _row('Status', appt.status),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-
-          // RIGHT: intake sections
-          Expanded(
-            flex: 2,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(8, 16, 16, 16),
-              child: ListView(
-                children: [
-                  _IntakeSectionCard(
-                    icon: Icons.history_edu,
-                    title: 'Patient History',
-                    description: 'Add medical history, surgeries, chronic conditions.',
-                    needUpdate: true,
-                    onTap: () => _openBottomSheet(context, 'Patient History', const [
-                      _TextField(label: 'Chronic Conditions'),
-                      _TextField(label: 'Past Surgeries'),
-                      _ChipsField(label: 'Lifestyle', suggestions: ['Smoker', 'Alcohol', 'Sedentary']),
-                    ]),
-                  ),
-                  _IntakeSectionCard(
-                    icon: Icons.sick,
-                    title: 'Current Symptoms',
-                    description: 'Chief complaint, onset date, pain scale.',
-                    needUpdate: true,
-                    onTap: () => _openBottomSheet(context, 'Current Symptoms', const [
-                      _TextField(label: 'Primary Complaint'),
-                      _DateField(label: 'Onset Date'),
-                      _SliderField(label: 'Pain (0-10)'),
-                    ]),
-                  ),
-                  _IntakeSectionCard(
-                    icon: Icons.medication_liquid,
-                    title: 'Allergies & Medications',
-                    description: 'List allergies and current meds.',
-                    needUpdate: false,
-                    onTap: () => _openBottomSheet(context, 'Allergies & Medications', const [
-                      _ChipsField(label: 'Allergies', suggestions: ['Penicillin', 'Peanuts', 'Dust']),
-                      _RepeaterField(label: 'Medications', fields: ['Name', 'Dosage', 'Frequency']),
-                    ]),
-                  ),
-                  _IntakeSectionCard(
-                    icon: Icons.credit_card,
-                    title: 'Insurance & Billing',
-                    description: 'Insurance details or mark self-pay.',
-                    needUpdate: true,
-                    onTap: () => _openBottomSheet(context, 'Insurance & Billing', const [
-                      _DropdownField(label: 'Payer', items: ['Aetna', 'Cigna', 'Star Health', 'Self-pay']),
-                      _TextField(label: 'Policy Number'),
-                      _MonthYearField(label: 'Valid Thru'),
-                    ]),
-                  ),
-                  _IntakeSectionCard(
-                    icon: Icons.verified_user,
-                    title: 'Consent',
-                    description: 'Required before treatment.',
-                    needUpdate: true,
-                    onTap: () => _openBottomSheet(context, 'Consent', const [
-                      _CheckboxField(text: 'I consent to treatment and data processing.'),
-                      _CheckboxField(text: 'I agree to receive appointment notifications.'),
-                    ]),
-                  ),
-                  const SizedBox(height: 12),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        // TODO: submit intake
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Intake saved')),
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: primaryColor,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                      child: const Text('Save & Continue'),
-                    ),
-                  )
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _row(String k, String v) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 6),
-    child: Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(k, style: const TextStyle(color: textSecondaryColor)),
-        Text(v, style: const TextStyle(color: textPrimaryColor, fontWeight: FontWeight.w600)),
-      ],
-    ),
-  );
-
-  void _openBottomSheet(BuildContext context, String title, List<Widget> fields) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
-      builder: (_) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-          left: 16, right: 16, top: 16,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(children: [
-              Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-              const Spacer(),
-              IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close)),
-            ]),
-            const SizedBox(height: 8),
-            ...fields,
-            const SizedBox(height: 12),
-            Align(
-              alignment: Alignment.centerRight,
-              child: ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: primaryColor,
-                  foregroundColor: Colors.white,
-                ),
-                child: const Text('Save'),
-              ),
-            ),
-            const SizedBox(height: 16),
-          ],
-        ),
+      body: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: IntakeFormBody(appt: appt),
       ),
     );
   }
 }
 
-// ---- small input widgets ----
+/// =========================
+/// 3) SHARED BODY (PAGE/POPUP)
+/// =========================
+class IntakeFormBody extends StatelessWidget {
+  final DashboardAppointments appt;
+  const IntakeFormBody({super.key, required this.appt});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // LEFT: patient details
+        Expanded(
+          flex: 1,
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Card(
+              color: cardBackgroundColor,
+              elevation: 3,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: ListView(
+                  children: [
+                    CircleAvatar(
+                      radius: 40,
+                      backgroundColor: const Color(0xFFF1F5F9),
+                      child: Icon(
+                        appt.gender.toLowerCase() == 'female'
+                            ? Icons.person_2
+                            : Icons.person,
+                        size: 48,
+                        color: textSecondaryColor,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(appt.patientName,
+                        style: const TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.w700, color: textPrimaryColor)),
+                    const SizedBox(height: 6),
+                    Text('Age ${appt.patientAge} • ${appt.gender}',
+                        style: const TextStyle(color: textSecondaryColor)),
+                    const Divider(height: 24),
+                    _kvRow('Date', appt.date),
+                    _kvRow('Time', appt.time),
+                    _kvRow('Reason', appt.reason),
+                    _kvRow('Status', appt.status),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+
+        // RIGHT: intake sections
+        Expanded(
+          flex: 2,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(4, 8, 8, 8),
+            child: ListView(
+              children: [
+                _IntakeSectionCard(
+                  icon: Icons.history_edu,
+                  title: 'Patient History',
+                  description: 'Add medical history, surgeries, chronic conditions.',
+                  needUpdate: true,
+                  onTap: () => openIntakeBottomSheet(context, 'Patient History', const [
+                    _TextField(label: 'Chronic Conditions'),
+                    _TextField(label: 'Past Surgeries'),
+                    _ChipsField(label: 'Lifestyle', suggestions: ['Smoker', 'Alcohol', 'Sedentary']),
+                  ]),
+                ),
+                _IntakeSectionCard(
+                  icon: Icons.sick,
+                  title: 'Current Symptoms',
+                  description: 'Chief complaint, onset date, pain scale.',
+                  needUpdate: true,
+                  onTap: () => openIntakeBottomSheet(context, 'Current Symptoms', const [
+                    _TextField(label: 'Primary Complaint'),
+                    _DateField(label: 'Onset Date'),
+                    _SliderField(label: 'Pain (0-10)'),
+                  ]),
+                ),
+                _IntakeSectionCard(
+                  icon: Icons.medication_liquid,
+                  title: 'Allergies & Medications',
+                  description: 'List allergies and current meds.',
+                  needUpdate: false,
+                  onTap: () => openIntakeBottomSheet(context, 'Allergies & Medications', const [
+                    _ChipsField(label: 'Allergies', suggestions: ['Penicillin', 'Peanuts', 'Dust']),
+                    _RepeaterField(label: 'Medications', fields: ['Name', 'Dosage', 'Frequency']),
+                  ]),
+                ),
+                _IntakeSectionCard(
+                  icon: Icons.credit_card,
+                  title: 'Insurance & Billing',
+                  description: 'Insurance details or mark self-pay.',
+                  needUpdate: true,
+                  onTap: () => openIntakeBottomSheet(context, 'Insurance & Billing', const [
+                    _DropdownField(label: 'Payer', items: ['Aetna', 'Cigna', 'Star Health', 'Self-pay']),
+                    _TextField(label: 'Policy Number'),
+                    _MonthYearField(label: 'Valid Thru'),
+                  ]),
+                ),
+                _IntakeSectionCard(
+                  icon: Icons.verified_user,
+                  title: 'Consent',
+                  description: 'Required before treatment.',
+                  needUpdate: true,
+                  onTap: () => openIntakeBottomSheet(context, 'Consent', const [
+                    _CheckboxField(text: 'I consent to treatment and data processing.'),
+                    _CheckboxField(text: 'I agree to receive appointment notifications.'),
+                  ]),
+                ),
+                const SizedBox(height: 12),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      // Submit intake (close dialog if in dialog, else pop page)
+                      Navigator.of(context).maybePop();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Intake saved')),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: primaryColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    child: const Text('Save & Continue'),
+                  ),
+                )
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// ---------- shared helpers (top-level so both page & dialog can use) ----------
+Widget _kvRow(String k, String v) => Padding(
+  padding: const EdgeInsets.symmetric(vertical: 6),
+  child: Row(
+    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    children: [
+      Text(k, style: const TextStyle(color: textSecondaryColor)),
+      Flexible(
+        child: Text(
+          v,
+          textAlign: TextAlign.end,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(color: textPrimaryColor, fontWeight: FontWeight.w600),
+        ),
+      ),
+    ],
+  ),
+);
+
+void openIntakeBottomSheet(BuildContext context, String title, List<Widget> fields) {
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
+    builder: (_) => Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+        left: 16, right: 16, top: 16,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(children: [
+            Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+            const Spacer(),
+            IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close)),
+          ]),
+          const SizedBox(height: 8),
+          ...fields,
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerRight,
+            child: ElevatedButton(
+              onPressed: () => Navigator.pop(context),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryColor,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Save'),
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
+      ),
+    ),
+  );
+}
+
+/// ---- small input widgets ----
 class _IntakeSectionCard extends StatelessWidget {
   final IconData icon;
   final String title;

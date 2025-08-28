@@ -379,18 +379,15 @@ class _AppointmentDataView extends StatelessWidget {
               // Intake -> IntakeFormPage
               ElevatedButton(
                 onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => IntakeFormPage(appt: appt)),
-                  );
+                  showIntakeFormDialog(context, appt); // 👈 opens as dialog instead of route
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _intakeButtonColor,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20)),
-                  padding:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   minimumSize: const Size(0, 26),
                 ),
                 child: const Text('Intake', style: TextStyle(fontSize: 11)),
