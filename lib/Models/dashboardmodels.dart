@@ -56,6 +56,8 @@ class DashboardAppointments {
     this.history = const {},
   });
 
+  get notes => null;
+
   DashboardAppointments copyWith({
     String? patientName,
     int? patientAge,

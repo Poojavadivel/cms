@@ -7,7 +7,11 @@ import '../../../Utils/Colors.dart';
 import 'Addnewappoiments.dart';
 import 'Editappoimentspage.dart';
 
-// --- DashboardAppointments model class ---
+// ✅ Preview dialog widget
+import 'doctor_appointment_preview.dart';
+// ✅ New pages we wire to (stubs below)
+import 'eyeicon.dart';
+import 'intakeform.dart';
 
 // --- App Theme Colors ---
 const Color primaryColor = Color(0xFFEF4444);
@@ -22,12 +26,13 @@ const Color _statusIncompleteColor = Color(0xFFDC2626);
 const Color _rowAlternateColor = Color(0xFFFEF2F2);
 const Color _intakeButtonColor = Color(0xFFF87171);
 
-// A simple example of the data you would pass to the widget.
-
 // --- AppointmentTable Widget ---
 class AppointmentTable extends StatelessWidget {
   final List<DashboardAppointments> appointments;
+
+  // kept for backward compatibility with your parent
   final void Function(DashboardAppointments) onShowAppointmentDetails;
+
   final VoidCallback onNewAppointmentPressed;
   final String searchQuery;
   final ValueChanged<String> onSearchChanged;
@@ -86,34 +91,18 @@ class AppointmentTable extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Top controls
           _AppointmentTableControls(
             searchQuery: searchQuery,
             onSearchChanged: onSearchChanged,
             onNewAppointmentPressed: onNewAppointmentPressed,
           ),
-
-          // 👇 control the TOP gap here
-          const SizedBox(height: 8), // reduce or increase top spacing
-
-          // Table expands in middle
+          const SizedBox(height: 8),
           Expanded(
             child: _AppointmentDataView(
               appointments: _paginatedAppointments,
-              onShowAppointmentDetails: onShowAppointmentDetails,
-              tableHeaderColor: _tableHeaderColor,
-              rowAlternateColor: _rowAlternateColor,
-              statusIncompleteColor: _statusIncompleteColor,
-              intakeButtonColor: _intakeButtonColor,
-              buttonBgColor: _buttonBgColor,
-              textSecondaryColor: textSecondaryColor,
             ),
           ),
-
-          // 👇 control the BOTTOM gap here
-          const SizedBox(height: 1), // reduce or increase bottom spacing
-
-          // Pagination always at bottom
+          const SizedBox(height: 1),
           _PaginationControls(
             currentPage: currentPage,
             itemsPerPage: itemsPerPage,
@@ -127,8 +116,7 @@ class AppointmentTable extends StatelessWidget {
   }
 }
 
-// --- Sub-widget: AppointmentTableControls ---
-// --- Sub-widget: AppointmentTableControls ---
+// --- Top controls ---
 class _AppointmentTableControls extends StatelessWidget {
   final String searchQuery;
   final ValueChanged<String> onSearchChanged;
@@ -170,10 +158,8 @@ class _AppointmentTableControls extends StatelessWidget {
                   ),
                   prefixIcon: const Icon(Icons.search, size: 20),
                   isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 17,
-                  ),
+                  contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 17),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                     borderSide: const BorderSide(color: _searchBorderColor),
@@ -190,13 +176,15 @@ class _AppointmentTableControls extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 16),
+
+            // New Appointment (no IconX here → avoids name collision)
             SizedBox(
               height: 48,
               child: ElevatedButton.icon(
                 onPressed: () {
                   showDialog(
                     context: context,
-                    barrierDismissible: false, // user must press Close or Save
+                    barrierDismissible: false,
                     builder: (context) {
                       return Dialog(
                         backgroundColor: Colors.transparent,
@@ -209,8 +197,9 @@ class _AppointmentTableControls extends StatelessWidget {
                               color: Colors.white,
                               child: AddAppointmentForm(
                                 onSubmit: (draft) {
-                                  Navigator.pop(context, draft); // close popup after submit
-                                  debugPrint("Appointment created: ${draft.toJson()}");
+                                  Navigator.pop(context, draft);
+                                  debugPrint(
+                                      "Appointment created: ${draft.toJson()}");
                                 },
                               ),
                             ),
@@ -221,7 +210,7 @@ class _AppointmentTableControls extends StatelessWidget {
                   );
                 },
                 icon: const Icon(
-                  IconX.add, // ✅ use IconX
+                  Icons.add_rounded, // ✅ Fixed
                   size: 18,
                   color: Colors.white,
                 ),
@@ -236,13 +225,13 @@ class _AppointmentTableControls extends StatelessWidget {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary600,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                  padding:
+                  const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
                 ),
               ),
-
             ),
           ],
         ),
@@ -251,105 +240,79 @@ class _AppointmentTableControls extends StatelessWidget {
   }
 }
 
-// --- Sub-widget: AppointmentDataView ---
+// --- Table view ---
 class _AppointmentDataView extends StatelessWidget {
   final List<DashboardAppointments> appointments;
-  final void Function(DashboardAppointments) onShowAppointmentDetails;
-  final Color tableHeaderColor;
-  final Color rowAlternateColor;
-  final Color statusIncompleteColor;
-  final Color intakeButtonColor;
-  final Color buttonBgColor;
-  final Color textSecondaryColor;
 
   const _AppointmentDataView({
     required this.appointments,
-    required this.onShowAppointmentDetails,
-    required this.tableHeaderColor,
-    required this.rowAlternateColor,
-    required this.statusIncompleteColor,
-    required this.intakeButtonColor,
-    required this.buttonBgColor,
-    required this.textSecondaryColor,
   });
-
-
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return Scrollbar(
-          thumbVisibility: true,
-          child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal, // ✅ horizontal scrolling
+    return LayoutBuilder(builder: (context, constraints) {
+      return Scrollbar(
+        thumbVisibility: true,
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
           child: ConstrainedBox(
             constraints: BoxConstraints(minWidth: constraints.maxWidth),
-            child: ScrollConfiguration(
-              behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
-              child: SingleChildScrollView(
-                scrollDirection: Axis.vertical, // ✅ vertical scrolling
-                child: Table(
-                  border: const TableBorder(
-                    horizontalInside: BorderSide(
-                      width: 0.5,
-                      color: Color(0xFFE5E7EB),
-                    ),
-                  ),
-                  columnWidths: const {
-                    0: FlexColumnWidth(1), // Patient name
-                    1: FlexColumnWidth(1), // Age
-                    2: FlexColumnWidth(1), // Date
-                    3: FlexColumnWidth(1), // Time
-                    4: FlexColumnWidth(1), // Reason
-                    5: FlexColumnWidth(1), // Status
-                    6: FlexColumnWidth(1), // Actions
-                  },
-                  defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-                  children: [
-                    // --- Header Row ---
-                    TableRow(
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFF9FAFB),
-                      ),
-                      children: [
-                        _buildHeaderCell("Patient Name", Alignment.centerLeft),
-                        _buildHeaderCell("Age", Alignment.center),
-                        _buildHeaderCell("Date", Alignment.center),
-                        _buildHeaderCell("Time", Alignment.center),
-                        _buildHeaderCell("Reason", Alignment.center),
-                        _buildHeaderCell("Status", Alignment.center),
-                        _buildHeaderCell("Actions", Alignment.center),
-                      ],
-                    ),
-
-                    // --- Data Rows ---
-                    for (int i = 0; i < appointments.length; i++)
-                      _buildDataRow(context, appointments[i], i),
-
-
-                  ],
+            child: SingleChildScrollView(
+              scrollDirection: Axis.vertical,
+              child: Table(
+                border: const TableBorder(
+                  horizontalInside:
+                  BorderSide(width: 0.5, color: Color(0xFFE5E7EB)),
                 ),
+                columnWidths: const {
+                  0: FlexColumnWidth(1), // Patient
+                  1: FlexColumnWidth(1), // Age
+                  2: FlexColumnWidth(1), // Date
+                  3: FlexColumnWidth(1), // Time
+                  4: FlexColumnWidth(1), // Reason
+                  5: FlexColumnWidth(1), // Status
+                  6: FlexColumnWidth(1), // Actions
+                },
+                defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                children: [
+                  // Header
+                  TableRow(
+                    decoration:
+                    const BoxDecoration(color: Color(0xFFF9FAFB)),
+                    children: [
+                      _header('Patient Name', Alignment.centerLeft),
+                      _header('Age', Alignment.center),
+                      _header('Date', Alignment.center),
+                      _header('Time', Alignment.center),
+                      _header('Reason', Alignment.center),
+                      _header('Status', Alignment.center),
+                      _header('Actions', Alignment.center),
+                    ],
+                  ),
+
+                  // Rows
+                  for (int i = 0; i < appointments.length; i++)
+                    _row(context, appointments[i], i),
+                ],
               ),
             ),
           ),
-        )
-        );
-      },
-    );
+        ),
+      );
+    });
   }
 
-  /// Header cell builder
-  Widget _buildHeaderCell(String title, Alignment alignment) {
+  // Header cell
+  Widget _header(String title, Alignment align) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
       child: Align(
-        alignment: alignment,
+        alignment: align,
         child: Text(
           title,
           style: GoogleFonts.poppins(
             fontWeight: FontWeight.w800,
-            color: tableHeaderColor,
+            color: _tableHeaderColor,
             fontSize: 15,
           ),
         ),
@@ -357,142 +320,138 @@ class _AppointmentDataView extends StatelessWidget {
     );
   }
 
-  /// Data row builder
-  TableRow _buildDataRow(BuildContext context, DashboardAppointments appt, int index)
-  {
+  // Data row
+  TableRow _row(BuildContext context, DashboardAppointments appt, int index) {
     return TableRow(
-      decoration: BoxDecoration(
-        color: index % 2 == 0 ? null : rowAlternateColor,
-      ),
+      decoration:
+      BoxDecoration(color: index.isEven ? null : _rowAlternateColor),
       children: [
-        // Patient Name + Avatar
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
-          child: Row(
-            children: [
-              CircleAvatar(
-                radius: 16,
-                backgroundImage: appt.gender.toLowerCase() == 'male'
-                    ? const AssetImage('assets/boyicon.png')
-                    : appt.gender.toLowerCase() == 'female'
-                    ? const AssetImage('assets/girlicon.png')
-                    : NetworkImage(appt.patientAvatarUrl) as ImageProvider,
-              ),
-              const SizedBox(width: 6),
-              Flexible(
-                child: Text(
-                  appt.patientName,
-                  style: const TextStyle(fontSize: 14),
-                  overflow: TextOverflow.ellipsis,
+        // Patient Name (Tap → Preview dialog)
+        InkWell(
+          onTap: () => _openPreviewDialog(context, appt),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 16,
+                  backgroundImage: appt.gender.toLowerCase() == 'male'
+                      ? const AssetImage('assets/boyicon.png')
+                      : appt.gender.toLowerCase() == 'female'
+                      ? const AssetImage('assets/girlicon.png')
+                      : (appt.patientAvatarUrl.isNotEmpty
+                      ? NetworkImage(appt.patientAvatarUrl)
+                      : const AssetImage('assets/boyicon.png'))
+                  as ImageProvider,
                 ),
-              ),
-            ],
-          ),
-        ),
-        _centeredCell(Text(appt.patientAge.toString(), style: const TextStyle(fontSize: 14))),
-        _centeredCell(Text(appt.date, style: const TextStyle(fontSize: 14))),
-        _centeredCell(Text(appt.time, style: const TextStyle(fontSize: 14))),
-        _centeredCell(Text(appt.reason, style: const TextStyle(fontSize: 14))),
-        _centeredCell(
-          Text(
-            appt.status,
-            style: GoogleFonts.poppins(
-              color: appt.status == 'Incomplete'
-                  ? statusIncompleteColor
-                  : textSecondaryColor,
-              fontWeight: FontWeight.w600,
-              fontSize: 14,
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    appt.patientName,
+                    style: const TextStyle(
+                        fontSize: 14, fontWeight: FontWeight.w500),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
             ),
           ),
         ),
 
-        // Actions
+        _center(appt.patientAge.toString()),
+        _center(appt.date),
+        _center(appt.time),
+        _center(appt.reason),
+        _center(
+          appt.status,
+          color: appt.status == 'Incomplete'
+              ? _statusIncompleteColor
+              : textSecondaryColor,
+          weight: FontWeight.w600,
+        ),
+
+        // Actions: Intake | Edit | Delete | Eye
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 2),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              // Intake -> IntakeFormPage
               ElevatedButton(
-                onPressed: () => print('Intake for ${appt.patientName}'),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => IntakeFormPage(appt: appt)),
+                  );
+                },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: intakeButtonColor,
+                  backgroundColor: _intakeButtonColor,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      borderRadius: BorderRadius.circular(20)),
+                  padding:
+                  const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   minimumSize: const Size(0, 26),
                 ),
                 child: const Text('Intake', style: TextStyle(fontSize: 11)),
               ),
               const SizedBox(width: 4),
+
+              // Edit -> EditAppointmentForm dialog
               SizedBox(
                 width: 28,
                 height: 28,
                 child: IconButton(
                   padding: EdgeInsets.zero,
-                  icon: Icon(Icons.edit, size: 16, color: buttonBgColor),
+                  icon: const Icon(Icons.edit, size: 16, color: _buttonBgColor),
+                  onPressed: () => _openEditDialog(context, appt),
+                ),
+              ),
+
+              // Delete (stub)
+              SizedBox(
+                width: 28,
+                height: 28,
+                child: IconButton(
+                  padding: EdgeInsets.zero,
+                  icon: const Icon(Icons.delete, size: 16, color: _buttonBgColor),
+                  onPressed: () {
+                    // TODO: hook your delete API
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Deleted ${appt.patientName}')),
+                    );
+                  },
+                ),
+              ),
+
+              // Eye -> AppointmentDetailPage
+              SizedBox(
+                width: 28,
+                height: 28,
+                child: IconButton(
+                  padding: EdgeInsets.zero,
+                  icon: const Icon(
+                    Icons.remove_red_eye_outlined,
+                    size: 16,
+                    color: _buttonBgColor,
+                  ),
                   onPressed: () {
                     showDialog(
                       context: context,
-                      barrierDismissible: false,
-                      builder: (_) {
+                      builder: (BuildContext context) {
                         return Dialog(
-                          backgroundColor: Colors.transparent,
                           insetPadding: const EdgeInsets.all(16),
-                          child: ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 600),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child: Material(
-                                color: Colors.white,
-                                child: EditAppointmentForm(
-                                  initial: AppointmentDraft(
-                                    clientName: appt.patientName,
-                                    appointmentType: appt.service, // e.g. "General Checkup"
-                                    date: DateTime.tryParse(appt.date) ?? DateTime.now(),
-                                    time: const TimeOfDay(hour: 10, minute: 30),
-                                    location: "Clinic Room 101",
-                                    notes: appt.reason,
-                                  ),
-                                  onSave: (updated) {
-                                    Navigator.pop(context);
-                                    debugPrint('Updated: ${updated.toJson()}');
-                                  },
-                                  onCancel: () => Navigator.pop(context),
-                                  onDelete: () {
-                                    Navigator.pop(context);
-                                    debugPrint('Deleted appointment for ${appt.patientName}');
-                                  },
-                                ),
-                              ),
-                            ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
                           ),
+                          child: AppointmentDetailPage(appt: appt),
+                          // ✅ or use DoctorAppointmentPreview(appt: appt)
                         );
                       },
                     );
                   },
                 ),
-              ),
-              SizedBox(
-                width: 28,
-                height: 28,
-                child: IconButton(
-                  padding: EdgeInsets.zero,
-                  icon: Icon(Icons.delete, size: 16, color: buttonBgColor),
-                  onPressed: () => print('Delete ${appt.patientName}'),
-                ),
-              ),
-              SizedBox(
-                width: 28,
-                height: 28,
-                child: IconButton(
-                  padding: EdgeInsets.zero,
-                  icon: Icon(Icons.remove_red_eye_outlined,
-                      size: 16, color: buttonBgColor),
-                  onPressed: () => onShowAppointmentDetails(appt),
-                ),
-              ),
+              )
             ],
           ),
         ),
@@ -500,29 +459,77 @@ class _AppointmentDataView extends StatelessWidget {
     );
   }
 
-
-  /// Helper → wrap content in centered Align
-  Widget _centeredCell(Widget child) {
+  // Helpers
+  Widget _center(String text,
+      {Color color = textPrimaryColor, FontWeight weight = FontWeight.w500}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-      child: Center(child: child),
-    );
-  }
-
-  Widget _centerLeftCell(Widget child) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-      child: Align(
-        alignment: Alignment.centerLeft,
-        child: child,
+      child: Center(
+        child: Text(
+          text,
+          style: TextStyle(fontSize: 14, color: color, fontWeight: weight),
+        ),
       ),
     );
   }
 
+  void _openPreviewDialog(BuildContext context, DashboardAppointments appt) {
+    // ✅ Uses your preview widget; expects DoctorAppointmentPreview(appointment: ...)
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (_) => Dialog(
+        insetPadding: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        clipBehavior: Clip.antiAlias,
+        child: DoctorAppointmentPreview(appointment: appt),
+      ),
+    );
+  }
+
+  void _openEditDialog(BuildContext context, DashboardAppointments appt) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.all(16),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Material(
+                color: Colors.white,
+                child: EditAppointmentForm(
+                  initial: AppointmentDraft(
+                    clientName: appt.patientName,
+                    appointmentType: appt.service,
+                    date: DateTime.tryParse(appt.date) ?? DateTime.now(),
+                    time: const TimeOfDay(hour: 10, minute: 30),
+                    location: "Clinic Room 101",
+                    notes: appt.reason,
+                  ),
+                  onSave: (updated) {
+                    Navigator.pop(context);
+                    debugPrint('Updated: ${updated.toJson()}');
+                  },
+                  onCancel: () => Navigator.pop(context),
+                  onDelete: () {
+                    Navigator.pop(context);
+                    debugPrint('Deleted appointment for ${appt.patientName}');
+                  },
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
 }
 
-// --- Sub-widget: PaginationControls ---
-// This widget provides the pagination buttons.
+// --- Pagination ---
 class _PaginationControls extends StatelessWidget {
   final int currentPage;
   final int itemsPerPage;
@@ -540,7 +547,7 @@ class _PaginationControls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final totalPages = (totalItems / itemsPerPage).ceil();
+    final totalPages = (totalItems / itemsPerPage).ceil().clamp(1, 9999);
     final isFirstPage = currentPage == 0;
     final isLastPage = currentPage >= totalPages - 1;
 

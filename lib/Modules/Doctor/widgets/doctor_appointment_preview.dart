@@ -2,12 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../Models/dashboardmodels.dart';
 
-/// DoctorAppointmentPreview
-/// - Red theme
-/// - Pixel-accurate to your screenshot
-/// - Efficient: small widgets, const where safe, no heavy deps
-/// - All tabs working: Overview, Patient profile, BGL Analysis, Medications, Lab results, Mini Goals
-/// - Accepts DashboardAppointments and maps common field names; swap getters if needed
 class DoctorAppointmentPreview extends StatefulWidget {
   final DashboardAppointments appointment;
 
@@ -20,8 +14,7 @@ class DoctorAppointmentPreview extends StatefulWidget {
   State<DoctorAppointmentPreview> createState() => _DoctorAppointmentPreviewState();
 }
 
-class _DoctorAppointmentPreviewState extends State<DoctorAppointmentPreview>
-    with SingleTickerProviderStateMixin {
+class _DoctorAppointmentPreviewState extends State<DoctorAppointmentPreview> with SingleTickerProviderStateMixin {
   // THEME (Enterprise Red)
   static const Color kPrimary = Color(0xFFEF4444); // red-500
   static const Color kPrimary600 = Color(0xFFDC2626); // red-600
@@ -802,45 +795,6 @@ class _KpiStrip extends StatelessWidget {
     );
   }
 }
-
-
-/// Styled key–value block for patient info
-// class _InfoBlock extends StatelessWidget {
-//   const _InfoBlock({required this.label, required this.value});
-//
-//   final String label;
-//   final String value;
-//
-//   @override
-//   Widget build(BuildContext context) {
-//     return SizedBox(
-//       width: 220,
-//       child: Column(
-//         crossAxisAlignment: CrossAxisAlignment.start,
-//         children: [
-//           Text(
-//             label,
-//             style: GoogleFonts.inter(
-//               fontSize: 13,
-//               fontWeight: FontWeight.w500,
-//               color: const Color(0xFF6B7280), // gray-500
-//             ),
-//           ),
-//           const SizedBox(height: 4),
-//           Text(
-//             value,
-//             style: GoogleFonts.lexend(
-//               fontSize: 15,
-//               fontWeight: FontWeight.w600,
-//               color: const Color(0xFF111827), // gray-900
-//             ),
-//           ),
-//         ],
-//       ),
-//     );
-//   }
-// }
-
 
 class _BglTab extends StatelessWidget {
   const _BglTab({required this.series, required TextStyle text});
