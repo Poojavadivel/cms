@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../../Models/appointment_draft.dart';
 import '../../../Models/dashboardmodels.dart';
 import '../../../Utils/Colors.dart';
 import 'Addnewappoiments.dart';
-
-
+import 'Editappoimentspage.dart';
 
 // --- DashboardAppointments model class ---
 
@@ -23,23 +23,6 @@ const Color _rowAlternateColor = Color(0xFFFEF2F2);
 const Color _intakeButtonColor = Color(0xFFF87171);
 
 // A simple example of the data you would pass to the widget.
-final List<DashboardAppointments> _dummyAppointments = List.generate(
-  50,
-      (index) => DashboardAppointments(
-    patientName: 'Patient ${index + 1}',
-    patientAge: 25 + (index % 10),
-    date: '2023-10-${(index % 30) + 1}',
-    time: '1${(index % 10)}:00 PM',
-    reason: 'Check-up',
-    status: (index % 3 == 0) ? 'Complete' : 'Incomplete',
-    patientAvatarUrl: 'https://i.pravatar.cc/300?img=${index + 1}',
-    gender: (index % 2 == 0) ? 'Male' : 'Female',
-    doctor: 'Dr. Jane Doe',
-    patientId: 'ID${index + 1}',
-    service: 'General Checkup',
-  ),
-);
-
 
 // --- AppointmentTable Widget ---
 class AppointmentTable extends StatelessWidget {
@@ -290,6 +273,8 @@ class _AppointmentDataView extends StatelessWidget {
     required this.textSecondaryColor,
   });
 
+
+
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
@@ -340,7 +325,9 @@ class _AppointmentDataView extends StatelessWidget {
 
                     // --- Data Rows ---
                     for (int i = 0; i < appointments.length; i++)
-                      _buildDataRow(appointments[i], i),
+                      _buildDataRow(context, appointments[i], i),
+
+
                   ],
                 ),
               ),
@@ -371,7 +358,8 @@ class _AppointmentDataView extends StatelessWidget {
   }
 
   /// Data row builder
-  TableRow _buildDataRow(DashboardAppointments appt, int index) {
+  TableRow _buildDataRow(BuildContext context, DashboardAppointments appt, int index)
+  {
     return TableRow(
       decoration: BoxDecoration(
         color: index % 2 == 0 ? null : rowAlternateColor,
@@ -444,7 +432,46 @@ class _AppointmentDataView extends StatelessWidget {
                 child: IconButton(
                   padding: EdgeInsets.zero,
                   icon: Icon(Icons.edit, size: 16, color: buttonBgColor),
-                  onPressed: () => print('Edit ${appt.patientName}'),
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      barrierDismissible: false,
+                      builder: (_) {
+                        return Dialog(
+                          backgroundColor: Colors.transparent,
+                          insetPadding: const EdgeInsets.all(16),
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 600),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Material(
+                                color: Colors.white,
+                                child: EditAppointmentForm(
+                                  initial: AppointmentDraft(
+                                    clientName: appt.patientName,
+                                    appointmentType: appt.service, // e.g. "General Checkup"
+                                    date: DateTime.tryParse(appt.date) ?? DateTime.now(),
+                                    time: const TimeOfDay(hour: 10, minute: 30),
+                                    location: "Clinic Room 101",
+                                    notes: appt.reason,
+                                  ),
+                                  onSave: (updated) {
+                                    Navigator.pop(context);
+                                    debugPrint('Updated: ${updated.toJson()}');
+                                  },
+                                  onCancel: () => Navigator.pop(context),
+                                  onDelete: () {
+                                    Navigator.pop(context);
+                                    debugPrint('Deleted appointment for ${appt.patientName}');
+                                  },
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    );
+                  },
                 ),
               ),
               SizedBox(
@@ -493,9 +520,6 @@ class _AppointmentDataView extends StatelessWidget {
   }
 
 }
-
-
-
 
 // --- Sub-widget: PaginationControls ---
 // This widget provides the pagination buttons.
