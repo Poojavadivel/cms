@@ -471,18 +471,13 @@ class _AppointmentDataView extends StatelessWidget {
   }
 
   void _openPreviewDialog(BuildContext context, DashboardAppointments appt) {
-    // ✅ Uses your preview widget; expects DoctorAppointmentPreview(appointment: ...)
     showDialog(
       context: context,
       barrierDismissible: true,
-      builder: (_) => Dialog(
-        insetPadding: const EdgeInsets.all(16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        clipBehavior: Clip.antiAlias,
-        child: DoctorAppointmentPreview(appointment: appt),
-      ),
+      builder: (_) => DoctorAppointmentPreview(appointment: appt),
     );
   }
+
 
   void _openEditDialog(BuildContext context, DashboardAppointments appt) {
     showDialog(

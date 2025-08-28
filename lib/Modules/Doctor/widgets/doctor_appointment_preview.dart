@@ -1,202 +1,39 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../Models/dashboardmodels.dart';
+import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class DoctorAppointmentPreview extends StatefulWidget {
   final DashboardAppointments appointment;
-
-  const DoctorAppointmentPreview({
-    super.key,
-    required this.appointment,
-  });
+  const DoctorAppointmentPreview({super.key, required this.appointment});
 
   @override
-  State<DoctorAppointmentPreview> createState() => _DoctorAppointmentPreviewState();
+  State<DoctorAppointmentPreview> createState() =>
+      _DoctorAppointmentPreviewState();
 }
 
-class _DoctorAppointmentPreviewState extends State<DoctorAppointmentPreview> with SingleTickerProviderStateMixin {
-  // THEME (Enterprise Red)
-  static const Color kPrimary = Color(0xFFEF4444); // red-500
-  static const Color kPrimary600 = Color(0xFFDC2626); // red-600
-  static const Color kBg = Color(0xFFF9FAFB); // gray-50
+
+class _DoctorAppointmentPreviewState extends State<DoctorAppointmentPreview>
+    with SingleTickerProviderStateMixin {
+  // THEME
+  static const Color kPrimary = Color(0xFFEF4444);
+  static const Color kBg = Color(0xFFF9FAFB);
   static const Color kCard = Colors.white;
-  static const Color kText = Color(0xFF111827); // gray-900
-  static const Color kMuted = Color(0xFF6B7280); // gray-500
-  static const Color kBorder = Color(0xFFE5E7EB); // gray-200
-  static const double kRadius = 12;
+  static const Color kText = Color(0xFF111827);
+  static const Color kMuted = Color(0xFF6B7280);
+  static const Color kBorder = Color(0xFFE5E7EB);
+  static const double kRadius = 16;
+
 
   late final TabController _tab;
   late final TextStyle baseText;
 
-  // ========= SAFE ACCESSORS (work off toJson/toMap if available) =========
-  Map<String, dynamic>? _jsonFrom(dynamic o) {
-    try {
-      final m = (o as dynamic).toJson?.call();
-      if (m is Map<String, dynamic>) return m;
-    } catch (_) {}
-    return null;
-  }
-
-  Map<String, dynamic>? _mapFrom(dynamic o) {
-    try {
-      final m = (o as dynamic).toMap?.call();
-      if (m is Map<String, dynamic>) return m;
-    } catch (_) {}
-    return null;
-  }
-
-  /// Returns first non-null string found in any of the given keys in toJson()/toMap().
-  String _getString(List<String> keys, String fallback) {
-    final a = widget.appointment;
-    final jm = _jsonFrom(a);
-    if (jm != null) {
-      for (final k in keys) {
-        final v = jm[k];
-        if (v != null) return v.toString();
-      }
-    }
-    final mm = _mapFrom(a);
-    if (mm != null) {
-      for (final k in keys) {
-        final v = mm[k];
-        if (v != null) return v.toString();
-      }
-    }
-    return fallback;
-  }
-
-  /// Returns a list of strings for the first matching list key in toJson()/toMap().
-  List<String> _getListS(List<String> keys, List<String> fallback) {
-    final a = widget.appointment;
-    final jm = _jsonFrom(a);
-    if (jm != null) {
-      for (final k in keys) {
-        final v = jm[k];
-        if (v is List) return v.map((e) => e.toString()).toList();
-      }
-    }
-    final mm = _mapFrom(a);
-    if (mm != null) {
-      for (final k in keys) {
-        final v = mm[k];
-        if (v is List) return v.map((e) => e.toString()).toList();
-      }
-    }
-    return fallback;
-  }
-
-  /// Returns a list of maps for the first matching list key in toJson()/toMap().
-  List<Map<String, dynamic>> _getListM(
-      List<String> keys, List<Map<String, dynamic>> fallback) {
-    final a = widget.appointment;
-    List<Map<String, dynamic>> _normalize(List src) {
-      return src.map<Map<String, dynamic>>((e) {
-        if (e is Map<String, dynamic>) return e;
-        try {
-          final m = (e as dynamic).toJson?.call();
-          if (m is Map<String, dynamic>) return m;
-        } catch (_) {}
-        return <String, dynamic>{};
-      }).toList();
-    }
-
-    final jm = _jsonFrom(a);
-    if (jm != null) {
-      for (final k in keys) {
-        final v = jm[k];
-        if (v is List) return _normalize(v);
-      }
-    }
-    final mm = _mapFrom(a);
-    if (mm != null) {
-      for (final k in keys) {
-        final v = mm[k];
-        if (v is List) return _normalize(v);
-      }
-    }
-    return fallback;
-  }
-
-  /// Returns a map for the first matching map key in toJson()/toMap().
-  Map<String, dynamic> _getMap(
-      List<String> keys, Map<String, dynamic> fallback) {
-    final a = widget.appointment;
-    final jm = _jsonFrom(a);
-    if (jm != null) {
-      for (final k in keys) {
-        final v = jm[k];
-        if (v is Map<String, dynamic>) return v;
-      }
-    }
-    final mm = _mapFrom(a);
-    if (mm != null) {
-      for (final k in keys) {
-        final v = mm[k];
-        if (v is Map<String, dynamic>) return v;
-      }
-    }
-    return fallback;
-  }
-
-  // ================== FIELD GETTERS WITH FALLBACKS ==================
-  String get pName => _getString(['patientName', 'name', 'fullName'], 'Ahmed Ali Hussain');
-  String get pType => _getString(['type', 'patientType'], 'Type 2');
-  String get pGender => _getString(['gender'], 'Male');
-  String get pLoc => _getString(['location', 'address'], 'Babesh sayed,Giza');
-  String get pJob => _getString(['occupation', 'job'], 'Accountant');
-  String get pDob => _getString(['dob', 'birthInfo'], '12 Dec 1997 (28 years)');
-  String get pBMI => _getString(['bmi'], '22.4');
-  String get pWt => _getString(['weight', 'weightKg'], '92');
-  String get pHt => _getString(['height', 'heightCm'], '175');
-  String get pBp => _getString(['bloodPressure', 'bp'], '124/80');
-
-  String get dName => _getString(['doctorName'], 'Ahmed Kamal');
-  String get dRole => _getString(['doctorRole'], 'Doctor');
-
-  List<String> get ownDx =>
-      _getListS(['diagnosis', 'ownDiagnosis'], ['Obesity', 'Uncontrolled Sugar']);
-  List<String> get barriers =>
-      _getListS(['barriers', 'healthBarriers'], ['Fear of medication', 'Fear of insulin']);
-
-  List<Map<String, dynamic>> get timeline => _getListM(['timeline'], [
-    {'date': 'Dec 2022', 'title': 'Pre-Diabetic', 'desc': 'A1c: 10.4'},
-    {'date': 'Jan 2022', 'title': 'Type 2', 'desc': 'A1c: 10.4'},
-    {'date': 'Jul 2022', 'title': 'Chronic thyroid disorder', 'desc': 'A1c: 10.4'},
-    {'date': 'Jul 2022', 'title': 'Angina Pectoris', 'desc': 'A1c: 10.4'},
-    {'date': 'Jul 2022', 'title': 'Stroke', 'desc': ''},
-  ]);
-
-  Map<String, dynamic> get medHistory => _getMap(['medicalHistory'], {
-    'chronic': 'IHD, Obesity, Chronic thyroid disorder',
-    'emergencies': 'Diabetic ketoacidosis',
-    'surgery': 'Liposuction',
-    'family': 'Obesity (Father)',
-    'complications':
-    'Nephropathy, Neuropathy, Retinopathy, Diabetic feet, Sexual dysfunction',
-  });
-
-  List<Map<String, dynamic>> get medications => _getListM(['medications'], []);
-  List<Map<String, dynamic>> get labResults => _getListM(['labResults'], [
-    {'name': 'HbA1c', 'value': '10.4%', 'date': '2022-12-01', 'ref': '< 5.7%'},
-    {'name': 'Fasting Glucose', 'value': '160 mg/dL', 'date': '2022-12-01', 'ref': '70–100'},
-  ]);
-  List<Map<String, dynamic>> get bglSeries => _getListM(['bglSeries'], [
-    {'date': '2022-10-01', 'value': 180},
-    {'date': '2022-11-01', 'value': 170},
-    {'date': '2022-12-01', 'value': 165},
-    {'date': '2023-01-01', 'value': 160},
-  ]);
-  List<Map<String, dynamic>> get miniGoals => _getListM(['goals'], [
-    {'title': 'Walk 30 mins/day', 'progress': 0.6},
-    {'title': 'Reduce sugar drinks', 'progress': 0.4},
-    {'title': 'Medication adherence', 'progress': 0.8},
-  ]);
-
   @override
   void initState() {
     super.initState();
-    _tab = TabController(length: 6, vsync: this);
-    baseText = GoogleFonts.inter(); // Inter base
+    _tab = TabController(length: 4, vsync: this);
+    baseText = GoogleFonts.inter();
   }
 
   @override
@@ -207,145 +44,472 @@ class _DoctorAppointmentPreviewState extends State<DoctorAppointmentPreview> wit
 
   @override
   Widget build(BuildContext context) {
+    final appt = widget.appointment;
+    final size = MediaQuery.of(context).size;
+
     return Dialog(
+      insetPadding: const EdgeInsets.all(24),
       backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.all(20),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 1280, maxHeight: 780),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: Material(
-            color: kBg,
-            elevation: 4,
-            shadowColor: Colors.black26,
-            child: Column(
-              children: [
-                // HEADER
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                  color: Colors.white,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          IconButton(
-                            onPressed: () => Navigator.pop(context),
-                            icon: const Icon(IconX.back),
-                            color: kMuted,
-                            splashRadius: 22,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            "$pName | $pType",
-                            style: GoogleFonts.lexend(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700,
-                              color: kText,
+        constraints: BoxConstraints(
+          maxWidth: size.width * 0.95,
+          maxHeight: size.height * 0.95,
+        ),
+        child: Stack(
+          clipBehavior: Clip.none, // allow floating button outside
+          children: [
+            // ============== ROUNDED DIALOG SURFACE ==============
+            ClipRRect(
+              borderRadius: BorderRadius.circular(kRadius),
+              child: Material(
+                color: kBg,
+                child: Column(
+                  children: [
+                    Expanded(
+                      child: Padding(
+                        // tight top padding so header stays high
+                        padding: const EdgeInsets.fromLTRB(12, 16, 12, 12),
+                        child: Column(
+                          children: [
+                            // ---------- CONTAINER 1 : PATIENT HEADER ----------
+                            Container(
+                              decoration: BoxDecoration(
+                                color: kCard,
+                                borderRadius: BorderRadius.circular(kRadius),
+                                border: Border.all(color: kBorder),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(.06),
+                                    blurRadius: 18,
+                                    offset: const Offset(0, 10),
+                                  ),
+                                ],
+                              ),
+                              padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+                              child: _ProfileHeaderCard(appt: appt),
                             ),
-                          ),
-                        ],
+
+                            const SizedBox(height: 12),
+
+                            // ---------- CONTAINER 2 : TABS + CONTENT ----------
+                            Expanded(
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: kCard,
+                                  borderRadius: BorderRadius.circular(kRadius),
+                                  border: Border.all(color: kBorder),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(.05),
+                                      blurRadius: 12,
+                                      offset: const Offset(0, 6),
+                                    ),
+                                  ],
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  children: [
+                                    // enterprise top bar with divider
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                                      decoration: BoxDecoration(
+                                        border: Border(
+                                          bottom: BorderSide(color: kBorder),
+                                        ),
+                                      ),
+                                      child: TabBar(
+                                        controller: _tab,
+                                        isScrollable: true,
+                                        indicator: const UnderlineTabIndicator(
+                                          borderSide: BorderSide(color: kPrimary, width: 3),
+                                          insets: EdgeInsets.symmetric(horizontal: 16),
+                                        ),
+                                        labelColor: kPrimary,
+                                        unselectedLabelColor: kMuted,
+                                        labelStyle: GoogleFonts.lexend(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                        unselectedLabelStyle: GoogleFonts.inter(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                        tabs: const [
+                                          Tab(text: 'Overview'),
+                                          Tab(text: 'Patient Profile'),
+                                          Tab(text: 'Medications'),
+                                          Tab(text: 'Lab Results'),
+                                        ],
+                                      ),
+                                    ),
+
+                                    // content
+                                    Expanded(
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(16),
+                                        child: TabBarView(
+                                          controller: _tab,
+                                          children: [
+                                            _OverviewTab(
+                                              text: baseText,
+                                              pName: appt.patientName,
+                                              pGender: appt.gender,
+                                              pLoc: appt.location.isEmpty ? '—' : appt.location,
+                                              pJob: appt.occupation.isEmpty ? '—' : appt.occupation,
+                                              pDob: appt.dob.isEmpty ? '—' : appt.dob,
+                                              pBMI: appt.bmi == 0 ? '—' : '${appt.bmi}',
+                                              pWt: appt.weight == 0 ? '—' : '${appt.weight}',
+                                              pHt: appt.height == 0 ? '—' : '${appt.height}',
+                                              pBp: appt.bp.isEmpty ? '—' : appt.bp,
+                                              ownDx: appt.diagnosis,
+                                              barriers: appt.barriers,
+                                              timeline: appt.timeline,
+                                              medHistory: appt.history,
+                                              date: appt.date,
+                                              time: appt.time,
+                                              reason: appt.reason,
+                                              status: appt.status,
+                                            ),
+                                            _PatientProfileTab(
+                                              patientId: appt.patientId,
+                                              name: appt.patientName,
+                                              gender: appt.gender,
+                                              dob: appt.dob.isEmpty ? '—' : appt.dob,
+                                              age: '${appt.patientAge}',
+                                              phone: '—',
+                                              email: '—',
+                                              address: appt.location.isEmpty ? '—' : appt.location,
+                                              doctorName: appt.doctor,
+                                              primaryDiagnosis: appt.diagnosis.isNotEmpty
+                                                  ? appt.diagnosis.first
+                                                  : '—',
+                                              diagnoses: appt.diagnosis,
+                                              allergies: const [],
+                                              chronicConditions: const [],
+                                              height: appt.height == 0 ? '—' : '${appt.height}',
+                                              weight: appt.weight == 0 ? '—' : '${appt.weight}',
+                                              bmi: appt.bmi == 0 ? '—' : '${appt.bmi}',
+                                              bp: appt.bp.isEmpty ? '—' : appt.bp,
+                                              heartRate: '—',
+                                              emergencyContactName: '—',
+                                              emergencyContactPhone: '—',
+                                            ),
+                                            const _MedicationsTab(),
+                                            _LabsTab(rows: const [], text: baseText),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
+              ),
+            ),
 
-                // TABS
-                Container(
-                  color: Colors.white,
-                  child: TabBar(
-                    controller: _tab,
-                    isScrollable: true,
-                    indicator: const UnderlineTabIndicator(
-                      borderSide: BorderSide(color: kPrimary, width: 3),
-                      insets: EdgeInsets.symmetric(horizontal: 16),
-                    ),
-                    labelColor: kPrimary,
-                    unselectedLabelColor: kMuted,
-                    labelStyle: GoogleFonts.lexend(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    unselectedLabelStyle: GoogleFonts.inter(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                    ),
-                    tabs: const [
-                      Tab(text: "Overview"),
-                      Tab(text: "Patient Profile"),
-                      Tab(text: "BGL Analysis"),
-                      Tab(text: "Medications"),
-                      Tab(text: "Lab Results"),
-                      // Tab(text: "Mini Goals"),
-                    ],
-                  ),
-                ),
-                const Divider(height: 1, thickness: 1, color: kBorder),
-
-                // BODY
-                Expanded(
+            // ============== FLOATING CLOSE BUTTON (OUTSIDE) ==============
+            Positioned(
+              top: -10,       // negative to sit OUTSIDE the rounded dialog
+              right: -10,
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(28),
+                  onTap: () => Navigator.pop(context),
                   child: Container(
-                    color: kBg,
-                    child: TabBarView(
-                      controller: _tab,
-                      children: [
-                        _OverviewTab(
-                          text: baseText,
-                          pName: pName,
-                          pGender: pGender,
-                          pLoc: pLoc,
-                          pJob: pJob,
-                          pDob: pDob,
-                          pBMI: pBMI,
-                          pWt: pWt,
-                          pHt: pHt,
-                          pBp: pBp,
-                          ownDx: ownDx,
-                          barriers: barriers,
-                          timeline: timeline,
-                          medHistory: medHistory,
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: kBorder),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(.10),
+                          blurRadius: 12,
+                          offset: const Offset(0, 6),
                         ),
-                        _PatientProfileTab(
-                          patientId: "H23-00987",
-                          name: pName,
-                          gender: pGender,
-                          dob: pDob,
-                          age: "28",
-                          phone: "+91 9876543210",
-                          email: "ahmed@example.com",
-                          address: pLoc,
-                          doctorName: dName,
-                          primaryDiagnosis: "Type 2 Diabetes",
-                          diagnoses: ownDx,
-                          allergies: ["Penicillin"],
-                          chronicConditions: ["IHD", "Thyroid disorder"],
-                          height: pHt,
-                          weight: pWt,
-                          bmi: pBMI,
-                          bp: pBp,
-                          heartRate: "78",
-                          emergencyContactName: "Ali Hussain",
-                          emergencyContactPhone: "+91 9988776655",
-                        ),
-                        _BglTab(series: bglSeries, text: baseText,),
-                        _MedicationsTab(rows: medications, text: baseText,),
-                        _LabsTab(text: baseText, rows: labResults),
                       ],
                     ),
+                    child: const Icon(Icons.close_rounded, size: 20, color: kMuted),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+}
+/// ===================== PROFILE HEADER CARD =====================
+ // for Clipboard
+
+
+
+
+class _ProfileHeaderCard extends StatelessWidget {
+  final DashboardAppointments appt;
+  const _ProfileHeaderCard({required this.appt});
+
+  // helpers
+  String _n(num? v, {String? suffix}) =>
+      (v == null || v == 0) ? '—' : '${v}${suffix ?? ''}';
+  String _s(String? v) => (v == null || v.trim().isEmpty) ? '—' : v;
+
+  String _bloodGroup() {
+    try {
+      final bg = (appt as dynamic).bloodGroup;
+      return _s(bg?.toString());
+    } catch (_) {
+      return '—';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isFemale = (_s(appt.gender)).toLowerCase() == 'female';
+    final avatar = isFemale ? 'assets/girlicon.png' : 'assets/boyicon.png';
+
+    return Card(
+      elevation: 0,
+      color: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: const BorderSide(color: _DoctorAppointmentPreviewState.kBorder),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // --- LEFT: Identity Block
+            _identityBlock(context, avatar, isFemale),
+
+            const Spacer(),
+
+            // --- RIGHT: KPI Grid (2x2)
+            ConstrainedBox(
+              constraints: const BoxConstraints(minWidth: 340, maxWidth: 420),
+              child: _kpiGrid(items: _kpis()),
+            ),
+
+            // --- ACTION: Edit Icon
+            // IconButton(
+            //   icon: const Icon(Icons.edit, color: Color(0xFF6B7280)),
+            //   tooltip: "Edit patient",
+            //   onPressed: () {
+            //     // wire your edit action
+            //   },
+            // ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// ---------------- LEFT SIDE: Identity block ----------------
+  /// ---------------- LEFT SIDE: Identity block ----------------
+  Widget _identityBlock(BuildContext context, String avatar, bool isFemale) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        // Avatar (square, bigger)
+        Container(
+          width: 138,
+          height: 138,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12), // 👈 square with subtle rounding
+            border: Border.all(color: const Color(0xFFE5E7EB), width: 2),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x08000000),
+                blurRadius: 6,
+                offset: Offset(0, 2),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: Image.asset(
+              avatar,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => const Icon(Icons.person, size: 72),
+            ),
+          ),
+        ),
+        const SizedBox(width: 20),
+
+        // Patient Info
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              _s(appt.patientName),
+              style: GoogleFonts.lexend(
+                fontSize: 24, // 👈 bump up to match larger avatar
+                fontWeight: FontWeight.w700,
+                color: _DoctorAppointmentPreviewState.kText,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF1F2),
+                border: Border.all(color: const Color(0xFFFFE4E6)),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                'ID: ${_s(appt.patientId)}',
+                style: GoogleFonts.lexend(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFFB42318),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 14,
+              runSpacing: 6,
+              children: [
+                _mini(isFemale ? Icons.female : Icons.male, _s(appt.gender)),
+                _mini(Icons.person, 'Age ${appt.patientAge}'),
+                _mini(Icons.calendar_month, _s(appt.dob)),
+                if (_s(appt.occupation) != '—')
+                  _mini(Icons.work_outline, _s(appt.occupation)),
+                if (_s(appt.location) != '—')
+                  _mini(Icons.place_outlined, _s(appt.location)),
+              ],
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _mini(IconData i, String t) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Icon(i, size: 14, color: _DoctorAppointmentPreviewState.kMuted),
+      const SizedBox(width: 4),
+      Text(
+        t,
+        style: GoogleFonts.inter(
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+          color: _DoctorAppointmentPreviewState.kMuted,
+        ),
+      ),
+    ],
+  );
+
+  /// ---------------- RIGHT SIDE: KPI GRID ----------------
+  List<_Metric> _kpis() => [
+    _Metric(Icons.scale, 'BMI', _n(appt.bmi)),
+    _Metric(Icons.monitor_weight_outlined, 'Weight', _n(appt.weight, suffix: ' kg')),
+    _Metric(Icons.height, 'Height', _n(appt.height, suffix: ' cm')),
+    _Metric(Icons.bloodtype, 'Blood Group', _bloodGroup()),
+  ];
+
+  Widget _kpiGrid({required List<_Metric> items}) {
+    return Table(
+      columnWidths: const {0: FlexColumnWidth(), 1: FlexColumnWidth()},
+      children: [
+        TableRow(children: [_kpiTile(items[0]), _kpiTile(items[1])]),
+        TableRow(children: [_kpiTile(items[2]), _kpiTile(items[3])]),
+      ],
+    );
+  }
+
+  Widget _kpiTile(_Metric m) {
+    return Padding(
+      padding: const EdgeInsets.all(6),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        constraints: const BoxConstraints(minHeight: 64),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: _DoctorAppointmentPreviewState.kBorder),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                color: const Color(0xFFFFE4E6),
+              ),
+              child: Icon(m.icon, size: 18, color: const Color(0xFFB42318)),
+            ),
+            const SizedBox(width: 10),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  m.value,
+                  style: GoogleFonts.lexend(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: _DoctorAppointmentPreviewState.kText,
+                  ),
+                ),
+                Text(
+                  m.title,
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: _DoctorAppointmentPreviewState.kMuted,
                   ),
                 ),
               ],
             ),
-          ),
+          ],
         ),
       ),
     );
   }
 }
 
-// ================== TABS ==================
+class _Metric {
+  final IconData icon;
+  final String title;
+  final String value;
+  _Metric(this.icon, this.title, this.value);
+}
+
+
+// metric model
+
+
+
+// Simple metric model (unchanged)
+
+
+/// ===================== TABS (lean, essential only) =====================
+
+
+
 
 class _OverviewTab extends StatelessWidget {
+  // ---- Incoming (unchanged) ----
+  final TextStyle text;
+  final String pName, pGender, pLoc, pJob, pDob, pBMI, pWt, pHt, pBp;
+  final List<String> ownDx, barriers;
+  final List<Map<String, dynamic>> timeline;
+  final Map<String, String> medHistory;
+  final String date, time, reason, status;
+
   const _OverviewTab({
     required this.text,
     required this.pName,
@@ -361,54 +525,712 @@ class _OverviewTab extends StatelessWidget {
     required this.barriers,
     required this.timeline,
     required this.medHistory,
+    required this.date,
+    required this.time,
+    required this.reason,
+    required this.status,
   });
 
-  final TextStyle text;
-  final String pName, pGender, pLoc, pJob, pDob, pBMI, pWt, pHt, pBp;
-  final List<String> ownDx, barriers;
-  final List<Map<String, dynamic>> timeline;
-  final Map<String, dynamic> medHistory;
+  // ---- Local palette / metrics ----
+  static const Color kText = Color(0xFF0B1324);
+  static const Color kMuted = Color(0xFF64748B);
+  static const Color kCard = Colors.white;
+  static const Color kSurface = Color(0xFFF7F8FA);
+  static const Color kBorder = Color(0xFFE5E7EB);
+  static const Color kPrimary = Color(0xFFEF4444);
+  static const Color kSuccess = Color(0xFF16A34A);
+  static const Color kWarn = Color(0xFFF59E0B);
+  static const Color kInfo = Color(0xFF3B82F6);
+  static const double kRadius = 16;
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
+    final themeText = GoogleFonts.inter(
+      textStyle: text.copyWith(color: kText, height: 1.25),
+    );
+
+    // ⛔️ Removed the outer Container(color: kSurface)
+    // so this widget blends perfectly into the parent card.
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isWide = constraints.maxWidth >= 980;
+        return ListView(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+          children: [
+            // _heroCard(themeText), // (kept available but not used)
+            const SizedBox(height: 14),
+
+            _ResponsiveGrid(
+              isWide: isWide,
+              children: [
+                // 1) Appointment
+                _sectionCard(
+                  icon: Icons.event_note_rounded,
+                  title: 'Appointment',
+                  child: _keyValues(themeText, {
+                    'Date': date,
+                    'Time': time,
+                    'Reason': reason,
+                    'Status': status,
+                  }),
+                  trailing: _statusBadge(status),
+                ),
+
+                // 2) Address (separate card)
+                _sectionCard(
+                  icon: Icons.place_rounded,
+                  title: 'Address',
+                  child: _keyValues(
+                    themeText,
+                    {
+                      'Address': pLoc.isEmpty ? '—' : pLoc,
+                    },
+                  ),
+                ),
+
+                // 3) Diagnosis
+                _sectionCard(
+                  icon: Icons.coronavirus_rounded,
+                  title: 'Diagnosis',
+                  child: ownDx.isEmpty
+                      ? _emptyLine()
+                      : Wrap(
+                    spacing: 8,
+                    runSpacing: 10,
+                    children: ownDx
+                        .map((e) => _chip(
+                      e,
+                      bg: const Color(0xFFFFEEF0),
+                      fg: const Color(0xFFB42318),
+                      leading: Icons.verified_rounded,
+                    ))
+                        .toList(),
+                  ),
+                ),
+
+                // 4) Medical History
+                _sectionCard(
+                  icon: Icons.history_edu_rounded,
+                  title: 'Medical History',
+                  child: medHistory.isEmpty
+                      ? _emptyLine()
+                      : Column(
+                    children: medHistory.entries
+                        .map((e) => _kv(
+                      _titleCase(e.key),
+                      e.value,
+                      themeText,
+                    ))
+                        .toList(),
+                  ),
+                ),
+
+                // 5) Health Barriers
+                _sectionCard(
+                  icon: Icons.block_rounded,
+                  title: 'Health Barriers',
+                  child: barriers.isEmpty
+                      ? _emptyLine()
+                      : Wrap(
+                    spacing: 8,
+                    runSpacing: 10,
+                    children: barriers
+                        .map((e) => _chip(
+                      e,
+                      bg: const Color(0xFFFFF7ED),
+                      fg: const Color(0xFFB45309),
+                      leading: Icons.warning_amber_rounded,
+                    ))
+                        .toList(),
+                  ),
+                ),
+
+                // 6) Timeline
+                _sectionCard(
+                  icon: Icons.timeline_rounded,
+                  title: 'Timeline',
+                  child: _timelineView(timeline),
+                ),
+              ],
+            )
+
+          ],
+        );
+      },
+    );
+  }
+
+  // ---------------- UI Blocks ----------------
+
+  Widget _heroCard(TextStyle themeText) {
+    return _elevatedCard(
+      borderGradient: LinearGradient(
+        colors: [kPrimary.withOpacity(.15), Colors.transparent],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _avatarSquare(name: pName),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(pName,
+                          style: GoogleFonts.inter(
+                            fontSize: 20,
+                            height: 1.1,
+                            fontWeight: FontWeight.w800,
+                            color: kText,
+                          )),
+                      const SizedBox(height: 6),
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 6,
+                        children: [
+                          _metaPill(Icons.person_rounded, pGender),
+                          _metaPill(Icons.work_outline_rounded, pJob),
+                          _metaPill(Icons.cake_outlined, pDob),
+                          _metaPill(Icons.place_outlined, pLoc),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                _statusBadge(status),
+              ],
+            ),
+            const SizedBox(height: 16),
+            _statsRow(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _metaPill(IconData icon, String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: kSurface,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: kBorder),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          _SummaryCard(
-            text: text,
-            pName: pName,
-            pGender: pGender,
-            pLoc: pLoc,
-            pJob: pJob,
-            pDob: pDob,
-            pBMI: pBMI,
-            pWt: pWt,
-            pHt: pHt,
-            pBp: pBp,
-            ownDx: ownDx,
-            barriers: barriers,
+          Icon(icon, size: 14, color: kMuted),
+          const SizedBox(width: 6),
+          Text(
+            text,
+            style: GoogleFonts.inter(
+              fontSize: 12.5,
+              color: kText,
+              fontWeight: FontWeight.w600,
+            ),
           ),
-          const SizedBox(height: 16),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        ],
+      ),
+    );
+  }
+
+  Widget _statsRow() {
+    final items = [
+      _statTile('BMI', pBMI, Icons.monitor_weight_rounded,
+          gradient: const LinearGradient(
+              colors: [Color(0xFFFFE2E5), Color(0xFFFFF1F2)])),
+      _statTile('BP', pBp, Icons.favorite_rounded,
+          gradient: const LinearGradient(
+              colors: [Color(0xFFE0EAFF), Color(0xFFF0F7FF)])),
+      _statTile('Height', pHt, Icons.height_rounded,
+          gradient: const LinearGradient(
+              colors: [Color(0xFFE6F4EA), Color(0xFFF3FAF5)])),
+      _statTile('Weight', pWt, Icons.fitness_center_rounded,
+          gradient: const LinearGradient(
+              colors: [Color(0xFFFFF3D6), Color(0xFFFFF9EC)])),
+    ];
+
+    return LayoutBuilder(builder: (_, c) {
+      final isTight = c.maxWidth < 640;
+      return Wrap(
+        spacing: 12,
+        runSpacing: 12,
+        children: items
+            .map((w) => SizedBox(
+          width: isTight ? (c.maxWidth) : (c.maxWidth - 36) / 4,
+          child: w,
+        ))
+            .toList(),
+      );
+    });
+  }
+
+  Widget _statTile(String title, String value, IconData icon,
+      {Gradient? gradient}) {
+    return _elevatedCard(
+      background: null,
+      borderGradient: gradient,
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: gradient,
+          borderRadius: BorderRadius.circular(kRadius),
+        ),
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border.all(color: kBorder),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, size: 18, color: kText),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title,
+                      style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: kMuted,
+                          fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 4),
+                  Text(value,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.inter(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: kText,
+                        height: 1.0,
+                      )),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _statusBadge(String status) {
+    final s = (status).toLowerCase();
+    Color bg = const Color(0xFFEFF6FF);
+    Color fg = kInfo;
+    IconData ic = Icons.schedule_rounded;
+
+    if (s.contains('completed')) {
+      bg = const Color(0xFFECFDF5);
+      fg = kSuccess;
+      ic = Icons.verified_rounded;
+    } else if (s.contains('cancel')) {
+      bg = const Color(0xFFFFF1F2);
+      fg = const Color(0xFFDC2626);
+      ic = Icons.cancel_rounded;
+    } else if (s.contains('resched') || s.contains('pending')) {
+      bg = const Color(0xFFFFFBEB);
+      fg = kWarn;
+      ic = Icons.update_rounded;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: bg.withOpacity(.7)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(ic, size: 16, color: fg),
+          const SizedBox(width: 8),
+          Text(
+            _titleCase(status),
+            style: GoogleFonts.inter(
+                fontWeight: FontWeight.w800, fontSize: 12, color: fg),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ---- Section Card ----
+  Widget _sectionCard({
+    required IconData icon,
+    required String title,
+    required Widget child,
+    Widget? trailing,
+  }) {
+    return _elevatedCard(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: kPrimary.withOpacity(.07),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(icon, size: 18, color: kPrimary),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: GoogleFonts.inter(
+                      fontWeight: FontWeight.w800,
+                      color: kText,
+                      fontSize: 14.5,
+                    ),
+                  ),
+                ),
+                if (trailing != null) trailing,
+              ],
+            ),
+            const SizedBox(height: 12),
+            child,
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ---- Key/Value Block ----
+  Widget _keyValues(TextStyle base, Map<String, String> data) {
+    return Column(
+      children: data.entries
+          .map((e) => _kv(e.key, e.value, base))
+          .toList(growable: false),
+    );
+  }
+
+  Widget _kv(String k, String v, TextStyle base) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 8),
+    child: Row(
+      children: [
+        Expanded(
+          child: Text(k,
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                color: kMuted,
+                fontWeight: FontWeight.w600,
+              )),
+        ),
+        const SizedBox(width: 8),
+        Flexible(
+          child: Text(
+            v.isEmpty ? '—' : v,
+            textAlign: TextAlign.right,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.inter(
+                fontSize: 13.5, color: kText, fontWeight: FontWeight.w800),
+          ),
+        ),
+      ],
+    ),
+  );
+
+  // ---- Chips ----
+  Widget _chip(String label,
+      {required Color bg, required Color fg, IconData? leading}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: bg.withOpacity(.7)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (leading != null) ...[
+            Icon(leading, size: 14, color: fg),
+            const SizedBox(width: 6),
+          ],
+          Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 12.5,
+              color: fg,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ---- Timeline ----
+  Widget _timelineView(List<Map<String, dynamic>> items) {
+    if (items.isEmpty) return _emptyLine();
+
+    return Column(
+      children: [
+        for (int i = 0; i < items.length; i++)
+          _timelineTile(
+            title: (items[i]['title'] ?? '—').toString(),
+            desc: (items[i]['desc'] ?? '').toString(),
+            date: (items[i]['date'] ?? '').toString(),
+            isFirst: i == 0,
+            isLast: i == items.length - 1,
+            accent: i == 0 ? kPrimary : kInfo,
+          ),
+      ],
+    );
+  }
+
+  Widget _timelineTile({
+    required String title,
+    required String desc,
+    required String date,
+    required bool isFirst,
+    required bool isLast,
+    required Color accent,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Column(
+          children: [
+            Container(
+              width: 12,
+              height: 12,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border.all(color: accent, width: 3),
+                shape: BoxShape.circle,
+              ),
+            ),
+            if (!isLast)
+              Container(width: 2, height: 42, color: kBorder),
+          ],
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Padding(
+            padding: EdgeInsets.only(bottom: isLast ? 0 : 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title,
+                    style: GoogleFonts.inter(
+                        fontWeight: FontWeight.w800, color: kText)),
+                if (desc.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    desc,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                        fontSize: 13, color: kMuted, height: 1.35),
+                  ),
+                ],
+                const SizedBox(height: 6),
+                Container(
+                  padding:
+                  const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: kSurface,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: kBorder),
+                  ),
+                  child: Text(
+                    date,
+                    style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: kText),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ---- Helpers ----
+  String _titleCase(String s) =>
+      s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
+
+  Widget _emptyLine() => Text('—',
+      style: GoogleFonts.inter(
+          fontSize: 14, color: kMuted, fontWeight: FontWeight.w600));
+
+  Widget _avatarSquare({required String name}) {
+    final initials = name.trim().isEmpty
+        ? 'PT'
+        : name
+        .trim()
+        .split(RegExp(r'\s+'))
+        .take(2)
+        .map((e) => e.isEmpty ? '' : e[0].toUpperCase())
+        .join();
+
+    return Container(
+      width: 64,
+      height: 64,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+            colors: [Color(0xFFFFE4E6), Color(0xFFFFF1F2)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: kBorder),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(.05),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          )
+        ],
+      ),
+      child: Center(
+        child: Text(
+          initials,
+          style: GoogleFonts.inter(
+              fontSize: 18, fontWeight: FontWeight.w900, color: kText),
+        ),
+      ),
+    );
+  }
+
+  Widget _elevatedCard({
+    required Widget child,
+    Gradient? background,
+    Gradient? borderGradient,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(kRadius),
+        gradient: background ??
+            const LinearGradient(colors: [Colors.white, Colors.white]),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(.04),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
+          ),
+          BoxShadow(
+            color: Colors.black.withOpacity(.03),
+            blurRadius: 6,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(kRadius),
+          border: Border.all(color: kBorder),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(kRadius),
+          child: Stack(
             children: [
-              Expanded(child: _TimelineCard(text: text, items: timeline)),
-              const SizedBox(width: 16),
-              Expanded(child: _MedicalHistoryCard(text: text, data: medHistory)),
+              if (borderGradient != null)
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(gradient: borderGradient),
+                    ),
+                  ),
+                ),
+              child,
             ],
           ),
-          const SizedBox(height: 16),
-          _MedicationsCard(text: text, rows: const []), // empty state like screenshot
-        ],
+        ),
       ),
     );
   }
 }
 
-// ==================== MYTHIC-LEVEL PATIENT PROFILE TAB ====================
+// ---------- Responsive Grid Helper ----------
+class _ResponsiveGrid extends StatelessWidget {
+  final bool isWide;
+  final List<Widget> children;
+  const _ResponsiveGrid({required this.isWide, required this.children});
 
+  @override
+  Widget build(BuildContext context) {
+    if (!isWide) {
+      return Column(
+        children: [
+          for (int i = 0; i < children.length; i++) ...[
+            children[i],
+            if (i != children.length - 1) const SizedBox(height: 14),
+          ]
+        ],
+      );
+    }
+    final left = <Widget>[];
+    final right = <Widget>[];
+    for (int i = 0; i < children.length; i++) {
+      (i.isEven ? left : right).add(children[i]);
+    }
+    Widget col(List<Widget> c) => Column(
+      children: [
+        for (int i = 0; i < c.length; i++) ...[
+          c[i],
+          if (i != c.length - 1) const SizedBox(height: 14),
+        ]
+      ],
+    );
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(child: col(left)),
+        const SizedBox(width: 14),
+        Expanded(child: col(right)),
+      ],
+    );
+  }
+}
+
+// ------------- Responsive Grid Helper -------------
+
+
+
+
+/// Enterprise version of Patient Tab — same API, better UX
+
+
+/// Enterprise-grade Patient Tab (same API, sober visuals)
 class _PatientProfileTab extends StatelessWidget {
+  // -------- Incoming (unchanged) --------
+  final String patientId,
+      name,
+      gender,
+      dob,
+      age,
+      phone,
+      email,
+      address,
+      doctorName,
+      primaryDiagnosis,
+      bmi,
+      weight,
+      height,
+      bp,
+      heartRate,
+      emergencyContactName,
+      emergencyContactPhone;
+  final List<String> diagnoses, allergies, chronicConditions;
+
   const _PatientProfileTab({
     required this.patientId,
     required this.name,
@@ -432,1934 +1254,594 @@ class _PatientProfileTab extends StatelessWidget {
     required this.emergencyContactPhone,
   });
 
-  final String patientId, name, gender, dob, age, phone, email, address;
-  final String doctorName, primaryDiagnosis, height, weight, bmi, bp, heartRate;
-  final List<String> diagnoses, allergies, chronicConditions;
-  final String emergencyContactName, emergencyContactPhone;
+  // -------- Enterprise tokens (neutral, high-contrast, low-chrome) --------
+  static const _bg = Color(0xFFF9FAFB);        // panel background
+  static const _card = Colors.white;            // card surface
+  static const _border = Color(0xFFE5E7EB);     // thin dividers
+  static const _label = Color(0xFF6B7280);      // secondary text
+  static const _text = Color(0xFF111827);       // primary text
+  static const _accent = Color(0xFFDC2626);     // restrained red accent
+  static const _mutedIcon = Color(0xFF9CA3AF);  // icon gray
 
-  @override
-  Widget build(BuildContext context) {
-    return _Card(
-      child: LayoutBuilder(
-        builder: (context, _) {
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      "Patient Profile",
-                      style: GoogleFonts.lexend(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFF1F2937), // gray-800
-                      ),
-                    ),
-                    TextButton.icon(
-                      style: TextButton.styleFrom(
-                        foregroundColor: _DoctorAppointmentPreviewState.kPrimary,
-                        textStyle: GoogleFonts.inter(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      onPressed: () {},
-                      icon: const Icon(Icons.edit_outlined, size: 18),
-                      label: const Text("Edit"),
-                    ),
-                  ],
-                ),
+  TextStyle get _hSmall => GoogleFonts.inter(
+    fontSize: 12,
+    letterSpacing: .8,
+    color: _label,
+    fontWeight: FontWeight.w700,
+  );
 
-                const SizedBox(height: 14),
+  TextStyle get _title => GoogleFonts.inter(
+    fontSize: 14,
+    fontWeight: FontWeight.w700,
+    color: _text,
+  );
 
-                // KPI strip
-                _KpiStrip(
-                  bmi: bmi,
-                  bp: bp,
-                  hr: heartRate,
-                  height: height,
-                  weight: weight,
-                ),
+  TextStyle get _k => GoogleFonts.inter(
+    fontSize: 12,
+    color: _label,
+  );
 
-                const SizedBox(height: 20),
-                const _SectionDivider(),
+  TextStyle get _v => GoogleFonts.inter(
+    fontSize: 13,
+    color: _text,
+    fontWeight: FontWeight.w600,
+  );
 
-                // Demographics
-                _SectionTitle("Demographics"),
-                const SizedBox(height: 12),
-                _InfoGrid(children: [
-                  _InfoTile(icon: Icons.badge_outlined, label: "Patient ID", value: patientId),
-                  _InfoTile(icon: Icons.person_outline, label: "Full Name", value: name),
-                  _InfoTile(icon: Icons.wc_outlined, label: "Gender", value: gender),
-                  _InfoTile(icon: Icons.cake_outlined, label: "Date of Birth", value: "$dob  (Age $age)"),
-                  _InfoTile(icon: Icons.call_outlined, label: "Phone", value: phone),
-                  _InfoTile(icon: Icons.alternate_email_outlined, label: "Email", value: email),
-                  _InfoTile(icon: Icons.location_on_outlined, label: "Address", value: address, wide: true),
-                ]),
-
-                const SizedBox(height: 20),
-                const _SectionDivider(),
-
-                // Clinical Snapshot
-                _SectionTitle("Clinical Snapshot"),
-                const SizedBox(height: 12),
-                _InfoGrid(children: [
-                  _InfoTile(icon: Icons.local_hospital_outlined, label: "Primary Diagnosis", value: primaryDiagnosis, wide: true),
-                  _ChipBlock(label: "Other Diagnoses", items: diagnoses, color: _DoctorAppointmentPreviewState.kPrimary),
-                  _ChipBlock(label: "Allergies", items: allergies, color: const Color(0xFFF59E0B)), // amber-500
-                  _ChipBlock(label: "Chronic Conditions", items: chronicConditions, color: const Color(0xFF2563EB)), // blue-600
-                  _InfoTile(icon: Icons.height, label: "Height", value: "$height cm"),
-                  _InfoTile(icon: Icons.monitor_weight_outlined, label: "Weight", value: "$weight kg"),
-                  _InfoTile(icon: Icons.monitor_heart_outlined, label: "Blood Pressure", value: bp),
-                  _InfoTile(icon: Icons.favorite_outline, label: "Heart Rate", value: "$heartRate bpm"),
-                  _InfoTile(icon: Icons.calculate_outlined, label: "BMI", value: bmi),
-                ]),
-
-                const SizedBox(height: 20),
-                const _SectionDivider(),
-
-                // Care context
-                _SectionTitle("Care Context"),
-                const SizedBox(height: 12),
-                _InfoGrid(children: [
-                  _InfoTile(icon: Icons.medical_information_outlined, label: "Doctor", value: doctorName),
-                  _InfoTile(icon: Icons.groups_2_outlined, label: "Care Team", value: "N/A"),
-                  _InfoTile(icon: Icons.event_outlined, label: "Next Appointment", value: "Not Scheduled"),
-                ]),
-
-                const SizedBox(height: 20),
-                const _SectionDivider(),
-
-                // Emergency
-                _SectionTitle("Emergency Contact"),
-                const SizedBox(height: 12),
-                _InfoGrid(children: [
-                  _InfoTile(icon: Icons.contact_emergency_outlined, label: "Contact Name", value: emergencyContactName),
-                  _InfoTile(icon: Icons.phone_enabled_outlined, label: "Phone", value: emergencyContactPhone),
-                ]),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
-
-// ==================== SUB-WIDGETS (scoped to Patient Profile) ====================
-
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle(this.text);
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      text,
-      style: GoogleFonts.lexend(
-        fontSize: 18,
-        fontWeight: FontWeight.w700,
-        color: const Color(0xFF374151), // gray-700
-      ),
-    );
-  }
-}
-
-class _SectionDivider extends StatelessWidget {
-  const _SectionDivider();
+  TextStyle get _mono => GoogleFonts.ibmPlexMono(
+    fontSize: 12,
+    fontWeight: FontWeight.w600,
+    color: _text,
+  );
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 1,
-      margin: const EdgeInsets.symmetric(vertical: 2),
-      color: _DoctorAppointmentPreviewState.kBorder,
-    );
-  }
-}
-
-class _InfoGrid extends StatelessWidget {
-  const _InfoGrid({required this.children});
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
-    // Responsive 2-column grid that gracefully wraps
-    return LayoutBuilder(
-      builder: (context, c) {
-        final maxW = c.maxWidth;
-        final tileW = 320.0; // target width per tile
-        final crossAxisCount = (maxW ~/ tileW).clamp(1, 3);
-        return GridView.count(
-          crossAxisCount: crossAxisCount,
-          childAspectRatio: 3.6,
-          mainAxisSpacing: 16,
-          crossAxisSpacing: 24,
-          physics: const NeverScrollableScrollPhysics(),
-          shrinkWrap: true,
-          children: children,
-        );
-      },
-    );
-  }
-}
-
-class _InfoTile extends StatelessWidget {
-  const _InfoTile({
-    required this.icon,
-    required this.label,
-    required this.value,
-    this.wide = false,
-  });
-
-  final IconData icon;
-  final String label;
-  final String value;
-  final bool wide;
-
-  @override
-  Widget build(BuildContext context) {
-    final tile = Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, size: 18, color: _DoctorAppointmentPreviewState.kPrimary),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(label,
-                  style: GoogleFonts.inter(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF6B7280), // gray-500
-                  )),
-              const SizedBox(height: 4),
-              SelectableText(
-                (value.isEmpty ? "-" : value),
-                style: GoogleFonts.lexend(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: const Color(0xFF111827), // gray-900
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-
-    if (!wide) return tile;
-
-    // If wide: span full width by wrapping in GridTile with colspan behavior via SizedBox
-    return SizedBox(width: double.infinity, child: tile);
-  }
-}
-
-class _ChipBlock extends StatelessWidget {
-  const _ChipBlock({
-    required this.label,
-    required this.items,
-    required this.color,
-  });
-
-  final String label;
-  final List<String> items;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    if (items.isEmpty) {
-      return _InfoTile(icon: Icons.label_outline, label: label, value: "-");
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(Icons.label_important_outline, size: 18, color: color),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: GoogleFonts.inter(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF6B7280),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: items
-              .map(
-                (e) => Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.10),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: color.withOpacity(0.25)),
-              ),
-              child: Text(
-                e,
-                style: GoogleFonts.lexend(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w600,
-                  color: color,
-                ),
-              ),
-            ),
-          )
-              .toList(),
-        ),
-      ],
-    );
-  }
-}
-
-class _KpiStrip extends StatelessWidget {
-  const _KpiStrip({
-    required this.bmi,
-    required this.bp,
-    required this.hr,
-    required this.height,
-    required this.weight,
-  });
-
-  final String bmi;
-  final String bp;
-  final String hr;
-  final String height;
-  final String weight;
-
-  @override
-  Widget build(BuildContext context) {
-    Widget kpi(String label, String value, {IconData? icon}) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: const Color(0xFFFFF1F2), // red-50
-          border: Border.all(color: const Color(0xFFFECACA)), // red-200
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (icon != null) ...[
-              Icon(icon, size: 18, color: _DoctorAppointmentPreviewState.kPrimary),
-              const SizedBox(width: 8),
-            ],
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  value,
-                  style: GoogleFonts.lexend(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF111827),
-                  ),
-                ),
-                Text(
-                  label,
-                  style: GoogleFonts.inter(
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w500,
-                    color: const Color(0xFF6B7280),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      );
-    }
-
-    return Wrap(
-      spacing: 12,
-      runSpacing: 12,
-      children: [
-        kpi('BMI', bmi, icon: Icons.calculate_outlined),
-        kpi('Blood Pressure', bp, icon: Icons.monitor_heart_outlined),
-        kpi('Heart Rate', '$hr bpm', icon: Icons.favorite_outline),
-        kpi('Height', '$height cm', icon: Icons.height),
-        kpi('Weight', '$weight kg', icon: Icons.monitor_weight_outlined),
-      ],
-    );
-  }
-}
-
-class _BglTab extends StatelessWidget {
-  const _BglTab({required this.series, required TextStyle text});
-
-  final List<Map<String, dynamic>> series;
-
-  @override
-  Widget build(BuildContext context) {
-    return _Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ===== Header =====
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  "BGL Analysis",
-                  style: GoogleFonts.lexend(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF1F2937),
-                  ),
-                ),
-                const _EditBtn(),
-              ],
-            ),
-
-            const SizedBox(height: 20),
-
-            // ===== KPI Row =====
-            if (series.isNotEmpty)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  _Kpi(label: "Latest BGL", value: "${series.last['value']} mg/dL"),
-                  _Kpi(label: "First BGL", value: "${series.first['value']} mg/dL"),
-                  _Kpi(
-                    label: "Change",
-                    value:
-                    "${((series.last['value'] - series.first['value']) as num).toString()} mg/dL",
-                  ),
-                ],
-              ),
-
-            const SizedBox(height: 24),
-
-            // ===== Chart =====
-            SizedBox(
-              height: 200,
-              child: CustomPaint(
-                painter: _SparklinePainter(
-                  series.map<double>((e) => ((e['value'] ?? 0) as num).toDouble()).toList(),
-                  showDots: true,
-                  shade: true,
-                ),
-                child: const SizedBox.expand(),
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // ===== Dates under chart =====
-            Wrap(
-              spacing: 16,
-              runSpacing: 6,
-              children: series
-                  .map(
-                    (e) => Text(
-                  "${e['date']}: ${e['value']} mg/dL",
-                  style: GoogleFonts.inter(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: _DoctorAppointmentPreviewState.kMuted,
-                  ),
-                ),
-              )
-                  .toList(),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// ===== KPI Block =====
-class _Kpi extends StatelessWidget {
-  const _Kpi({required this.label, required this.value});
-  final String label, value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFF1F2), // red-50
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFFECACA)), // red-200
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      color: _bg,
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
         children: [
-          Text(
-            value,
-            style: GoogleFonts.lexend(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: const Color(0xFF111827),
+          _section(
+            header: 'PATIENT OVERVIEW',
+            actions: [
+              _ghostIcon(
+                tooltip: 'Copy Patient ID',
+                icon: Icons.content_copy_rounded,
+                onTap: () => _copy(context, patientId),
+              ),
+              _ghostIcon(
+                tooltip: 'Copy Phone',
+                icon: Icons.call_outlined,
+                onTap: () => _copy(context, phone),
+              ),
+              _ghostIcon(
+                tooltip: 'Copy Email',
+                icon: Icons.alternate_email_outlined,
+                onTap: () => _copy(context, email),
+              ),
+            ],
+            child: _grid(
+              items: [
+                _kv('Patient ID', patientId, valueStyle: _mono),
+                _kv('Name', name),
+                _kv('Gender', gender),
+                _kv('DOB', dob),
+                _kv('Age', age),
+                _kv('Doctor', doctorName),
+                _kv('Primary Diagnosis', primaryDiagnosis),
+                _kv('Phone', phone, copyable: true),
+                _kv('Email', email, copyable: true),
+              ],
             ),
           ),
-          Text(
-            label,
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: _DoctorAppointmentPreviewState.kMuted,
+
+          const SizedBox(height: 12),
+
+          _section(
+            header: 'ADDRESS',
+            child: _addressBlock(context, address),
+          ),
+
+          const SizedBox(height: 12),
+
+          _section(
+            header: 'VITALS',
+            child: _vitals(
+              tiles: [
+                _metric('Height', height),
+                _metric('Weight', weight),
+                _metric('BMI', bmi),
+                _metric('BP', bp, emphasize: true),
+                _metric('Heart Rate', heartRate),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 12),
+
+          // _section(
+          //   header: 'CLINICAL SUMMARY',
+          //   child: Column(
+          //     children: [
+          //       _listBlock('Diagnoses', diagnoses),
+          //       _divider(),
+          //       _listBlock('Chronic Conditions', chronicConditions),
+          //       _divider(),
+          //       _listBlock('Allergies', allergies, warning: true),
+          //     ],
+          //   ),
+          // ),
+
+          const SizedBox(height: 12),
+
+          _section(
+            header: 'EMERGENCY CONTACT',
+            child: _grid(
+              items: [
+                _kv('Name', emergencyContactName),
+                _kv('Phone', emergencyContactPhone, copyable: true),
+              ],
             ),
           ),
         ],
       ),
     );
   }
-}
 
-/// ===== Edit Button (styled) =====
-class _EditBtn extends StatelessWidget {
-  const _EditBtn({this.onTap});
-  final VoidCallback? onTap;
+  // ---------------- UI Blocks ----------------
 
-  @override
-  Widget build(BuildContext context) {
-    return TextButton.icon(
-      onPressed: onTap,
-      icon: const Icon(Icons.edit_outlined, size: 16, color: _DoctorAppointmentPreviewState.kPrimary),
-      label: Text(
-        "Edit",
-        style: GoogleFonts.inter(
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
-          color: _DoctorAppointmentPreviewState.kPrimary,
+  Widget _section({
+    required String header,
+    required Widget child,
+    List<Widget> actions = const [],
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: _card,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: _border),
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: const BoxDecoration(
+              border: Border(bottom: BorderSide(color: _border)),
+            ),
+            child: Row(
+              children: [
+                Text(header, style: _hSmall),
+                const Spacer(),
+                ..._withSpacing(actions, gap: 6),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+            child: child,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _grid({required List<Widget> items}) {
+    return LayoutBuilder(builder: (_, c) {
+      final w = c.maxWidth;
+      int cols = 1;
+      if (w >= 520) cols = 2;
+      if (w >= 960) cols = 3;
+
+      final gap = 16.0;
+      final itemW = (w - (gap * (cols - 1))) / cols;
+
+      return Wrap(
+        spacing: gap,
+        runSpacing: 12,
+        children: items.map((e) => SizedBox(width: itemW, child: e)).toList(),
+      );
+    });
+  }
+
+  Widget _kv(String k, String v, {bool copyable = false, TextStyle? valueStyle}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(k, style: _k),
+        const SizedBox(height: 4),
+        Row(
+          children: [
+            Expanded(
+              child: SelectableText(
+                v,
+                style: valueStyle ?? _v,
+                maxLines: 2,
+              ),
+            ),
+            if (copyable) ...[
+              const SizedBox(width: 8),
+              _ghostIcon(
+                tooltip: 'Copy',
+                icon: Icons.copy_rounded,
+                onTap: () => _copyInline(v),
+              ),
+            ],
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _addressBlock(BuildContext context, String text) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        border: Border.all(color: _border),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.location_on_outlined, size: 18, color: _mutedIcon),
+          const SizedBox(width: 8),
+          Expanded(child: SelectableText(text, style: _v)),
+          const SizedBox(width: 8),
+          _ghostIcon(
+            tooltip: 'Copy Address',
+            icon: Icons.copy_all_rounded,
+            onTap: () => _copy(context, text),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _vitals({required List<Widget> tiles}) {
+    return LayoutBuilder(builder: (_, c) {
+      final w = c.maxWidth;
+      int cols = 2;
+      if (w >= 720) cols = 3;
+      if (w >= 1080) cols = 4;
+
+      final gap = 12.0;
+      final itemW = (w - (gap * (cols - 1))) / cols;
+
+      return Wrap(
+        spacing: gap,
+        runSpacing: gap,
+        children: tiles.map((e) => SizedBox(width: itemW, child: e)).toList(),
+      );
+    });
+  }
+
+  Widget _metric(String label, String value, {bool emphasize = false}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      decoration: BoxDecoration(
+        border: Border.all(color: _border),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 4,
+            height: 16,
+            decoration: BoxDecoration(
+              color: emphasize ? _accent : _border,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(child: Text(label, style: _k)),
+          Text(value, style: emphasize ? _mono.copyWith(color: _text) : _v),
+        ],
+      ),
+    );
+  }
+
+  Widget _listBlock(String heading, List<String> items, {bool warning = false}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(heading.toUpperCase(), style: _hSmall),
+        const SizedBox(height: 8),
+        if (items.isEmpty)
+          Text('No data', style: _k)
+        else
+          Column(
+            children: List.generate(items.length, (i) {
+              final last = i == items.length - 1;
+              return Container(
+                decoration: BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(color: last ? Colors.transparent : _border),
+                  ),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      warning ? Icons.error_outline : Icons.circle,
+                      size: 14,
+                      color: warning ? _accent : _mutedIcon,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(child: SelectableText(items[i], style: _v)),
+                  ],
+                ),
+              );
+            }),
+          ),
+      ],
+    );
+  }
+
+  Widget _divider() => const Divider(height: 16, thickness: 1, color: _border);
+
+  Widget _ghostIcon({
+    required String tooltip,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      waitDuration: const Duration(milliseconds: 400),
+      child: InkResponse(
+        onTap: onTap,
+        radius: 20,
+        child: Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            border: Border.all(color: _border),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Icon(icon, size: 16, color: _mutedIcon),
         ),
       ),
     );
   }
-}
 
-/// ===== Sparkline with dots + shade =====
-class _SparklinePainter extends CustomPainter {
-  _SparklinePainter(this.values, {this.showDots = false, this.shade = false});
-  final List<double> values;
-  final bool showDots;
-  final bool shade;
+  // ---------------- Utilities ----------------
 
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (values.isEmpty) return;
-
-    final minV = values.reduce((a, b) => a < b ? a : b);
-    final maxV = values.reduce((a, b) => a > b ? a : b);
-    final range = (maxV - minV) == 0 ? 1.0 : (maxV - minV);
-
-    final points = <Offset>[];
-    for (int i = 0; i < values.length; i++) {
-      final x = i * size.width / (values.length - 1);
-      final y = size.height - ((values[i] - minV) / range) * size.height;
-      points.add(Offset(x, y));
+  List<Widget> _withSpacing(List<Widget> children, {double gap = 8}) {
+    if (children.isEmpty) return const [];
+    final out = <Widget>[];
+    for (var i = 0; i < children.length; i++) {
+      out.add(children[i]);
+      if (i != children.length - 1) out.add(SizedBox(width: gap));
     }
-
-    final path = Path()..moveTo(points.first.dx, points.first.dy);
-    for (var p in points.skip(1)) {
-      path.lineTo(p.dx, p.dy);
-    }
-
-    // Shade under line
-    if (shade) {
-      final shadePath = Path.from(path)
-        ..lineTo(points.last.dx, size.height)
-        ..lineTo(points.first.dx, size.height)
-        ..close();
-      final shadePaint = Paint()
-        ..shader = LinearGradient(
-          colors: [
-            _DoctorAppointmentPreviewState.kPrimary.withOpacity(0.25),
-            Colors.transparent,
-          ],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
-      canvas.drawPath(shadePath, shadePaint);
-    }
-
-    // Draw line
-    final stroke = Paint()
-      ..color = _DoctorAppointmentPreviewState.kPrimary
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.2;
-    canvas.drawPath(path, stroke);
-
-    // Draw dots
-    if (showDots) {
-      final dotPaint = Paint()..color = _DoctorAppointmentPreviewState.kPrimary;
-      for (var p in points) {
-        canvas.drawCircle(p, 3, dotPaint);
-      }
-    }
+    return out;
   }
 
-  @override
-  bool shouldRepaint(covariant _SparklinePainter old) {
-    return old.values != values || old.showDots != showDots || old.shade != shade;
+  Future<void> _copy(BuildContext context, String text) async {
+    await Clipboard.setData(ClipboardData(text: text));
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Copied', style: GoogleFonts.inter(fontSize: 13)),
+        duration: const Duration(milliseconds: 900),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  Future<void> _copyInline(String text) async {
+    await Clipboard.setData(ClipboardData(text: text));
   }
 }
 
+
+
+
+
+
+
+
+/// Page wrapper to match your Appointments page (title + search + button + table)
+
+
+// ---- SAME COLORS AS APPOINTMENTS ----
+const Color primaryColor = Color(0xFFEF4444);
+const Color cardBackgroundColor = Color(0xFFFFFFFF);
+const Color textPrimaryColor = Color(0xFF1F2937);
+const Color textSecondaryColor = Color(0xFF6B7280);
+const Color _appointmentsHeaderColor = Color(0xFFB91C1C);
+const Color _tableHeaderColor = Color(0xFF991B1B);
+const Color _searchBorderColor = Color(0xFFFCA5A5);
+const Color _buttonBgColor = Color(0xFFDC2626);
+const Color _statusIncompleteColor = Color(0xFFDC2626);
+const Color _rowAlternateColor = Color(0xFFFEF2F2);
+const Color _intakeButtonColor = Color(0xFFF87171);
 
 class _MedicationsTab extends StatefulWidget {
-  const _MedicationsTab({required this.rows, required TextStyle text});
-
-  final List<Map<String, dynamic>> rows;
+  const _MedicationsTab();
 
   @override
   State<_MedicationsTab> createState() => _MedicationsTabState();
 }
 
 class _MedicationsTabState extends State<_MedicationsTab> {
-  late List<Map<String, dynamic>> _rows;
+  late Future<List<Map<String, dynamic>>> _futureRows;
 
   @override
   void initState() {
     super.initState();
-    _rows = widget.rows;
+    _futureRows = _fetchMedications(); // simulate API fetch
+  }
+
+  Future<List<Map<String, dynamic>>> _fetchMedications() async {
+    await Future.delayed(const Duration(milliseconds: 600));
+    return [
+      {
+        'name': 'Paracetamol',
+        'dose': '500 mg',
+        'route': 'PO',
+        'freq': 'BID',
+        'start': '05/12/2022',
+        'end': '10/12/2022',
+        'status': 'Completed',
+      },
+      {
+        'name': 'Amoxicillin',
+        'dose': '250 mg',
+        'route': 'PO',
+        'freq': 'TID',
+        'start': '19/08/2025',
+        'end': '—',
+        'status': 'Incomplete',
+      },
+      {
+        'name': 'Atorvastatin',
+        'dose': '10 mg',
+        'route': 'PO',
+        'freq': 'Daily',
+        'start': '01/01/2023',
+        'end': '—',
+        'status': 'Completed',
+      },
+    ];
   }
 
   @override
   Widget build(BuildContext context) {
-    return _Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            // ===== Header =====
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: _futureRows,
+      builder: (context, snap) {
+        if (snap.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snap.hasError) {
+          return Center(
+            child: Text('Error: ${snap.error}',
+                style: const TextStyle(color: _statusIncompleteColor)),
+          );
+        }
+
+        final rows = snap.data ?? [];
+        if (rows.isEmpty) {
+          return const Center(child: Text('No medications recorded.'));
+        }
+
+        final headerStyle = GoogleFonts.poppins(
+          fontSize: 14,
+          fontWeight: FontWeight.w700,
+          color: _appointmentsHeaderColor, // same deep red as appointments header
+        );
+        final cellStyle = GoogleFonts.poppins(
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+          color: textPrimaryColor,
+        );
+
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            color: cardBackgroundColor,
+            child: Column(
               children: [
-                Text(
-                  "Medications",
-                  style: GoogleFonts.lexend(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF1F2937),
+                // ------- HEADER ROW + RED RULE (exact like appointments) -------
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  decoration: const BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(color: _tableHeaderColor, width: 1.5),
+                    ),
                   ),
-                ),
-                Row(
-                  children: [
-                    TextButton.icon(
-                      onPressed: () {
-                        // TODO: implement edit logic
-                      },
-                      icon: const Icon(Icons.edit_outlined,
-                          size: 16,
-                          color: _DoctorAppointmentPreviewState.kPrimary),
-                      label: Text(
-                        "Edit",
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: _DoctorAppointmentPreviewState.kPrimary,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        // TODO: implement add note logic
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _DoctorAppointmentPreviewState.kPrimary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 10),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8)),
-                        elevation: 0,
-                      ),
-                      icon: const Icon(Icons.add, size: 16),
-                      label: Text("Notes",
-                          style: GoogleFonts.inter(
-                              fontSize: 14, fontWeight: FontWeight.w600)),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 20),
-
-            // ===== Table =====
-            Expanded(
-              child: _rows.isEmpty
-                  ? Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.medical_services_outlined,
-                        size: 64,
-                        color:
-                        _DoctorAppointmentPreviewState.kPrimary.withOpacity(0.3)),
-                    const SizedBox(height: 12),
-                    Text(
-                      "No Medications Assigned",
-                      style: GoogleFonts.lexend(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: _DoctorAppointmentPreviewState.kMuted,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      "Click +Notes to add medication details.",
-                      style: GoogleFonts.inter(
-                        fontSize: 13,
-                        color: _DoctorAppointmentPreviewState.kMuted,
-                      ),
-                    ),
-                  ],
-                ),
-              )
-                  : Scrollbar(
-                thumbVisibility: true,
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: DataTable(
-                    headingTextStyle: GoogleFonts.inter(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13,
-                      color: const Color(0xFF374151),
-                    ),
-                    dataTextStyle: GoogleFonts.lexend(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      color: const Color(0xFF111827),
-                    ),
-                    headingRowColor: MaterialStateProperty.all(
-                        const Color(0xFFFFF1F2)), // red-50
-                    dataRowColor: MaterialStateProperty.resolveWith(
-                            (states) => states.contains(MaterialState.selected)
-                            ? const Color(0xFFFFE4E6)
-                            : Colors.white),
-                    columnSpacing: 24,
-                    horizontalMargin: 16,
-                    columns: const [
-                      DataColumn(label: Text("Name")),
-                      DataColumn(label: Text("Indication")),
-                      DataColumn(label: Text("Status")),
-                      DataColumn(label: Text("Sig")),
-                      DataColumn(label: Text("Start Date")),
-                      DataColumn(label: Text("Assigned By")),
-                      DataColumn(label: Text("Note")),
+                  child: Row(
+                    children: const [
+                      _Th('Medication', flex: 22),
+                      _Th('Dose', flex: 12),
+                      _Th('Route', flex: 10),
+                      _Th('Frequency', flex: 12),
+                      _Th('Start', flex: 12),
+                      _Th('End', flex: 12),
+                      _Th('Status', flex: 10),
                     ],
-                    rows: _rows
-                        .map(
-                          (r) => DataRow(
-                        cells: [
-                          DataCell(Text(r['name'] ?? '-')),
-                          DataCell(Text(r['indication'] ?? '-')),
-                          DataCell(Text(r['status'] ?? '-')),
-                          DataCell(Text(r['sig'] ?? '-')),
-                          DataCell(Text(r['startDate'] ?? '-')),
-                          DataCell(Text(r['assignedBy'] ?? '-')),
-                          DataCell(Text(r['note'] ?? '-')),
-                        ],
-                      ),
-                    )
-                        .toList(),
                   ),
                 ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
-// -----------------------------------------------------------------------------
-// IconX: lightweight alias so you can “use icon from the iconx”
-// -----------------------------------------------------------------------------
-class IconX {
-  static const IconData beaker = Icons.biotech_outlined;
-  static const IconData back = Icons.arrow_back_ios;
-  static const IconData range = Icons.straighten;
-  static const IconData calendar = Icons.event_outlined;
-  static const IconData normal = Icons.check_circle_outline;
-  static const IconData high = Icons.trending_up_outlined;
-  static const IconData low = Icons.trending_down_outlined;
-  static const IconData edit = Icons.edit_outlined;
-  static const IconData export = Icons.file_download_outlined;
-  static const IconData goal = Icons.flag_outlined;
-  static const IconData done = Icons.verified_outlined;
-  static const IconData progress = Icons.timelapse_outlined;
-  static const IconData add = Icons.add;
-}
+                // ------- BODY (zebra rows, spacing like image 2) -------
+                ...List.generate(rows.length, (i) {
+                  final r = rows[i];
+                  final bg = i.isOdd ? _rowAlternateColor : Colors.transparent;
 
-// -----------------------------------------------------------------------------
-// MYTHIC-LEVEL LABS TAB (keeps same class name/signature)
-// -----------------------------------------------------------------------------
-class _LabsTab extends StatelessWidget {
-  const _LabsTab({required this.text, required this.rows});
-  final TextStyle text;
-  final List<Map<String, dynamic>> rows;
-
-  @override
-  Widget build(BuildContext context) {
-    // Compute KPI counts
-    final parsed = rows.map((r) => _LabRow.fromMap(r)).toList();
-    int total = parsed.length;
-    int high = parsed.where((e) => e.status == _LabStatus.high).length;
-    int low = parsed.where((e) => e.status == _LabStatus.low).length;
-    int normal = parsed.where((e) => e.status == _LabStatus.normal).length;
-
-    return _Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Lab Results',
-                  style: GoogleFonts.lexend(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF1F2937),
-                  ),
-                ),
-                Row(
-                  children: [
-                    TextButton.icon(
-                      onPressed: () {},
-                      icon: Icon(IconX.edit,
-                          size: 16, color: _DoctorAppointmentPreviewState.kPrimary),
-                      label: Text(
-                        'Edit',
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: _DoctorAppointmentPreviewState.kPrimary,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        // TODO: hook up export
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _DoctorAppointmentPreviewState.kPrimary,
-                        foregroundColor: Colors.white,
-                        padding:
-                        const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8)),
-                        elevation: 0,
-                      ),
-                      icon: const Icon(IconX.export, size: 16),
-                      label: Text(
-                        'Export',
-                        style: GoogleFonts.inter(
-                            fontSize: 14, fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 16),
-
-            // KPI strip
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: [
-                _LabKpi(
-                  icon: IconX.beaker,
-                  label: 'Total',
-                  value: '$total',
-                  bg: const Color(0xFFFFF1F2),
-                  border: const Color(0xFFFECACA),
-                ),
-                _LabKpi(
-                  icon: IconX.high,
-                  label: 'High',
-                  value: '$high',
-                  bg: const Color(0xFFFFF1F2),
-                  border: const Color(0xFFFECACA),
-                ),
-                _LabKpi(
-                  icon: IconX.low,
-                  label: 'Low',
-                  value: '$low',
-                  bg: const Color(0xFFFFF1F2),
-                  border: const Color(0xFFFECACA),
-                ),
-                _LabKpi(
-                  icon: IconX.normal,
-                  label: 'Normal',
-                  value: '$normal',
-                  bg: const Color(0xFFEFF6FF),
-                  border: const Color(0xFFBFDBFE),
-                  fg: const Color(0xFF2563EB),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 20),
-            _SectionDivider(),
-
-            const SizedBox(height: 8),
-
-            if (rows.isEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 24),
-                child: Row(
-                  children: [
-                    Icon(IconX.beaker,
-                        size: 48,
-                        color:
-                        _DoctorAppointmentPreviewState.kPrimary.withOpacity(0.25)),
-                    const SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  return Container(
+                    color: bg,
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    height: 64, // same row height
+                    child: Row(
                       children: [
-                        Text('No lab results',
-                            style: GoogleFonts.lexend(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: _DoctorAppointmentPreviewState.kMuted)),
-                        const SizedBox(height: 4),
-                        Text('Add labs to see trends and flags here.',
-                            style: GoogleFonts.inter(
-                                fontSize: 13,
-                                color: _DoctorAppointmentPreviewState.kMuted)),
+                        _Td(r['name'], flex: 22, style: cellStyle),
+                        _Td(r['dose'], flex: 12, style: cellStyle),
+                        _Td(r['route'], flex: 10, style: cellStyle),
+                        _Td(r['freq'], flex: 12, style: cellStyle),
+                        _Td(r['start'], flex: 12, style: cellStyle),
+                        _Td(r['end'], flex: 12, style: cellStyle),
+                        // Status pill (soft red bg, red text)
+                        Expanded(
+                          flex: 10,
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: _statusChip((r['status'] ?? 'Ongoing').toString()),
+                          ),
+                        ),
                       ],
                     ),
-                  ],
-                ),
-              )
-            else
-            // Table
-              ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: Column(
-                  children: [
-                    Container(
-                      height: 44,
-                      color: const Color(0xFFFFF1F2),
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      child: Row(
-                        children: [
-                          _LabTh(icon: IconX.beaker, label: 'Test'),
-                          _LabTh(icon: IconX.range, label: 'Value'),
-                          _LabTh(icon: IconX.range, label: 'Reference'),
-                          _LabTh(icon: IconX.calendar, label: 'Date'),
-                          _LabTh(icon: IconX.normal, label: 'Flag'),
-                        ],
-                      ),
-                    ),
-                    ...parsed.map((r) => Container(
-                      decoration: const BoxDecoration(
-                        border: Border(
-                          bottom: BorderSide(
-                              color: _DoctorAppointmentPreviewState.kBorder),
-                        ),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 12, horizontal: 12),
-                      child: Row(
-                        children: [
-                          Expanded(
-                              child: Text(r.name,
-                                  style: GoogleFonts.lexend(
-                                      fontSize: 13.5,
-                                      fontWeight: FontWeight.w600))),
-                          Expanded(
-                              child: Text(r.valueRaw,
-                                  style: GoogleFonts.inter(fontSize: 13))),
-                          Expanded(
-                              child: Text(r.refRaw,
-                                  style: GoogleFonts.inter(
-                                      fontSize: 13,
-                                      color:
-                                      _DoctorAppointmentPreviewState.kMuted))),
-                          Expanded(
-                              child: Text(r.date,
-                                  style: GoogleFonts.inter(
-                                      fontSize: 13,
-                                      color:
-                                      _DoctorAppointmentPreviewState.kMuted))),
-                          Expanded(child: _LabFlag(status: r.status)),
-                        ],
-                      ),
-                    )),
-                  ],
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-enum _LabStatus { high, low, normal, unknown }
-
-class _LabRow {
-  final String name;
-  final String valueRaw;
-  final String refRaw;
-  final String date;
-  final _LabStatus status;
-
-  _LabRow({
-    required this.name,
-    required this.valueRaw,
-    required this.refRaw,
-    required this.date,
-    required this.status,
-  });
-
-  static _LabRow fromMap(Map<String, dynamic> m) {
-    final name = (m['name'] ?? '-').toString();
-    final valueRaw = (m['value'] ?? '-').toString();
-    final refRaw = (m['ref'] ?? '-').toString();
-    final date = (m['date'] ?? '-').toString();
-
-    _LabStatus status = _inferStatus(valueRaw, refRaw);
-    return _LabRow(
-      name: name,
-      valueRaw: valueRaw,
-      refRaw: refRaw,
-      date: date,
-      status: status,
+                  );
+                }),
+                const SizedBox(height: 8),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
-  static _LabStatus _inferStatus(String value, String ref) {
-    // Simple numeric parser: if ref looks like "70–100" or "70-100"
-    final num? val = _tryNum(value);
-    if (val == null) return _LabStatus.unknown;
+  Widget _statusChip(String status) {
+    final isIncomplete = status.toLowerCase() == 'incomplete';
+    final bg = isIncomplete
+        ? _statusIncompleteColor.withOpacity(0.12)
+        : primaryColor.withOpacity(0.12);
+    final fg = isIncomplete ? _statusIncompleteColor : primaryColor;
 
-    final range = _tryRange(ref);
-    if (range == null) return _LabStatus.unknown;
-
-    if (val < range.$1) return _LabStatus.low;
-    if (val > range.$2) return _LabStatus.high;
-    return _LabStatus.normal;
-  }
-
-  static num? _tryNum(String s) {
-    // strip unit suffixes like " mg/dL" or "%"
-    final cleaned = s.replaceAll(RegExp(r'[^0-9\.\-]'), '');
-    if (cleaned.isEmpty) return null;
-    return num.tryParse(cleaned);
-  }
-
-  // returns (low, high)
-  static (num, num)? _tryRange(String s) {
-    final m = RegExp(r'([0-9\.]+)\s*[-–]\s*([0-9\.]+)').firstMatch(s);
-    if (m == null) return null;
-    final a = num.tryParse(m.group(1)!);
-    final b = num.tryParse(m.group(2)!);
-    if (a == null || b == null) return null;
-    final lo = a < b ? a : b;
-    final hi = a < b ? b : a;
-    return (lo, hi);
-  }
-}
-
-class _LabKpi extends StatelessWidget {
-  const _LabKpi({
-    required this.icon,
-    required this.label,
-    required this.value,
-    required this.bg,
-    required this.border,
-    this.fg,
-  });
-
-  final IconData icon;
-  final String label;
-  final String value;
-  final Color bg;
-  final Color border;
-  final Color? fg;
-
-  @override
-  Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: border),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 18, color: fg ?? _DoctorAppointmentPreviewState.kPrimary),
-          const SizedBox(width: 8),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(value,
-                  style: GoogleFonts.lexend(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF111827))),
-              Text(label,
-                  style: GoogleFonts.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: _DoctorAppointmentPreviewState.kMuted)),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _LabTh extends StatelessWidget {
-  const _LabTh({required this.icon, required this.label});
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Row(
-        children: [
-          Icon(icon, size: 16, color: const Color(0xFF374151)),
-          const SizedBox(width: 6),
-          Text(label,
-              style: GoogleFonts.inter(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w700,
-                  color: const Color(0xFF374151))),
-        ],
-      ),
-    );
-  }
-}
-
-class _LabFlag extends StatelessWidget {
-  const _LabFlag({required this.status});
-  final _LabStatus status;
-
-  @override
-  Widget build(BuildContext context) {
-    late IconData icon;
-    late String text;
-    late Color color;
-    switch (status) {
-      case _LabStatus.high:
-        icon = IconX.high;
-        text = 'High';
-        color = const Color(0xFFB91C1C);
-        break;
-      case _LabStatus.low:
-        icon = IconX.low;
-        text = 'Low';
-        color = const Color(0xFFB45309);
-        break;
-      case _LabStatus.normal:
-        icon = IconX.normal;
-        text = 'Normal';
-        color = const Color(0xFF2563EB);
-        break;
-      default:
-        icon = Icons.help_outline;
-        text = '—';
-        color = _DoctorAppointmentPreviewState.kMuted;
-    }
-
-    return Row(
-      children: [
-        Icon(icon, size: 16, color: color),
-        const SizedBox(width: 6),
-        Text(text,
-            style: GoogleFonts.inter(
-                fontSize: 12.5, fontWeight: FontWeight.w600, color: color)),
-      ],
-    );
-  }
-}
-
-// -----------------------------------------------------------------------------
-// MYTHIC-LEVEL GOALS TAB (keeps same class name/signature)
-// -----------------------------------------------------------------------------
-// class _GoalsTab extends StatelessWidget {
-//   const _GoalsTab({required this.text, required this.goals});
-//   final TextStyle text;
-//   final List<Map<String, dynamic>> goals;
-//
-//   @override
-//   Widget build(BuildContext context) {
-//     return _Card(
-//       child: Padding(
-//         padding: const EdgeInsets.all(20),
-//         child: Column(
-//           crossAxisAlignment: CrossAxisAlignment.start,
-//           children: [
-//             // Header
-//             Row(
-//               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-//               children: [
-//                 Text(
-//                   'Mini Goals',
-//                   style: GoogleFonts.lexend(
-//                     fontSize: 20,
-//                     fontWeight: FontWeight.w700,
-//                     color: const Color(0xFF1F2937),
-//                   ),
-//                 ),
-//                 ElevatedButton.icon(
-//                   onPressed: () {
-//                     // TODO: add goal
-//                   },
-//                   style: ElevatedButton.styleFrom(
-//                     backgroundColor: _DoctorAppointmentPreviewState.kPrimary,
-//                     foregroundColor: Colors.white,
-//                     padding:
-//                     const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-//                     shape: RoundedRectangleBorder(
-//                         borderRadius: BorderRadius.circular(8)),
-//                     elevation: 0,
-//                   ),
-//                   icon: const Icon(IconX.add, size: 16),
-//                   label: Text('Add',
-//                       style: GoogleFonts.inter(
-//                           fontSize: 14, fontWeight: FontWeight.w600)),
-//                 ),
-//               ],
-//             ),
-//
-//             const SizedBox(height: 16),
-//             _SectionDivider(),
-//             const SizedBox(height: 12),
-//
-//             if (goals.isEmpty)
-//               Padding(
-//                 padding: const EdgeInsets.symmetric(vertical: 24),
-//                 child: Row(
-//                   children: [
-//                     Icon(IconX.goal,
-//                         size: 48,
-//                         color:
-//                         _DoctorAppointmentPreviewState.kPrimary.withOpacity(0.25)),
-//                     const SizedBox(width: 12),
-//                     Column(
-//                       crossAxisAlignment: CrossAxisAlignment.start,
-//                       children: [
-//                         Text('No goals yet',
-//                             style: GoogleFonts.lexend(
-//                                 fontSize: 16,
-//                                 fontWeight: FontWeight.w600,
-//                                 color: _DoctorAppointmentPreviewState.kMuted)),
-//                         const SizedBox(height: 4),
-//                         Text('Create goals to track patient progress.',
-//                             style: GoogleFonts.inter(
-//                                 fontSize: 13,
-//                                 color: _DoctorAppointmentPreviewState.kMuted)),
-//                       ],
-//                     ),
-//                   ],
-//                 ),
-//               )
-//             else
-//               LayoutBuilder(
-//                 builder: (context, c) {
-//                   final maxW = c.maxWidth;
-//                   final cardW = 360.0;
-//                   final cols = (maxW ~/ cardW).clamp(1, 3);
-//                   return GridView.builder(
-//                     shrinkWrap: true,
-//                     physics: const NeverScrollableScrollPhysics(),
-//                     gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-//                       crossAxisCount: cols,
-//                       mainAxisSpacing: 16,
-//                       crossAxisSpacing: 16,
-//                       childAspectRatio: 1.9,
-//                     ),
-//                     itemCount: goals.length,
-//                     itemBuilder: (_, i) {
-//                       final g = goals[i];
-//                       return _GoalCard(goal: _GoalModel.fromMap(g));
-//                     },
-//                   );
-//                 },
-//               ),
-//           ],
-//         ),
-//       ),
-//     );
-//   }
-// }
-
-// class _GoalModel {
-//   final String title;
-//   final double progress; // 0..1
-//   final String? due;     // ISO or readable
-//   final String? category;
-//
-//   _GoalModel({
-//     required this.title,
-//     required this.progress,
-//     this.due,
-//     this.category,
-//   });
-//
-//   factory _GoalModel.fromMap(Map<String, dynamic> m) {
-//     return _GoalModel(
-//       title: (m['title'] ?? '-').toString(),
-//       progress: ((m['progress'] ?? 0.0) as num).toDouble().clamp(0.0, 1.0),
-//       due: m['due']?.toString(),
-//       category: m['category']?.toString(),
-//     );
-//   }
-// }
-//
-// class _GoalCard extends StatelessWidget {
-//   const _GoalCard({required this.goal});
-//   final _GoalModel goal;
-//
-//   @override
-//   Widget build(BuildContext context) {
-//     final pct = (goal.progress * 100).round();
-//     final statusIcon = pct >= 100
-//         ? IconX.done
-//         : (pct >= 50 ? IconX.progress : IconX.goal);
-//     final statusColor = pct >= 100
-//         ? const Color(0xFF059669) // green-600
-//         : (pct >= 50 ? const Color(0xFFF59E0B) : _DoctorAppointmentPreviewState.kPrimary);
-//
-//     return Container(
-//       padding: const EdgeInsets.all(16),
-//       decoration: BoxDecoration(
-//         color: Colors.white,
-//         border: Border.all(color: _DoctorAppointmentPreviewState.kBorder),
-//         borderRadius: BorderRadius.circular(12),
-//         boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0,1))],
-//       ),
-//       child: Column(
-//         crossAxisAlignment: CrossAxisAlignment.start,
-//         children: [
-//           // Title + status
-//           Row(
-//             crossAxisAlignment: CrossAxisAlignment.start,
-//             children: [
-//               Icon(statusIcon, size: 20, color: statusColor),
-//               const SizedBox(width: 8),
-//               Expanded(
-//                 child: Text(
-//                   goal.title,
-//                   style: GoogleFonts.lexend(
-//                     fontSize: 15.5,
-//                     fontWeight: FontWeight.w700,
-//                     color: const Color(0xFF111827),
-//                   ),
-//                 ),
-//               ),
-//             ],
-//           ),
-//           const SizedBox(height: 10),
-//
-//           // Progress bar
-//           ClipRRect(
-//             borderRadius: BorderRadius.circular(999),
-//             child: LinearProgressIndicator(
-//               value: goal.progress,
-//               minHeight: 10,
-//               backgroundColor: const Color(0xFFFFE4E6),
-//               valueColor: AlwaysStoppedAnimation<Color>(statusColor),
-//             ),
-//           ),
-//           const SizedBox(height: 8),
-//
-//           // Meta row
-//           Row(
-//             children: [
-//               Text(
-//                 '$pct%',
-//                 style: GoogleFonts.inter(
-//                   fontSize: 12.5,
-//                   fontWeight: FontWeight.w700,
-//                   color: const Color(0xFF374151),
-//                 ),
-//               ),
-//               const SizedBox(width: 12),
-//               if (goal.category != null && goal.category!.isNotEmpty)
-//                 _Pill(label: goal.category!, color: const Color(0xFF2563EB)),
-//               const Spacer(),
-//               if (goal.due != null && goal.due!.isNotEmpty)
-//                 Row(
-//                   children: [
-//                     const Icon(IconX.calendar, size: 16, color: Color(0xFF6B7280)),
-//                     const SizedBox(width: 6),
-//                     Text(
-//                       goal.due!,
-//                       style: GoogleFonts.inter(
-//                         fontSize: 12.5,
-//                         color: const Color(0xFF6B7280),
-//                         fontWeight: FontWeight.w500,
-//                       ),
-//                     ),
-//                   ],
-//                 ),
-//             ],
-//           ),
-//         ],
-//       ),
-//     );
-//   }
-// }
-
-class _Pill extends StatelessWidget {
-  const _Pill({required this.label, required this.color});
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        border: Border.all(color: color.withOpacity(0.25)),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
-        label,
-        style: GoogleFonts.inter(
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
-          color: color,
+        status,
+        style: GoogleFonts.poppins(
+          fontWeight: FontWeight.w600,
+          fontSize: 13,
+          color: fg,
         ),
       ),
     );
   }
 }
 
-// ================= REUSABLE BLOCKS =================
-
-class _Card extends StatelessWidget {
-  const _Card({required this.child});
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: _DoctorAppointmentPreviewState.kCard,
-        borderRadius: BorderRadius.circular(_DoctorAppointmentPreviewState.kRadius),
-        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 1))],
-      ),
-      child: child,
-    );
-  }
-}
-
-class _SectionHead extends StatelessWidget {
-  const _SectionHead({required this.text, required this.title, this.trailing});
-  final TextStyle text;
-  final String title;
-  final Widget? trailing;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(title, style: text.copyWith(fontSize: 15, fontWeight: FontWeight.w600)),
-        if (trailing != null) trailing!,
-      ],
-    );
-  }
-}
-
-class _SummaryCard extends StatelessWidget {
-  const _SummaryCard({
-    required this.text,
-    required this.pName,
-    required this.pGender,
-    required this.pLoc,
-    required this.pJob,
-    required this.pDob,
-    required this.pBMI,
-    required this.pWt,
-    required this.pHt,
-    required this.pBp,
-    required this.ownDx,
-    required this.barriers,
-  });
-
-  final TextStyle text;
-  final String pName, pGender, pLoc, pJob, pDob, pBMI, pWt, pHt, pBp;
-  final List<String> ownDx, barriers;
-
-  @override
-  Widget build(BuildContext context) {
-    return _Card(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Avatar
-          Container(
-            decoration: BoxDecoration(
-              border: Border.all(color: const Color(0xFFFFCDD2), width: 4),
-              shape: BoxShape.circle,
-            ),
-            child: const CircleAvatar(
-              radius: 44,
-              backgroundImage: AssetImage('assets/boyicon.png'),
-            ),
-          ),
-          const SizedBox(width: 16),
-
-          // Identity + vitals
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(pName,
-                    style: text.copyWith(fontSize: 18, fontWeight: FontWeight.w700, color: _DoctorAppointmentPreviewState.kText)),
-                const SizedBox(height: 6),
-                Wrap(
-                  spacing: 18,
-                  runSpacing: 8,
-                  children: const [
-                    _Info(icon: Icons.male),
-                    _Info(icon: Icons.person_outline),
-                    _Info(icon: Icons.work_outline),
-                    _Info(icon: Icons.cake),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _Vital(value: '22.4', note: 'BMI > 30'),
-                    _Vital(value: '92kg', note: 'Weight > 65kg'),
-                    _Vital(value: '175cm', note: 'Height'),
-                    _Vital(value: '124/80', note: 'Blood P. (mmHg) > 30'),
-                  ],
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(width: 16),
-
-          // Actions + Chips
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              const _PrimaryBtn(label: 'Edit', onTap: null),
-              const SizedBox(height: 10),
-              Text('Own diagnosis', style: GoogleFonts.roboto(fontSize: 12, fontWeight: FontWeight.w600)),
-              const SizedBox(height: 6),
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: ownDx
-                    .map((e) => const _Chip(label: null))
-                    .toList()
-                    .asMap()
-                    .entries
-                    .map((entry) => _Chip(
-                  label: ownDx[entry.key],
-                  bg: const Color(0xFFFFE4E6),
-                  fg: _DoctorAppointmentPreviewState.kPrimary600,
-                ))
-                    .toList(),
-              ),
-              const SizedBox(height: 10),
-              Text('Health barriers', style: GoogleFonts.roboto(fontSize: 12, fontWeight: FontWeight.w600)),
-              const SizedBox(height: 6),
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: barriers
-                    .map((e) => _Chip(label: e, bg: const Color(0xFFFFF7ED), fg: const Color(0xFFB45309)))
-                    .toList(),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _TimelineCard extends StatelessWidget {
-  const _TimelineCard({required this.text, required this.items});
-  final TextStyle text;
-  final List<Map<String, dynamic>> items;
-
-  @override
-  Widget build(BuildContext context) {
-    return _Card(
-      child: Column(
-        children: [
-          _SectionHead(text: text, title: 'Timeline', trailing: _TextBtn(label: 'Edit', onTap: null)),
-          const SizedBox(height: 8),
-          Column(
-            children: items
-                .map((t) => _TimelineTile(
-              date: t['date']?.toString() ?? '',
-              title: t['title']?.toString() ?? '',
-              desc: t['desc']?.toString() ?? '',
-            ))
-                .toList(),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MedicalHistoryCard extends StatelessWidget {
-  const _MedicalHistoryCard({required this.text, required this.data});
-  final TextStyle text;
-  final Map<String, dynamic> data;
-
-  @override
-  Widget build(BuildContext context) {
-    return _Card(
-      child: Padding(
-        padding: const EdgeInsets.only(bottom: 6),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _SectionHead(text: text, title: 'Medical History', trailing: _TextBtn(label: 'Edit', onTap: null)),
-            const SizedBox(height: 8),
-            GridView(
-              shrinkWrap: true,
-              padding: EdgeInsets.zero,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                mainAxisSpacing: 8,
-                crossAxisSpacing: 24,
-                childAspectRatio: 4.2,
-              ),
-              children: [
-                _KV('Chronic disease', data['chronic']?.toString() ?? '-'),
-                _KV('Diabetes Emergencies', data['emergencies']?.toString() ?? '-'),
-                _KV('Surgery', data['surgery']?.toString() ?? '-'),
-                _KV('Family disease', data['family']?.toString() ?? '-'),
-                GridTile(
-                  header: Padding(
-                    padding: const EdgeInsets.only(bottom: 6),
-                    child: Text('Diabetes related complication',
-                        style: GoogleFonts.roboto(fontSize: 12, color: _DoctorAppointmentPreviewState.kMuted)),
-                  ),
-                  child: Text(
-                    data['complications']?.toString() ?? '-',
-                    style: GoogleFonts.roboto(fontSize: 14, fontWeight: FontWeight.w500),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _MedicationsCard extends StatelessWidget {
-  const _MedicationsCard({required this.text, required this.rows});
-  final TextStyle text;
-  final List<Map<String, dynamic>> rows;
-
-  @override
-  Widget build(BuildContext context) {
-    return _Card(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _SectionHead(
-            text: text,
-            title: 'Medications',
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: const [
-                _TextBtn(label: 'Edit', onTap: null),
-                SizedBox(width: 8),
-                _PrimaryBtn(label: '+ Notes', onTap: null),
-              ],
-            ),
-          ),
-          const SizedBox(height: 8),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: Container(
-              decoration: BoxDecoration(
-                border: Border.all(color: _DoctorAppointmentPreviewState.kBorder),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Column(
-                children: [
-                  Container(
-                    height: 44,
-                    color: const Color(0xFFFFF1F2),
-                    child: Row(
-                      children: const [
-                        _Th('NAME'),
-                        _Th('IND.'),
-                        _Th('STATUS'),
-                        _Th('SIG'),
-                        _Th('START DATE'),
-                        _Th('ASSIGN BY'),
-                        _Th('NOTE'),
-                      ],
-                    ),
-                  ),
-                  if (rows.isEmpty)
-                    Container(
-                      alignment: Alignment.centerLeft,
-                      padding: const EdgeInsets.all(16),
-                      child: Text('No medications yet',
-                          style: GoogleFonts.roboto(fontSize: 13, color: _DoctorAppointmentPreviewState.kMuted)),
-                    )
-                  else
-                    ...rows.map((r) => Container(
-                      decoration: const BoxDecoration(
-                        border: Border(bottom: BorderSide(color: _DoctorAppointmentPreviewState.kBorder)),
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      child: Row(
-                        children: [
-                          _Td(r['name']),
-                          _Td(r['indication']),
-                          _Td(r['status']),
-                          _Td(r['sig']),
-                          _Td(r['startDate']),
-                          _Td(r['assignedBy']),
-                          _Td(r['note']),
-                        ],
-                      ),
-                    )),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// =============== MICRO WIDGETS ===============
-
-// class _SectionHead extends StatelessWidget {
-//   const _SectionHead({required this.text, required this.title, this.trailing});
-//   final TextStyle text;
-//   final String title;
-//   final Widget? trailing;
-//
-//   @override
-//   Widget build(BuildContext context) {
-//     return Row(
-//       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-//       children: [
-//         Text(title, style: text.copyWith(fontSize: 15, fontWeight: FontWeight.w600)),
-//         if (trailing != null) trailing!,
-//       ],
-//     );
-//   }
-// }
-
-class _Info extends StatelessWidget {
-  const _Info({required this.icon, this.label});
-  final IconData icon;
-  final String? label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 16, color: _DoctorAppointmentPreviewState.kMuted),
-        if (label != null) ...[
-          const SizedBox(width: 6),
-          Text(label!, style: GoogleFonts.roboto(fontSize: 13, color: _DoctorAppointmentPreviewState.kMuted)),
-        ],
-      ],
-    );
-  }
-}
-
-class _Vital extends StatelessWidget {
-  const _Vital({required this.value, required this.note});
-  final String value;
-  final String note;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(value, style: GoogleFonts.roboto(fontSize: 18, fontWeight: FontWeight.w700)),
-        const SizedBox(height: 2),
-        Text(note, style: GoogleFonts.roboto(fontSize: 12, color: _DoctorAppointmentPreviewState.kMuted)),
-      ],
-    );
-  }
-}
-
-class _Chip extends StatelessWidget {
-  const _Chip({required this.label, this.bg, this.fg});
-  final String? label;
-  final Color? bg;
-  final Color? fg;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(color: bg ?? const Color(0xFFFFE4E6), borderRadius: BorderRadius.circular(999)),
-      child: Text(label ?? '-', style: GoogleFonts.roboto(fontSize: 11, color: fg ?? _DoctorAppointmentPreviewState.kPrimary600)),
-    );
-  }
-}
-
-class _TextBtn extends StatelessWidget {
-  const _TextBtn({required this.label, required this.onTap});
-  final String label;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return TextButton(
-      onPressed: onTap,
-      style: TextButton.styleFrom(foregroundColor: _DoctorAppointmentPreviewState.kPrimary),
-      child: Text(label, style: GoogleFonts.roboto(fontSize: 13, fontWeight: FontWeight.w500)),
-    );
-  }
-}
-
-class _PrimaryBtn extends StatelessWidget {
-  const _PrimaryBtn({required this.label, required this.onTap});
-  final String label;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return ElevatedButton(
-      onPressed: onTap,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: _DoctorAppointmentPreviewState.kPrimary,
-        foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        elevation: 0,
-      ),
-      child: Text(label, style: GoogleFonts.roboto(fontSize: 13)),
-    );
-  }
-}
-
-class _TimelineTile extends StatelessWidget {
-  const _TimelineTile({required this.date, required this.title, required this.desc});
-  final String date, title, desc;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Dot + stem
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: Column(
-              children: [
-                const SizedBox(height: 2),
-                Container(
-                  width: 10,
-                  height: 10,
-                  decoration: const BoxDecoration(
-                    color: _DoctorAppointmentPreviewState.kPrimary,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                Container(width: 2, height: 40, color: Color(0xFFFFCDD2)),
-              ],
-            ),
-          ),
-          // Content
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(date, style: GoogleFonts.roboto(fontSize: 12, color: _DoctorAppointmentPreviewState.kMuted)),
-                Text(title, style: GoogleFonts.roboto(fontSize: 14, fontWeight: FontWeight.w600)),
-                if (desc.isNotEmpty)
-                  Text(desc, style: GoogleFonts.roboto(fontSize: 12, color: _DoctorAppointmentPreviewState.kMuted)),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _KV extends StatelessWidget {
-  const _KV(this.k, this.v);
-  final String k, v;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 280,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(k, style: GoogleFonts.roboto(fontSize: 12, color: _DoctorAppointmentPreviewState.kMuted)),
-          const SizedBox(height: 2),
-          Text(v, style: GoogleFonts.roboto(fontSize: 14, fontWeight: FontWeight.w500)),
-        ],
-      ),
-    );
-  }
-}
+// ======= SMALL HEADER/CELL HELPERS (matching appointments spacing) =======
 
 class _Th extends StatelessWidget {
-  const _Th(this.text);
-  final String text;
+  final String label;
+  final int flex;
+  const _Th(this.label, {required this.flex});
 
   @override
   Widget build(BuildContext context) {
     return Expanded(
-      child: Container(
+      flex: flex,
+      child: Align(
         alignment: Alignment.centerLeft,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
         child: Text(
-          text,
-          style: GoogleFonts.roboto(
-            fontSize: 11,
-            letterSpacing: 0.5,
-            color: _DoctorAppointmentPreviewState.kMuted,
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 14,
             fontWeight: FontWeight.w700,
+            color: _appointmentsHeaderColor,
           ),
         ),
       ),
@@ -2368,68 +1850,70 @@ class _Th extends StatelessWidget {
 }
 
 class _Td extends StatelessWidget {
-  _Td(dynamic value) : _text = value?.toString() ?? '-';
-  final String _text;
+  final dynamic value;
+  final int flex;
+  final TextStyle style;
+  const _Td(this.value, {required this.flex, required this.style});
 
   @override
   Widget build(BuildContext context) {
     return Expanded(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        child: Text(_text, style: GoogleFonts.roboto(fontSize: 13)),
+      flex: flex,
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Text(
+          (value ?? '—').toString(),
+          style: style,
+        ),
       ),
     );
   }
 }
 
-// =============== SPARKLINE (no extra packages) ===============
+/// Exact visual structure of your appointments table (header row, zebra rows, chips, actions)
 
-// class _SparklinePainter extends CustomPainter {
-//   _SparklinePainter(this.values);
-//   final List<double> values;
-//
-//   @override
-//   void paint(Canvas canvas, Size size) {
-//     if (values.isEmpty) return;
-//     final minV = values.reduce((a, b) => a < b ? a : b);
-//     final maxV = values.reduce((a, b) => a > b ? a : b);
-//     final range = (maxV - minV) == 0 ? 1.0 : (maxV - minV);
-//
-//     final path = Path();
-//     for (int i = 0; i < values.length; i++) {
-//       final x = i * size.width / (values.length - 1);
-//       final y = size.height - ((values[i] - minV) / range) * size.height;
-//       if (i == 0) {
-//         path.moveTo(x, y);
-//       } else {
-//         path.lineTo(x, y);
-//       }
-//     }
-//
-//     final stroke = Paint()
-//       ..color = _DoctorAppointmentPreviewState.kPrimary
-//       ..style = PaintingStyle.stroke
-//       ..strokeWidth = 2;
-//
-//     final grid = Paint()
-//       ..color = const Color(0xFFFFE4E6)
-//       ..style = PaintingStyle.stroke
-//       ..strokeWidth = 1;
-//
-//     for (int i = 1; i <= 3; i++) {
-//       final y = size.height * i / 4;
-//       canvas.drawLine(Offset(0, y), Offset(size.width, y), grid);
-//     }
-//
-//     canvas.drawPath(path, stroke);
-//   }
-//
-//   @override
-//   bool shouldRepaint(covariant _SparklinePainter old) {
-//     if (old.values.length != values.length) return true;
-//     for (int i = 0; i < values.length; i++) {
-//       if (old.values[i] != values[i]) return true;
-//     }
-//     return false;
-//   }
-// }
+// ---- Top bar widgets (match Appointments) ----
+
+
+
+
+
+class _LabsTab extends StatelessWidget {
+  final List<Map<String, dynamic>> rows;
+  final TextStyle text;
+  const _LabsTab({required this.rows, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    if (rows.isEmpty) {
+      return const Center(child: Text('No lab results.'));
+    }
+    return ListView.separated(
+      padding: EdgeInsets.zero,
+      itemCount: rows.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 8),
+      itemBuilder: (context, i) {
+        final r = rows[i];
+        return Card(
+          child: ListTile(
+            title: Text(r['name']?.toString() ?? '—'),
+            subtitle: Text('Ref: ${r['ref'] ?? '—'}'),
+            trailing: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(r['value']?.toString() ?? '—',
+                    style: const TextStyle(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 2),
+                Text(r['date']?.toString() ?? '—',
+                    style: const TextStyle(
+                        fontSize: 12,
+                        color: _DoctorAppointmentPreviewState.kMuted)),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
