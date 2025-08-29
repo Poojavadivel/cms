@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../../Models/dashboardmodels.dart';
 
 // ---- Theme ----
@@ -11,34 +12,47 @@ const Color borderColor = Color(0xFFE5E7EB);
 const Color successColor = Color(0xFF10B981);
 const Color warningColor = Color(0xFFF59E0B);
 
-class AppointmentDetailPage extends StatelessWidget {
+/// Call this to open the popup:
+/// await AppointmentDetailPopup.show(context, appt);
+class AppointmentDetail extends StatelessWidget {
   final DashboardAppointments appt;
-  const AppointmentDetailPage({super.key, required this.appt});
+  const AppointmentDetail({super.key, required this.appt});
+
+  static Future<void> show(BuildContext context, DashboardAppointments appt) {
+    return showDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierColor: Colors.black.withOpacity(0.35), // dim background
+      builder: (_) => AppointmentDetail(appt: appt),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: backgroundColor,
-      body: SafeArea(
-        child: Center(
-          child: FractionallySizedBox(
-            widthFactor: 0.92,
-            heightFactor: 0.92,
-            child: Container(
-              constraints: const BoxConstraints(maxWidth: 1200),
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
+    final size = MediaQuery.of(context).size;
+
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.all(24),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: size.width * 0.95,
+          maxHeight: size.height * 0.95,
+        ),
+        child: Stack(
+          clipBehavior: Clip.none, // allow close button to float outside
+          children: [
+            // ---- Popup surface ----
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Material(
                 color: backgroundColor,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Stack(
-                children: [
-                  // ---- Main content ----
-                  _ResponsiveScroll(
+                child: _ResponsiveScroll(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        // ---- Mythic profile header ----
                         _ProfileHeaderCard(appt: appt),
                         const SizedBox(height: 16),
 
@@ -102,31 +116,39 @@ class AppointmentDetailPage extends StatelessWidget {
                       ],
                     ),
                   ),
-
-                  // ---- Page-level close (NOT inside profile card) ----
-                  Positioned(
-                    top: 4,
-                    right: 4,
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: () => Navigator.maybePop(context),
-                        customBorder: const CircleBorder(),
-                        child: Ink(
-                          decoration: const BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Color(0xFFFFEBEE),
-                          ),
-                          padding: const EdgeInsets.all(8),
-                          child: const Icon(Icons.close, size: 22, color: primaryColor),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
-          ),
+
+            // ---- Floating close button (outside corner) ----
+            Positioned(
+              top: -10,
+              right: -10,
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(24),
+                  onTap: () => Navigator.of(context).maybePop(),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: borderColor),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(.10),
+                          blurRadius: 12,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    padding: const EdgeInsets.all(8),
+                    child: const Icon(Icons.close_rounded, color: primaryColor, size: 20),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -141,13 +163,40 @@ String _n(num? v, {String? suffix}) =>
 // ---------------- Widgets ----------------
 
 class _ProfileHeaderCard extends StatelessWidget {
+  static const Color kPrimary = Color(0xFFEF4444);
+  static const Color kBg = Color(0xFFF9FAFB);
+  static const Color kCard = Colors.white;
+  static const Color kText = Color(0xFF111827);
+  static const Color kMuted = Color(0xFF6B7280);
+  static const Color kBorder = Color(0xFFE5E7EB);
+  static const double kRadius = 16;
   final DashboardAppointments appt;
   const _ProfileHeaderCard({required this.appt});
+
+  // ---- Tokens
+  static const Color kTint = Color(0xFFFFF1F2);
+  static const Color kTintLine = Color(0xFFFFE4E6);
+  static const double kAvatar = 128;
+
+  String _n(num? v, {String? suffix}) =>
+      (v == null || v == 0) ? '—' : '${v}${suffix ?? ''}';
+  String _ss(String? v) => (v == null || v.trim().isEmpty) ? '—' : v;
 
   String _bloodGroup() {
     try {
       final bg = (appt as dynamic).bloodGroup;
-      return _s(bg?.toString()).isEmpty ? '—' : _s(bg?.toString());
+      return _ss(bg?.toString());
+    } catch (_) {
+      return '—';
+    }
+  }
+
+  String _spo2() {
+    try {
+      final o2 = (appt as dynamic).spo2 ?? (appt as dynamic).oxygen ?? (appt as dynamic).oxygenLevel;
+      if (o2 == null) return '—';
+      final v = (o2 is num) ? o2 : num.tryParse(o2.toString());
+      return v == null ? '—' : '${v.toStringAsFixed(0)}%';
     } catch (_) {
       return '—';
     }
@@ -155,131 +204,61 @@ class _ProfileHeaderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isFemale = _s(appt.gender).toLowerCase() == 'female';
+    final name = _ss(appt.patientName);
+    final isFemale = _ss(appt.gender).toLowerCase() == 'female';
     final avatar = isFemale ? 'assets/girlicon.png' : 'assets/boyicon.png';
 
-    return _CardShell(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(kRadius),
+      child: Container(
+        decoration: BoxDecoration(
+          color: kTint,
+          borderRadius: BorderRadius.circular(kRadius),
+          border: Border.all(color: kTintLine),
+        ),
+        child: Stack(
           children: [
-            // ---- LEFT: Avatar + Name + ID + Meta ----
-            Expanded(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  // Avatar
-                  Container(
-                    width: 84,
-                    height: 84,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFE5E7EB), width: 1.5),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Color(0x08000000),
-                          blurRadius: 6,
-                          offset: Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
-                      child: Image.asset(
-                        avatar,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) =>
-                        const Icon(Icons.person, size: 42, color: textSecondaryColor),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-
-                  Flexible(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _s(appt.patientName).isEmpty ? '—' : _s(appt.patientName),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w800,
-                            color: textPrimaryColor,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        // ID pill
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFFF1F2),
-                            border: Border.all(color: const Color(0xFFFFE4E6)),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            'ID: ${_s((appt as dynamic).patientId?.toString()).isEmpty ? '—' : _s((appt as dynamic).patientId?.toString())}',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xFFB42318),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Wrap(
-                          spacing: 10,
-                          runSpacing: 8,
-                          children: [
-                            _MetaChip(icon: Icons.transgender, label: _s(appt.gender).isEmpty ? '—' : _s(appt.gender)),
-                            _MetaChip(icon: Icons.cake, label: '${_s(appt.patientAge?.toString()).isEmpty ? '—' : _s(appt.patientAge?.toString())} yrs'),
-                            _MetaChip(icon: Icons.event, label: _s(appt.date).isEmpty ? '—' : _s(appt.date)),
-                            _MetaChip(icon: Icons.access_time, label: _s(appt.time).isEmpty ? '—' : _s(appt.time)),
-                            _StatusChip(status: _s(appt.status).isEmpty ? '—' : _s(appt.status)),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+            Positioned(
+              top: 8,
+              right: 8,
+              child: _ghostButton(
+                icon: Icons.edit_outlined,
+                onTap: () {},
               ),
             ),
-
-            const SizedBox(width: 12),
-
-            // ---- RIGHT: KPI GRID + actions top-right ----
-            ConstrainedBox(
-              constraints: const BoxConstraints(minWidth: 360, maxWidth: 420),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: LayoutBuilder(
+                builder: (context, c) {
+                  final isTight = c.maxWidth < 980;
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _ActionBtn(tooltip: 'Preview', icon: Icons.visibility_outlined, onTap: () {}),
-                      const SizedBox(width: 8),
-                      _ActionBtn(tooltip: 'Edit', icon: Icons.edit_outlined, onTap: () {}),
-                      const SizedBox(width: 8),
-                      _ActionBtn(tooltip: 'Intake', icon: Icons.assignment_outlined, onTap: () {}),
+                      Expanded(
+                        flex: isTight ? 10 : 6,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            _avatar(avatar),
+                            const SizedBox(width: 16),
+                            Expanded(child: _identityBlock(name, isFemale)),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      if (!isTight)
+                        Expanded(flex: 5, child: _vitalsGrid())
+                      else
+                        Expanded(
+                          flex: 10,
+                          child: Padding(
+                            padding: const EdgeInsets.only(top: 16),
+                            child: _vitalsGrid(),
+                          ),
+                        ),
                     ],
-                  ),
-                  const SizedBox(height: 8),
-                  Table(
-                    columnWidths: const {0: FlexColumnWidth(), 1: FlexColumnWidth()},
-                    defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-                    children: [
-                      TableRow(children: [
-                        _kpiTile(_Metric(Icons.scale, 'BMI', _n((appt as dynamic).bmi))),
-                        _kpiTile(_Metric(Icons.monitor_weight_outlined, 'Weight', _n((appt as dynamic).weight, suffix: ' kg'))),
-                      ]),
-                      TableRow(children: [
-                        _kpiTile(_Metric(Icons.height, 'Height', _n((appt as dynamic).height, suffix: ' cm'))),
-                        _kpiTile(_Metric(Icons.bloodtype, 'Blood Group', _bloodGroup())),
-                      ]),
-                    ],
-                  ),
-                ],
+                  );
+                },
               ),
             ),
           ],
@@ -288,59 +267,197 @@ class _ProfileHeaderCard extends StatelessWidget {
     );
   }
 
-  Widget _kpiTile(_Metric m) {
-    return Padding(
-      padding: const EdgeInsets.all(6),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        constraints: const BoxConstraints(minHeight: 64),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: borderColor),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x08000000),
-              blurRadius: 8,
-              offset: Offset(0, 2),
+  Widget _avatar(String asset) {
+    return Container(
+      width: kAvatar,
+      height: kAvatar,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: kTintLine),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Image.asset(
+          asset,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => const Icon(Icons.person, size: 72),
+        ),
+      ),
+    );
+  }
+
+  Widget _identityBlock(String name, bool isFemale) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          name,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: GoogleFonts.lexend(
+            fontSize: 24,
+            fontWeight: FontWeight.w800,
+            color: kText,
+            height: 1.05,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: kTintLine),
+          ),
+          child: Text(
+            'ID: ${_ss(appt.patientId)}',
+            style: GoogleFonts.lexend(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFFB42318),
+              letterSpacing: 0.1,
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 18,
+          runSpacing: 10,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            _mini(isFemale ? Icons.female : Icons.male, _ss(appt.gender)),
+            _mini(Icons.person, 'Age ${appt.patientAge ?? '—'}'),
+            _mini(Icons.calendar_month, _ss(appt.dob)),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            const Icon(Icons.bloodtype, size: 16, color: _ProfileHeaderCard.kMuted),
+            const SizedBox(width: 6),
+            Text(
+              'Blood Group: ${_bloodGroup()}',
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: _ProfileHeaderCard.kMuted,
+              ),
             ),
           ],
         ),
-        child: Row(
+      ],
+    );
+  }
+
+  Widget _mini(IconData i, String t) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Icon(i, size: 16, color: kMuted),
+      const SizedBox(width: 6),
+      Text(
+        t,
+        style: GoogleFonts.inter(
+          fontSize: 13,
+          fontWeight: FontWeight.w500,
+          color: kMuted,
+        ),
+      ),
+    ],
+  );
+
+  Widget _vitalsGrid() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
           children: [
-            Container(
-              width: 34,
-              height: 34,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
-                color: const Color(0xFFFFE4E6),
-              ),
-              child: Icon(m.icon, size: 18, color: primaryColor),
-            ),
-            const SizedBox(width: 10),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  m.value,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: textPrimaryColor,
-                  ),
-                ),
-                Text(
-                  m.title,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: textSecondaryColor,
-                  ),
-                ),
-              ],
-            ),
+            Expanded(child: _kv(Icons.height, 'Height', _n(appt.height, suffix: ' cm'))),
+            const SizedBox(width: 24),
+            Expanded(child: _kv(Icons.monitor_weight_outlined, 'Weight', _n(appt.weight, suffix: ' kg'))),
           ],
+        ),
+        const SizedBox(height: 20),
+        Row(
+          children: [
+            Expanded(child: _kv(Icons.scale, 'BMI', _n(appt.bmi))),
+            const SizedBox(width: 24),
+            Expanded(child: _kv(Icons.monitor_heart_outlined, 'Oxygen (SpO₂)', _spo2())),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _kv(IconData icon, String title, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Container(
+          width: 34,
+          height: 34,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0x26FFFFFF), Color(0x14FFFFFF)],
+            ),
+            border: Border.all(color: kTintLine),
+          ),
+          child: Icon(icon, size: 18, color: const Color(0xFFB42318)),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Baseline(
+                baseline: 18,
+                baselineType: TextBaseline.alphabetic,
+                child: Text(
+                  value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.lexend(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: kText,
+                    height: 1.0,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                title,
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: kMuted,
+                  letterSpacing: 0.1,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _ghostButton({required IconData icon, required VoidCallback onTap}) {
+    return Material(
+      color: kTint,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: const BorderSide(color: kTintLine),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: const Padding(
+          padding: EdgeInsets.all(8.0),
+          child: Icon(Icons.edit_outlined, size: 18, color: Color(0xFF6B7280)),
         ),
       ),
     );
@@ -350,7 +467,7 @@ class _ProfileHeaderCard extends StatelessWidget {
 class _InfoCard extends StatelessWidget {
   final String title;
   final List<Widget> children;
-  final EdgeInsetsGeometry padding; // optional, default below
+  final EdgeInsetsGeometry padding;
   const _InfoCard({
     required this.title,
     required this.children,
@@ -497,87 +614,9 @@ class _StatusChip extends StatelessWidget {
   }
 }
 
-class _MetaChip extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  const _MetaChip({required this.icon, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF3F4F6),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: borderColor),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: textSecondaryColor),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 12,
-              color: textPrimaryColor,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ActionBtn extends StatelessWidget {
-  final String tooltip;
-  final IconData icon;
-  final VoidCallback onTap;
-  final EdgeInsetsGeometry padding; // optional
-  const _ActionBtn({
-    required this.tooltip,
-    required this.icon,
-    required this.onTap,
-    this.padding = const EdgeInsets.all(0),
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: tooltip,
-      preferBelow: false,
-      child: Padding(
-        padding: padding, // optional external spacing
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(10),
-          child: Ink(
-            width: 38,
-            height: 38,
-            decoration: BoxDecoration(
-              color: cardBackgroundColor,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: borderColor),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x14000000),
-                  blurRadius: 10,
-                  offset: Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Icon(icon, size: 18, color: textPrimaryColor),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _CardShell extends StatelessWidget {
   final Widget child;
-  final EdgeInsetsGeometry padding; // optional external padding (if needed)
+  final EdgeInsetsGeometry padding;
   const _CardShell({
     required this.child,
     this.padding = EdgeInsets.zero,
@@ -623,11 +662,4 @@ class _ResponsiveScroll extends StatelessWidget {
       },
     );
   }
-}
-
-class _Metric {
-  final IconData icon;
-  final String title;
-  final String value;
-  _Metric(this.icon, this.title, this.value);
 }

@@ -433,12 +433,7 @@ class _AppointmentDataView extends StatelessWidget {
                     color: _buttonBgColor,
                   ),
                   onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => AppointmentDetailPage(appt: appt),
-                        // fullscreenDialog: true, // optional — remove if you want a normal push
-                      ),
-                    );
+                    AppointmentDetail.show(context, appt);
                   },
                 ),
               )
