@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:glowhair/Modules/Doctor/widgets/table.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../Models/dashboardmodels.dart';
 import 'package:flutter/services.dart';
@@ -14,8 +15,7 @@ class DoctorAppointmentPreview extends StatefulWidget {
 }
 
 
-class _DoctorAppointmentPreviewState extends State<DoctorAppointmentPreview>
-    with SingleTickerProviderStateMixin {
+class _DoctorAppointmentPreviewState extends State<DoctorAppointmentPreview> with SingleTickerProviderStateMixin {
   // THEME
   static const Color kPrimary = Color(0xFFEF4444);
   static const Color kBg = Color(0xFFF9FAFB);
@@ -32,7 +32,7 @@ class _DoctorAppointmentPreviewState extends State<DoctorAppointmentPreview>
   @override
   void initState() {
     super.initState();
-    _tab = TabController(length: 4, vsync: this);
+    _tab = TabController(length: 5, vsync: this);
     baseText = GoogleFonts.inter();
   }
 
@@ -42,6 +42,7 @@ class _DoctorAppointmentPreviewState extends State<DoctorAppointmentPreview>
     super.dispose();
   }
 
+  @override
   @override
   Widget build(BuildContext context) {
     final appt = widget.appointment;
@@ -67,21 +68,18 @@ class _DoctorAppointmentPreviewState extends State<DoctorAppointmentPreview>
                   children: [
                     Expanded(
                       child: Padding(
-                        // tight top padding so header stays high
                         padding: const EdgeInsets.fromLTRB(12, 16, 12, 12),
                         child: Column(
                           children: [
-                            // ---------- CONTAINER 1 : PATIENT HEADER ----------
-                            // simplest: just drop the decoration
+                            // ---------- PATIENT HEADER ----------
                             Container(
                               padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
                               child: _ProfileHeaderCard(appt: appt),
                             ),
 
-
                             const SizedBox(height: 12),
 
-                            // ---------- CONTAINER 2 : TABS + CONTENT ----------
+                            // ---------- TABS + CONTENT ----------
                             Expanded(
                               child: Container(
                                 decoration: BoxDecoration(
@@ -99,7 +97,7 @@ class _DoctorAppointmentPreviewState extends State<DoctorAppointmentPreview>
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.stretch,
                                   children: [
-                                    // enterprise top bar with divider
+                                    // top tab bar
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 8),
                                       decoration: BoxDecoration(
@@ -128,12 +126,13 @@ class _DoctorAppointmentPreviewState extends State<DoctorAppointmentPreview>
                                           Tab(text: 'Profile'),
                                           Tab(text: 'Medical History'),
                                           Tab(text: 'Prescription'),
-                                          Tab(text: 'Pathalogy'),
+                                          Tab(text: 'Lab Result'),
+                                          Tab(text: 'Billings'),
                                         ],
                                       ),
                                     ),
 
-                                    // content
+                                    // tab views
                                     Expanded(
                                       child: Padding(
                                         padding: const EdgeInsets.all(16),
@@ -184,8 +183,9 @@ class _DoctorAppointmentPreviewState extends State<DoctorAppointmentPreview>
                                               emergencyContactName: '—',
                                               emergencyContactPhone: '—',
                                             ),
-                                            const _MedicationsTab(),
-                                            _LabsTab(rows: const [], text: baseText),
+                                            const _MedicationsTab(), // Prescription
+                                            const _LabsTab(),        // Lab Result ✅
+                                            const _BillingsTab(),    // Billings ✅
                                           ],
                                         ),
                                       ),
@@ -203,9 +203,9 @@ class _DoctorAppointmentPreviewState extends State<DoctorAppointmentPreview>
               ),
             ),
 
-            // ============== FLOATING CLOSE BUTTON (OUTSIDE) ==============
+            // ============== CLOSE BUTTON ==============
             Positioned(
-              top: -10,       // negative to sit OUTSIDE the rounded dialog
+              top: -10,
               right: -10,
               child: Material(
                 color: Colors.transparent,
@@ -237,11 +237,8 @@ class _DoctorAppointmentPreviewState extends State<DoctorAppointmentPreview>
     );
   }
 
+
 }
-/// ===================== PROFILE HEADER CARD =====================
- // for Clipboard
-
-
 
 
 class _ProfileHeaderCard extends StatelessWidget {
@@ -577,34 +574,6 @@ class _ProfileHeaderCard extends StatelessWidget {
     );
   }
 }
-
-
-
-
-
-
-
-
-class _Metric {
-  final IconData icon;
-  final String title;
-  final String value;
-  _Metric(this.icon, this.title, this.value);
-}
-
-
-// metric model
-
-
-
-// Simple metric model (unchanged)
-
-
-/// ===================== TABS (lean, essential only) =====================
-
-
-
-
 
 class _OverviewTab extends StatelessWidget {
   // Incoming (kept for compatibility)
@@ -1031,64 +1000,8 @@ class _USAddress {
   });
 }
 
-
-
-
-// ---------- Responsive Grid Helper ----------
-class _ResponsiveGrid extends StatelessWidget {
-  final bool isWide;
-  final List<Widget> children;
-  const _ResponsiveGrid({required this.isWide, required this.children});
-
-  @override
-  Widget build(BuildContext context) {
-    if (!isWide) {
-      return Column(
-        children: [
-          for (int i = 0; i < children.length; i++) ...[
-            children[i],
-            if (i != children.length - 1) const SizedBox(height: 14),
-          ]
-        ],
-      );
-    }
-    final left = <Widget>[];
-    final right = <Widget>[];
-    for (int i = 0; i < children.length; i++) {
-      (i.isEven ? left : right).add(children[i]);
-    }
-    Widget col(List<Widget> c) => Column(
-      children: [
-        for (int i = 0; i < c.length; i++) ...[
-          c[i],
-          if (i != c.length - 1) const SizedBox(height: 14),
-        ]
-      ],
-    );
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(child: col(left)),
-        const SizedBox(width: 14),
-        Expanded(child: col(right)),
-      ],
-    );
-  }
-}
-
-// ---------- Responsive Grid Helper ----------
-
-// ------------- Responsive Grid Helper -------------
-
-
-
-
-/// Enterprise version of Patient Tab — same API, better UX
-
-
-/// Enterprise-grade Patient Tab (same API, sober visuals)
-class _PatientProfileTab extends StatelessWidget {
-  // -------- Incoming (unchanged) --------
+class _PatientProfileTab extends StatefulWidget {
+  // -------- Incoming (unchanged props, but not used in this simplified version) --------
   final String patientId,
       name,
       gender,
@@ -1131,390 +1044,134 @@ class _PatientProfileTab extends StatelessWidget {
     required this.emergencyContactPhone,
   });
 
-  // -------- Enterprise tokens (neutral, high-contrast, low-chrome) --------
-  static const _bg = Color(0xFFF9FAFB);        // panel background
-  static const _card = Colors.white;            // card surface
-  static const _border = Color(0xFFE5E7EB);     // thin dividers
-  static const _label = Color(0xFF6B7280);      // secondary text
-  static const _text = Color(0xFF111827);       // primary text
-  static const _accent = Color(0xFFDC2626);     // restrained red accent
-  static const _mutedIcon = Color(0xFF9CA3AF);  // icon gray
-
-  TextStyle get _hSmall => GoogleFonts.inter(
-    fontSize: 12,
-    letterSpacing: .8,
-    color: _label,
-    fontWeight: FontWeight.w700,
-  );
-
-  TextStyle get _title => GoogleFonts.inter(
-    fontSize: 14,
-    fontWeight: FontWeight.w700,
-    color: _text,
-  );
-
-  TextStyle get _k => GoogleFonts.inter(
-    fontSize: 12,
-    color: _label,
-  );
-
-  TextStyle get _v => GoogleFonts.inter(
-    fontSize: 13,
-    color: _text,
-    fontWeight: FontWeight.w600,
-  );
-
-  TextStyle get _mono => GoogleFonts.ibmPlexMono(
-    fontSize: 12,
-    fontWeight: FontWeight.w600,
-    color: _text,
-  );
-
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: _bg,
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-        children: [
-          _section(
-            header: 'PATIENT OVERVIEW',
-            actions: [
-              _ghostIcon(
-                tooltip: 'Copy Patient ID',
-                icon: Icons.content_copy_rounded,
-                onTap: () => _copy(context, patientId),
-              ),
-              _ghostIcon(
-                tooltip: 'Copy Phone',
-                icon: Icons.call_outlined,
-                onTap: () => _copy(context, phone),
-              ),
-              _ghostIcon(
-                tooltip: 'Copy Email',
-                icon: Icons.alternate_email_outlined,
-                onTap: () => _copy(context, email),
-              ),
-            ],
-            child: _grid(
-              items: [
-                _kv('Patient ID', patientId, valueStyle: _mono),
-                _kv('Name', name),
-                _kv('Gender', gender),
-                _kv('DOB', dob),
-                _kv('Age', age),
-                _kv('Doctor', doctorName),
-                _kv('Primary Diagnosis', primaryDiagnosis),
-                _kv('Phone', phone, copyable: true),
-                _kv('Email', email, copyable: true),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 12),
-
-          _section(
-            header: 'ADDRESS',
-            child: _addressBlock(context, address),
-          ),
-
-          const SizedBox(height: 12),
-
-          _section(
-            header: 'VITALS',
-            child: _vitals(
-              tiles: [
-                _metric('Height', height),
-                _metric('Weight', weight),
-                _metric('BMI', bmi),
-                _metric('BP', bp, emphasize: true),
-                _metric('Heart Rate', heartRate),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 12),
-
-          // _section(
-          //   header: 'CLINICAL SUMMARY',
-          //   child: Column(
-          //     children: [
-          //       _listBlock('Diagnoses', diagnoses),
-          //       _divider(),
-          //       _listBlock('Chronic Conditions', chronicConditions),
-          //       _divider(),
-          //       _listBlock('Allergies', allergies, warning: true),
-          //     ],
-          //   ),
-          // ),
-
-          const SizedBox(height: 12),
-
-          _section(
-            header: 'EMERGENCY CONTACT',
-            child: _grid(
-              items: [
-                _kv('Name', emergencyContactName),
-                _kv('Phone', emergencyContactPhone, copyable: true),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ---------------- UI Blocks ----------------
-
-  Widget _section({
-    required String header,
-    required Widget child,
-    List<Widget> actions = const [],
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: _card,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: _border),
-      ),
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            decoration: const BoxDecoration(
-              border: Border(bottom: BorderSide(color: _border)),
-            ),
-            child: Row(
-              children: [
-                Text(header, style: _hSmall),
-                const Spacer(),
-                ..._withSpacing(actions, gap: 6),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-            child: child,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _grid({required List<Widget> items}) {
-    return LayoutBuilder(builder: (_, c) {
-      final w = c.maxWidth;
-      int cols = 1;
-      if (w >= 520) cols = 2;
-      if (w >= 960) cols = 3;
-
-      final gap = 16.0;
-      final itemW = (w - (gap * (cols - 1))) / cols;
-
-      return Wrap(
-        spacing: gap,
-        runSpacing: 12,
-        children: items.map((e) => SizedBox(width: itemW, child: e)).toList(),
-      );
-    });
-  }
-
-  Widget _kv(String k, String v, {bool copyable = false, TextStyle? valueStyle}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(k, style: _k),
-        const SizedBox(height: 4),
-        Row(
-          children: [
-            Expanded(
-              child: SelectableText(
-                v,
-                style: valueStyle ?? _v,
-                maxLines: 2,
-              ),
-            ),
-            if (copyable) ...[
-              const SizedBox(width: 8),
-              _ghostIcon(
-                tooltip: 'Copy',
-                icon: Icons.copy_rounded,
-                onTap: () => _copyInline(v),
-              ),
-            ],
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _addressBlock(BuildContext context, String text) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        border: Border.all(color: _border),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(Icons.location_on_outlined, size: 18, color: _mutedIcon),
-          const SizedBox(width: 8),
-          Expanded(child: SelectableText(text, style: _v)),
-          const SizedBox(width: 8),
-          _ghostIcon(
-            tooltip: 'Copy Address',
-            icon: Icons.copy_all_rounded,
-            onTap: () => _copy(context, text),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _vitals({required List<Widget> tiles}) {
-    return LayoutBuilder(builder: (_, c) {
-      final w = c.maxWidth;
-      int cols = 2;
-      if (w >= 720) cols = 3;
-      if (w >= 1080) cols = 4;
-
-      final gap = 12.0;
-      final itemW = (w - (gap * (cols - 1))) / cols;
-
-      return Wrap(
-        spacing: gap,
-        runSpacing: gap,
-        children: tiles.map((e) => SizedBox(width: itemW, child: e)).toList(),
-      );
-    });
-  }
-
-  Widget _metric(String label, String value, {bool emphasize = false}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-      decoration: BoxDecoration(
-        border: Border.all(color: _border),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 4,
-            height: 16,
-            decoration: BoxDecoration(
-              color: emphasize ? _accent : _border,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(child: Text(label, style: _k)),
-          Text(value, style: emphasize ? _mono.copyWith(color: _text) : _v),
-        ],
-      ),
-    );
-  }
-
-  Widget _listBlock(String heading, List<String> items, {bool warning = false}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(heading.toUpperCase(), style: _hSmall),
-        const SizedBox(height: 8),
-        if (items.isEmpty)
-          Text('No data', style: _k)
-        else
-          Column(
-            children: List.generate(items.length, (i) {
-              final last = i == items.length - 1;
-              return Container(
-                decoration: BoxDecoration(
-                  border: Border(
-                    bottom: BorderSide(color: last ? Colors.transparent : _border),
-                  ),
-                ),
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(
-                      warning ? Icons.error_outline : Icons.circle,
-                      size: 14,
-                      color: warning ? _accent : _mutedIcon,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(child: SelectableText(items[i], style: _v)),
-                  ],
-                ),
-              );
-            }),
-          ),
-      ],
-    );
-  }
-
-  Widget _divider() => const Divider(height: 16, thickness: 1, color: _border);
-
-  Widget _ghostIcon({
-    required String tooltip,
-    required IconData icon,
-    required VoidCallback onTap,
-  }) {
-    return Tooltip(
-      message: tooltip,
-      waitDuration: const Duration(milliseconds: 400),
-      child: InkResponse(
-        onTap: onTap,
-        radius: 20,
-        child: Container(
-          padding: const EdgeInsets.all(6),
-          decoration: BoxDecoration(
-            border: Border.all(color: _border),
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: Icon(icon, size: 16, color: _mutedIcon),
-        ),
-      ),
-    );
-  }
-
-  // ---------------- Utilities ----------------
-
-  List<Widget> _withSpacing(List<Widget> children, {double gap = 8}) {
-    if (children.isEmpty) return const [];
-    final out = <Widget>[];
-    for (var i = 0; i < children.length; i++) {
-      out.add(children[i]);
-      if (i != children.length - 1) out.add(SizedBox(width: gap));
-    }
-    return out;
-  }
-
-  Future<void> _copy(BuildContext context, String text) async {
-    await Clipboard.setData(ClipboardData(text: text));
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Copied', style: GoogleFonts.inter(fontSize: 13)),
-        duration: const Duration(milliseconds: 900),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
-  Future<void> _copyInline(String text) async {
-    await Clipboard.setData(ClipboardData(text: text));
-  }
+  State<_PatientProfileTab> createState() => _PatientProfileTabState();
 }
 
 
 
+class _PatientProfileTabState extends State<_PatientProfileTab> {
+  String _searchQuery = "";
+  int _currentPage = 0;
+  final int _itemsPerPage = 5;
 
+  final List<Map<String, String>> _medicalHistory = List.generate(10, (i) {
+    return {
+      'doctor':
+      'Dr. ${["Smith", "Johnson", "Lee", "Kumar", "Patel", "Brown", "Miller", "Taylor", "Davis", "Wilson"][i]}',
+      'date': '2025-08-${(i + 10).toString().padLeft(2, "0")}',
+      'time': '${9 + i % 3}:30 AM',
+      'category': ['Checkup', 'Surgery', 'Therapy', 'Consultation', 'Follow-up'][i % 5],
+      'notes': 'Sample note ${i + 1}',
+      'document': 'Doc_${i + 1}.pdf',
+    };
+  });
 
+  @override
+  Widget build(BuildContext context) {
+    // filter
+    final filtered = _medicalHistory.where((row) {
+      if (_searchQuery.isEmpty) return true;
+      final hay = [
+        row['doctor'],
+        row['category'],
+        row['notes'],
+        row['document'],
+      ].join(' ').toLowerCase();
+      return hay.contains(_searchQuery.toLowerCase());
+    }).toList();
 
+    // paginate
+    final startIndex = _currentPage * _itemsPerPage;
+    final endIndex = (startIndex + _itemsPerPage).clamp(0, filtered.length);
+    final pageRows = startIndex >= filtered.length
+        ? <Map<String, String>>[]
+        : filtered.sublist(startIndex, endIndex);
 
+    // rows -> widgets
+    final rowWidgets = pageRows.map((r) {
+      return [
+        Text(r['doctor']!, style: _cellStyle),
+        Text(r['date']!, style: _cellStyle),
+        Text(r['time']!, style: _cellStyle),
+        Text(r['category']!, style: _cellStyle),
+        Text(r['notes']!, style: _cellStyle),
+        InkWell(
+          onTap: () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Opening ${r['document']}')),
+            );
+          },
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.picture_as_pdf, size: 16, color: Colors.red),
+              const SizedBox(width: 4),
+              Text(r['document']!, style: _cellStyle.copyWith(color: Colors.blue)),
+            ],
+          ),
+        ),
+      ];
+    }).toList();
 
-/// Page wrapper to match your Appointments page (title + search + button + table)
+    // fill available height cleanly
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+          child: SizedBox(
+            width: constraints.maxWidth,
+            height: constraints.maxHeight,
+            child: GenericDataTable(
+              title: 'Medical History',
+              headers: const ['Doctor Name', 'Date', 'Time', 'Category', 'Notes', 'Document'],
+              rows: rowWidgets,
+              searchQuery: _searchQuery,
+              onSearchChanged: (q) => setState(() => _searchQuery = q),
+              filters: const [],
+              currentPage: _currentPage,
+              totalItems: filtered.length,
+              itemsPerPage: _itemsPerPage,
+              onPreviousPage: () {
+                setState(() => _currentPage = (_currentPage - 1).clamp(0, 9999));
+              },
+              onNextPage: () {
+                setState(() => _currentPage = _currentPage + 1);
+              },
+
+              // actions
+              onView: (index) {
+                final row = pageRows[index];
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Viewing ${row['doctor']}')),
+                );
+              },
+              onEdit: (index) {
+                final row = pageRows[index];
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Editing ${row['doctor']}')),
+                );
+              },
+              onDelete: (index) {
+                final row = pageRows[index];
+                setState(() => _medicalHistory.remove(row));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Deleted ${row['doctor']}')),
+                );
+              },
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  TextStyle get _cellStyle => GoogleFonts.poppins(
+    fontSize: 14,
+    fontWeight: FontWeight.w500,
+    color: const Color(0xFF1F2937),
+  );
+}
 
 
 
@@ -1542,61 +1199,80 @@ class _MedicationsTabState extends State<_MedicationsTab> {
   late Future<List<Map<String, dynamic>>> _futureRows;
 
   // search / filter state
-  final TextEditingController _searchCtrl = TextEditingController();
-  bool _showFilters = false;
+  String _searchQuery = "";
   String _statusFilter = 'All';
+
+  // pagination state
+  int _currentPage = 0;
+  final int _itemsPerPage = 10;
 
   @override
   void initState() {
     super.initState();
-    _futureRows = _fetchMedications(); // simulate API fetch
-    _searchCtrl.addListener(() => setState(() {}));
-  }
-
-  @override
-  void dispose() {
-    _searchCtrl.dispose();
-    super.dispose();
+    _futureRows = _fetchMedications();
   }
 
   Future<List<Map<String, dynamic>>> _fetchMedications() async {
-    await Future.delayed(const Duration(milliseconds: 600));
+    await Future.delayed(const Duration(milliseconds: 300));
+    // >= 10 sample rows
     return [
       {
-        'name': 'Paracetamol',
-        'dose': '500 mg',
-        'route': 'PO',
-        'freq': 'BID',
-        'start': '05/12/2022',
-        'end': '10/12/2022',
-        'status': 'Completed',
+        'name': 'Paracetamol', 'dose': '500 mg', 'route': 'PO', 'freq': 'BID',
+        'start': '05/12/2022', 'end': '10/12/2022', 'status': 'Completed'
       },
       {
-        'name': 'Amoxicillin',
-        'dose': '250 mg',
-        'route': 'PO',
-        'freq': 'TID',
-        'start': '19/08/2025',
-        'end': '—',
-        'status': 'Incomplete',
+        'name': 'Amoxicillin', 'dose': '250 mg', 'route': 'PO', 'freq': 'TID',
+        'start': '19/08/2025', 'end': '—', 'status': 'Incomplete'
       },
       {
-        'name': 'Atorvastatin',
-        'dose': '10 mg',
-        'route': 'PO',
-        'freq': 'Daily',
-        'start': '01/01/2023',
-        'end': '—',
-        'status': 'Ongoing',
+        'name': 'Atorvastatin', 'dose': '10 mg', 'route': 'PO', 'freq': 'Daily',
+        'start': '01/01/2023', 'end': '—', 'status': 'Ongoing'
+      },
+      {
+        'name': 'Metformin', 'dose': '500 mg', 'route': 'PO', 'freq': 'BID',
+        'start': '10/03/2024', 'end': '—', 'status': 'Ongoing'
+      },
+      {
+        'name': 'Ibuprofen', 'dose': '200 mg', 'route': 'PO', 'freq': 'TID',
+        'start': '12/07/2025', 'end': '18/07/2025', 'status': 'Completed'
+      },
+      {
+        'name': 'Azithromycin', 'dose': '500 mg', 'route': 'PO', 'freq': 'Daily',
+        'start': '22/06/2025', 'end': '26/06/2025', 'status': 'Completed'
+      },
+      {
+        'name': 'Lisinopril', 'dose': '5 mg', 'route': 'PO', 'freq': 'Daily',
+        'start': '11/10/2024', 'end': '—', 'status': 'Ongoing'
+      },
+      {
+        'name': 'Prednisone', 'dose': '20 mg', 'route': 'PO', 'freq': 'Daily',
+        'start': '05/05/2025', 'end': '12/05/2025', 'status': 'Completed'
+      },
+      {
+        'name': 'Cefixime', 'dose': '200 mg', 'route': 'PO', 'freq': 'BID',
+        'start': '15/08/2025', 'end': '—', 'status': 'Incomplete'
+      },
+      {
+        'name': 'Pantoprazole', 'dose': '40 mg', 'route': 'PO', 'freq': 'Daily',
+        'start': '09/09/2024', 'end': '—', 'status': 'Ongoing'
+      },
+      {
+        'name': 'Cetirizine', 'dose': '10 mg', 'route': 'PO', 'freq': 'HS',
+        'start': '01/02/2025', 'end': '05/02/2025', 'status': 'Completed'
+      },
+      {
+        'name': 'Doxycycline', 'dose': '100 mg', 'route': 'PO', 'freq': 'BID',
+        'start': '20/08/2025', 'end': '—', 'status': 'Incomplete'
       },
     ];
   }
 
   List<Map<String, dynamic>> _applyFilters(List<Map<String, dynamic>> data) {
-    final q = _searchCtrl.text.trim().toLowerCase();
+    final q = _searchQuery.trim().toLowerCase();
     return data.where((r) {
       final s = (r['status'] ?? '').toString();
-      final matchesStatus = _statusFilter == 'All' || s.toLowerCase() == _statusFilter.toLowerCase();
+      final matchesStatus =
+          _statusFilter == 'All' || s.toLowerCase() == _statusFilter.toLowerCase();
 
       if (q.isEmpty) return matchesStatus;
 
@@ -1613,17 +1289,6 @@ class _MedicationsTabState extends State<_MedicationsTab> {
 
   @override
   Widget build(BuildContext context) {
-    final headerStyle = GoogleFonts.poppins(
-      fontSize: 14,
-      fontWeight: FontWeight.w700,
-      color: _appointmentsHeaderColor,
-    );
-    final cellStyle = GoogleFonts.poppins(
-      fontSize: 14,
-      fontWeight: FontWeight.w500,
-      color: textPrimaryColor,
-    );
-
     return FutureBuilder<List<Map<String, dynamic>>>(
       future: _futureRows,
       builder: (context, snap) {
@@ -1632,216 +1297,110 @@ class _MedicationsTabState extends State<_MedicationsTab> {
         }
         if (snap.hasError) {
           return Center(
-            child: Text('Error: ${snap.error}',
-                style: const TextStyle(color: _statusIncompleteColor)),
+            child: Text(
+              'Error: ${snap.error}',
+              style: const TextStyle(color: _statusIncompleteColor),
+            ),
           );
         }
 
         final allRows = snap.data ?? [];
-        var rows = _applyFilters(allRows);
+        final filtered = _applyFilters(allRows);
 
-        return ClipRRect(
-          borderRadius: BorderRadius.circular(12),
-          child: Container(
-            color: cardBackgroundColor,
-            child: Column(
-              children: [
-                // ======= TOP BAR: Filter button + Search field =======
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                  child: Row(
-                    children: [
-                      // Filter icon button (enterprise look)
-                      Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: cardBackgroundColor,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: _searchBorderColor),
-                          boxShadow: [
-                            BoxShadow(
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                              color: Colors.black.withOpacity(0.06),
-                            ),
-                          ],
-                        ),
-                        child: IconButton(
-                          tooltip: 'Filter',
-                          onPressed: () => setState(() => _showFilters = !_showFilters),
-                          icon: const Icon(Icons.tune_rounded, color: _buttonBgColor),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
+        // Pagination
+        final startIndex = _currentPage * _itemsPerPage;
+        final endIndex = (startIndex + _itemsPerPage).clamp(0, filtered.length);
+        final pageRows = startIndex >= filtered.length
+            ? <Map<String, dynamic>>[]
+            : filtered.sublist(startIndex, endIndex);
 
-                      // Search field
-                      Expanded(
-                        child: TextField(
-                          controller: _searchCtrl,
-                          style: GoogleFonts.poppins(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                            color: textPrimaryColor,
-                          ),
-                          decoration: InputDecoration(
-                            hintText: 'Search medication, dose, route…',
-                            hintStyle: GoogleFonts.poppins(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                              color: textSecondaryColor,
-                            ),
-                            prefixIcon: const Icon(Icons.search, color: _buttonBgColor),
-                            isDense: true,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                            filled: true,
-                            fillColor: cardBackgroundColor,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(color: _searchBorderColor),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(color: _searchBorderColor),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(color: _buttonBgColor, width: 1.5),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+        // ---- Convert rows into List<List<Widget>> for GenericDataTable ----
+        final rowWidgets = pageRows.map((r) {
+          return [
+            Text(r['name'],  style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: textPrimaryColor)),
+            Text(r['dose'],  style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: textPrimaryColor)),
+            Text(r['route'], style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: textPrimaryColor)),
+            Text(r['freq'],  style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: textPrimaryColor)),
+            Text(r['start'], style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: textPrimaryColor)),
+            Text(r['end'],   style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: textPrimaryColor)),
+            _statusChip(r['status']),
+          ];
+        }).toList();
+
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+              child: SizedBox(
+                width: constraints.maxWidth,
+                height: constraints.maxHeight,
+                child: GenericDataTable(
+                  title: "Medications",
+                  headers: const [
+                    'Medication',
+                    'Dose',
+                    'Route',
+                    'Frequency',
+                    'Start',
+                    'End',
+                    'Status'
+                  ],
+                  rows: rowWidgets,
+                  searchQuery: _searchQuery,
+                  onSearchChanged: (q) => setState(() => _searchQuery = q),
+                  filters: [
+                    DropdownButton<String>(
+                      value: _statusFilter,
+                      onChanged: (v) => setState(() => _statusFilter = v!),
+                      items: const [
+                        DropdownMenuItem(value: "All", child: Text("All")),
+                        DropdownMenuItem(value: "Completed", child: Text("Completed")),
+                        DropdownMenuItem(value: "Incomplete", child: Text("Incomplete")),
+                        DropdownMenuItem(value: "Ongoing", child: Text("Ongoing")),
+                      ],
+                    )
+                  ],
+                  currentPage: _currentPage,
+                  totalItems: filtered.length,
+                  itemsPerPage: _itemsPerPage,
+                  onPreviousPage: () => setState(
+                        () => _currentPage = (_currentPage - 1).clamp(0, 9999),
                   ),
-                ),
-
-                // ======= FILTER PANEL (collapsible) =======
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 180),
-                  child: !_showFilters
-                      ? const SizedBox(height: 8)
-                      : Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: cardBackgroundColor,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: _searchBorderColor),
-                      ),
-                      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-                      child: Row(
-                        children: [
-                          // Status dropdown
-                          Expanded(
-                            child: _LabeledDropdown(
-                              label: 'Status',
-                              value: _statusFilter,
-                              items: const ['All', 'Completed', 'Incomplete', 'Ongoing'],
-                              onChanged: (v) => setState(() => _statusFilter = v!),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-
-                          // Clear filters
-                          SizedBox(
-                            height: 44,
-                            child: OutlinedButton.icon(
-                              onPressed: () {
-                                setState(() {
-                                  _statusFilter = 'All';
-                                  _searchCtrl.clear();
-                                });
-                              },
-                              icon: const Icon(Icons.refresh, size: 18, color: _buttonBgColor),
-                              label: Text(
-                                'Reset',
-                                style: GoogleFonts.poppins(
-                                  fontWeight: FontWeight.w600,
-                                  color: _buttonBgColor,
-                                ),
-                              ),
-                              style: OutlinedButton.styleFrom(
-                                side: const BorderSide(color: _buttonBgColor),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                  onNextPage: () => setState(
+                        () => _currentPage = _currentPage + 1,
                   ),
-                ),
 
-                // ------- HEADER ROW + RED RULE -------
-                Container(
-                  margin: const EdgeInsets.only(top: 8),
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                  decoration: const BoxDecoration(
-                    border: Border(
-                      bottom: BorderSide(color: _tableHeaderColor, width: 1.5),
-                    ),
-                  ),
-                  child: Row(
-                    children: const [
-                      _Th('Medication', flex: 22),
-                      _Th('Dose', flex: 12),
-                      _Th('Route', flex: 10),
-                      _Th('Frequency', flex: 12),
-                      _Th('Start', flex: 12),
-                      _Th('End', flex: 12),
-                      _Th('Status', flex: 10),
-                    ],
-                  ),
-                ),
-
-                // ------- BODY (zebra rows) -------
-                if (rows.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Text('No medications match your filters.',
-                        style: GoogleFonts.poppins(color: textSecondaryColor)),
-                  )
-                else
-                  ...List.generate(rows.length, (i) {
-                    final r = rows[i];
-                    final bg = i.isOdd ? _rowAlternateColor : Colors.transparent;
-
-                    return Container(
-                      color: bg,
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      height: 64,
-                      child: Row(
-                        children: [
-                          _Td(r['name'], flex: 22, style: cellStyle),
-                          _Td(r['dose'], flex: 12, style: cellStyle),
-                          _Td(r['route'], flex: 10, style: cellStyle),
-                          _Td(r['freq'], flex: 12, style: cellStyle),
-                          _Td(r['start'], flex: 12, style: cellStyle),
-                          _Td(r['end'], flex: 12, style: cellStyle),
-                          Expanded(
-                            flex: 10,
-                            child: Align(
-                              alignment: Alignment.centerLeft,
-                              child: _statusChip((r['status'] ?? 'Ongoing').toString()),
-                            ),
-                          ),
-                        ],
-                      ),
+                  // ✅ Action icons will now show
+                  onView: (i) {
+                    final row = pageRows[i];
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text("Viewing ${row['name']}")),
                     );
-                  }),
-                const SizedBox(height: 8),
-              ],
-            ),
-          ),
+                  },
+                  onEdit: (i) {
+                    final row = pageRows[i];
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text("Editing ${row['name']}")),
+                    );
+                  },
+                  onDelete: (i) {
+                    final row = pageRows[i];
+                    setState(() => allRows.remove(row));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text("Deleted ${row['name']}")),
+                    );
+                  },
+                ),
+              ),
+            );
+          },
         );
       },
     );
   }
 
   Widget _statusChip(String status) {
-    final isIncomplete = status.toLowerCase() == 'incomplete';
+    final isIncomplete = (status).toLowerCase() == 'incomplete';
     final bg = isIncomplete
         ? _statusIncompleteColor.withOpacity(0.12)
         : primaryColor.withOpacity(0.12);
@@ -1865,159 +1424,350 @@ class _MedicationsTabState extends State<_MedicationsTab> {
   }
 }
 
-// ======= SMALL HEADER/CELL/FORM HELPERS =======
 
-class _Th extends StatelessWidget {
-  final String label;
-  final int flex;
-  const _Th(this.label, {required this.flex});
 
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      flex: flex,
-      child: Align(
-        alignment: Alignment.centerLeft,
-        child: Text(
-          label,
-          style: GoogleFonts.poppins(
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
-            color: _appointmentsHeaderColor,
-          ),
-        ),
-      ),
-    );
-  }
-}
 
-class _Td extends StatelessWidget {
-  final dynamic value;
-  final int flex;
-  final TextStyle style;
-  const _Td(this.value, {required this.flex, required this.style});
+class _LabsTab extends StatefulWidget {
+  const _LabsTab({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      flex: flex,
-      child: Align(
-        alignment: Alignment.centerLeft,
-        child: Text((value ?? '—').toString(), style: style),
-      ),
-    );
-  }
+  State<_LabsTab> createState() => _LabsTabState();
 }
 
-class _LabeledDropdown extends StatelessWidget {
-  final String label;
-  final String? value;
-  final List<String> items;
-  final ValueChanged<String?> onChanged;
-
-  const _LabeledDropdown({
-    required this.label,
-    required this.value,
-    required this.items,
-    required this.onChanged,
+class _LabsTabState extends State<_LabsTab> {
+  // sample lab data (min 10 rows)
+  final List<Map<String, dynamic>> _labRows = List.generate(12, (i) {
+    return {
+      'name': 'Test ${i + 1}',
+      'value': (4.0 + i).toStringAsFixed(1),
+      'unit': 'mg/dL',
+      'ref': '4.0 - 10.0',
+      'date': '2025-08-${(10 + i).toString().padLeft(2, '0')}',
+      'comment': 'Auto-generated sample',
+      'flag': i % 3 == 0 ? 'High' : (i % 4 == 0 ? 'Low' : 'Normal'),
+    };
   });
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label,
-            style: GoogleFonts.poppins(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: textSecondaryColor,
-            )),
-        const SizedBox(height: 6),
-        DropdownButtonFormField<String>(
-          value: value,
-          items: items
-              .map((e) => DropdownMenuItem<String>(
-            value: e,
-            child: Text(e, style: GoogleFonts.poppins(fontSize: 14)),
-          ))
-              .toList(),
-          onChanged: onChanged,
-          isDense: true,
-          decoration: InputDecoration(
-            isDense: true,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-            filled: true,
-            fillColor: cardBackgroundColor,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: _searchBorderColor),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: _searchBorderColor),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: _buttonBgColor, width: 1.5),
-            ),
+    return _LabsTable(rows: _labRows);
+  }
+}
+
+/// Extracted table widget (uses GenericDataTable underneath)
+class _LabsTable extends StatefulWidget {
+  final List<Map<String, dynamic>> rows;
+  const _LabsTable({required this.rows});
+
+  @override
+  State<_LabsTable> createState() => _LabsTableState();
+}
+
+class _LabsTableState extends State<_LabsTable> {
+  String _searchQuery = "";
+  String _statusFilter = "All";
+  int _currentPage = 0;
+  final int _itemsPerPage = 10;
+
+  String _statusForRow(Map<String, dynamic> r) {
+    final flag = (r['flag'] ?? '').toString().toLowerCase();
+    if (flag.contains('high')) return 'High';
+    if (flag.contains('low')) return 'Low';
+    return 'Normal';
+  }
+
+  List<Map<String, dynamic>> _applyFilters(List<Map<String, dynamic>> data) {
+    final q = _searchQuery.trim().toLowerCase();
+    return data.where((r) {
+      final status = _statusForRow(r);
+      final matchesStatus = _statusFilter == 'All' || status == _statusFilter;
+      if (q.isEmpty) return matchesStatus;
+
+      final hay = [
+        r['name'],
+        r['value'],
+        r['unit'],
+        r['ref'],
+        r['date'],
+        r['comment'],
+      ].join(' ').toLowerCase();
+
+      return matchesStatus && hay.contains(q);
+    }).toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final filtered = _applyFilters(widget.rows);
+
+    final startIndex = _currentPage * _itemsPerPage;
+    final endIndex = (startIndex + _itemsPerPage).clamp(0, filtered.length);
+    final pageRows = startIndex >= filtered.length
+        ? <Map<String, dynamic>>[]
+        : filtered.sublist(startIndex, endIndex);
+
+    final rowWidgets = pageRows.map((r) {
+      final status = _statusForRow(r);
+      return [
+        Text(r['name'] ?? '—'),
+        Text(r['value'] ?? '—'),
+        Text(r['unit'] ?? '—'),
+        Text(r['ref'] ?? '—'),
+        Text(r['date'] ?? '—'),
+        Text(r['comment'] ?? '—'),
+        _statusChip(status),
+      ];
+    }).toList();
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SizedBox(
+          width: constraints.maxWidth,
+          height: constraints.maxHeight,
+          child: GenericDataTable(
+            title: "Lab Results",
+            headers: const [
+              'Medication',
+              'Dose',
+              'Route',
+              'Frequency',
+              'Start',
+              'End',
+              'Status'
+            ],
+            rows: rowWidgets,
+            searchQuery: _searchQuery,
+            onSearchChanged: (q) => setState(() => _searchQuery = q),
+            filters: [
+              DropdownButton<String>(
+                value: _statusFilter,
+                onChanged: (v) => setState(() {
+                  _statusFilter = v!;
+                  _currentPage = 0;
+                }),
+                items: const [
+                  DropdownMenuItem(value: "All", child: Text("All")),
+                  DropdownMenuItem(value: "High", child: Text("High")),
+                  DropdownMenuItem(value: "Low", child: Text("Low")),
+                  DropdownMenuItem(value: "Normal", child: Text("Normal")),
+                ],
+              ),
+            ],
+            currentPage: _currentPage,
+            totalItems: filtered.length,
+            itemsPerPage: _itemsPerPage,
+            onPreviousPage: () =>
+                setState(() => _currentPage = (_currentPage - 1).clamp(0, 9999)),
+            onNextPage: () => setState(() => _currentPage = _currentPage + 1),
+            onView: (i) {
+              final r = pageRows[i];
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text("Viewing ${r['name']}")),
+              );
+            },
+            onEdit: (i) {
+              final r = pageRows[i];
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text("Editing ${r['name']}")),
+              );
+            },
+            onDelete: (i) {
+              final r = pageRows[i];
+              setState(() => widget.rows.remove(r));
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text("Deleted ${r['name']}")),
+              );
+            },
           ),
-          icon: const Icon(Icons.keyboard_arrow_down_rounded, color: _buttonBgColor),
-        ),
-      ],
+        );
+      },
+    );
+  }
+
+  Widget _statusChip(String status) {
+    Color fg;
+    if (status == 'High') {
+      fg = Colors.red;
+    } else if (status == 'Low') {
+      fg = Colors.blue;
+    } else {
+      fg = Colors.green;
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: fg.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(status,
+          style: GoogleFonts.poppins(
+              fontWeight: FontWeight.w600, fontSize: 13, color: fg)),
     );
   }
 }
 
+class _BillingsTab extends StatefulWidget {
+  const _BillingsTab({super.key});
 
-// ======= SMALL HEADER/CELL HELPERS (matching appointments spacing) =======
+  @override
+  State<_BillingsTab> createState() => _BillingsTabState();
+}
 
+class _BillingsTabState extends State<_BillingsTab> {
+  // search/filter/pagination
+  String _searchQuery = "";
+  String _statusFilter = "All";
+  int _currentPage = 0;
+  final int _itemsPerPage = 10;
 
+  // sample billing data (min 10)
+  final List<Map<String, dynamic>> _billingRows = List.generate(12, (i) {
+    return {
+      'invoice': 'INV-${1000 + i}',
+      'date': '2025-08-${(10 + i).toString().padLeft(2, '0')}',
+      'amount': (500 + i * 20).toString(),
+      'method': i % 2 == 0 ? 'Credit Card' : 'Cash',
+      'due': '2025-09-${(10 + i).toString().padLeft(2, '0')}',
+      'status': i % 3 == 0 ? 'Unpaid' : 'Paid',
+      'comment': 'Billing for visit ${i + 1}',
+    };
+  });
 
-/// Exact visual structure of your appointments table (header row, zebra rows, chips, actions)
+  List<Map<String, dynamic>> _applyFilters(List<Map<String, dynamic>> data) {
+    final q = _searchQuery.trim().toLowerCase();
+    return data.where((r) {
+      final status = (r['status'] ?? '').toString();
+      final matchesStatus = _statusFilter == 'All' ||
+          status.toLowerCase() == _statusFilter.toLowerCase();
 
-// ---- Top bar widgets (match Appointments) ----
+      if (q.isEmpty) return matchesStatus;
 
+      final hay = [
+        r['invoice'],
+        r['date'],
+        r['amount'],
+        r['method'],
+        r['comment'],
+      ].join(' ').toLowerCase();
 
-
-
-
-class _LabsTab extends StatelessWidget {
-  final List<Map<String, dynamic>> rows;
-  final TextStyle text;
-  const _LabsTab({required this.rows, required this.text});
+      return matchesStatus && hay.contains(q);
+    }).toList();
+  }
 
   @override
   Widget build(BuildContext context) {
-    if (rows.isEmpty) {
-      return const Center(child: Text('No lab results.'));
-    }
-    return ListView.separated(
-      padding: EdgeInsets.zero,
-      itemCount: rows.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 8),
-      itemBuilder: (context, i) {
-        final r = rows[i];
-        return Card(
-          child: ListTile(
-            title: Text(r['name']?.toString() ?? '—'),
-            subtitle: Text('Ref: ${r['ref'] ?? '—'}'),
-            trailing: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(r['value']?.toString() ?? '—',
-                    style: const TextStyle(fontWeight: FontWeight.w700)),
-                const SizedBox(height: 2),
-                Text(r['date']?.toString() ?? '—',
-                    style: const TextStyle(
-                        fontSize: 12,
-                        color: _DoctorAppointmentPreviewState.kMuted)),
+    final filtered = _applyFilters(_billingRows);
+
+    // pagination
+    final startIndex = _currentPage * _itemsPerPage;
+    final endIndex = (startIndex + _itemsPerPage).clamp(0, filtered.length);
+    final pageRows = startIndex >= filtered.length
+        ? <Map<String, dynamic>>[]
+        : filtered.sublist(startIndex, endIndex);
+
+    // map billing into temporary headers
+    List<List<Widget>> rowWidgets = pageRows.map((r) {
+      return [
+        Text(r['invoice'] ?? '—'), // Medication → invoice
+        Text(r['date'] ?? '—'),    // Dose → date
+        Text(r['amount'] ?? '—'),  // Route → amount
+        Text(r['method'] ?? '—'),  // Frequency → payment method
+        Text(r['due'] ?? '—'),     // Start → due date
+        Text(r['comment'] ?? '—'), // End → comment
+        _statusChip(r['status']),  // Status → paid/unpaid
+      ];
+    }).toList();
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+          child: SizedBox(
+            width: constraints.maxWidth,
+            height: constraints.maxHeight,
+            child: GenericDataTable(
+              title: "Billings",
+              headers: const [
+                'Medication', // temp → invoice
+                'Dose',       // temp → date
+                'Route',      // temp → amount
+                'Frequency',  // temp → method
+                'Start',      // temp → due
+                'End',        // temp → comment
+                'Status',     // temp → paid/unpaid
               ],
+              rows: rowWidgets,
+              searchQuery: _searchQuery,
+              onSearchChanged: (q) => setState(() => _searchQuery = q),
+              filters: [
+                DropdownButton<String>(
+                  value: _statusFilter,
+                  onChanged: (v) => setState(() {
+                    _statusFilter = v!;
+                    _currentPage = 0;
+                  }),
+                  items: const [
+                    DropdownMenuItem(value: "All", child: Text("All")),
+                    DropdownMenuItem(value: "Paid", child: Text("Paid")),
+                    DropdownMenuItem(value: "Unpaid", child: Text("Unpaid")),
+                  ],
+                ),
+              ],
+              currentPage: _currentPage,
+              totalItems: filtered.length,
+              itemsPerPage: _itemsPerPage,
+              onPreviousPage: () =>
+                  setState(() => _currentPage = (_currentPage - 1).clamp(0, 9999)),
+              onNextPage: () =>
+                  setState(() => _currentPage = _currentPage + 1),
+
+              // ✅ actions
+              onView: (i) {
+                final r = pageRows[i];
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text("Viewing ${r['invoice']}")),
+                );
+              },
+              onEdit: (i) {
+                final r = pageRows[i];
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text("Editing ${r['invoice']}")),
+                );
+              },
+              onDelete: (i) {
+                final r = pageRows[i];
+                setState(() => _billingRows.remove(r));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text("Deleted ${r['invoice']}")),
+                );
+              },
             ),
           ),
         );
       },
     );
   }
+
+  Widget _statusChip(String? status) {
+    final isUnpaid = (status ?? '').toLowerCase() == 'unpaid';
+    final fg = isUnpaid ? Colors.red : Colors.green;
+    final bg = fg.withOpacity(0.12);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        status ?? '—',
+        style: GoogleFonts.poppins(
+          fontWeight: FontWeight.w600,
+          fontSize: 13,
+          color: fg,
+        ),
+      ),
+    );
+  }
 }
+
