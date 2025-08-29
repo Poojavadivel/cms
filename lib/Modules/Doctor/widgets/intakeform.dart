@@ -76,7 +76,7 @@ Future<void> showIntakeFormDialog(
     barrierDismissible: false,
     builder: (ctx) {
       final size = MediaQuery.of(ctx).size;
-      final maxW = size.width.clamp(360, 1000).toDouble();
+      final maxW = size.width.clamp(1060, 1350).toDouble();
       final maxH = size.height.clamp(520, 860).toDouble();
 
       return Theme(
@@ -865,7 +865,8 @@ class _ProfileHeaderCard extends StatelessWidget {
   }
 }
 
-/// Expandable section with inline editor
+/// Expandable section with inline editor + per-section saved summary
+/// Expandable section with inline editor + per-section saved summary
 class _SectionCard extends StatefulWidget {
   final IconData icon;
   final String title;
@@ -873,6 +874,7 @@ class _SectionCard extends StatefulWidget {
   final bool required;
   final bool completed;
   final Widget editor;
+  final List<String> saved; // per-section saved lines
 
   const _SectionCard({
     required this.icon,
@@ -881,6 +883,7 @@ class _SectionCard extends StatefulWidget {
     this.required = false,
     required this.completed,
     required this.editor,
+    this.saved = const [],
   });
 
   @override
@@ -889,6 +892,7 @@ class _SectionCard extends StatefulWidget {
 
 class _SectionCardState extends State<_SectionCard> {
   bool open = false;
+  bool showSaved = true; // toggle for detailed saved in the body
 
   @override
   Widget build(BuildContext context) {
@@ -907,6 +911,7 @@ class _SectionCardState extends State<_SectionCard> {
         curve: Curves.easeInOut,
         child: Column(
           children: [
+            // ---- Header (slide bar) with inline saved preview ----
             InkWell(
               borderRadius: BorderRadius.circular(16),
               onTap: () => setState(() => open = !open),
@@ -921,23 +926,46 @@ class _SectionCardState extends State<_SectionCard> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(children: [
-                            Expanded(
-                              child: Text(widget.title,
-                                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: pillBg, borderRadius: BorderRadius.circular(999),
-                                border: Border.all(color: (widget.completed ? Colors.green[200] : badgeBg)!),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  widget.title,
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
                               ),
-                              child: Text(pillText,
-                                  style: TextStyle(fontSize: 11, color: pillFg, fontWeight: FontWeight.w700)),
-                            ),
-                          ]),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: pillBg,
+                                  borderRadius: BorderRadius.circular(999),
+                                  border: Border.all(color: (widget.completed ? Colors.green[200] : badgeBg)!),
+                                ),
+                                child: Text(
+                                  pillText,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: pillFg,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                           const SizedBox(height: 4),
-                          Text(widget.description, style: const TextStyle(color: textSecondaryColor, fontSize: 13)),
+                          Text(
+                            widget.description,
+                            style: const TextStyle(color: textSecondaryColor, fontSize: 13),
+                          ),
+
+                          // 🔹 Inline SAVED PREVIEW **inside header**
+                          if (widget.saved.isNotEmpty) ...[
+                            const SizedBox(height: 10),
+                            _SavedInlinePreview(lines: widget.saved),
+                          ],
                         ],
                       ),
                     ),
@@ -951,14 +979,134 @@ class _SectionCardState extends State<_SectionCard> {
                 ),
               ),
             ),
+
+            // ---- Body (expanded) ----
             if (open) const Divider(height: 1),
             if (open)
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                child: widget.editor,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Detailed saved list (collapsible)
+                    if (widget.saved.isNotEmpty) ...[
+                      Row(
+                        children: [
+                          const Text(
+                            'Saved',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13.5,
+                              color: textPrimaryColor,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          InkWell(
+                            borderRadius: BorderRadius.circular(999),
+                            onTap: () => setState(() => showSaved = !showSaved),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    showSaved ? Icons.expand_less : Icons.expand_more,
+                                    size: 18,
+                                    color: textSecondaryColor,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    showSaved ? 'Hide' : 'Show',
+                                    style: const TextStyle(
+                                      fontSize: 12.5,
+                                      color: textSecondaryColor,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 150),
+                        switchInCurve: Curves.easeOut,
+                        switchOutCurve: Curves.easeIn,
+                        child: showSaved
+                            ? Container(
+                          key: const ValueKey('saved-open'),
+                          margin: const EdgeInsets.only(top: 8, bottom: 12),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[50],
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: borderColor),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: widget.saved
+                                .map(
+                                  (s) => Padding(
+                                padding: const EdgeInsets.only(bottom: 4),
+                                child: Text(
+                                  '• $s',
+                                  style: const TextStyle(fontSize: 13, color: textSecondaryColor),
+                                ),
+                              ),
+                            )
+                                .toList(),
+                          ),
+                        )
+                            : const SizedBox.shrink(key: ValueKey('saved-closed')),
+                      ),
+                    ],
+
+                    // Editor content
+                    widget.editor,
+                  ],
+                ),
               ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Compact chips-style preview that fits in the header.
+/// Shows up to 3 items + "+N more" to avoid wrapping too much.
+class _SavedInlinePreview extends StatelessWidget {
+  final List<String> lines;
+  const _SavedInlinePreview({required this.lines});
+
+  @override
+  Widget build(BuildContext context) {
+    const maxChips = 3;
+    final visible = lines.take(maxChips).toList();
+    final hiddenCount = lines.length - visible.length;
+
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      children: [
+        ...visible.map((s) => _chip(s)),
+        if (hiddenCount > 0) _chip('+$hiddenCount more'),
+      ],
+    );
+  }
+
+  Widget _chip(String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: borderColor),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(fontSize: 12.5, color: textSecondaryColor, fontWeight: FontWeight.w600),
       ),
     );
   }
