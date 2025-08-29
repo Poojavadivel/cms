@@ -253,15 +253,18 @@ class _IntakeFormBodyState extends State<IntakeFormBody> {
     super.dispose();
   }
 
+
   @override
   Widget build(BuildContext context) {
+    // make sure you have this in scope; adapt if your field is named differently
+    final appt = widget.appt;
+
     return Column(
       children: [
-        _TopProgressStrip(done: _doneCount, total: _completed.length),
         const SizedBox(height: 10),
 
         /// HORIZONTAL PROFILE HEADER (replaces vertical card)
-        _PatientHeaderBar(appt: widget.appt, saved: _saved),
+        _ProfileHeaderCard(appt: appt),
         const SizedBox(height: 12),
 
         /// Sections + Saved panel below
@@ -504,10 +507,7 @@ class _IntakeFormBodyState extends State<IntakeFormBody> {
               const SizedBox(width: 8),
               ElevatedButton.icon(
                 onPressed: _saveAndContinue,
-                icon: const Icon(
-                  Icons.check_rounded,
-                  color: Colors.white, // ✅ white check icon
-                  size: 20,),
+                icon: const Icon(Icons.check_rounded, color: Colors.white, size: 20),
                 label: const Text('Save & Continue'),
               ),
             ],
@@ -516,257 +516,354 @@ class _IntakeFormBodyState extends State<IntakeFormBody> {
       ],
     );
   }
+
 }
 
 /// ==================== PARTS ====================
 
-class _TopProgressStrip extends StatelessWidget {
-  final int done;
-  final int total;
-  const _TopProgressStrip({required this.done, required this.total});
-  @override
-  Widget build(BuildContext context) {
-    final value = total == 0 ? 0.0 : done / total;
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        child: Row(
-          children: [
-            const Icon(Icons.assignment_turned_in_outlined, color: primaryColor),
-            const SizedBox(width: 10),
-            const Text('Intake Progress', style: TextStyle(fontWeight: FontWeight.w700)),
-            const SizedBox(width: 12),
-            Expanded(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(999),
-                child: LinearProgressIndicator(
-                  value: value,
-                  minHeight: 8,
-                  backgroundColor: const Color(0xFFF1F5F9),
-                  valueColor: const AlwaysStoppedAnimation(primaryColor),
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Text('$done/$total', style: const TextStyle(color: textSecondaryColor)),
-          ],
-        ),
-      ),
-    );
-  }
-}
+
 
 /// HORIZONTAL profile header bar
-class _PatientHeaderBar extends StatelessWidget {
+class _ProfileHeaderCard extends StatelessWidget {
+  static const Color kPrimary = Color(0xFFEF4444);
+  static const Color kBg = Color(0xFFF9FAFB);
+  static const Color kCard = Colors.white;
+  static const Color kText = Color(0xFF111827);
+  static const Color kMuted = Color(0xFF6B7280);
+  static const Color kBorder = Color(0xFFE5E7EB);
+  static const double kRadius = 16;
   final DashboardAppointments appt;
-  final Map<_SectionKey, List<String>> saved;
-  const _PatientHeaderBar({required this.appt, required this.saved});
+  const _ProfileHeaderCard({required this.appt});
 
-  String _valNum(num? v, {String suffix = ''}) =>
-      (v == null || v == 0) ? '—' : '$v$suffix';
-  String _valStr(String? v) =>
-      (v == null || v.trim().isEmpty) ? '—' : v;
+  // ---- Tokens
+  static const Color kTint = Color(0xFFFFF1F2);      // unified bg
+  static const Color kTintLine = Color(0xFFFFE4E6);  // hairlines on tint
+
+  static const double kAvatar = 128;
+
+  // ---- Helpers
+  String _n(num? v, {String? suffix}) =>
+      (v == null || v == 0) ? '—' : '${v}${suffix ?? ''}';
+  String _s(String? v) => (v == null || v.trim().isEmpty) ? '—' : v;
+
+  String _bloodGroup() {
+    try {
+      final bg = (appt as dynamic).bloodGroup;
+      return _s(bg?.toString());
+    } catch (_) {
+      return '—';
+    }
+  }
+
+  String _spo2() {
+    try {
+      final o2 = (appt as dynamic).spo2 ?? (appt as dynamic).oxygen ?? (appt as dynamic).oxygenLevel;
+      if (o2 == null) return '—';
+      final v = (o2 is num) ? o2 : num.tryParse(o2.toString());
+      return v == null ? '—' : '${v.toStringAsFixed(0)}%';
+    } catch (_) {
+      return '—';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final isFemale = appt.gender.toLowerCase() == 'female';
-    final avatarAsset = isFemale ? 'assets/girlicon.png' : 'assets/boyicon.png';
+    final name = _s(appt.patientName);
+    final isFemale = _s(appt.gender).toLowerCase() == 'female';
+    final avatar = isFemale ? 'assets/girlicon.png' : 'assets/boyicon.png';
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(kRadius),
+      child: Container(
+        decoration: BoxDecoration(
+          color: kTint,                                   // ← unified tint
+          borderRadius: BorderRadius.circular(kRadius),
+          border: Border.all(color: kTintLine),          // hairline border
+        ),
+        child: Stack(
           children: [
-            // Avatar
-            Container(
-              width: 72,
-              height: 72,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: const Color(0xFFFFE4E6), width: 4),
-              ),
-              child: Container(
-                margin: const EdgeInsets.all(3),
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Color(0xFFF1F5F9),
-                ),
-                padding: const EdgeInsets.all(6),
-                child: ClipOval(
-                  child: Image.asset(avatarAsset, fit: BoxFit.contain),
-                ),
-              ),
-            ),
-            const SizedBox(width: 16),
-
-            // LEFT: Name + demographics
-            Expanded(
-              flex: 4,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(appt.patientName,
-                      style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          color: textPrimaryColor)),
-                  const SizedBox(height: 6),
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 6,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      _miniIconLabel(isFemale ? Icons.female : Icons.male, appt.gender),
-                      _miniIconLabel(Icons.person, 'Age ${appt.patientAge}'),
-                      _miniIconLabel(Icons.badge, _valStr(appt.occupation)),
-                      _miniIconLabel(Icons.event, _valStr(appt.dob)),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            // MIDDLE: vitals
-            Expanded(
-              flex: 5,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _metric(title: _valNum(appt.bmi), subtitle: 'BMI'),
-                  _metric(title: _valNum(appt.weight, suffix: 'kg'), subtitle: 'Weight'),
-                  _metric(title: _valNum(appt.height, suffix: 'cm'), subtitle: 'Height'),
-                  _metric(title: _valStr(appt.bp), subtitle: 'Blood P. (mmHg)'),
-                ],
-              ),
-            ),
-
-            // RIGHT: Edit button
-            Align(
-              alignment: Alignment.topRight,
-              child: _editGhostButton(
+            // Edit button (ghost)
+            Positioned(
+              top: 8,
+              right: 8,
+              child: _ghostButton(
+                icon: Icons.edit_outlined,
                 onTap: () {
-                  // open edit sheet here if needed
+                  // TODO: wire edit
                 },
               ),
-            )
+            ),
+
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: LayoutBuilder(
+                builder: (context, c) {
+                  final isTight = c.maxWidth < 980;
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // LEFT: Identity + Demographics
+                      Expanded(
+                        flex: isTight ? 10 : 6,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            _avatar(avatar),
+                            const SizedBox(width: 16),
+                            Expanded(child: _identityBlock(name, isFemale)),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+
+                      // RIGHT: Vitals (unified background, no inner boxes)
+                      if (!isTight)
+                        Expanded(flex: 5, child: _vitalsGrid())
+                      else
+                        Expanded(
+                          flex: 10,
+                          child: Padding(
+                            padding: const EdgeInsets.only(top: 16),
+                            child: _vitalsGrid(),
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              ),
+            ),
           ],
         ),
       ),
     );
   }
-}
 
+  // --- UI atoms
 
-
-
-Widget _miniIconLabel(IconData icon, String text) {
-  return Row(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      Icon(icon, size: 14, color: textSecondaryColor),
-      const SizedBox(width: 4),
-      Text(text, style: const TextStyle(color: textSecondaryColor, fontSize: 12)),
-    ],
-  );
-}
-
-Widget _metric({required String title, required String subtitle, bool emphasize = false}) {
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      Text(
-        title,
-        style: TextStyle(
-          fontSize: 18,
-          fontWeight: emphasize ? FontWeight.w800 : FontWeight.w700,
-          color: textPrimaryColor,
-          height: 1.05,
+  Widget _avatar(String asset) {
+    return Container(
+      width: kAvatar,
+      height: kAvatar,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: kTintLine),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Image.asset(
+          asset,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => const Icon(Icons.person, size: 72),
         ),
       ),
-      const SizedBox(height: 4),
-      Text(subtitle,
-          style: const TextStyle(fontSize: 12, color: textSecondaryColor),
-          overflow: TextOverflow.ellipsis),
-    ],
-  );
-}
+    );
+  }
 
-Widget _chip(String text, {required Color bg, required Color fg}) {
-  return Container(
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-    decoration: BoxDecoration(
-      color: bg,
-      borderRadius: BorderRadius.circular(999),
-    ),
-    child: Text(text, style: TextStyle(color: fg, fontWeight: FontWeight.w600, fontSize: 12)),
-  );
-}
+  Widget _identityBlock(String name, bool isFemale) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          name,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: GoogleFonts.lexend(
+            fontSize: 24,
+            fontWeight: FontWeight.w800,
+            color: kText,
+            height: 1.05,
+          ),
+        ),
+        const SizedBox(height: 8),
 
-Widget _editGhostButton({required VoidCallback onTap}) {
-  return InkWell(
-    onTap: onTap,
-    borderRadius: BorderRadius.circular(10),
-    child: Ink(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: const Color(0xFFE5E7EB),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: const Text('Edit', style: TextStyle(color: Color(0xFF374151), fontWeight: FontWeight.w600)),
-    ),
-  );
-}
+        // ID pill
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: kTintLine),
+          ),
+          child: Text(
+            'ID: ${_s(appt.patientId)}',
+            style: GoogleFonts.lexend(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFFB42318),
+              letterSpacing: 0.1,
+            ),
+          ),
+        ),
 
+        const SizedBox(height: 12),
 
-/// Small reusable fact item (label + bold value)
-Widget _factItem(String label, String value) {
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
+        // Demographics line
+        Wrap(
+          spacing: 18,
+          runSpacing: 10,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            _mini(isFemale ? Icons.female : Icons.male, _s(appt.gender)),
+            _mini(Icons.person, 'Age ${appt.patientAge ?? '—'}'),
+            _mini(Icons.calendar_month, _s(appt.dob)),
+          ],
+        ),
+        const SizedBox(height: 8),
+
+        // Blood Group on its own line
+        Row(
+          children: [
+            const Icon(Icons.bloodtype, size: 16, color: kMuted),
+            const SizedBox(width: 6),
+            Text(
+              'Blood Group: ${_bloodGroup()}',
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: kMuted,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _mini(IconData i, String t) => Row(
     mainAxisSize: MainAxisSize.min,
     children: [
-      Text(label,
-          style: const TextStyle(
-              fontSize: 12, color: textSecondaryColor, height: 1.2)),
-      const SizedBox(height: 2),
-      Text(value,
-          style: const TextStyle(
-              fontSize: 14, fontWeight: FontWeight.w600, height: 1.2)),
+      Icon(i, size: 16, color: kMuted),
+      const SizedBox(width: 6),
+      Text(
+        t,
+        style: GoogleFonts.inter(
+          fontSize: 13,
+          fontWeight: FontWeight.w500,
+          color: kMuted,
+        ),
+      ),
     ],
   );
-}
+
+  // --- Vitals: unified bg, 2x2 grid, hairlines (no tiles)
+  Widget _vitalsGrid() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(child: _kv(Icons.height, 'Height', _n(appt.height, suffix: ' cm'))),
+            const SizedBox(width: 24), // spacing instead of line
+            Expanded(child: _kv(Icons.monitor_weight_outlined, 'Weight', _n(appt.weight, suffix: ' kg'))),
+          ],
+        ),
+        const SizedBox(height: 20), // vertical gap instead of line
+        Row(
+          children: [
+            Expanded(child: _kv(Icons.scale, 'BMI', _n(appt.bmi))),
+            const SizedBox(width: 24),
+            Expanded(child: _kv(Icons.monitor_heart_outlined, 'Oxygen (SpO₂)', _spo2())),
+          ],
+        ),
+      ],
+    );
+  }
 
 
-class _Tag extends StatelessWidget {
-  final String text;
-  const _Tag(this.text);
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF1F5F9),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: borderColor),
+  Widget _vRow({required Widget left, required Widget right}) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Expanded(child: left),
+        _vLine(),
+        Expanded(child: right),
+      ],
+    );
+  }
+
+  Widget _hLine() => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 12),
+    child: Container(height: 1, color: kTintLine),
+  );
+
+  Widget _vLine() => Container(width: 1, height: 40, color: kTintLine);
+
+  Widget _kv(IconData icon, String title, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        // tone-on-tone capsule (keeps enterprise feel w/o boxes)
+        Container(
+          width: 34,
+          height: 34,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0x26FFFFFF), Color(0x14FFFFFF)],
+            ),
+            border: Border.all(color: kTintLine),
+          ),
+          child: Icon(icon, size: 18, color: const Color(0xFFB42318)),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Baseline(
+                baseline: 18,
+                baselineType: TextBaseline.alphabetic,
+                child: Text(
+                  value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.lexend(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: kText,
+                    height: 1.0,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                title,
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: kMuted,
+                  letterSpacing: 0.1,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _ghostButton({required IconData icon, required VoidCallback onTap}) {
+    return Material(
+      color: kTint,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: const BorderSide(color: kTintLine),
       ),
-      child: Text(text, style: const TextStyle(fontSize: 12, color: textSecondaryColor)),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: const Padding(
+          padding: EdgeInsets.all(8.0),
+          child: Icon(Icons.edit_outlined, size: 18, color: Color(0xFF6B7280)),
+        ),
+      ),
     );
   }
 }
-
-Widget _kv(String k, String v) => Row(
-  children: [
-    Expanded(
-      child: Text(k, style: const TextStyle(color: textSecondaryColor)),
-    ),
-    const SizedBox(width: 6),
-    Flexible(child: Text(v, textAlign: TextAlign.right, style: const TextStyle(fontWeight: FontWeight.w600))),
-  ],
-);
 
 /// Expandable section with inline editor
 class _SectionCard extends StatefulWidget {
