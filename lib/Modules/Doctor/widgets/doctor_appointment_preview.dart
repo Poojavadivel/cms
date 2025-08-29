@@ -72,22 +72,12 @@ class _DoctorAppointmentPreviewState extends State<DoctorAppointmentPreview>
                         child: Column(
                           children: [
                             // ---------- CONTAINER 1 : PATIENT HEADER ----------
+                            // simplest: just drop the decoration
                             Container(
-                              decoration: BoxDecoration(
-                                color: kCard,
-                                borderRadius: BorderRadius.circular(kRadius),
-                                border: Border.all(color: kBorder),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(.06),
-                                    blurRadius: 18,
-                                    offset: const Offset(0, 10),
-                                  ),
-                                ],
-                              ),
                               padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
                               child: _ProfileHeaderCard(appt: appt),
                             ),
+
 
                             const SizedBox(height: 12),
 
@@ -132,13 +122,13 @@ class _DoctorAppointmentPreviewState extends State<DoctorAppointmentPreview>
                                         ),
                                         unselectedLabelStyle: GoogleFonts.inter(
                                           fontSize: 13,
-                                          fontWeight: FontWeight.w500,
+                                          fontWeight: FontWeight.w800,
                                         ),
                                         tabs: const [
-                                          Tab(text: 'Overview'),
-                                          Tab(text: 'Patient Profile'),
-                                          Tab(text: 'Medications'),
-                                          Tab(text: 'Lab Results'),
+                                          Tab(text: 'Profile'),
+                                          Tab(text: 'Medical History'),
+                                          Tab(text: 'Prescription'),
+                                          Tab(text: 'Pathalogy'),
                                         ],
                                       ),
                                     ),
@@ -258,7 +248,13 @@ class _ProfileHeaderCard extends StatelessWidget {
   final DashboardAppointments appt;
   const _ProfileHeaderCard({required this.appt});
 
-  // helpers
+  // ---- Tokens
+  static const Color kTint = Color(0xFFFFF1F2);      // unified bg
+  static const Color kTintLine = Color(0xFFFFE4E6);  // hairlines on tint
+  static const double kRadius = 16;
+  static const double kAvatar = 128;
+
+  // ---- Helpers
   String _n(num? v, {String? suffix}) =>
       (v == null || v == 0) ? '—' : '${v}${suffix ?? ''}';
   String _s(String? v) => (v == null || v.trim().isEmpty) ? '—' : v;
@@ -272,122 +268,174 @@ class _ProfileHeaderCard extends StatelessWidget {
     }
   }
 
+  String _spo2() {
+    try {
+      final o2 = (appt as dynamic).spo2 ?? (appt as dynamic).oxygen ?? (appt as dynamic).oxygenLevel;
+      if (o2 == null) return '—';
+      final v = (o2 is num) ? o2 : num.tryParse(o2.toString());
+      return v == null ? '—' : '${v.toStringAsFixed(0)}%';
+    } catch (_) {
+      return '—';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final isFemale = (_s(appt.gender)).toLowerCase() == 'female';
+    final name = _s(appt.patientName);
+    final isFemale = _s(appt.gender).toLowerCase() == 'female';
     final avatar = isFemale ? 'assets/girlicon.png' : 'assets/boyicon.png';
 
-    return Card(
-      elevation: 0,
-      color: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-        side: const BorderSide(color: _DoctorAppointmentPreviewState.kBorder),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(kRadius),
+      child: Container(
+        decoration: BoxDecoration(
+          color: kTint,                                   // ← unified tint
+          borderRadius: BorderRadius.circular(kRadius),
+          border: Border.all(color: kTintLine),          // hairline border
+        ),
+        child: Stack(
           children: [
-            // --- LEFT: Identity Block
-            _identityBlock(context, avatar, isFemale),
-
-            const Spacer(),
-
-            // --- RIGHT: KPI Grid (2x2)
-            ConstrainedBox(
-              constraints: const BoxConstraints(minWidth: 340, maxWidth: 420),
-              child: _kpiGrid(items: _kpis()),
+            // Edit button (ghost)
+            Positioned(
+              top: 8,
+              right: 8,
+              child: _ghostButton(
+                icon: Icons.edit_outlined,
+                onTap: () {
+                  // TODO: wire edit
+                },
+              ),
             ),
 
-            // --- ACTION: Edit Icon
-            // IconButton(
-            //   icon: const Icon(Icons.edit, color: Color(0xFF6B7280)),
-            //   tooltip: "Edit patient",
-            //   onPressed: () {
-            //     // wire your edit action
-            //   },
-            // ),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: LayoutBuilder(
+                builder: (context, c) {
+                  final isTight = c.maxWidth < 980;
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // LEFT: Identity + Demographics
+                      Expanded(
+                        flex: isTight ? 10 : 6,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            _avatar(avatar),
+                            const SizedBox(width: 16),
+                            Expanded(child: _identityBlock(name, isFemale)),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+
+                      // RIGHT: Vitals (unified background, no inner boxes)
+                      if (!isTight)
+                        Expanded(flex: 5, child: _vitalsGrid())
+                      else
+                        Expanded(
+                          flex: 10,
+                          child: Padding(
+                            padding: const EdgeInsets.only(top: 16),
+                            child: _vitalsGrid(),
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  /// ---------------- LEFT SIDE: Identity block ----------------
-  /// ---------------- LEFT SIDE: Identity block ----------------
-  Widget _identityBlock(BuildContext context, String avatar, bool isFemale) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
+  // --- UI atoms
+
+  Widget _avatar(String asset) {
+    return Container(
+      width: kAvatar,
+      height: kAvatar,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: kTintLine),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Image.asset(
+          asset,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => const Icon(Icons.person, size: 72),
+        ),
+      ),
+    );
+  }
+
+  Widget _identityBlock(String name, bool isFemale) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Avatar (square, bigger)
-        Container(
-          width: 138,
-          height: 138,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12), // 👈 square with subtle rounding
-            border: Border.all(color: const Color(0xFFE5E7EB), width: 2),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x08000000),
-                blurRadius: 6,
-                offset: Offset(0, 2),
-              ),
-            ],
+        Text(
+          name,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: GoogleFonts.lexend(
+            fontSize: 24,
+            fontWeight: FontWeight.w800,
+            color: _DoctorAppointmentPreviewState.kText,
+            height: 1.05,
           ),
-          child: ClipRRect(
+        ),
+        const SizedBox(height: 8),
+
+        // ID pill
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.white,
             borderRadius: BorderRadius.circular(10),
-            child: Image.asset(
-              avatar,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => const Icon(Icons.person, size: 72),
+            border: Border.all(color: kTintLine),
+          ),
+          child: Text(
+            'ID: ${_s(appt.patientId)}',
+            style: GoogleFonts.lexend(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFFB42318),
+              letterSpacing: 0.1,
             ),
           ),
         ),
-        const SizedBox(width: 20),
 
-        // Patient Info
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        const SizedBox(height: 12),
+
+        // Demographics line
+        Wrap(
+          spacing: 18,
+          runSpacing: 10,
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: [
+            _mini(isFemale ? Icons.female : Icons.male, _s(appt.gender)),
+            _mini(Icons.person, 'Age ${appt.patientAge ?? '—'}'),
+            _mini(Icons.calendar_month, _s(appt.dob)),
+          ],
+        ),
+        const SizedBox(height: 8),
+
+        // Blood Group on its own line
+        Row(
+          children: [
+            const Icon(Icons.bloodtype, size: 16, color: _DoctorAppointmentPreviewState.kMuted),
+            const SizedBox(width: 6),
             Text(
-              _s(appt.patientName),
-              style: GoogleFonts.lexend(
-                fontSize: 24, // 👈 bump up to match larger avatar
-                fontWeight: FontWeight.w700,
-                color: _DoctorAppointmentPreviewState.kText,
+              'Blood Group: ${_bloodGroup()}',
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: _DoctorAppointmentPreviewState.kMuted,
               ),
-            ),
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFF1F2),
-                border: Border.all(color: const Color(0xFFFFE4E6)),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Text(
-                'ID: ${_s(appt.patientId)}',
-                style: GoogleFonts.lexend(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: const Color(0xFFB42318),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 14,
-              runSpacing: 6,
-              children: [
-                _mini(isFemale ? Icons.female : Icons.male, _s(appt.gender)),
-                _mini(Icons.person, 'Age ${appt.patientAge}'),
-                _mini(Icons.calendar_month, _s(appt.dob)),
-                if (_s(appt.occupation) != '—')
-                  _mini(Icons.work_outline, _s(appt.occupation)),
-                if (_s(appt.location) != '—')
-                  _mini(Icons.place_outlined, _s(appt.location)),
-              ],
             ),
           ],
         ),
@@ -398,12 +446,12 @@ class _ProfileHeaderCard extends StatelessWidget {
   Widget _mini(IconData i, String t) => Row(
     mainAxisSize: MainAxisSize.min,
     children: [
-      Icon(i, size: 14, color: _DoctorAppointmentPreviewState.kMuted),
-      const SizedBox(width: 4),
+      Icon(i, size: 16, color: _DoctorAppointmentPreviewState.kMuted),
+      const SizedBox(width: 6),
       Text(
         t,
         style: GoogleFonts.inter(
-          fontSize: 12,
+          fontSize: 13,
           fontWeight: FontWeight.w500,
           color: _DoctorAppointmentPreviewState.kMuted,
         ),
@@ -411,75 +459,131 @@ class _ProfileHeaderCard extends StatelessWidget {
     ],
   );
 
-  /// ---------------- RIGHT SIDE: KPI GRID ----------------
-  List<_Metric> _kpis() => [
-    _Metric(Icons.scale, 'BMI', _n(appt.bmi)),
-    _Metric(Icons.monitor_weight_outlined, 'Weight', _n(appt.weight, suffix: ' kg')),
-    _Metric(Icons.height, 'Height', _n(appt.height, suffix: ' cm')),
-    _Metric(Icons.bloodtype, 'Blood Group', _bloodGroup()),
-  ];
-
-  Widget _kpiGrid({required List<_Metric> items}) {
-    return Table(
-      columnWidths: const {0: FlexColumnWidth(), 1: FlexColumnWidth()},
+  // --- Vitals: unified bg, 2x2 grid, hairlines (no tiles)
+  Widget _vitalsGrid() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        TableRow(children: [_kpiTile(items[0]), _kpiTile(items[1])]),
-        TableRow(children: [_kpiTile(items[2]), _kpiTile(items[3])]),
+        Row(
+          children: [
+            Expanded(child: _kv(Icons.height, 'Height', _n(appt.height, suffix: ' cm'))),
+            const SizedBox(width: 24), // spacing instead of line
+            Expanded(child: _kv(Icons.monitor_weight_outlined, 'Weight', _n(appt.weight, suffix: ' kg'))),
+          ],
+        ),
+        const SizedBox(height: 20), // vertical gap instead of line
+        Row(
+          children: [
+            Expanded(child: _kv(Icons.scale, 'BMI', _n(appt.bmi))),
+            const SizedBox(width: 24),
+            Expanded(child: _kv(Icons.monitor_heart_outlined, 'Oxygen (SpO₂)', _spo2())),
+          ],
+        ),
       ],
     );
   }
 
-  Widget _kpiTile(_Metric m) {
-    return Padding(
-      padding: const EdgeInsets.all(6),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        constraints: const BoxConstraints(minHeight: 64),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: _DoctorAppointmentPreviewState.kBorder),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 34,
-              height: 34,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
-                color: const Color(0xFFFFE4E6),
-              ),
-              child: Icon(m.icon, size: 18, color: const Color(0xFFB42318)),
+
+  Widget _vRow({required Widget left, required Widget right}) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Expanded(child: left),
+        _vLine(),
+        Expanded(child: right),
+      ],
+    );
+  }
+
+  Widget _hLine() => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 12),
+    child: Container(height: 1, color: kTintLine),
+  );
+
+  Widget _vLine() => Container(width: 1, height: 40, color: kTintLine);
+
+  Widget _kv(IconData icon, String title, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        // tone-on-tone capsule (keeps enterprise feel w/o boxes)
+        Container(
+          width: 34,
+          height: 34,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0x26FFFFFF), Color(0x14FFFFFF)],
             ),
-            const SizedBox(width: 10),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  m.value,
+            border: Border.all(color: kTintLine),
+          ),
+          child: Icon(icon, size: 18, color: const Color(0xFFB42318)),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Baseline(
+                baseline: 18,
+                baselineType: TextBaseline.alphabetic,
+                child: Text(
+                  value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.lexend(
                     fontSize: 16,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w800,
                     color: _DoctorAppointmentPreviewState.kText,
+                    height: 1.0,
                   ),
                 ),
-                Text(
-                  m.title,
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: _DoctorAppointmentPreviewState.kMuted,
-                  ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                title,
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: _DoctorAppointmentPreviewState.kMuted,
+                  letterSpacing: 0.1,
                 ),
-              ],
-            ),
-          ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _ghostButton({required IconData icon, required VoidCallback onTap}) {
+    return Material(
+      color: kTint,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: const BorderSide(color: kTintLine),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: const Padding(
+          padding: EdgeInsets.all(8.0),
+          child: Icon(Icons.edit_outlined, size: 18, color: Color(0xFF6B7280)),
         ),
       ),
     );
   }
 }
+
+
+
+
+
+
+
 
 class _Metric {
   final IconData icon;
@@ -501,8 +605,9 @@ class _Metric {
 
 
 
+
 class _OverviewTab extends StatelessWidget {
-  // ---- Incoming (unchanged) ----
+  // Incoming (kept for compatibility)
   final TextStyle text;
   final String pName, pGender, pLoc, pJob, pDob, pBMI, pWt, pHt, pBp;
   final List<String> ownDx, barriers;
@@ -531,209 +636,213 @@ class _OverviewTab extends StatelessWidget {
     required this.status,
   });
 
-  // ---- Local palette / metrics ----
-  static const Color kText = Color(0xFF0B1324);
-  static const Color kMuted = Color(0xFF64748B);
-  static const Color kCard = Colors.white;
-  static const Color kSurface = Color(0xFFF7F8FA);
+  // Theme
+  static const Color kText   = Color(0xFF0B1324);
+  static const Color kMuted  = Color(0xFF64748B);
+  static const Color kCard   = Colors.white;
   static const Color kBorder = Color(0xFFE5E7EB);
-  static const Color kPrimary = Color(0xFFEF4444);
-  static const Color kSuccess = Color(0xFF16A34A);
-  static const Color kWarn = Color(0xFFF59E0B);
-  static const Color kInfo = Color(0xFF3B82F6);
-  static const double kRadius = 16;
+  static const Color kPrimary= Color(0xFFEF4444);
+  static const double kRadius= 16;
+  static const double kCardMinH = 156;
+
+  // Samples / placeholders
+  static const String kSampleAddress = "94 KR nagar, Dindigul, TamilNadu";
+  static const String kSampleEmergencyName = "Sri ram";
+  static const String kSampleEmergencyPhone = "+91 6382255960";
+  static const String kSampleEmergencyAddress = "98 RM colony, Dinigul, TamilNadu";
+  static const String kSampleInsurance = "HealthPlus Insurance, Policy #123456789";
+
+  // Treat these as “no data”
+  bool _isMissing(String? s) {
+    if (s == null) return true;
+    final t = s.trim();
+    if (t.isEmpty) return true;
+    const invalid = {'—','-','--','na','n/a','null','none'};
+    return invalid.contains(t.toLowerCase());
+  }
 
   @override
   Widget build(BuildContext context) {
-    final themeText = GoogleFonts.inter(
-      textStyle: text.copyWith(color: kText, height: 1.25),
-    );
+    final base = GoogleFonts.inter(color: kText, height: 1.35);
 
-    // ⛔️ Removed the outer Container(color: kSurface)
-    // so this widget blends perfectly into the parent card.
+    // Address fallback and normalization
+    final rawAddress = _isMissing(pLoc) ? kSampleAddress : pLoc.trim();
+    final addr = _normalizeUSAddress(rawAddress);
+
+    const addrUpdated = "Updated: Jan 15, 2025";
+    const emgUpdated  = "Last Updated: Jan 10, 2025";
+    const insUpdated  = "Verified: Jan 12, 2025";
+
     return LayoutBuilder(
-      builder: (context, constraints) {
-        final isWide = constraints.maxWidth >= 980;
+      builder: (context, c) {
+        final isWide = c.maxWidth >= 980;
+
         return ListView(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
           children: [
-            // _heroCard(themeText), // (kept available but not used)
+            // Row 1 — Address + Emergency (same height)
+            if (isWide)
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: _addressCard(context, base, addr, addrUpdated)),
+                  const SizedBox(width: 14),
+                  Expanded(child: _emergencyCard(base, emgUpdated)),
+                ],
+              )
+            else
+              Column(
+                children: [
+                  _addressCard(context, base, addr, addrUpdated),
+                  const SizedBox(height: 14),
+                  _emergencyCard(base, emgUpdated),
+                ],
+              ),
+
             const SizedBox(height: 14),
 
-            _ResponsiveGrid(
-              isWide: isWide,
-              children: [
-                // 1) Appointment
-                _sectionCard(
-                  icon: Icons.event_note_rounded,
-                  title: 'Appointment',
-                  child: _keyValues(themeText, {
-                    'Date': date,
-                    'Time': time,
-                    'Reason': reason,
-                    'Status': status,
-                  }),
-                  trailing: _statusBadge(status),
-                ),
-
-                // 2) Address (separate card)
-                _sectionCard(
-                  icon: Icons.place_rounded,
-                  title: 'Address',
-                  child: _keyValues(
-                    themeText,
-                    {
-                      'Address': pLoc.isEmpty ? '—' : pLoc,
-                    },
-                  ),
-                ),
-
-                // 3) Diagnosis
-                _sectionCard(
-                  icon: Icons.coronavirus_rounded,
-                  title: 'Diagnosis',
-                  child: ownDx.isEmpty
-                      ? _emptyLine()
-                      : Wrap(
-                    spacing: 8,
-                    runSpacing: 10,
-                    children: ownDx
-                        .map((e) => _chip(
-                      e,
-                      bg: const Color(0xFFFFEEF0),
-                      fg: const Color(0xFFB42318),
-                      leading: Icons.verified_rounded,
-                    ))
-                        .toList(),
-                  ),
-                ),
-
-                // 4) Medical History
-                _sectionCard(
-                  icon: Icons.history_edu_rounded,
-                  title: 'Medical History',
-                  child: medHistory.isEmpty
-                      ? _emptyLine()
-                      : Column(
-                    children: medHistory.entries
-                        .map((e) => _kv(
-                      _titleCase(e.key),
-                      e.value,
-                      themeText,
-                    ))
-                        .toList(),
-                  ),
-                ),
-
-                // 5) Health Barriers
-                _sectionCard(
-                  icon: Icons.block_rounded,
-                  title: 'Health Barriers',
-                  child: barriers.isEmpty
-                      ? _emptyLine()
-                      : Wrap(
-                    spacing: 8,
-                    runSpacing: 10,
-                    children: barriers
-                        .map((e) => _chip(
-                      e,
-                      bg: const Color(0xFFFFF7ED),
-                      fg: const Color(0xFFB45309),
-                      leading: Icons.warning_amber_rounded,
-                    ))
-                        .toList(),
-                  ),
-                ),
-
-                // 6) Timeline
-                _sectionCard(
-                  icon: Icons.timeline_rounded,
-                  title: 'Timeline',
-                  child: _timelineView(timeline),
-                ),
-              ],
-            )
-
+            // Row 2 — Insurance
+            _insuranceCard(base, insUpdated),
           ],
         );
       },
     );
   }
 
-  // ---------------- UI Blocks ----------------
+  // ============ EXPERT ADDRESS CARD ============
+  Widget _addressCard(
+      BuildContext context,
+      TextStyle base,
+      _USAddress addr,
+      String updated,
+      ) {
+    final fullOneLine = _joinNonEmpty([
+      addr.street1,
+      addr.street2,
+      _joinNonEmpty([addr.city, _joinNonEmpty([addr.state, addr.zip], sep: ' ')], sep: ', '),
+      addr.country
+    ], sep: ', ');
 
-  Widget _heroCard(TextStyle themeText) {
-    return _elevatedCard(
-      borderGradient: LinearGradient(
-        colors: [kPrimary.withOpacity(.15), Colors.transparent],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _avatarSquare(name: pName),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(pName,
-                          style: GoogleFonts.inter(
-                            fontSize: 20,
-                            height: 1.1,
-                            fontWeight: FontWeight.w800,
-                            color: kText,
-                          )),
-                      const SizedBox(height: 6),
-                      Wrap(
-                        spacing: 12,
-                        runSpacing: 6,
-                        children: [
-                          _metaPill(Icons.person_rounded, pGender),
-                          _metaPill(Icons.work_outline_rounded, pJob),
-                          _metaPill(Icons.cake_outlined, pDob),
-                          _metaPill(Icons.place_outlined, pLoc),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                _statusBadge(status),
-              ],
-            ),
-            const SizedBox(height: 16),
-            _statsRow(),
-          ],
-        ),
+    return _sectionCard(
+      icon: Icons.place_rounded,
+      title: 'Address',
+      minHeight: kCardMinH,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _labelValue('Street',  _joinNonEmpty([addr.street1, addr.street2], sep: ', '), base),
+          _labelValue('City',    addr.city, base),
+          _labelValue('State',   addr.state, base),
+          _labelValue('ZIP',     addr.zip, base),
+          _labelValue('Country', addr.country, base),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _actionChip(
+                context: context,
+                icon: Icons.copy_rounded,
+                label: 'Copy',
+                onTap: () => Clipboard.setData(ClipboardData(text: fullOneLine)),
+              ),
+              _actionChip(
+                context: context,
+                icon: Icons.map_rounded,
+                label: 'Open in Maps',
+                onTap: () {
+                  // Hook: integrate url_launcher if needed.
+                  // final url = 'https://maps.google.com/?q=${Uri.encodeComponent(fullOneLine)}';
+                  // launchUrl(Uri.parse(url));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Map integration hook ready')),
+                  );
+                },
+              ),
+              _dateTag(updated),
+            ],
+          ),
+        ],
       ),
     );
   }
 
-  Widget _metaPill(IconData icon, String text) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: kSurface,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: kBorder),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+  // Emergency (formatted cleanly)
+  Widget _emergencyCard(TextStyle base, String updated) {
+    return _sectionCard(
+      icon: Icons.contact_phone_rounded,
+      title: 'Emergency Contact',
+      minHeight: kCardMinH,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 14, color: kMuted),
-          const SizedBox(width: 6),
-          Text(
-            text,
-            style: GoogleFonts.inter(
-              fontSize: 12.5,
-              color: kText,
-              fontWeight: FontWeight.w600,
+          _labelValue('Name', kSampleEmergencyName, base),
+          _labelValue('Relationship', 'Brother', base), // ✅ new field
+          _labelValue('Phone', kSampleEmergencyPhone, base),
+          _labelValue('Email', 'doctor12@hms.com', base), // ✅ new field
+          _labelValue('Address', kSampleEmergencyAddress, base),
+          const SizedBox(height: 10),
+          _dateTag(updated),
+        ],
+      ),
+    );
+  }
+
+
+  // Insurance
+  Widget _insuranceCard(TextStyle base, String updated) {
+    return _sectionCard(
+      icon: Icons.verified_user_rounded,
+      title: 'Insurance',
+      minHeight: kCardMinH,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SelectableText(
+            kSampleInsurance,
+            style: base.copyWith(fontSize: 15, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 10),
+          _dateTag(updated),
+        ],
+      ),
+    );
+  }
+
+  // ======= Shared shells / atoms =======
+
+  Widget _labelValue(String label, String value, TextStyle base) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Label
+          SizedBox(
+            width: 110, // slightly wider for alignment
+            child: Text(
+              label.toUpperCase(), // 🔑 uppercase = professional, subtle
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                letterSpacing: 0.6,
+                color: kMuted,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+
+          const SizedBox(width: 12),
+
+          // Value
+          Expanded(
+            child: SelectableText(
+              value.isEmpty ? 'Not Provided' : value,
+              style: GoogleFonts.inter(
+                fontSize: 14.5,
+                height: 1.4,
+                fontWeight: FontWeight.w700,
+                color: kText,
+              ),
             ),
           ),
         ],
@@ -741,396 +850,109 @@ class _OverviewTab extends StatelessWidget {
     );
   }
 
-  Widget _statsRow() {
-    final items = [
-      _statTile('BMI', pBMI, Icons.monitor_weight_rounded,
-          gradient: const LinearGradient(
-              colors: [Color(0xFFFFE2E5), Color(0xFFFFF1F2)])),
-      _statTile('BP', pBp, Icons.favorite_rounded,
-          gradient: const LinearGradient(
-              colors: [Color(0xFFE0EAFF), Color(0xFFF0F7FF)])),
-      _statTile('Height', pHt, Icons.height_rounded,
-          gradient: const LinearGradient(
-              colors: [Color(0xFFE6F4EA), Color(0xFFF3FAF5)])),
-      _statTile('Weight', pWt, Icons.fitness_center_rounded,
-          gradient: const LinearGradient(
-              colors: [Color(0xFFFFF3D6), Color(0xFFFFF9EC)])),
-    ];
 
-    return LayoutBuilder(builder: (_, c) {
-      final isTight = c.maxWidth < 640;
-      return Wrap(
-        spacing: 12,
-        runSpacing: 12,
-        children: items
-            .map((w) => SizedBox(
-          width: isTight ? (c.maxWidth) : (c.maxWidth - 36) / 4,
-          child: w,
-        ))
-            .toList(),
-      );
-    });
-  }
-
-  Widget _statTile(String title, String value, IconData icon,
-      {Gradient? gradient}) {
-    return _elevatedCard(
-      background: null,
-      borderGradient: gradient,
+  Widget _actionChip({
+    required BuildContext context,
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(999),
+      onTap: onTap,
       child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          gradient: gradient,
-          borderRadius: BorderRadius.circular(kRadius),
+          color: Colors.white,
+          border: Border.all(color: kBorder),
+          borderRadius: BorderRadius.circular(999),
         ),
-        padding: const EdgeInsets.all(14),
         child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border.all(color: kBorder),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(icon, size: 18, color: kText),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title,
-                      style: GoogleFonts.inter(
-                          fontSize: 12,
-                          color: kMuted,
-                          fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 4),
-                  Text(value,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.inter(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                        color: kText,
-                        height: 1.0,
-                      )),
-                ],
-              ),
-            ),
+            Icon(icon, size: 16, color: kText),
+            const SizedBox(width: 6),
+            Text(label,
+                style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w700)),
           ],
         ),
       ),
     );
   }
 
-  Widget _statusBadge(String status) {
-    final s = (status).toLowerCase();
-    Color bg = const Color(0xFFEFF6FF);
-    Color fg = kInfo;
-    IconData ic = Icons.schedule_rounded;
-
-    if (s.contains('completed')) {
-      bg = const Color(0xFFECFDF5);
-      fg = kSuccess;
-      ic = Icons.verified_rounded;
-    } else if (s.contains('cancel')) {
-      bg = const Color(0xFFFFF1F2);
-      fg = const Color(0xFFDC2626);
-      ic = Icons.cancel_rounded;
-    } else if (s.contains('resched') || s.contains('pending')) {
-      bg = const Color(0xFFFFFBEB);
-      fg = kWarn;
-      ic = Icons.update_rounded;
-    }
-
+  Widget _dateTag(String date) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: bg.withOpacity(.7)),
+        color: kPrimary.withOpacity(.05),
+        border: Border.all(color: kBorder),
+        borderRadius: BorderRadius.circular(8),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(ic, size: 16, color: fg),
-          const SizedBox(width: 8),
-          Text(
-            _titleCase(status),
-            style: GoogleFonts.inter(
-                fontWeight: FontWeight.w800, fontSize: 12, color: fg),
-          ),
-        ],
+      child: Text(
+        date,
+        style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: kMuted),
       ),
     );
   }
 
-  // ---- Section Card ----
   Widget _sectionCard({
     required IconData icon,
     required String title,
     required Widget child,
-    Widget? trailing,
+    double minHeight = 0,
   }) {
     return _elevatedCard(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: kPrimary.withOpacity(.07),
-                    borderRadius: BorderRadius.circular(12),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(minHeight: minHeight),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [kPrimary.withOpacity(.15), kPrimary.withOpacity(.05)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(icon, size: 18, color: kPrimary),
                   ),
-                  child: Icon(icon, size: 18, color: kPrimary),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    title,
-                    style: GoogleFonts.inter(
-                      fontWeight: FontWeight.w800,
-                      color: kText,
-                      fontSize: 14.5,
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: GoogleFonts.inter(
+                        fontWeight: FontWeight.w800,
+                        color: kText,
+                        fontSize: 14.5,
+                      ),
                     ),
                   ),
-                ),
-                if (trailing != null) trailing,
-              ],
-            ),
-            const SizedBox(height: 12),
-            child,
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ---- Key/Value Block ----
-  Widget _keyValues(TextStyle base, Map<String, String> data) {
-    return Column(
-      children: data.entries
-          .map((e) => _kv(e.key, e.value, base))
-          .toList(growable: false),
-    );
-  }
-
-  Widget _kv(String k, String v, TextStyle base) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 8),
-    child: Row(
-      children: [
-        Expanded(
-          child: Text(k,
-              style: GoogleFonts.inter(
-                fontSize: 13,
-                color: kMuted,
-                fontWeight: FontWeight.w600,
-              )),
-        ),
-        const SizedBox(width: 8),
-        Flexible(
-          child: Text(
-            v.isEmpty ? '—' : v,
-            textAlign: TextAlign.right,
-            overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.inter(
-                fontSize: 13.5, color: kText, fontWeight: FontWeight.w800),
-          ),
-        ),
-      ],
-    ),
-  );
-
-  // ---- Chips ----
-  Widget _chip(String label,
-      {required Color bg, required Color fg, IconData? leading}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: bg.withOpacity(.7)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (leading != null) ...[
-            Icon(leading, size: 14, color: fg),
-            const SizedBox(width: 6),
-          ],
-          Text(
-            label,
-            style: GoogleFonts.inter(
-              fontSize: 12.5,
-              color: fg,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ---- Timeline ----
-  Widget _timelineView(List<Map<String, dynamic>> items) {
-    if (items.isEmpty) return _emptyLine();
-
-    return Column(
-      children: [
-        for (int i = 0; i < items.length; i++)
-          _timelineTile(
-            title: (items[i]['title'] ?? '—').toString(),
-            desc: (items[i]['desc'] ?? '').toString(),
-            date: (items[i]['date'] ?? '').toString(),
-            isFirst: i == 0,
-            isLast: i == items.length - 1,
-            accent: i == 0 ? kPrimary : kInfo,
-          ),
-      ],
-    );
-  }
-
-  Widget _timelineTile({
-    required String title,
-    required String desc,
-    required String date,
-    required bool isFirst,
-    required bool isLast,
-    required Color accent,
-  }) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Column(
-          children: [
-            Container(
-              width: 12,
-              height: 12,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border.all(color: accent, width: 3),
-                shape: BoxShape.circle,
-              ),
-            ),
-            if (!isLast)
-              Container(width: 2, height: 42, color: kBorder),
-          ],
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Padding(
-            padding: EdgeInsets.only(bottom: isLast ? 0 : 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title,
-                    style: GoogleFonts.inter(
-                        fontWeight: FontWeight.w800, color: kText)),
-                if (desc.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    desc,
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.inter(
-                        fontSize: 13, color: kMuted, height: 1.35),
-                  ),
                 ],
-                const SizedBox(height: 6),
-                Container(
-                  padding:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: kSurface,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: kBorder),
-                  ),
-                  child: Text(
-                    date,
-                    style: GoogleFonts.inter(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: kText),
-                  ),
-                ),
-              ],
-            ),
+              ),
+              const SizedBox(height: 12),
+              // IMPORTANT: no Expanded/Spacer here; safe for ListView
+              child,
+            ],
           ),
         ),
-      ],
-    );
-  }
-
-  // ---- Helpers ----
-  String _titleCase(String s) =>
-      s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
-
-  Widget _emptyLine() => Text('—',
-      style: GoogleFonts.inter(
-          fontSize: 14, color: kMuted, fontWeight: FontWeight.w600));
-
-  Widget _avatarSquare({required String name}) {
-    final initials = name.trim().isEmpty
-        ? 'PT'
-        : name
-        .trim()
-        .split(RegExp(r'\s+'))
-        .take(2)
-        .map((e) => e.isEmpty ? '' : e[0].toUpperCase())
-        .join();
-
-    return Container(
-      width: 64,
-      height: 64,
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-            colors: [Color(0xFFFFE4E6), Color(0xFFFFF1F2)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: kBorder),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(.05),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          )
-        ],
-      ),
-      child: Center(
-        child: Text(
-          initials,
-          style: GoogleFonts.inter(
-              fontSize: 18, fontWeight: FontWeight.w900, color: kText),
-        ),
       ),
     );
   }
 
-  Widget _elevatedCard({
-    required Widget child,
-    Gradient? background,
-    Gradient? borderGradient,
-  }) {
+  Widget _elevatedCard({required Widget child}) {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(kRadius),
-        gradient: background ??
-            const LinearGradient(colors: [Colors.white, Colors.white]),
+        gradient: const LinearGradient(colors: [kCard, kCard]),
         boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(.04),
-            blurRadius: 18,
-            offset: const Offset(0, 10),
-          ),
-          BoxShadow(
-            color: Colors.black.withOpacity(.03),
-            blurRadius: 6,
-            offset: const Offset(0, 1),
-          ),
+          BoxShadow(color: Colors.black.withOpacity(.06), blurRadius: 16, offset: Offset(0, 8)),
         ],
       ),
       child: DecoratedBox(
@@ -1140,24 +962,77 @@ class _OverviewTab extends StatelessWidget {
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(kRadius),
-          child: Stack(
-            children: [
-              if (borderGradient != null)
-                Positioned.fill(
-                  child: IgnorePointer(
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(gradient: borderGradient),
-                    ),
-                  ),
-                ),
-              child,
-            ],
-          ),
+          child: child,
         ),
       ),
     );
   }
+
+  // ======= Address normalization =======
+  _USAddress _normalizeUSAddress(String input) {
+    // Light parser for "street, city, state zip, country" patterns.
+    String street1 = '', street2 = '', city = '', state = '', zip = '', country = 'India';
+
+    final parts = input.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+
+    if (parts.isNotEmpty) street1 = parts[0];
+    if (parts.length >= 2) city = parts[1];
+    if (parts.length >= 3) {
+      final p = parts[2];
+      final tokens = p.split(RegExp(r'\s+'));
+      if (tokens.length >= 2 && RegExp(r'^\d{5}(-\d{4})?$').hasMatch(tokens.last)) {
+        zip = tokens.removeLast();
+        state = tokens.join(' ').toUpperCase();
+      } else {
+        state = p.toUpperCase();
+      }
+    }
+    if (parts.length >= 4) country = parts[3];
+
+    if (country == 'USA' && state.isEmpty && city.contains(' ')) {
+      final tokens = city.split(' ');
+      if (tokens.length >= 2 && RegExp(r'^\d{5}(-\d{4})?$').hasMatch(tokens.last)) {
+        zip = tokens.removeLast();
+        state = tokens.removeLast().toUpperCase();
+        city = tokens.join(' ');
+      }
+    }
+
+    return _USAddress(
+      street1: street1,
+      street2: street2,
+      city: city,
+      state: state,
+      zip: zip,
+      country: country,
+    );
+  }
+
+  String _joinNonEmpty(List<String> items, {String sep = ', '}) =>
+      items.where((e) => e.trim().isNotEmpty).join(sep);
 }
+
+// Simple address model
+class _USAddress {
+  final String street1;
+  final String street2;
+  final String city;
+  final String state;
+  final String zip;
+  final String country;
+
+  const _USAddress({
+    required this.street1,
+    required this.street2,
+    required this.city,
+    required this.state,
+    required this.zip,
+    required this.country,
+  });
+}
+
+
+
 
 // ---------- Responsive Grid Helper ----------
 class _ResponsiveGrid extends StatelessWidget {
@@ -1200,6 +1075,8 @@ class _ResponsiveGrid extends StatelessWidget {
     );
   }
 }
+
+// ---------- Responsive Grid Helper ----------
 
 // ------------- Responsive Grid Helper -------------
 
@@ -1640,6 +1517,7 @@ class _PatientProfileTab extends StatelessWidget {
 /// Page wrapper to match your Appointments page (title + search + button + table)
 
 
+
 // ---- SAME COLORS AS APPOINTMENTS ----
 const Color primaryColor = Color(0xFFEF4444);
 const Color cardBackgroundColor = Color(0xFFFFFFFF);
@@ -1663,10 +1541,22 @@ class _MedicationsTab extends StatefulWidget {
 class _MedicationsTabState extends State<_MedicationsTab> {
   late Future<List<Map<String, dynamic>>> _futureRows;
 
+  // search / filter state
+  final TextEditingController _searchCtrl = TextEditingController();
+  bool _showFilters = false;
+  String _statusFilter = 'All';
+
   @override
   void initState() {
     super.initState();
     _futureRows = _fetchMedications(); // simulate API fetch
+    _searchCtrl.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
   }
 
   Future<List<Map<String, dynamic>>> _fetchMedications() async {
@@ -1697,13 +1587,43 @@ class _MedicationsTabState extends State<_MedicationsTab> {
         'freq': 'Daily',
         'start': '01/01/2023',
         'end': '—',
-        'status': 'Completed',
+        'status': 'Ongoing',
       },
     ];
   }
 
+  List<Map<String, dynamic>> _applyFilters(List<Map<String, dynamic>> data) {
+    final q = _searchCtrl.text.trim().toLowerCase();
+    return data.where((r) {
+      final s = (r['status'] ?? '').toString();
+      final matchesStatus = _statusFilter == 'All' || s.toLowerCase() == _statusFilter.toLowerCase();
+
+      if (q.isEmpty) return matchesStatus;
+
+      final hay = [
+        r['name'],
+        r['dose'],
+        r['route'],
+        r['freq'],
+      ].map((e) => (e ?? '').toString().toLowerCase()).join(' ');
+
+      return matchesStatus && hay.contains(q);
+    }).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final headerStyle = GoogleFonts.poppins(
+      fontSize: 14,
+      fontWeight: FontWeight.w700,
+      color: _appointmentsHeaderColor,
+    );
+    final cellStyle = GoogleFonts.poppins(
+      fontSize: 14,
+      fontWeight: FontWeight.w500,
+      color: textPrimaryColor,
+    );
+
     return FutureBuilder<List<Map<String, dynamic>>>(
       future: _futureRows,
       builder: (context, snap) {
@@ -1717,21 +1637,8 @@ class _MedicationsTabState extends State<_MedicationsTab> {
           );
         }
 
-        final rows = snap.data ?? [];
-        if (rows.isEmpty) {
-          return const Center(child: Text('No medications recorded.'));
-        }
-
-        final headerStyle = GoogleFonts.poppins(
-          fontSize: 14,
-          fontWeight: FontWeight.w700,
-          color: _appointmentsHeaderColor, // same deep red as appointments header
-        );
-        final cellStyle = GoogleFonts.poppins(
-          fontSize: 14,
-          fontWeight: FontWeight.w500,
-          color: textPrimaryColor,
-        );
+        final allRows = snap.data ?? [];
+        var rows = _applyFilters(allRows);
 
         return ClipRRect(
           borderRadius: BorderRadius.circular(12),
@@ -1739,8 +1646,137 @@ class _MedicationsTabState extends State<_MedicationsTab> {
             color: cardBackgroundColor,
             child: Column(
               children: [
-                // ------- HEADER ROW + RED RULE (exact like appointments) -------
+                // ======= TOP BAR: Filter button + Search field =======
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  child: Row(
+                    children: [
+                      // Filter icon button (enterprise look)
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: cardBackgroundColor,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: _searchBorderColor),
+                          boxShadow: [
+                            BoxShadow(
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                              color: Colors.black.withOpacity(0.06),
+                            ),
+                          ],
+                        ),
+                        child: IconButton(
+                          tooltip: 'Filter',
+                          onPressed: () => setState(() => _showFilters = !_showFilters),
+                          icon: const Icon(Icons.tune_rounded, color: _buttonBgColor),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+
+                      // Search field
+                      Expanded(
+                        child: TextField(
+                          controller: _searchCtrl,
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: textPrimaryColor,
+                          ),
+                          decoration: InputDecoration(
+                            hintText: 'Search medication, dose, route…',
+                            hintStyle: GoogleFonts.poppins(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: textSecondaryColor,
+                            ),
+                            prefixIcon: const Icon(Icons.search, color: _buttonBgColor),
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                            filled: true,
+                            fillColor: cardBackgroundColor,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: _searchBorderColor),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: _searchBorderColor),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: _buttonBgColor, width: 1.5),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // ======= FILTER PANEL (collapsible) =======
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 180),
+                  child: !_showFilters
+                      ? const SizedBox(height: 8)
+                      : Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: cardBackgroundColor,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: _searchBorderColor),
+                      ),
+                      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                      child: Row(
+                        children: [
+                          // Status dropdown
+                          Expanded(
+                            child: _LabeledDropdown(
+                              label: 'Status',
+                              value: _statusFilter,
+                              items: const ['All', 'Completed', 'Incomplete', 'Ongoing'],
+                              onChanged: (v) => setState(() => _statusFilter = v!),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+
+                          // Clear filters
+                          SizedBox(
+                            height: 44,
+                            child: OutlinedButton.icon(
+                              onPressed: () {
+                                setState(() {
+                                  _statusFilter = 'All';
+                                  _searchCtrl.clear();
+                                });
+                              },
+                              icon: const Icon(Icons.refresh, size: 18, color: _buttonBgColor),
+                              label: Text(
+                                'Reset',
+                                style: GoogleFonts.poppins(
+                                  fontWeight: FontWeight.w600,
+                                  color: _buttonBgColor,
+                                ),
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                side: const BorderSide(color: _buttonBgColor),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+                // ------- HEADER ROW + RED RULE -------
                 Container(
+                  margin: const EdgeInsets.only(top: 8),
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                   decoration: const BoxDecoration(
                     border: Border(
@@ -1760,35 +1796,41 @@ class _MedicationsTabState extends State<_MedicationsTab> {
                   ),
                 ),
 
-                // ------- BODY (zebra rows, spacing like image 2) -------
-                ...List.generate(rows.length, (i) {
-                  final r = rows[i];
-                  final bg = i.isOdd ? _rowAlternateColor : Colors.transparent;
+                // ------- BODY (zebra rows) -------
+                if (rows.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Text('No medications match your filters.',
+                        style: GoogleFonts.poppins(color: textSecondaryColor)),
+                  )
+                else
+                  ...List.generate(rows.length, (i) {
+                    final r = rows[i];
+                    final bg = i.isOdd ? _rowAlternateColor : Colors.transparent;
 
-                  return Container(
-                    color: bg,
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    height: 64, // same row height
-                    child: Row(
-                      children: [
-                        _Td(r['name'], flex: 22, style: cellStyle),
-                        _Td(r['dose'], flex: 12, style: cellStyle),
-                        _Td(r['route'], flex: 10, style: cellStyle),
-                        _Td(r['freq'], flex: 12, style: cellStyle),
-                        _Td(r['start'], flex: 12, style: cellStyle),
-                        _Td(r['end'], flex: 12, style: cellStyle),
-                        // Status pill (soft red bg, red text)
-                        Expanded(
-                          flex: 10,
-                          child: Align(
-                            alignment: Alignment.centerLeft,
-                            child: _statusChip((r['status'] ?? 'Ongoing').toString()),
+                    return Container(
+                      color: bg,
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      height: 64,
+                      child: Row(
+                        children: [
+                          _Td(r['name'], flex: 22, style: cellStyle),
+                          _Td(r['dose'], flex: 12, style: cellStyle),
+                          _Td(r['route'], flex: 10, style: cellStyle),
+                          _Td(r['freq'], flex: 12, style: cellStyle),
+                          _Td(r['start'], flex: 12, style: cellStyle),
+                          _Td(r['end'], flex: 12, style: cellStyle),
+                          Expanded(
+                            flex: 10,
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              child: _statusChip((r['status'] ?? 'Ongoing').toString()),
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                  );
-                }),
+                        ],
+                      ),
+                    );
+                  }),
                 const SizedBox(height: 8),
               ],
             ),
@@ -1823,7 +1865,7 @@ class _MedicationsTabState extends State<_MedicationsTab> {
   }
 }
 
-// ======= SMALL HEADER/CELL HELPERS (matching appointments spacing) =======
+// ======= SMALL HEADER/CELL/FORM HELPERS =======
 
 class _Th extends StatelessWidget {
   final String label;
@@ -1861,14 +1903,76 @@ class _Td extends StatelessWidget {
       flex: flex,
       child: Align(
         alignment: Alignment.centerLeft,
-        child: Text(
-          (value ?? '—').toString(),
-          style: style,
-        ),
+        child: Text((value ?? '—').toString(), style: style),
       ),
     );
   }
 }
+
+class _LabeledDropdown extends StatelessWidget {
+  final String label;
+  final String? value;
+  final List<String> items;
+  final ValueChanged<String?> onChanged;
+
+  const _LabeledDropdown({
+    required this.label,
+    required this.value,
+    required this.items,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label,
+            style: GoogleFonts.poppins(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: textSecondaryColor,
+            )),
+        const SizedBox(height: 6),
+        DropdownButtonFormField<String>(
+          value: value,
+          items: items
+              .map((e) => DropdownMenuItem<String>(
+            value: e,
+            child: Text(e, style: GoogleFonts.poppins(fontSize: 14)),
+          ))
+              .toList(),
+          onChanged: onChanged,
+          isDense: true,
+          decoration: InputDecoration(
+            isDense: true,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            filled: true,
+            fillColor: cardBackgroundColor,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: _searchBorderColor),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: _searchBorderColor),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: _buttonBgColor, width: 1.5),
+            ),
+          ),
+          icon: const Icon(Icons.keyboard_arrow_down_rounded, color: _buttonBgColor),
+        ),
+      ],
+    );
+  }
+}
+
+
+// ======= SMALL HEADER/CELL HELPERS (matching appointments spacing) =======
+
+
 
 /// Exact visual structure of your appointments table (header row, zebra rows, chips, actions)
 

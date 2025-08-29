@@ -433,22 +433,16 @@ class _AppointmentDataView extends StatelessWidget {
                     color: _buttonBgColor,
                   ),
                   onPressed: () {
-                    showDialog(
-                      context: context,
-                      builder: (BuildContext context) {
-                        return Dialog(
-                          insetPadding: const EdgeInsets.all(16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: AppointmentDetailPage(appt: appt),
-                          // ✅ or use DoctorAppointmentPreview(appt: appt)
-                        );
-                      },
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => AppointmentDetailPage(appt: appt),
+                        // fullscreenDialog: true, // optional — remove if you want a normal push
+                      ),
                     );
                   },
                 ),
               )
+
             ],
           ),
         ),

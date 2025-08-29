@@ -36,7 +36,7 @@ const Color _intakeButtonColor = Color(0xFFF87171);
 // --- Simulated API Data ---
 final _dashboardApiData = DoctorDashboardData(
   appointments: [
-    DashboardAppointments(patientName: 'Arthur', patientAge: 32, date: '05/12/2022', time: '9:30 AM', reason: 'Fever', doctor: 'Dr. John', status: 'Completed', gender: 'Male', patientId: 'P001', service: 'General Checkup', patientAvatarUrl: 'https://placehold.co/100x100/A0AEC0/FFFFFF?text=A', isSelected: false),
+    DashboardAppointments(patientName: 'Sanjit sriram', patientAge: 32, date: '05/12/2022', time: '9:30 AM', reason: 'Fever', doctor: 'Dr. John', status: 'Completed', gender: 'Male', patientId: 'P001', service: 'General Checkup', patientAvatarUrl: 'https://placehold.co/100x100/A0AEC0/FFFFFF?text=A', isSelected: false),
     DashboardAppointments(patientName: 'John', patientAge: 28, date: '05/12/2022', time: '9:30 AM', reason: 'Injury', doctor: 'Dr. Joel', status: 'Completed', gender: 'Male', patientId: 'P002', service: 'Emergency', patientAvatarUrl: 'https://placehold.co/100x100/A0AEC0/FFFFFF?text=J', isSelected: false),
     DashboardAppointments(patientName: 'Bhavana', patientAge: 20, date: '19/08/2025', time: '10:30 AM', reason: 'Head Ache', doctor: 'Dr. Joel', status: 'Completed', gender: 'Female', patientId: 'P003', service: 'Neurology Consult', patientAvatarUrl: 'https://placehold.co/100x100/A0AEC0/FFFFFF?text=B', isSelected: false),
     DashboardAppointments(patientName: 'David', patientAge: 26, date: '05/12/2022', time: '11:00 AM', reason: 'Fever', doctor: 'Dr. John', status: 'Completed', gender: 'Male', patientId: 'P004', service: 'General Checkup', patientAvatarUrl: 'https://placehold.co/100x100/A0AEC0/FFFFFF?text=D', isSelected: false),
