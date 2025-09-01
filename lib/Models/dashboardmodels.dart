@@ -12,6 +12,13 @@ class DashboardAppointments {
   final String patientAvatarUrl; // Optional: for network images if needed
   bool isSelected;
 
+  // ✅ Notes
+  final String? previousNotes;
+  final String? currentNotes;
+
+  // ✅ Pharmacy & Pathology
+  final List<Map<String, String>> pharmacy;
+  final List<Map<String, String>> pathology;
 
   // Extended fields for detailed preview
   final String diabetesType;
@@ -41,7 +48,15 @@ class DashboardAppointments {
     this.patientAvatarUrl = '',
     this.isSelected = false,
 
-    // New fields
+    // ✅ Notes
+    this.previousNotes,
+    this.currentNotes,
+
+    // ✅ Tables
+    this.pharmacy = const [],
+    this.pathology = const [],
+
+    // Extended fields
     this.diabetesType = 'Type 2',
     this.location = '',
     this.occupation = '',
@@ -55,8 +70,6 @@ class DashboardAppointments {
     this.timeline = const [],
     this.history = const {},
   });
-
-  get notes => null;
 
   DashboardAppointments copyWith({
     String? patientName,
@@ -72,7 +85,15 @@ class DashboardAppointments {
     String? patientAvatarUrl,
     bool? isSelected,
 
-    // New fields
+    // ✅ Notes
+    String? previousNotes,
+    String? currentNotes,
+
+    // ✅ Tables
+    List<Map<String, String>>? pharmacy,
+    List<Map<String, String>>? pathology,
+
+    // Extended fields
     String? diabetesType,
     String? location,
     String? occupation,
@@ -100,6 +121,15 @@ class DashboardAppointments {
       patientAvatarUrl: patientAvatarUrl ?? this.patientAvatarUrl,
       isSelected: isSelected ?? this.isSelected,
 
+      // ✅ Notes
+      previousNotes: previousNotes ?? this.previousNotes,
+      currentNotes: currentNotes ?? this.currentNotes,
+
+      // ✅ Tables
+      pharmacy: pharmacy ?? this.pharmacy,
+      pathology: pathology ?? this.pathology,
+
+      // Extended fields
       diabetesType: diabetesType ?? this.diabetesType,
       location: location ?? this.location,
       occupation: occupation ?? this.occupation,
@@ -118,6 +148,5 @@ class DashboardAppointments {
 
 class DoctorDashboardData {
   final List<DashboardAppointments> appointments;
-
   DoctorDashboardData({required this.appointments});
 }

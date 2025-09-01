@@ -12,8 +12,6 @@ const Color borderColor = Color(0xFFE5E7EB);
 const Color successColor = Color(0xFF10B981);
 const Color warningColor = Color(0xFFF59E0B);
 
-/// Call this to open the popup:
-/// await AppointmentDetailPopup.show(context, appt);
 class AppointmentDetail extends StatelessWidget {
   final DashboardAppointments appt;
   const AppointmentDetail({super.key, required this.appt});
@@ -22,7 +20,7 @@ class AppointmentDetail extends StatelessWidget {
     return showDialog(
       context: context,
       barrierDismissible: true,
-      barrierColor: Colors.black.withOpacity(0.35), // dim background
+      barrierColor: Colors.black.withOpacity(0.35),
       builder: (_) => AppointmentDetail(appt: appt),
     );
   }
@@ -40,9 +38,8 @@ class AppointmentDetail extends StatelessWidget {
           maxHeight: size.height * 0.95,
         ),
         child: Stack(
-          clipBehavior: Clip.none, // allow close button to float outside
+          clipBehavior: Clip.none,
           children: [
-            // ---- Popup surface ----
             ClipRRect(
               borderRadius: BorderRadius.circular(16),
               child: Material(
@@ -56,62 +53,81 @@ class AppointmentDetail extends StatelessWidget {
                         _ProfileHeaderCard(appt: appt),
                         const SizedBox(height: 16),
 
-                        // ---- Content Grid ----
-                        LayoutBuilder(
-                          builder: (context, constraints) {
-                            final isWide = constraints.maxWidth >= 900;
-                            final colW = isWide
-                                ? (constraints.maxWidth - 16) / 2
-                                : constraints.maxWidth;
-
-                            return Wrap(
-                              spacing: 16,
-                              runSpacing: 16,
+                        // ---- Dropdown style sections ----
+                        _SectionCard(
+                          icon: Icons.note_alt_outlined,
+                          title: "Medical Notes",
+                          description: "Previous & current notes",
+                          builder: () => Align(  // 👈 force left
+                            alignment: Alignment.centerLeft,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start, // 👈 stack left
+                              mainAxisSize: MainAxisSize.min,
                               children: [
-                                SizedBox(
-                                  width: colW,
-                                  child: _InfoCard(
-                                    title: 'Patient Info',
-                                    children: [
-                                      _KeyValueRow('Patient Name', _s(appt.patientName)),
-                                      _KeyValueRow('Age', _s(appt.patientAge?.toString())),
-                                      _KeyValueRow('Gender', _s(appt.gender)),
-                                      _KeyValueRow('Reason', _s(appt.reason)),
-                                    ],
+                                Text(
+                                  "Previous Notes",
+                                  style: GoogleFonts.lexend(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                    color: textPrimaryColor,
                                   ),
                                 ),
-                                SizedBox(
-                                  width: colW,
-                                  child: _InfoCard(
-                                    title: 'Appointment Info',
-                                    children: [
-                                      _KeyValueRow('Date', _s(appt.date)),
-                                      _KeyValueRow('Time', _s(appt.time)),
-                                      _StatusRow('Status', _s(appt.status)),
-                                      _KeyValueRow('Service', _s(appt.service)),
-                                    ],
+                                const SizedBox(height: 4),
+                                Text(
+                                  appt.previousNotes?.isNotEmpty == true
+                                      ? appt.previousNotes!
+                                      : "No previous notes available",
+                                  style: const TextStyle(
+                                    color: textSecondaryColor,
+                                    fontSize: 13,
+                                    height: 1.4,
                                   ),
                                 ),
-                                SizedBox(
-                                  width: constraints.maxWidth,
-                                  child: _InfoCard(
-                                    title: 'Notes',
-                                    children: [
-                                      Text(
-                                        _s(appt.notes).isEmpty
-                                            ? 'No additional notes'
-                                            : _s(appt.notes),
-                                        style: const TextStyle(
-                                          color: textSecondaryColor,
-                                          height: 1.45,
-                                        ),
-                                      ),
-                                    ],
+                                const SizedBox(height: 12),
+                                Text(
+                                  "Current Notes",
+                                  style: GoogleFonts.lexend(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                    color: textPrimaryColor,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  appt.currentNotes ?? "No current notes",
+                                  style: const TextStyle(
+                                    color: textPrimaryColor,
+                                    fontSize: 13,
+                                    height: 1.4,
                                   ),
                                 ),
                               ],
-                            );
-                          },
+                            ),
+                          ),
+                        ),
+
+                        _SectionCard(
+                          icon: Icons.local_pharmacy_outlined,
+                          title: "Pharmacy",
+                          description: "Prescribed medicines",
+                          builder: () => _ReadOnlyTable(
+                            columns: const [
+                              "Medicine",
+                              "Dosage",
+                              "Frequency",
+                              "Notes"
+                            ],
+                            rows: appt.pharmacy,
+                          ),
+                        ),
+                        _SectionCard(
+                          icon: Icons.biotech_outlined,
+                          title: "Pathology",
+                          description: "Lab investigations",
+                          builder: () => _ReadOnlyTable(
+                            columns: const ["Test Name","Category" ,"Priority", "Notes"],
+                            rows: appt.pathology,
+                          ),
                         ),
                       ],
                     ),
@@ -120,7 +136,7 @@ class AppointmentDetail extends StatelessWidget {
               ),
             ),
 
-            // ---- Floating close button (outside corner) ----
+            // ---- Floating close button ----
             Positioned(
               top: -10,
               right: -10,
@@ -143,7 +159,8 @@ class AppointmentDetail extends StatelessWidget {
                       ],
                     ),
                     padding: const EdgeInsets.all(8),
-                    child: const Icon(Icons.close_rounded, color: primaryColor, size: 20),
+                    child: const Icon(Icons.close_rounded,
+                        color: primaryColor, size: 20),
                   ),
                 ),
               ),
@@ -154,11 +171,145 @@ class AppointmentDetail extends StatelessWidget {
     );
   }
 }
+class _SectionCard extends StatefulWidget {
+  final IconData icon;
+  final String title;
+  final String description;
+  final Widget Function() builder;
+
+  const _SectionCard({
+    required this.icon,
+    required this.title,
+    required this.description,
+    required this.builder,
+  });
+
+  @override
+  State<_SectionCard> createState() => _SectionCardState();
+}
+
+class _SectionCardState extends State<_SectionCard> {
+  bool open = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 14),
+      color: Colors.white,
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: borderColor.withOpacity(0.3)),
+      ),
+      child: Column(
+        children: [
+          ListTile(
+            leading: Icon(widget.icon, color: primaryColor),
+            title: Text(widget.title),
+            subtitle: Text(widget.description,
+                style: const TextStyle(color: textSecondaryColor)),
+            trailing: Icon(open
+                ? Icons.keyboard_arrow_up
+                : Icons.keyboard_arrow_down),
+            onTap: () => setState(() => open = !open),
+          ),
+          if (open)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: widget.builder(),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 
 // ---------------- Helpers ----------------
 String _s(String? v) => (v == null) ? '' : v.trim();
 String _n(num? v, {String? suffix}) =>
     (v == null || v == 0) ? '—' : '${v}${suffix ?? ''}';
+
+// ---------------- Read-only Table ----------------
+class _ReadOnlyTable extends StatelessWidget {
+  final List<String> columns;
+  final List<Map<String, String>> rows;
+
+  const _ReadOnlyTable({required this.columns, required this.rows});
+
+  @override
+  Widget build(BuildContext context) {
+    return Table(
+      border: const TableBorder(
+        horizontalInside: BorderSide(width: 0.5, color: Color(0xFFE5E7EB)),
+      ),
+      columnWidths: {
+        for (var i = 0; i < columns.length; i++) i: const FlexColumnWidth(),
+      },
+      children: [
+        // Header
+        TableRow(
+          decoration: const BoxDecoration(color: Color(0xFFFEF2F2)),
+          children: columns
+              .map((c) => Padding(
+            padding: const EdgeInsets.all(8),
+            child: Text(
+              c,
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF991B1B),
+                fontSize: 13,
+              ),
+            ),
+          ))
+              .toList(),
+        ),
+        // Rows
+        if (rows.isNotEmpty)
+          for (int i = 0; i < rows.length; i++)
+            TableRow(
+              decoration: BoxDecoration(
+                color: i.isEven
+                    ? Colors.white
+                    : const Color(0xFFFEF2F2).withOpacity(0.3),
+              ),
+              children: columns.map((c) {
+                return Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: Text(
+                    rows[i][c] ?? "—",
+                    style: const TextStyle(
+                        fontSize: 13, color: textPrimaryColor),
+                  ),
+                );
+              }).toList(),
+            )
+        else
+          TableRow(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Text(
+                  "No records found",
+                  style: const TextStyle(color: textSecondaryColor),
+                ),
+              ),
+              for (int i = 1; i < columns.length; i++) const SizedBox(),
+            ],
+          ),
+      ],
+    );
+  }
+}
+
+// ---------------- Existing Widgets ----------------
+// Keep your _ProfileHeaderCard, _InfoCard, _CardShell, _ResponsiveScroll
+// (from your pasted code above) without change
+
+// ---------------- Helpers ----------------
+// String _s(String? v) => (v == null) ? '' : v.trim();
+// String _n(num? v, {String? suffix}) =>
+//     (v == null || v == 0) ? '—' : '${v}${suffix ?? ''}';
 
 // ---------------- Widgets ----------------
 

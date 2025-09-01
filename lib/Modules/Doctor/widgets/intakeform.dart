@@ -5,12 +5,14 @@ import '../../../Models/dashboardmodels.dart';
 /// ==================== THEME ====================
 const Color primaryColor = Color(0xFFEF4444);
 const Color backgroundColor = Color(0xFFF6F7FB);
-const Color surfaceColor = Colors.white;
-const Color textPrimaryColor = Color(0xFF0F172A);
-const Color textSecondaryColor = Color(0xFF64748B);
+const Color textPrimaryColor = Color(0xFF1F2937);
+const Color textSecondaryColor = Color(0xFF6B7280);
 const Color borderColor = Color(0xFFE2E8F0);
-const Color badgeBg = Color(0xFFFFF3C7);
-const Color badgeFg = Color(0xFFD97706);
+
+// Match your appointment table theme
+const Color _tableHeaderColor = Color(0xFF991B1B);
+const Color _rowAlternateColor = Color(0xFFFEF2F2);
+const Color _statusIncompleteColor = Color(0xFFDC2626);
 
 ThemeData _intakeTheme(BuildContext context) {
   return ThemeData(
@@ -18,59 +20,12 @@ ThemeData _intakeTheme(BuildContext context) {
     colorScheme: ColorScheme.fromSeed(seedColor: primaryColor),
     scaffoldBackgroundColor: backgroundColor,
     textTheme: GoogleFonts.interTextTheme(Theme.of(context).textTheme),
-    cardTheme: CardTheme(
-      color: surfaceColor,
-      elevation: 1,
-      surfaceTintColor: Colors.transparent,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: const BorderSide(color: borderColor),
-      ),
-    ),
-    inputDecorationTheme: InputDecorationTheme(
-      filled: true,
-      fillColor: const Color(0xFFF1F5F9),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: borderColor),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: borderColor),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: primaryColor, width: 1.4),
-      ),
-      labelStyle: const TextStyle(color: textSecondaryColor),
-      hintStyle: const TextStyle(color: Color(0xFF94A3B8)),
-    ),
-    elevatedButtonTheme: ElevatedButtonThemeData(
-      style: ElevatedButton.styleFrom(
-        backgroundColor: primaryColor,
-        foregroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      ),
-    ),
-    outlinedButtonTheme: OutlinedButtonThemeData(
-      style: OutlinedButton.styleFrom(
-        foregroundColor: primaryColor,
-        side: const BorderSide(color: primaryColor),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      ),
-    ),
-    dividerTheme: const DividerThemeData(color: borderColor, thickness: 1),
   );
 }
 
-/// ============== DIALOG (headerless + floating close) ==============
+/// ============== DIALOG (floating intake form) ==============
 Future<void> showIntakeFormDialog(
-    BuildContext context,
-    DashboardAppointments appt,
-    ) {
+    BuildContext context, DashboardAppointments appt) {
   return showDialog(
     context: context,
     barrierDismissible: false,
@@ -101,20 +56,20 @@ Future<void> showIntakeFormDialog(
                     ],
                   ),
                   child: ConstrainedBox(
-                    constraints: BoxConstraints(maxWidth: maxW, maxHeight: maxH),
+                    constraints:
+                    BoxConstraints(maxWidth: maxW, maxHeight: maxH),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(22),
                       child: Material(
-                        color: backgroundColor,
+                        color: Colors.white, // 🔴 changed from backgroundColor
                         child: Padding(
                           padding: const EdgeInsets.all(12),
-                          child: IntakeFormBody(appt: appt, isDialog: true),
+                          child: IntakeFormBody(appt: appt),
                         ),
                       ),
                     ),
                   ),
                 ),
-                // floating close
                 Positioned(
                   right: -8,
                   top: -8,
@@ -130,13 +85,6 @@ Future<void> showIntakeFormDialog(
                             color: Colors.white,
                             border: Border.all(color: borderColor),
                             borderRadius: BorderRadius.circular(999),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(.06),
-                                blurRadius: 10,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
                           ),
                           child: const Padding(
                             padding: EdgeInsets.all(10),
@@ -156,7 +104,8 @@ Future<void> showIntakeFormDialog(
   );
 }
 
-/// ============== FULL PAGE (kept) ==============
+
+/// ============== FULL PAGE ==============
 class IntakeFormPage extends StatelessWidget {
   final DashboardAppointments appt;
   const IntakeFormPage({super.key, required this.appt});
@@ -170,7 +119,7 @@ class IntakeFormPage extends StatelessWidget {
         body: SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(12),
-            child: IntakeFormBody(appt: appt, isDialog: false),
+            child: IntakeFormBody(appt: appt),
           ),
         ),
       ),
@@ -181,349 +130,415 @@ class IntakeFormPage extends StatelessWidget {
 /// ============== SHARED BODY ==============
 class IntakeFormBody extends StatefulWidget {
   final DashboardAppointments appt;
-  final bool isDialog;
-  const IntakeFormBody({super.key, required this.appt, required this.isDialog});
+  const IntakeFormBody({super.key, required this.appt});
 
   @override
   State<IntakeFormBody> createState() => _IntakeFormBodyState();
 }
 
-enum _SectionKey { history, symptoms, allergies, pathology, consent }
-
 class _IntakeFormBodyState extends State<IntakeFormBody> {
-  final Map<_SectionKey, bool> _completed = {
-    _SectionKey.history: false,
-    _SectionKey.symptoms: false,
-    _SectionKey.allergies: false,
-    _SectionKey.pathology: false,
-    _SectionKey.consent: false,
-  };
+  // Notes controllers
+  final TextEditingController _currentNotesCtrl = TextEditingController();
+  final TextEditingController _heightCtrl = TextEditingController();
+  final TextEditingController _weightCtrl = TextEditingController();
+  final TextEditingController _bmiCtrl = TextEditingController();
+  final TextEditingController _spo2Ctrl = TextEditingController();
 
-  /// saved summaries for the bottom panel
-  final Map<_SectionKey, List<String>> _saved = {
-    _SectionKey.history: [],
-    _SectionKey.symptoms: [],
-    _SectionKey.allergies: [],
-    _SectionKey.pathology: [],
-    _SectionKey.consent: [],
-  };
-
-  // selections
-  String? chronicCond, surgery, lifestyle;
-  String? primaryComplaint, onset, pain;
-  String? allergy, medName, medDose, medFreq;
-
-  // pathology + message
-  String? testType, testPriority;
-  final TextEditingController _labNote = TextEditingController();
-
-  // consent
-  bool consent1 = false, consent2 = false;
-
-  int get _doneCount => _completed.values.where((e) => e).length;
-  bool get _allRequired =>
-      _completed[_SectionKey.history] == true &&
-          _completed[_SectionKey.symptoms] == true &&
-          _completed[_SectionKey.consent] == true;
-
-  void _markDone(_SectionKey key, List<String> summaryLines) {
-    setState(() {
-      _completed[key] = true;
-      _saved[key] = summaryLines;
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Section saved'), behavior: SnackBarBehavior.floating),
-    );
-  }
-
-  void _saveAndContinue() {
-    if (!_allRequired) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Complete required sections (marked with *) to continue.'),
-      ));
-      return;
-    }
-    Navigator.of(context).maybePop();
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Intake saved')));
-  }
+  // Pharmacy + Pathology dynamic tables
+  final List<Map<String, String>> _pharmacyRows = [];
+  final List<Map<String, String>> _pathologyRows = [];
 
   @override
   void dispose() {
-    _labNote.dispose();
+    _currentNotesCtrl.dispose();
+    _heightCtrl.dispose();
+    _weightCtrl.dispose();
+    _bmiCtrl.dispose();
+    _spo2Ctrl.dispose();
     super.dispose();
   }
 
+  void _saveForm() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Form saved successfully ✅")),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    // make sure you have this in scope; adapt if your field is named differently
     final appt = widget.appt;
 
     return Column(
       children: [
         const SizedBox(height: 10),
-
-        /// HORIZONTAL PROFILE HEADER (replaces vertical card)
         _ProfileHeaderCard(appt: appt),
         const SizedBox(height: 12),
-
-        /// Sections + Saved panel below
         Expanded(
           child: ListView(
             children: [
+              /// --- MEDICAL NOTES ---
+              /// --- MEDICAL NOTES ---
               _SectionCard(
-                icon: Icons.history_edu,
-                title: 'Patient History *',
-                description: 'Add medical history, surgeries, chronic conditions.',
-                required: true,
-                completed: _completed[_SectionKey.history] ?? false,
-                editor: Column(
+                icon: Icons.note_alt_outlined,
+                title: 'Medical Notes',
+                description: 'Overview, vitals, and notes history.',
+                editorBuilder: (_) => Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _SelectField(
-                      label: 'Chronic Conditions',
-                      value: chronicCond,
-                      items: const ['Diabetes', 'Hypertension', 'Asthma', 'Thyroid', 'None', 'Other'],
-                      onChanged: (v) => setState(() => chronicCond = v),
-                    ),
-                    _SelectField(
-                      label: 'Past Surgeries',
-                      value: surgery,
-                      items: const ['Appendectomy', 'C-Section', 'Bypass', 'Fracture Fixation', 'None', 'Other'],
-                      onChanged: (v) => setState(() => surgery = v),
-                    ),
-                    _SelectField(
-                      label: 'Lifestyle',
-                      value: lifestyle,
-                      items: const ['Smoker', 'Alcohol', 'Active', 'Sedentary', 'Other'],
-                      onChanged: (v) => setState(() => lifestyle = v),
-                    ),
-                    _EditorActions(
-                      onCancel: () {},
-                      onSave: () => _markDone(_SectionKey.history, [
-                        if (chronicCond != null) 'Chronic: $chronicCond',
-                        if (surgery != null) 'Surgery: $surgery',
-                        if (lifestyle != null) 'Lifestyle: $lifestyle',
-                      ]),
-                    ),
-                  ],
-                ),
-              ),
-              _SectionCard(
-                icon: Icons.sick,
-                title: 'Current Symptoms *',
-                description: 'Chief complaint, onset date, pain scale.',
-                required: true,
-                completed: _completed[_SectionKey.symptoms] ?? false,
-                editor: Column(
-                  children: [
-                    _SelectField(
-                      label: 'Primary Complaint',
-                      value: primaryComplaint,
-                      items: const ['Fever', 'Headache', 'Cough', 'Chest Pain', 'Vomiting', 'Other'],
-                      onChanged: (v) => setState(() => primaryComplaint = v),
-                    ),
-                    _SelectField(
-                      label: 'Onset',
-                      value: onset,
-                      items: const ['Today', 'Yesterday', '1 Week', '2 Weeks', '1 Month', 'Other'],
-                      onChanged: (v) => setState(() => onset = v),
-                    ),
-                    _SelectField(
-                      label: 'Pain (0–10)',
-                      value: pain,
-                      items: const ['0','1','2','3','4','5','6','7','8','9','10'],
-                      onChanged: (v) => setState(() => pain = v),
-                    ),
-                    _EditorActions(
-                      onCancel: () {},
-                      onSave: () => _markDone(_SectionKey.symptoms, [
-                        if (primaryComplaint != null) 'Complaint: $primaryComplaint',
-                        if (onset != null) 'Onset: $onset',
-                        if (pain != null) 'Pain: $pain/10',
-                      ]),
-                    ),
-                  ],
-                ),
-              ),
-              _SectionCard(
-                icon: Icons.medication_liquid,
-                title: 'Allergies & Medications',
-                description: 'List allergies and current meds.',
-                completed: _completed[_SectionKey.allergies] ?? false,
-                editor: Column(
-                  children: [
-                    _SelectField(
-                      label: 'Allergies',
-                      value: allergy,
-                      items: const ['Penicillin', 'Sulfa', 'Peanuts', 'Dust', 'None', 'Other'],
-                      onChanged: (v) => setState(() => allergy = v),
-                    ),
-                    _SelectField(
-                      label: 'Medication Name',
-                      value: medName,
-                      items: const ['Paracetamol', 'Cetirizine', 'Ibuprofen', 'Amoxicillin', 'Other'],
-                      onChanged: (v) => setState(() => medName = v),
-                    ),
+                    Text('Edit Vitals',
+                        style: GoogleFonts.lexend(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: textPrimaryColor)),
+                    const SizedBox(height: 6),
                     Row(
                       children: [
                         Expanded(
-                          child: _SelectField(
-                            label: 'Dosage',
-                            value: medDose,
-                            items: const ['125 mg', '250 mg', '500 mg', '1 g', 'Other'],
-                            onChanged: (v) => setState(() => medDose = v),
+                          child: TextField(
+                            controller: _heightCtrl,
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(
+                              labelText: 'Height (cm)',
+                              border: OutlineInputBorder(),
+                            ),
                           ),
                         ),
                         const SizedBox(width: 8),
                         Expanded(
-                          child: _SelectField(
-                            label: 'Frequency',
-                            value: medFreq,
-                            items: const ['OD', 'BD', 'TID', 'QID', 'HS', 'Other'],
-                            onChanged: (v) => setState(() => medFreq = v),
+                          child: TextField(
+                            controller: _weightCtrl,
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(
+                              labelText: 'Weight (kg)',
+                              border: OutlineInputBorder(),
+                            ),
                           ),
                         ),
                       ],
                     ),
-                    _EditorActions(
-                      onCancel: () {},
-                      onSave: () => _markDone(_SectionKey.allergies, [
-                        if (allergy != null) 'Allergy: $allergy',
-                        if (medName != null) 'Med: $medName ${medDose ?? ''} ${medFreq ?? ''}'.trim(),
-                      ]),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _bmiCtrl,
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(
+                              labelText: 'BMI',
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: TextField(
+                            controller: _spo2Ctrl,
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(
+                              labelText: 'SpO₂ (%)',
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              ),
-              _SectionCard(
-                icon: Icons.biotech_outlined,
-                title: 'Pathology & Message',
-                description: 'Order tests, set priority and add note to lab.',
-                completed: _completed[_SectionKey.pathology] ?? false,
-                editor: Column(
-                  children: [
-                    _SelectField(
-                      label: 'Test',
-                      value: testType,
-                      items: const ['CBC', 'CRP', 'LFT', 'RFT', 'Urinalysis', 'X-Ray Chest', 'Other'],
-                      onChanged: (v) => setState(() => testType = v),
-                    ),
-                    _SelectField(
-                      label: 'Priority',
-                      value: testPriority,
-                      items: const ['Routine', 'Urgent', 'STAT'],
-                      onChanged: (v) => setState(() => testPriority = v),
-                    ),
-                    TextField(
-                      controller: _labNote,
-                      maxLines: 3,
-                      decoration: const InputDecoration(
-                        labelText: 'Message to Lab',
-                        hintText: 'Any specific instructions…',
+
+                    const SizedBox(height: 12),
+                    Text('Previous Notes',
+                        style: GoogleFonts.lexend(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: textPrimaryColor)),
+                    const SizedBox(height: 6),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: borderColor),
+                      ),
+                      child: Text(
+                        widget.appt.previousNotes?.isNotEmpty == true
+                            ? widget.appt.previousNotes!
+                            : "No previous notes available.",
+                        style: const TextStyle(color: textSecondaryColor, fontSize: 14),
                       ),
                     ),
-                    _EditorActions(
-                      onCancel: () {},
-                      onSave: () => _markDone(_SectionKey.pathology, [
-                        if (testType != null) 'Test: $testType',
-                        if (testPriority != null) 'Priority: $testPriority',
-                        if (_labNote.text.trim().isNotEmpty) 'Note: ${_labNote.text.trim()}',
-                      ]),
-                    ),
-                  ],
-                ),
-              ),
-              _SectionCard(
-                icon: Icons.verified_user,
-                title: 'Consent *',
-                description: 'Required before treatment.',
-                required: true,
-                completed: _completed[_SectionKey.consent] ?? false,
-                editor: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SwitchListTile.adaptive(
-                      value: consent1,
-                      onChanged: (v) => setState(() => consent1 = v),
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text('I consent to treatment and data processing.'),
-                    ),
-                    SwitchListTile.adaptive(
-                      value: consent2,
-                      onChanged: (v) => setState(() => consent2 = v),
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text('I agree to receive appointment notifications.'),
-                    ),
-                    _EditorActions(
-                      onCancel: () {},
-                      onSave: () {
-                        if (!consent1) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Primary consent is required.')),
-                          );
-                          return;
-                        }
-                        _markDone(_SectionKey.consent, [
-                          'Primary Consent: Yes',
-                          'Notify Agreement: ${consent2 ? "Yes" : "No"}',
-                        ]);
-                      },
+
+                    const SizedBox(height: 12),
+                    Text('Current Notes',
+                        style: GoogleFonts.lexend(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: textPrimaryColor)),
+                    const SizedBox(height: 6),
+                    TextField(
+                      controller: _currentNotesCtrl,
+                      maxLines: 4,
+                      decoration: const InputDecoration(
+                        hintText: 'Enter today\'s medical notes…',
+                        border: OutlineInputBorder(),
+                      ),
                     ),
                   ],
                 ),
               ),
 
-              const SizedBox(height: 10),
-              _SavedDetailsPanel(saved: _saved),
+              /// --- PHARMACY ---
+              _SectionCard(
+                icon: Icons.local_pharmacy_outlined,
+                title: 'Pharmacy',
+                description: 'Prescribe and manage medications.',
+                editorBuilder: (_) => Column(
+                  children: [
+                    CustomEditableTable(
+                      rows: _pharmacyRows,
+                      columns: const ['Medicine', 'Dosage', 'Frequency', 'Notes'],
+                      onDelete: (i) => setState(() => _pharmacyRows.removeAt(i)),
+                    ),
+                    const SizedBox(height: 8),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          setState(() {
+                            _pharmacyRows.add({
+                              'Medicine': '',
+                              'Dosage': '',
+                              'Frequency': '',
+                              'Notes': '',
+                            });
+                          });
+                        },
+                        icon: const Icon(Icons.add),
+                        label: const Text('Add Medicine'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              /// --- PATHOLOGY ---
+              _SectionCard(
+                icon: Icons.biotech_outlined,
+                title: 'Pathology',
+                description: 'Order and track lab investigations.',
+                editorBuilder: (_) => Column(
+                  children: [
+                    CustomEditableTable(
+                      rows: _pathologyRows,
+                      columns: const ['Test Name', 'Category','Priority', 'Notes'],
+                      onDelete: (i) => setState(() => _pathologyRows.removeAt(i)),
+                    ),
+                    const SizedBox(height: 8),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          setState(() {
+                            _pathologyRows.add({
+                              'Test Name': '',
+                              'Priority': '',
+                              'Notes': '',
+                            });
+                          });
+                        },
+                        icon: const Icon(Icons.add),
+                        label: const Text('Add Test'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
               const SizedBox(height: 90),
             ],
           ),
         ),
 
-        // sticky footer
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            border: const Border(top: BorderSide(color: borderColor)),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(.05), blurRadius: 10, offset: const Offset(0, -2))],
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          child: Row(
-            children: [
-              Icon(Icons.info_outline, size: 18, color: _allRequired ? Colors.green : badgeFg),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  _allRequired
-                      ? 'All required sections completed.'
-                      : 'Complete required sections (marked with *) to continue.',
-                  style: TextStyle(color: _allRequired ? Colors.green[800] : textSecondaryColor),
-                ),
-              ),
-              OutlinedButton(
-                onPressed: () => Navigator.of(context).maybePop(),
-                child: const Text('Cancel'),
-              ),
-              const SizedBox(width: 8),
-              ElevatedButton.icon(
-                onPressed: _saveAndContinue,
-                icon: const Icon(Icons.check_rounded, color: Colors.white, size: 20),
-                label: const Text('Save & Continue'),
-              ),
-            ],
-          ),
-        ),
+        /// --- Bottom Save Bar ---
       ],
     );
   }
-
 }
 
-/// ==================== PARTS ====================
+/// ============== SECTION CARD ==============
+class _SectionCard extends StatefulWidget {
+  final IconData icon;
+  final String title;
+  final String description;
+  final Widget Function(void Function(List<String>) saveCallback) editorBuilder;
+
+  const _SectionCard({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.description,
+    required this.editorBuilder,
+  });
+
+  @override
+  State<_SectionCard> createState() => _SectionCardState();
+}
+
+class _SectionCardState extends State<_SectionCard> {
+  bool open = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 14),
+      color: Colors.white, // 👈 force white background
+      elevation: 2,        // 👌 slight shadow for card feel
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: borderColor.withOpacity(0.3)), // subtle border
+      ),
+      child: Column(
+        children: [
+          ListTile(
+            leading: Icon(widget.icon, color: primaryColor),
+            title: Text(widget.title),
+            subtitle: Text(
+              widget.description,
+              style: const TextStyle(color: textSecondaryColor),
+            ),
+            trailing: Icon(open
+                ? Icons.keyboard_arrow_up
+                : Icons.keyboard_arrow_down),
+            onTap: () => setState(() => open = !open),
+          ),
+          if (open)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: widget.editorBuilder((_) {}),
+            ),
+        ],
+      ),
+    );
+  }
+}
 
 
+/// ============== Custom Editable Table ==============
+class CustomEditableTable extends StatelessWidget {
+  final List<Map<String, String>> rows;
+  final List<String> columns;
+  final void Function(int index) onDelete;
 
-/// HORIZONTAL profile header bar
+  const CustomEditableTable({
+    super.key,
+    required this.rows,
+    required this.columns,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: _tableHeaderColor, width: 1),
+        borderRadius: BorderRadius.circular(10), // rounded corners
+      ),
+      child: Table(
+        border: TableBorder.symmetric(
+          inside: BorderSide(color: _tableHeaderColor.withOpacity(0.4), width: 0.6),
+        ),
+        columnWidths: {
+          for (var i = 0; i < columns.length; i++) i: const FlexColumnWidth(),
+          columns.length: const FixedColumnWidth(80), // 👈 Actions column fixed small width
+        },
+        defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+        children: [
+          // Header Row
+          TableRow(
+            decoration: BoxDecoration(color: _rowAlternateColor.withOpacity(0.5)),
+            children: [
+              for (var col in columns)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+                  child: Text(
+                    col,
+                    style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.w700,
+                      color: _tableHeaderColor,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+                child: Text(
+                  "Actions",
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: _tableHeaderColor,
+                      fontSize: 13),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ],
+          ),
+
+          // Data Rows
+          for (int i = 0; i < rows.length; i++)
+            TableRow(
+              decoration: BoxDecoration(
+                color: i.isEven ? Colors.white : _rowAlternateColor.withOpacity(0.2),
+              ),
+              children: [
+                for (var col in columns)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 6),
+                    child: TextFormField(
+                      initialValue: rows[i][col],
+                      onChanged: (v) => rows[i][col] = v,
+                      style: const TextStyle(fontSize: 13),
+                      decoration: const InputDecoration(
+                        border: InputBorder.none,
+                        isDense: true,
+                        contentPadding: EdgeInsets.symmetric(vertical: 6, horizontal: 6),
+                      ),
+                    ),
+                  ),
+
+                // Actions Cell (small + centered)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.check_circle, color: Colors.green, size: 18),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        onPressed: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text("Row saved ✅")),
+                          );
+                        },
+                      ),
+                      const SizedBox(width: 6),
+                      IconButton(
+                        icon: const Icon(Icons.delete, color: Colors.red, size: 18),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        onPressed: () => onDelete(i),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+
+/// ============== Dummy Profile Header ==============
 class _ProfileHeaderCard extends StatelessWidget {
   static const Color kPrimary = Color(0xFFEF4444);
   static const Color kBg = Color(0xFFF9FAFB);
@@ -536,20 +551,18 @@ class _ProfileHeaderCard extends StatelessWidget {
   const _ProfileHeaderCard({required this.appt});
 
   // ---- Tokens
-  static const Color kTint = Color(0xFFFFF1F2);      // unified bg
-  static const Color kTintLine = Color(0xFFFFE4E6);  // hairlines on tint
-
+  static const Color kTint = Color(0xFFFFF1F2);
+  static const Color kTintLine = Color(0xFFFFE4E6);
   static const double kAvatar = 128;
 
-  // ---- Helpers
   String _n(num? v, {String? suffix}) =>
       (v == null || v == 0) ? '—' : '${v}${suffix ?? ''}';
-  String _s(String? v) => (v == null || v.trim().isEmpty) ? '—' : v;
+  String _ss(String? v) => (v == null || v.trim().isEmpty) ? '—' : v;
 
   String _bloodGroup() {
     try {
       final bg = (appt as dynamic).bloodGroup;
-      return _s(bg?.toString());
+      return _ss(bg?.toString());
     } catch (_) {
       return '—';
     }
@@ -568,32 +581,28 @@ class _ProfileHeaderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final name = _s(appt.patientName);
-    final isFemale = _s(appt.gender).toLowerCase() == 'female';
+    final name = _ss(appt.patientName);
+    final isFemale = _ss(appt.gender).toLowerCase() == 'female';
     final avatar = isFemale ? 'assets/girlicon.png' : 'assets/boyicon.png';
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(kRadius),
       child: Container(
         decoration: BoxDecoration(
-          color: kTint,                                   // ← unified tint
+          color: kTint,
           borderRadius: BorderRadius.circular(kRadius),
-          border: Border.all(color: kTintLine),          // hairline border
+          border: Border.all(color: kTintLine),
         ),
         child: Stack(
           children: [
-            // Edit button (ghost)
             Positioned(
               top: 8,
               right: 8,
               child: _ghostButton(
                 icon: Icons.edit_outlined,
-                onTap: () {
-                  // TODO: wire edit
-                },
+                onTap: () {},
               ),
             ),
-
             Padding(
               padding: const EdgeInsets.all(16),
               child: LayoutBuilder(
@@ -602,7 +611,6 @@ class _ProfileHeaderCard extends StatelessWidget {
                   return Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // LEFT: Identity + Demographics
                       Expanded(
                         flex: isTight ? 10 : 6,
                         child: Row(
@@ -615,8 +623,6 @@ class _ProfileHeaderCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 16),
-
-                      // RIGHT: Vitals (unified background, no inner boxes)
                       if (!isTight)
                         Expanded(flex: 5, child: _vitalsGrid())
                       else
@@ -637,8 +643,6 @@ class _ProfileHeaderCard extends StatelessWidget {
       ),
     );
   }
-
-  // --- UI atoms
 
   Widget _avatar(String asset) {
     return Container(
@@ -676,8 +680,6 @@ class _ProfileHeaderCard extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 8),
-
-        // ID pill
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
@@ -686,7 +688,7 @@ class _ProfileHeaderCard extends StatelessWidget {
             border: Border.all(color: kTintLine),
           ),
           child: Text(
-            'ID: ${_s(appt.patientId)}',
+            'ID: ${_ss(appt.patientId)}',
             style: GoogleFonts.lexend(
               fontSize: 12.5,
               fontWeight: FontWeight.w700,
@@ -695,33 +697,28 @@ class _ProfileHeaderCard extends StatelessWidget {
             ),
           ),
         ),
-
         const SizedBox(height: 12),
-
-        // Demographics line
         Wrap(
           spacing: 18,
           runSpacing: 10,
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            _mini(isFemale ? Icons.female : Icons.male, _s(appt.gender)),
+            _mini(isFemale ? Icons.female : Icons.male, _ss(appt.gender)),
             _mini(Icons.person, 'Age ${appt.patientAge ?? '—'}'),
-            _mini(Icons.calendar_month, _s(appt.dob)),
+            _mini(Icons.calendar_month, _ss(appt.dob)),
           ],
         ),
         const SizedBox(height: 8),
-
-        // Blood Group on its own line
         Row(
           children: [
-            const Icon(Icons.bloodtype, size: 16, color: kMuted),
+            const Icon(Icons.bloodtype, size: 16, color: _ProfileHeaderCard.kMuted),
             const SizedBox(width: 6),
             Text(
               'Blood Group: ${_bloodGroup()}',
               style: GoogleFonts.inter(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: kMuted,
+                color: _ProfileHeaderCard.kMuted,
               ),
             ),
           ],
@@ -746,7 +743,6 @@ class _ProfileHeaderCard extends StatelessWidget {
     ],
   );
 
-  // --- Vitals: unified bg, 2x2 grid, hairlines (no tiles)
   Widget _vitalsGrid() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -754,11 +750,11 @@ class _ProfileHeaderCard extends StatelessWidget {
         Row(
           children: [
             Expanded(child: _kv(Icons.height, 'Height', _n(appt.height, suffix: ' cm'))),
-            const SizedBox(width: 24), // spacing instead of line
+            const SizedBox(width: 24),
             Expanded(child: _kv(Icons.monitor_weight_outlined, 'Weight', _n(appt.weight, suffix: ' kg'))),
           ],
         ),
-        const SizedBox(height: 20), // vertical gap instead of line
+        const SizedBox(height: 20),
         Row(
           children: [
             Expanded(child: _kv(Icons.scale, 'BMI', _n(appt.bmi))),
@@ -770,30 +766,10 @@ class _ProfileHeaderCard extends StatelessWidget {
     );
   }
 
-
-  Widget _vRow({required Widget left, required Widget right}) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Expanded(child: left),
-        _vLine(),
-        Expanded(child: right),
-      ],
-    );
-  }
-
-  Widget _hLine() => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 12),
-    child: Container(height: 1, color: kTintLine),
-  );
-
-  Widget _vLine() => Container(width: 1, height: 40, color: kTintLine);
-
   Widget _kv(IconData icon, String title, String value) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        // tone-on-tone capsule (keeps enterprise feel w/o boxes)
         Container(
           width: 34,
           height: 34,
@@ -862,387 +838,5 @@ class _ProfileHeaderCard extends StatelessWidget {
         ),
       ),
     );
-  }
-}
-
-/// Expandable section with inline editor + per-section saved summary
-/// Expandable section with inline editor + per-section saved summary
-class _SectionCard extends StatefulWidget {
-  final IconData icon;
-  final String title;
-  final String description;
-  final bool required;
-  final bool completed;
-  final Widget editor;
-  final List<String> saved; // per-section saved lines
-
-  const _SectionCard({
-    required this.icon,
-    required this.title,
-    required this.description,
-    this.required = false,
-    required this.completed,
-    required this.editor,
-    this.saved = const [],
-  });
-
-  @override
-  State<_SectionCard> createState() => _SectionCardState();
-}
-
-class _SectionCardState extends State<_SectionCard> {
-  bool open = false;
-  bool showSaved = true; // toggle for detailed saved in the body
-
-  @override
-  Widget build(BuildContext context) {
-    final pillText = widget.completed
-        ? 'COMPLETED'
-        : widget.required
-        ? 'REQUIRED'
-        : 'OPTIONAL';
-    final pillBg = widget.completed ? Colors.green[50] : badgeBg;
-    final pillFg = widget.completed ? Colors.green[800] : badgeFg;
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: 14),
-      child: AnimatedSize(
-        duration: const Duration(milliseconds: 180),
-        curve: Curves.easeInOut,
-        child: Column(
-          children: [
-            // ---- Header (slide bar) with inline saved preview ----
-            InkWell(
-              borderRadius: BorderRadius.circular(16),
-              onTap: () => setState(() => open = !open),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(widget.icon, color: primaryColor),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  widget.title,
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: pillBg,
-                                  borderRadius: BorderRadius.circular(999),
-                                  border: Border.all(color: (widget.completed ? Colors.green[200] : badgeBg)!),
-                                ),
-                                child: Text(
-                                  pillText,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: pillFg,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            widget.description,
-                            style: const TextStyle(color: textSecondaryColor, fontSize: 13),
-                          ),
-
-                          // 🔹 Inline SAVED PREVIEW **inside header**
-                          if (widget.saved.isNotEmpty) ...[
-                            const SizedBox(height: 10),
-                            _SavedInlinePreview(lines: widget.saved),
-                          ],
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    OutlinedButton.icon(
-                      onPressed: () => setState(() => open = true),
-                      icon: const Icon(Icons.edit_outlined, size: 18),
-                      label: const Text('Add / Edit'),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            // ---- Body (expanded) ----
-            if (open) const Divider(height: 1),
-            if (open)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Detailed saved list (collapsible)
-                    if (widget.saved.isNotEmpty) ...[
-                      Row(
-                        children: [
-                          const Text(
-                            'Saved',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 13.5,
-                              color: textPrimaryColor,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          InkWell(
-                            borderRadius: BorderRadius.circular(999),
-                            onTap: () => setState(() => showSaved = !showSaved),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    showSaved ? Icons.expand_less : Icons.expand_more,
-                                    size: 18,
-                                    color: textSecondaryColor,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    showSaved ? 'Hide' : 'Show',
-                                    style: const TextStyle(
-                                      fontSize: 12.5,
-                                      color: textSecondaryColor,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 150),
-                        switchInCurve: Curves.easeOut,
-                        switchOutCurve: Curves.easeIn,
-                        child: showSaved
-                            ? Container(
-                          key: const ValueKey('saved-open'),
-                          margin: const EdgeInsets.only(top: 8, bottom: 12),
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[50],
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: borderColor),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: widget.saved
-                                .map(
-                                  (s) => Padding(
-                                padding: const EdgeInsets.only(bottom: 4),
-                                child: Text(
-                                  '• $s',
-                                  style: const TextStyle(fontSize: 13, color: textSecondaryColor),
-                                ),
-                              ),
-                            )
-                                .toList(),
-                          ),
-                        )
-                            : const SizedBox.shrink(key: ValueKey('saved-closed')),
-                      ),
-                    ],
-
-                    // Editor content
-                    widget.editor,
-                  ],
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Compact chips-style preview that fits in the header.
-/// Shows up to 3 items + "+N more" to avoid wrapping too much.
-class _SavedInlinePreview extends StatelessWidget {
-  final List<String> lines;
-  const _SavedInlinePreview({required this.lines});
-
-  @override
-  Widget build(BuildContext context) {
-    const maxChips = 3;
-    final visible = lines.take(maxChips).toList();
-    final hiddenCount = lines.length - visible.length;
-
-    return Wrap(
-      spacing: 6,
-      runSpacing: 6,
-      children: [
-        ...visible.map((s) => _chip(s)),
-        if (hiddenCount > 0) _chip('+$hiddenCount more'),
-      ],
-    );
-  }
-
-  Widget _chip(String text) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: borderColor),
-      ),
-      child: Text(
-        text,
-        style: const TextStyle(fontSize: 12.5, color: textSecondaryColor, fontWeight: FontWeight.w600),
-      ),
-    );
-  }
-}
-
-/// Editor actions
-class _EditorActions extends StatelessWidget {
-  final VoidCallback onCancel;
-  final VoidCallback onSave;
-  const _EditorActions({required this.onCancel, required this.onSave});
-  @override
-  Widget build(BuildContext context) {
-    return Align(
-      alignment: Alignment.centerRight,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          OutlinedButton(onPressed: onCancel, child: const Text('Cancel')),
-          const SizedBox(width: 8),
-          ElevatedButton.icon(onPressed: onSave, icon: const Icon(Icons.save_outlined), label: const Text('Save')),
-        ],
-      ),
-    );
-  }
-}
-
-/// Reusable dropdown with "Other" support
-class _SelectField extends StatefulWidget {
-  final String label;
-  final List<String> items;
-  final String? value;
-  final ValueChanged<String?> onChanged;
-  const _SelectField({
-    required this.label,
-    required this.items,
-    required this.value,
-    required this.onChanged,
-  });
-
-  @override
-  State<_SelectField> createState() => _SelectFieldState();
-}
-
-class _SelectFieldState extends State<_SelectField> {
-  String? local;
-  final _ctrl = TextEditingController();
-
-  @override
-  void initState() {
-    super.initState();
-    local = widget.value;
-  }
-
-  @override
-  void didUpdateWidget(covariant _SelectField oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.value != local) local = widget.value;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final isOther = local == 'Other';
-    return Column(
-      children: [
-        DropdownButtonFormField<String>(
-          value: local,
-          decoration: InputDecoration(labelText: widget.label),
-          items: widget.items.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-          onChanged: (v) {
-            setState(() => local = v);
-            if (v != 'Other') widget.onChanged(v);
-          },
-        ),
-        if (isOther)
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: TextField(
-              controller: _ctrl,
-              decoration: InputDecoration(
-                labelText: '${widget.label} (Other)',
-                hintText: 'Type value',
-              ),
-              onChanged: (t) => widget.onChanged(t),
-            ),
-          ),
-      ],
-    );
-  }
-}
-
-/// Saved details summary
-class _SavedDetailsPanel extends StatelessWidget {
-  final Map<_SectionKey, List<String>> saved;
-  const _SavedDetailsPanel({required this.saved});
-
-  @override
-  Widget build(BuildContext context) {
-    final nonEmpty = saved.entries.where((e) => e.value.isNotEmpty).toList();
-    if (nonEmpty.isEmpty) return const SizedBox.shrink();
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Saved Details', style: TextStyle(fontWeight: FontWeight.w700)),
-            const SizedBox(height: 8),
-            ...nonEmpty.map((e) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('${_sectionTitle(e.key)}: ',
-                      style: const TextStyle(fontWeight: FontWeight.w600)),
-                  Expanded(child: Text(e.value.join(' • '))),
-                ],
-              ),
-            )),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-String _sectionTitle(_SectionKey k) {
-  switch (k) {
-    case _SectionKey.history:
-      return 'History';
-    case _SectionKey.symptoms:
-      return 'Symptoms';
-    case _SectionKey.allergies:
-      return 'Allergies';
-    case _SectionKey.pathology:
-      return 'Pathology';
-    case _SectionKey.consent:
-      return 'Consent';
   }
 }
