@@ -8,6 +8,9 @@ class AppointmentDraft {
   final String location;
   final String notes;
 
+  /// 👇 Gender is now optional (nullable)
+  final String? gender;
+
   // Enterprise extras
   final String? patientId;
   final String? phoneNumber;
@@ -31,7 +34,7 @@ class AppointmentDraft {
     required this.time,
     required this.location,
     required this.notes,
-    // extras
+    this.gender, // 👈 optional
     this.patientId,
     this.phoneNumber,
     this.mode = 'In-clinic',
@@ -57,6 +60,7 @@ class AppointmentDraft {
     '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}',
     'location': location,
     'notes': notes,
+    'gender': gender, // 👈 included, may be null
     'patientId': patientId,
     'phoneNumber': phoneNumber,
     'mode': mode,
