@@ -32,29 +32,42 @@ class DoctorDashboardScreen extends StatefulWidget {
 }
 
 class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
-  late Future<DoctorDashboardData> _dashboardFuture;
+  bool _loading = false;
+  List<DashboardAppointments> _appointments = [];
+
   String _searchQuery = '';
   int _currentPage = 0;
 
   @override
   void initState() {
     super.initState();
-    _dashboardFuture = _fetchDashboardData();
+    _loadAppointments();
   }
 
-  Future<DoctorDashboardData> _fetchDashboardData() async {
-    print("🌍 Fetching appointments from backend...");
-    final appointments = await AuthService.instance.fetchAppointments();
-    print("📊 Backend returned ${appointments.length} appointments");
-    return DoctorDashboardData(appointments: appointments);
+  /// Fetch appointments from backend
+  Future<void> _loadAppointments() async {
+    setState(() => _loading = true);
+    try {
+      print("🌍 Fetching appointments from backend...");
+      final appointments = await AuthService.instance.fetchAppointments();
+      print("📊 Backend returned ${appointments.length} appointments");
+      setState(() {
+        _appointments = appointments;
+      });
+    } catch (e) {
+      debugPrint("❌ Error loading appointments: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to load appointments: $e")),
+      );
+    } finally {
+      setState(() => _loading = false);
+    }
   }
 
   void _showAppointmentDetails(DashboardAppointments appointment) {
     showDialog(
       context: context,
-      builder: (BuildContext context) {
-        return DoctorAppointmentPreview(appointment: appointment);
-      },
+      builder: (_) => DoctorAppointmentPreview(appointment: appointment),
     );
   }
 
@@ -74,11 +87,8 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
     print("📥 Dialog closed, result = $result");
 
     if (result == true) {
-      print("🔄 Forcing refresh with new data...");
-      final newData = await _fetchDashboardData();
-      setState(() {
-        _dashboardFuture = Future.value(newData); // ✅ new resolved future
-      });
+      print("🔄 Refreshing after new appointment...");
+      await _loadAppointments();
     }
   }
 
@@ -89,31 +99,52 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
         title: const Text("Delete Appointment"),
         content: Text("Are you sure you want to delete ${appt.patientName}?"),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text("Cancel")),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text("Delete")),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text("Cancel"),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text("Delete", style: TextStyle(color: Colors.red)),
+          ),
         ],
       ),
     );
 
     if (confirm != true) return;
 
+    // 👇 STEP 1: Show loader immediately
+    setState(() => _loading = true);
+
     try {
+      // 👇 STEP 2: Call delete API
       final success = await AuthService.instance.deleteAppointment(appt.id);
+
       if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("✅ Deleted ${appt.patientName}")),
-        );
+        // 👇 STEP 3: Immediately re-fetch appointments
+        final freshAppointments = await AuthService.instance.fetchAppointments();
+
         setState(() {
-          _dashboardFuture = _fetchDashboardData();
+          _appointments = freshAppointments;
+          _loading = false; // hide loader after data is set
         });
-      } else {
+
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("❌ Failed to delete ${appt.patientName}")),
+          SnackBar(
+            content: Text("🗑️ Deleted ${appt.patientName}"),
+            backgroundColor: Colors.green,
+          ),
         );
+      } else {
+        setState(() => _loading = false); // stop loader even if fail
       }
     } catch (e) {
+      setState(() => _loading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("💥 Error: $e")),
+        SnackBar(
+          content: Text("💥 Error while deleting ${appt.patientName}: $e"),
+          backgroundColor: Colors.orange,
+        ),
       );
     }
   }
@@ -137,56 +168,39 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: backgroundColor,
-      body: FutureBuilder<DoctorDashboardData>(
-        future: _dashboardFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
-                child: CircularProgressIndicator(color: primaryColor));
-          } else if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          } else if (snapshot.hasData) {
-            return _buildDashboardContent(context, snapshot.data!);
-          } else {
-            return const Center(
-                child: Text('Could not load dashboard data.'));
-          }
-        },
-      ),
-    );
-  }
-
-  Widget _buildDashboardContent(
-      BuildContext context, DoctorDashboardData data) {
-    final filteredAppointments = data.appointments
+    final filteredAppointments = _appointments
         .where((appt) =>
         appt.patientName.toLowerCase().contains(_searchQuery.toLowerCase()))
         .toList();
 
-    return Padding(
-      padding: const EdgeInsets.all(24.0),
-      child: Column(
-        children: [
-          _buildHeader(),
-          const SizedBox(height: 24),
-          _buildStatsAndWelcomeCards(),
-          const SizedBox(height: 24),
-          Expanded(
-            child: AppointmentTable(
-              appointments: filteredAppointments,
-              onShowAppointmentDetails: _showAppointmentDetails,
-              onNewAppointmentPressed: _onNewAppointmentPressed,
-              searchQuery: _searchQuery,
-              onSearchChanged: _updateSearchQuery,
-              currentPage: _currentPage,
-              onNextPage: _goToNextPage,
-              onPreviousPage: _goToPreviousPage,
-
+    return Scaffold(
+      backgroundColor: backgroundColor,
+      body: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          children: [
+            _buildHeader(),
+            const SizedBox(height: 24),
+            _buildStatsAndWelcomeCards(),
+            const SizedBox(height: 24),
+            Expanded(
+              child: AppointmentTable(
+                key: ValueKey(_appointments.length),
+                appointments: filteredAppointments,
+                onShowAppointmentDetails: _showAppointmentDetails,
+                onNewAppointmentPressed: _onNewAppointmentPressed,
+                searchQuery: _searchQuery,
+                onSearchChanged: _updateSearchQuery,
+                currentPage: _currentPage,
+                onNextPage: _goToNextPage,
+                onPreviousPage: _goToPreviousPage,
+                onDeleteAppointment: _deleteAppointment,
+                onRefreshRequested: _loadAppointments, // 🔄 parent reload
+                isLoading: _loading, // ⏳ loader flag
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -209,8 +223,7 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
           children: [
             const SizedBox(width: 16),
             Container(
-              padding:
-              const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
                 border: Border.all(color: const Color(0xFFFCA5A5)),
                 borderRadius: BorderRadius.circular(999),
@@ -385,8 +398,8 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
           Text(
             'Weekly appointments completed',
             textAlign: TextAlign.center,
-            style: GoogleFonts.lexend(
-                color: const Color(0xFFB91C1C), fontSize: 12),
+            style:
+            GoogleFonts.lexend(color: const Color(0xFFB91C1C), fontSize: 12),
           ),
         ],
       ),
@@ -427,8 +440,8 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
           Text(
             'Weekly hours completed',
             textAlign: TextAlign.center,
-            style: GoogleFonts.lexend(
-                color: const Color(0xFFB91C1C), fontSize: 12),
+            style:
+            GoogleFonts.lexend(color: const Color(0xFFB91C1C), fontSize: 12),
           ),
         ],
       ),

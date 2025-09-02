@@ -27,6 +27,8 @@ const Color _rowAlternateColor = Color(0xFFFEF2F2);
 const Color _intakeButtonColor = Color(0xFFF87171);
 
 // --- AppointmentTable Widget ---
+
+
 class AppointmentTable extends StatelessWidget {
   final List<DashboardAppointments> appointments;
 
@@ -40,6 +42,13 @@ class AppointmentTable extends StatelessWidget {
   final VoidCallback onNextPage;
   final VoidCallback onPreviousPage;
 
+  // 👇 Optional delete callback
+  final void Function(DashboardAppointments)? onDeleteAppointment;
+
+  // 👇 New props for refresh + loader
+  final VoidCallback onRefreshRequested;
+  final bool isLoading;
+
   const AppointmentTable({
     super.key,
     required this.appointments,
@@ -50,6 +59,9 @@ class AppointmentTable extends StatelessWidget {
     required this.currentPage,
     required this.onNextPage,
     required this.onPreviousPage,
+    this.onDeleteAppointment, // 👈 optional
+    required this.onRefreshRequested, // 👈 parent API reload
+    this.isLoading = false, // 👈 loader flag
   });
 
   List<DashboardAppointments> get _filteredAppointments {
@@ -75,43 +87,66 @@ class AppointmentTable extends StatelessWidget {
   Widget build(BuildContext context) {
     const itemsPerPage = 10;
 
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: cardBackgroundColor,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          )
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _AppointmentTableControls(
-            searchQuery: searchQuery,
-            onSearchChanged: onSearchChanged,
-            onNewAppointmentPressed: onNewAppointmentPressed,
+    return Stack(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: cardBackgroundColor,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              )
+            ],
           ),
-          const SizedBox(height: 8),
-          Expanded(
-            child: _AppointmentDataView(
-              appointments: _paginatedAppointments,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _AppointmentTableControls(
+                searchQuery: searchQuery,
+                onSearchChanged: onSearchChanged,
+                onNewAppointmentPressed: () {
+                  onNewAppointmentPressed();
+                },
+              ),
+              const SizedBox(height: 8),
+              Expanded(
+                child: _AppointmentDataView(
+                  appointments: _paginatedAppointments,
+                  onShowAppointmentDetails: onShowAppointmentDetails,
+                  onDeleteAppointment: (appt) {
+                    if (onDeleteAppointment != null) {
+                      onDeleteAppointment!(appt);
+                      onRefreshRequested(); // 👈 ask parent to reload after delete
+                    }
+                  },
+                ),
+              ),
+              const SizedBox(height: 1),
+              _PaginationControls(
+                currentPage: currentPage,
+                itemsPerPage: itemsPerPage,
+                totalItems: _filteredAppointments.length,
+                onPrevious: onPreviousPage,
+                onNext: onNextPage,
+              ),
+            ],
+          ),
+        ),
+
+        // 👇 Loader overlay when parent fetching
+        if (isLoading)
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
             ),
+            child: const Center(child: CircularProgressIndicator()),
           ),
-          const SizedBox(height: 1),
-          _PaginationControls(
-            currentPage: currentPage,
-            itemsPerPage: itemsPerPage,
-            totalItems: _filteredAppointments.length,
-            onPrevious: onPreviousPage,
-            onNext: onNextPage,
-          ),
-        ],
-      ),
+      ],
     );
   }
 }
@@ -170,47 +205,21 @@ class _AppointmentTableControls extends StatelessWidget {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
-                    borderSide: const BorderSide(color: primaryColor, width: 2),
+                    borderSide:
+                    const BorderSide(color: primaryColor, width: 2),
                   ),
                 ),
               ),
             ),
             const SizedBox(width: 16),
 
-            // New Appointment (no IconX here → avoids name collision)
+            // New Appointment
             SizedBox(
               height: 48,
               child: ElevatedButton.icon(
-                onPressed: () {
-                  showDialog(
-                    context: context,
-                    barrierDismissible: false,
-                    builder: (context) {
-                      return Dialog(
-                        backgroundColor: Colors.transparent,
-                        insetPadding: const EdgeInsets.all(16),
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 600),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: Material(
-                              color: Colors.white,
-                              child: AddAppointmentForm(
-                                onSubmit: (draft) {
-                                  Navigator.pop(context, draft);
-                                  debugPrint(
-                                      "Appointment created: ${draft.toJson()}");
-                                },
-                              ),
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  );
-                },
+                onPressed: onNewAppointmentPressed, // 👈 delegate to parent
                 icon: const Icon(
-                  Icons.add_rounded, // ✅ Fixed
+                  Icons.add_rounded,
                   size: 18,
                   color: Colors.white,
                 ),
@@ -225,8 +234,8 @@ class _AppointmentTableControls extends StatelessWidget {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary600,
                   foregroundColor: Colors.white,
-                  padding:
-                  const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 20, vertical: 14),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
@@ -240,12 +249,17 @@ class _AppointmentTableControls extends StatelessWidget {
   }
 }
 
+
 // --- Table view ---
 class _AppointmentDataView extends StatelessWidget {
   final List<DashboardAppointments> appointments;
+  final void Function(DashboardAppointments) onShowAppointmentDetails;
+  final void Function(DashboardAppointments)? onDeleteAppointment; // 👈 optional
 
   const _AppointmentDataView({
     required this.appointments,
+    required this.onShowAppointmentDetails,
+    this.onDeleteAppointment,
   });
 
   @override
@@ -277,8 +291,7 @@ class _AppointmentDataView extends StatelessWidget {
                 children: [
                   // Header
                   TableRow(
-                    decoration:
-                    const BoxDecoration(color: Color(0xFFF9FAFB)),
+                    decoration: const BoxDecoration(color: Color(0xFFF9FAFB)),
                     children: [
                       _header('Patient Name', Alignment.centerLeft),
                       _header('Age', Alignment.center),
@@ -323,8 +336,8 @@ class _AppointmentDataView extends StatelessWidget {
   // Data row
   TableRow _row(BuildContext context, DashboardAppointments appt, int index) {
     return TableRow(
-      decoration:
-      BoxDecoration(color: index.isEven ? null : _rowAlternateColor),
+      key: ValueKey(appt.id), // 👈 IMPORTANT: unique key per row
+      decoration: BoxDecoration(color: index.isEven ? null : _rowAlternateColor),
       children: [
         // Patient Name (Tap → Preview dialog)
         InkWell(
@@ -379,7 +392,7 @@ class _AppointmentDataView extends StatelessWidget {
               // Intake -> IntakeFormPage
               ElevatedButton(
                 onPressed: () {
-                  showIntakeFormDialog(context, appt); // 👈 opens as dialog instead of route
+                  showIntakeFormDialog(context, appt);
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _intakeButtonColor,
@@ -387,14 +400,15 @@ class _AppointmentDataView extends StatelessWidget {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding:
+                  const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   minimumSize: const Size(0, 26),
                 ),
                 child: const Text('Intake', style: TextStyle(fontSize: 11)),
               ),
               const SizedBox(width: 4),
 
-              // Edit -> EditAppointmentForm dialog
+              // Edit
               SizedBox(
                 width: 28,
                 height: 28,
@@ -405,21 +419,18 @@ class _AppointmentDataView extends StatelessWidget {
                 ),
               ),
 
-              // Delete (stub)
-              SizedBox(
-                width: 28,
-                height: 28,
-                child: IconButton(
-                  padding: EdgeInsets.zero,
-                  icon: const Icon(Icons.delete, size: 16, color: _buttonBgColor),
-                  onPressed: () {
-                    // TODO: hook your delete API
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Deleted ${appt.patientName}')),
-                    );
-                  },
+              // Delete
+              if (onDeleteAppointment != null)
+                SizedBox(
+                  width: 28,
+                  height: 28,
+                  child: IconButton(
+                    padding: EdgeInsets.zero,
+                    icon: const Icon(Icons.delete,
+                        size: 16, color: _buttonBgColor),
+                    onPressed: () => onDeleteAppointment!(appt),
+                  ),
                 ),
-              ),
 
               // Eye -> AppointmentDetailPage
               SizedBox(
@@ -432,12 +443,9 @@ class _AppointmentDataView extends StatelessWidget {
                     size: 16,
                     color: _buttonBgColor,
                   ),
-                  onPressed: () {
-                    AppointmentDetail.show(context, appt);
-                  },
+                  onPressed: () => onShowAppointmentDetails(appt),
                 ),
               )
-
             ],
           ),
         ),
@@ -466,7 +474,6 @@ class _AppointmentDataView extends StatelessWidget {
       builder: (_) => DoctorAppointmentPreview(appointment: appt),
     );
   }
-
 
   void _openEditDialog(BuildContext context, DashboardAppointments appt) {
     showDialog(
@@ -509,6 +516,8 @@ class _AppointmentDataView extends StatelessWidget {
     );
   }
 }
+
+
 
 // --- Pagination ---
 class _PaginationControls extends StatelessWidget {

@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:iconsax/iconsax.dart';
 
 import '../../Models/dashboardmodels.dart';
+import '../../Services/Authservices.dart';
 import 'AppoimentsPage.dart';
 import 'DashboardPage.dart';
 import 'PatientsPage.dart';
@@ -34,35 +35,34 @@ class _DoctorRootPageState extends State<DoctorRootPage> {
   String _searchQuery = '';
   int _currentPage = 0;
 
+  bool _loading = false;
+  List<DashboardAppointments> _appointments = [];
+
   late List<Map<String, dynamic>> _navItems;
-
-  final DoctorDashboardData dashboardData = DoctorDashboardData(
-    appointments: [
-      DashboardAppointments(
-        id: "2323",
-        patientName: 'Arthur',
-        patientAge: 32,
-        date: '05/12/2022',
-        time: '9:30 AM',
-        reason: 'Fever',
-        doctor: 'Dr. John',
-        status: 'Completed',
-        gender: 'Male',
-        patientId: 'P001',
-        service: 'General Checkup',
-        patientAvatarUrl: 'https://placehold.co/100x100/A0AEC0/FFFFFF?text=A',
-        isSelected: false,
-      ),
-
-      // add more if needed...
-    ],
-
-  );
 
   @override
   void initState() {
     super.initState();
+    _loadAppointments();
     _buildNavItems();
+  }
+
+  Future<void> _loadAppointments() async {
+    setState(() => _loading = true);
+    try {
+      final data = await AuthService.instance.fetchAppointments();
+      setState(() {
+        _appointments = data;
+      });
+    } catch (e) {
+      debugPrint("❌ Error fetching appointments: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to load appointments: $e")),
+      );
+    } finally {
+      setState(() => _loading = false);
+      _buildNavItems();
+    }
   }
 
   void _buildNavItems() {
@@ -76,7 +76,7 @@ class _DoctorRootPageState extends State<DoctorRootPage> {
         'icon': Iconsax.calendar,
         'label': 'Appointments',
         'screen': AppointmentTable(
-          appointments: dashboardData.appointments,           // ✅ FIXED
+          appointments: _appointments,
           onShowAppointmentDetails: _showAppointmentDetails,
           onNewAppointmentPressed: _onNewAppointmentPressed,
           searchQuery: _searchQuery,
@@ -84,7 +84,9 @@ class _DoctorRootPageState extends State<DoctorRootPage> {
           currentPage: _currentPage,
           onNextPage: _goToNextPage,
           onPreviousPage: _goToPreviousPage,
-
+          onDeleteAppointment: _deleteAppointment,
+          onRefreshRequested: _loadAppointments,
+          isLoading: _loading,
         ),
       },
       {
@@ -118,15 +120,55 @@ class _DoctorRootPageState extends State<DoctorRootPage> {
     );
   }
 
-  void _onNewAppointmentPressed() {
-    debugPrint("New Appointment Pressed");
+  void _onNewAppointmentPressed() async {
+    debugPrint("➕ New Appointment Pressed");
+    // TODO: open AddAppointmentForm dialog
+    await _loadAppointments();
+  }
+
+  void _deleteAppointment(DashboardAppointments appt) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Delete Appointment"),
+        content: Text("Are you sure you want to delete ${appt.patientName}?"),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text("Cancel")),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text("Delete",
+                  style: TextStyle(color: Colors.red))),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      final success = await AuthService.instance.deleteAppointment(appt.id);
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content:
+          Text("🗑️ Appointment for ${appt.patientName} deleted successfully"),
+          backgroundColor: Colors.green,
+        ));
+        await _loadAppointments();
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text("💥 Error while deleting ${appt.patientName}: $e"),
+        backgroundColor: Colors.orange,
+      ));
+    }
   }
 
   void _updateSearchQuery(String value) {
     setState(() {
       _searchQuery = value;
       _currentPage = 0;
-      _buildNavItems(); // rebuild appointments nav with new state
+      _buildNavItems();
     });
   }
 
@@ -148,12 +190,6 @@ class _DoctorRootPageState extends State<DoctorRootPage> {
   void _onItemTapped(int index) {
     setState(() => _selectedIndex = index);
   }
-  void _deleteAppointment(DashboardAppointments appt) async {
-
-
-    }
-
-
 
   // ========== Chatbot ==========
   void _toggleChatbot() {
