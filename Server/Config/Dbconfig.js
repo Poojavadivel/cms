@@ -1,47 +1,70 @@
-// Import the Sequelize class from the library.
+// ===============================
+// Database Config (Postgres + MongoDB)
+// ===============================
+
+// Import libraries
 const { Sequelize } = require('sequelize');
-// Import dotenv to manage environment variables.
+const mongoose = require('mongoose');
 require('dotenv').config();
 
-// Get the database connection URL from our .env file.
-const connectionString = process.env.POSTGRES_URL;
+// --- ENV Variables ---
+const pgUrl = process.env.POSTGRES_URL;
+const mongoUrl = process.env.MANGODB_URL;
 
-if (!connectionString) {
-  // If the connection string is not found, we cannot proceed.
-  throw new Error('POSTGRES_URL is not defined in the .env file');
-}
+if (!pgUrl) throw new Error('POSTGRES_URL is not defined in the .env file');
+if (!mongoUrl) throw new Error('MONGODB_URL is not defined in the .env file');
 
-// Create a new Sequelize instance.
-// This single instance will manage our database connection pool automatically.
-const sequelize = new Sequelize(connectionString, {
+// ===============================
+// Sequelize (Postgres) Setup
+// ===============================
+const sequelize = new Sequelize(pgUrl, {
   dialect: 'postgres',
-  // Configuration required for cloud providers like Neon.
   dialectOptions: {
     ssl: {
       require: true,
-      rejectUnauthorized: false,
+      rejectUnauthorized: false, // Required for cloud providers like Neon
     },
   },
-  // We can disable Sequelize's verbose logging in production.
-  logging: false, 
+  logging: false, // disable SQL logs in console
 });
 
-/**
- * Checks the connection to the PostgreSQL database using Sequelize's
- * built-in authenticate method.
- */
-const connectDB = async () => {
+const connectPostgres = async () => {
   try {
-    // This function attempts to authenticate with the database.
     await sequelize.authenticate();
-    console.log('Sequelize Connection Successful: The server is connected to the database.');
+    console.log('✅ Sequelize: Connected to PostgreSQL successfully');
   } catch (err) {
-    console.error('Sequelize Connection Failed:', err.stack);
-    // Exit the process with failure if we cannot connect.
+    console.error('❌ Sequelize: Connection failed:', err.stack);
     process.exit(1);
   }
 };
 
-// We export the single sequelize instance and the connection checker.
-// The instance will be used to define models and run queries.
-module.exports = { sequelize, connectDB };
+// ===============================
+// Mongoose (MongoDB) Setup
+// ===============================
+const connectMongo = async () => {
+  try {
+    await mongoose.connect(mongoUrl, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+    console.log('✅ Mongoose: Connected to MongoDB successfully');
+  } catch (err) {
+    console.error('❌ Mongoose: Connection failed:', err.message);
+    process.exit(1);
+  }
+};
+
+// ===============================
+// Unified Connect Function
+// ===============================
+const connectDBs = async () => {
+  console.log('🌍 Starting database connections...');
+  await connectPostgres();
+  await connectMongo();
+  console.log('🚀 All databases connected successfully');
+};
+
+// ===============================
+// Exports
+// ===============================
+module.exports = { sequelize, connectDBs, connectPostgres, connectMongo };

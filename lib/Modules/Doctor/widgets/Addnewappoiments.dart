@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../Models/appointment_draft.dart';
+import '../../../Models/dashboardmodels.dart';
+import '../../../Services/Authservices.dart';
 
 /// ---------------------------------------------------------------------------
 /// IconX (enterprise aliases) — still mapping to Material to avoid extra deps.
@@ -50,19 +52,26 @@ class AddAppointmentForm extends StatefulWidget {
     super.key,
     this.initialTypes = const ['Consultation', 'Follow-up', 'Check-up'],
     this.onSubmit,
+    this.onSuccess, // ✅ new callback for dashboard refresh
   });
 
   final List<String> initialTypes;
+  final VoidCallback? onSuccess;
+
+  /// Called after the form draft is built (optional).
   final void Function(AppointmentDraft draft)? onSubmit;
+
+  /// Called when appointment is successfully saved in backend.
+
 
   @override
   State<AddAppointmentForm> createState() => _AddAppointmentFormState();
 }
 
+
 class _AddAppointmentFormState extends State<AddAppointmentForm> {
   final _formKey = GlobalKey<FormState>();
-
-  // Controllers
+  late Future<DoctorDashboardData> _dashboardFuture;
   final _clientNameCtrl = TextEditingController();
   final _patientIdCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
@@ -141,7 +150,7 @@ class _AddAppointmentFormState extends State<AddAppointmentForm> {
   String _fmtTime(TimeOfDay? t) =>
       t == null ? '' : '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
 
-  void _submit() {
+  void _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
     final draft = AppointmentDraft(
@@ -151,57 +160,60 @@ class _AddAppointmentFormState extends State<AddAppointmentForm> {
       time: _time!,
       location: _locationCtrl.text.trim(),
       notes: _notesCtrl.text.trim(),
-      // extras
-      patientId: _patientIdCtrl.text.trim().isEmpty ? null : _patientIdCtrl.text.trim(),
-      phoneNumber: _phoneCtrl.text.trim().isEmpty ? null : _phoneCtrl.text.trim(),
+      patientId: _patientIdCtrl.text.trim().isEmpty
+          ? null
+          : _patientIdCtrl.text.trim(),
+      phoneNumber: _phoneCtrl.text.trim().isEmpty
+          ? null
+          : _phoneCtrl.text.trim(),
       mode: _mode,
       priority: _priority,
       durationMinutes: _duration,
       reminder: _reminder,
       chiefComplaint: _complaintCtrl.text.trim(),
-      heightCm: _heightCtrl.text.trim().isEmpty ? null : _heightCtrl.text.trim(),
-      weightKg: _weightCtrl.text.trim().isEmpty ? null : _weightCtrl.text.trim(),
+      heightCm: _heightCtrl.text.trim().isEmpty
+          ? null
+          : _heightCtrl.text.trim(),
+      weightKg: _weightCtrl.text.trim().isEmpty
+          ? null
+          : _weightCtrl.text.trim(),
       bp: _bpCtrl.text.trim().isEmpty ? null : _bpCtrl.text.trim(),
       heartRate: _hrCtrl.text.trim().isEmpty ? null : _hrCtrl.text.trim(),
       spo2: _spo2Ctrl.text.trim().isEmpty ? null : _spo2Ctrl.text.trim(),
     );
 
-    widget.onSubmit?.call(draft);
+    try {
+      final success = await AuthService.instance.createAppointment(draft);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Appointment added', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
-        backgroundColor: _kPrimary600,
-      ),
-    );
-
-    // reset
-    _formKey.currentState!.reset();
-    setState(() {
-      _type = null;
-      _mode = 'In-clinic';
-      _priority = 'Normal';
-      _duration = 20;
-      _reminder = true;
-      _date = null;
-      _time = null;
-    });
-    for (final c in [
-      _clientNameCtrl,
-      _patientIdCtrl,
-      _phoneCtrl,
-      _locationCtrl,
-      _notesCtrl,
-      _complaintCtrl,
-      _heightCtrl,
-      _weightCtrl,
-      _bpCtrl,
-      _hrCtrl,
-      _spo2Ctrl,
-    ]) {
-      c.clear();
+      if (success) {
+        print("✅ Appointment created in backend");
+        Navigator.of(context).pop(true); // ✅ notify parent to refresh
+      } else {
+        print("❌ Appointment creation failed");
+        Navigator.of(context).pop(false); // ❌ notify failure
+      }
+    } catch (e) {
+      print("💥 Error in _submit(): $e");
+      Navigator.of(context).pop(false); // ❌ also fail on exception
     }
   }
+
+
+
+
+
+
+  Future<DoctorDashboardData> _fetchDashboardData() async {
+    print("🌍 Fetching appointments from backend...");
+    final appointments = await AuthService.instance.fetchAppointments();
+    print("📊 Backend returned ${appointments.length} appointments");
+    return DoctorDashboardData(appointments: appointments);
+  }
+
+
+
+
+
 
   InputDecoration _dec({
     required String hintText,

@@ -1,4 +1,5 @@
 class DashboardAppointments {
+  final String id; // 👈 Appointment ID from MongoDB (_id)
   final String patientName;
   final int patientAge;
   final String date;
@@ -35,6 +36,7 @@ class DashboardAppointments {
   final Map<String, String> history;
 
   DashboardAppointments({
+    required this.id, // 👈 Required
     required this.patientName,
     required this.patientAge,
     required this.date,
@@ -71,7 +73,103 @@ class DashboardAppointments {
     this.history = const {},
   });
 
+  /// ✅ Create object from API JSON
+  factory DashboardAppointments.fromJson(Map<String, dynamic> json) {
+    return DashboardAppointments(
+      id: json['_id'] ?? '', // 👈 Map MongoDB _id
+      patientName: json['clientName'] ?? '',
+      patientAge: int.tryParse(json['patientAge']?.toString() ?? '0') ?? 0,
+      date: json['date'] ?? '',
+      time: json['time'] ?? '',
+      reason: json['chiefComplaint'] ?? '',
+      doctor: json['doctorId'] ?? '',
+      status: json['status'] ?? 'Scheduled',
+      gender: json['gender'] ?? '',
+      patientId: json['patientId'] is Map
+          ? json['patientId']['_id'] ?? ''
+          : (json['patientId']?.toString() ?? ''),
+      service: json['appointmentType'] ?? '',
+      patientAvatarUrl: json['patientAvatarUrl'] ?? '',
+
+      // ✅ Notes
+      previousNotes: json['history']?['previousNotes'],
+      currentNotes: json['history']?['currentNotes'],
+
+      // ✅ Tables
+      pharmacy: (json['pharmacy'] as List?)
+          ?.map((e) => Map<String, String>.from(e))
+          .toList() ??
+          [],
+      pathology: (json['pathology'] as List?)
+          ?.map((e) => Map<String, String>.from(e))
+          .toList() ??
+          [],
+
+      // Extended fields
+      diabetesType: json['history']?['diabetesType'] ?? 'Type 2',
+      location: json['location'] ?? '',
+      occupation: json['history']?['occupation'] ?? '',
+      dob: json['dob'] ?? '',
+      bmi: double.tryParse(json['bmi']?.toString() ?? '0') ?? 0.0,
+      weight: int.tryParse(json['weight']?.toString() ?? '0') ?? 0,
+      height: int.tryParse(json['height']?.toString() ?? '0') ?? 0,
+      bp: json['vitals']?['bp'] ?? '',
+      diagnosis: (json['diagnosis'] as List?)
+          ?.map((e) => e.toString())
+          .toList() ??
+          [],
+      barriers: (json['barriers'] as List?)
+          ?.map((e) => e.toString())
+          .toList() ??
+          [],
+      timeline: (json['timeline'] as List?)
+          ?.map((e) => Map<String, String>.from(e))
+          .toList() ??
+          [],
+      history: json['history'] != null
+          ? Map<String, String>.from(json['history'])
+          : {},
+    );
+  }
+
+  /// ✅ Convert object to JSON for API
+  Map<String, dynamic> toJson() {
+    return {
+      '_id': id, // 👈 Include id
+      'clientName': patientName,
+      'patientAge': patientAge,
+      'date': date,
+      'time': time,
+      'chiefComplaint': reason,
+      'doctorId': doctor,
+      'status': status,
+      'gender': gender,
+      'patientId': patientId,
+      'appointmentType': service,
+      'patientAvatarUrl': patientAvatarUrl,
+      'history': {
+        'previousNotes': previousNotes,
+        'currentNotes': currentNotes,
+        'diabetesType': diabetesType,
+        'occupation': occupation,
+      },
+      'pharmacy': pharmacy,
+      'pathology': pathology,
+      'dob': dob,
+      'bmi': bmi,
+      'weight': weight,
+      'height': height,
+      'vitals': {
+        'bp': bp,
+      },
+      'diagnosis': diagnosis,
+      'barriers': barriers,
+      'timeline': timeline,
+    };
+  }
+
   DashboardAppointments copyWith({
+    String? id,
     String? patientName,
     int? patientAge,
     String? date,
@@ -108,6 +206,7 @@ class DashboardAppointments {
     Map<String, String>? history,
   }) {
     return DashboardAppointments(
+      id: id ?? this.id,
       patientName: patientName ?? this.patientName,
       patientAge: patientAge ?? this.patientAge,
       date: date ?? this.date,

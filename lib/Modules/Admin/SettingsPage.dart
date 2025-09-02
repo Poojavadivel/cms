@@ -27,7 +27,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String? _staffFileStatus;
   String? _invoiceFileStatus;
 
-  final AuthService _authService = AuthService();
+  final AuthService _authService = AuthService.instance;
+
 
   void _handleLogout() async {
     // Clear the token from storage

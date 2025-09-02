@@ -1,8 +1,8 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const User = require('../Models/models'); // Correct path to the User model
-const auth = require('../Middleware/Auth'); // Correct path to the auth middleware
+const { User } = require('../Models/models'); // ✅ destructure to get Sequelize User
+const auth = require('../Middleware/Auth');   // Token verification middleware
 
 const router = express.Router();
 
@@ -11,7 +11,7 @@ const router = express.Router();
 router.post('/login', async (req, res) => {
   console.log('--- LOGIN REQUEST INITIATED ---');
   console.log(`[${new Date().toISOString()}] /api/auth/login route hit.`);
-  
+
   try {
     const { email, password } = req.body;
     console.log(`Attempting login for email: ${email}`);
@@ -41,7 +41,7 @@ router.post('/login', async (req, res) => {
     }
     console.log('✅ Password matched.');
 
-    // 4. Generate JWT
+    // 4. Generate JWT (contains both id + role)
     console.log('Generating JWT...');
     const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET, {
       expiresIn: '1d',
@@ -52,10 +52,15 @@ router.post('/login', async (req, res) => {
     console.log('Sending successful login response to client.');
     res.status(200).json({
       token,
-      user: user.toJSON(),
+      user: {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        firstName: user.firstName,
+        lastName: user.lastName,
+      },
     });
     console.log('--- LOGIN REQUEST COMPLETED ---');
-
   } catch (error) {
     console.error('💥 FATAL LOGIN ERROR:', error);
     res.status(500).json({ message: 'Server error', errorCode: 5000 });
@@ -67,27 +72,32 @@ router.post('/login', async (req, res) => {
 router.post('/validate-token', auth, async (req, res) => {
   console.log('--- TOKEN VALIDATION INITIATED ---');
   console.log(`[${new Date().toISOString()}] /api/auth/validate-token route hit.`);
-  
+
   try {
     // The 'auth' middleware has already run and verified the token.
-    console.log(`Token validated for user ID: ${req.user}`);
-    
+    console.log(`Token validated for user ID: ${req.user.id}`);
+
     console.log('Querying database for user details...');
-    const user = await User.findByPk(req.user, {
+    const user = await User.findByPk(req.user.id, {
       attributes: { exclude: ['password'] },
     });
 
     if (!user) {
-      console.log(`❌ User Not Found: No user with ID ${req.user}.`);
+      console.log(`❌ User Not Found: No user with ID ${req.user.id}.`);
       return res.status(404).json({ message: 'User not found', errorCode: 1002 });
     }
     console.log(`✅ User details found: ${user.email}`);
 
-    // If the user is found, send their data back.
+    // Return user details (including role)
     console.log('Sending successful validation response to client.');
-    res.status(200).json(user.toJSON());
+    res.status(200).json({
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      firstName: user.firstName,
+      lastName: user.lastName,
+    });
     console.log('--- TOKEN VALIDATION COMPLETED ---');
-
   } catch (error) {
     console.error('💥 FATAL TOKEN VALIDATION ERROR:', error);
     res.status(500).json({ message: 'Server error', errorCode: 5000 });
@@ -96,15 +106,13 @@ router.post('/validate-token', auth, async (req, res) => {
 
 // --- POST /api/auth/signout ---
 // A simple endpoint to acknowledge the sign-out request.
-// In more advanced setups, this is where you would blacklist the JWT.
 router.post('/signout', (req, res) => {
   console.log('--- SIGNOUT REQUEST INITIATED ---');
   console.log(`[${new Date().toISOString()}] /api/auth/signout route hit.`);
-  
-  // For this setup, we just acknowledge the request.
-  // The client is responsible for deleting the token.
+
   res.status(200).json({ message: 'Sign-out successful.' });
-  
+
   console.log('--- SIGNOUT REQUEST COMPLETED ---');
 });
+
 module.exports = router;

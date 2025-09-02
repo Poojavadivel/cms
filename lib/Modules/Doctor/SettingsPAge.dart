@@ -30,7 +30,8 @@ class _DoctorSettingsScreenState extends State<DoctorSettingsScreen> {
   bool _pushNotifications = true;
   String _currentStatus = 'Available';
 
-  final AuthService _authService = AuthService();
+  final AuthService _authService = AuthService.instance;
+
 
   void _handleLogout() async {
     // Clear the token from storage

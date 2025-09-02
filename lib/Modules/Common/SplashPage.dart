@@ -24,7 +24,8 @@ class SplashPage extends StatefulWidget {
 }
 
 class _SplashPageState extends State<SplashPage> {
-  final AuthService _authService = AuthService();
+  final AuthService _authService = AuthService.instance;
+
 
   @override
   void initState() {

@@ -17,8 +17,8 @@ class ApiConstants {
   // --- Base URL ---
   /// The base URL for the backend API.
   /// Change this to your actual server address during development/production.
-  // static const String baseUrl = "http://10.75.171.132:3000";
-  static const String baseUrl = "https://glowhair-skin.onrender.com";// <-- IMPORTANT: Replace with your actual backend URL
+   static const String baseUrl = "http://10.40.68.132:3000";
+ // static const String baseUrl = "https://glowhair-skin.onrender.com";// <-- IMPORTANT: Replace with your actual backend URL
 
   // --- HTTP Methods ---
   static const String post = 'POST';
@@ -34,6 +34,16 @@ class ApiEndpoints {
 
   /// Endpoint to validate an existing authentication token.
   static RestApi validateToken() => RestApi(url: '/api/auth/validate-token', method: ApiConstants.post);
+
+
+  static RestApi createAppointment() =>
+      RestApi(url: '/api/appointments', method: ApiConstants.post);
+  static RestApi getAppointments() =>
+      RestApi(url: '/api/appointments', method: ApiConstants.get);
+  static RestApi deleteAppointment(String id) =>
+      RestApi(url: '/api/appointments/$id', method: ApiConstants.delete);
+
+
 }
 
 /// Maps backend error codes to user-friendly messages.

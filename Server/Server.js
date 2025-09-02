@@ -5,9 +5,10 @@ const bcrypt = require('bcryptjs');
 require('dotenv').config();
 
 // --- Local Imports ---
-const { sequelize, connectDB } = require('./Config/Dbconfig');
-const User = require('./Models/models');
+const { sequelize, connectPostgres, connectMongo } = require('./Config/Dbconfig');
+const { User } = require('./Models/models');
 const authRoutes = require('./routes/auth');
+const appointmentRoutes = require('./routes/appointment');
 const path = require("path"); 
 // --- Initialization ---
 const app = express();
@@ -19,6 +20,8 @@ app.use(express.json());
 const webAppPath = path.join(__dirname, 'web');
 // --- API Route Definitions ---
 app.use('/api/auth', authRoutes);
+app.use('/api/appointments', appointmentRoutes);
+
 app.use(express.static(webAppPath));
 app.get('/', (req, res) => {
   res.sendFile(path.join(webAppPath, 'index.html'));
@@ -50,7 +53,7 @@ const createInitialAdmin = async () => {
     } else {
       const hashedPassword = await bcrypt.hash(adminPassword, 12);
       await User.create({
-        id: `admin_${Date.now()}`,
+        id: `doctor_${Date.now()}`,
         email: adminEmail,
         password: hashedPassword,
         role: adminRole, // Hardcoded role for safety
@@ -69,28 +72,31 @@ const createInitialAdmin = async () => {
  */
 const startServer = async () => {
   try {
-    // 1. Verify the database connection.
-    await connectDB();
+    // 1. Connect to PostgreSQL
+    await connectPostgres();
 
-    // 2. Sync all defined models with the database.
-    // Using { force: true } will drop existing tables and recreate them.
-    // WARNING: This will delete all data in your tables. Use only in development.
-    await sequelize.sync();
-    console.log('All models were synchronized successfully.');
-    
-    // 3. Create the initial admin user if they don't exist.
+    // 2. Connect to MongoDB
+    await connectMongo();
+
+    // 3. Sync all defined Sequelize models with PostgreSQL
+    await sequelize.sync({ alter: true });
+    console.log('✅ All Sequelize models were synchronized successfully.');
+
+    // 4. Create the initial admin user if they don't exist
     await createInitialAdmin();
+    console.log('👑 Initial admin user check completed.');
 
-    // 4. Start the Express server.
+    // 5. Start the Express server
     app.listen(PORT, () => {
-      console.log(`Server is listening on port ${PORT}`);
+      console.log(`🌍 Server is listening on port ${PORT}`);
     });
 
   } catch (error) {
-    console.error('Failed to start the server:', error);
+    console.error('❌ Failed to start the server:', error);
     process.exit(1);
   }
 };
+
 
 // --- Start the Server ---
 startServer();
