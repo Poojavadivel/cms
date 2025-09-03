@@ -426,6 +426,27 @@ class _AddAppointmentFormState extends State<AddAppointmentForm> {
                   ),
                 ),
               ),
+              SizedBox(width: colW,
+              child:  _Labeled(
+                label: 'Appointment Type *',
+                labelStyle: labelStyle,
+                child: DropdownButtonFormField<String>(
+                  value: _type,
+                  items: const [
+                    DropdownMenuItem(value: 'Consultation', child: Text('Consultation')),
+                    DropdownMenuItem(value: 'Follow-up', child: Text('Follow-up')),
+                    DropdownMenuItem(value: 'Check-up', child: Text('Check-up')),
+                    DropdownMenuItem(value: 'Emergency', child: Text('Emergency')),
+                  ],
+                  onChanged: (val) => setState(() => _type = val),
+                  decoration: _dec(
+                    hintText: 'Select type',
+                    prefixIcon: const Icon(IconX.list),
+                  ),
+                  validator: (v) =>
+                  (v == null || v.trim().isEmpty) ? 'Select appointment type' : null,
+                ),
+              ),),
               SizedBox(
                 width: colW,
                 child: _Labeled(

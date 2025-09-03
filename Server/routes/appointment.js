@@ -3,21 +3,39 @@ const { Appointment } = require('../Models/models'); // use combined models expo
 const auth = require('../Middleware/Auth'); // verifies JWT
 const router = express.Router();
 
-
+// ===============================
+// CREATE Appointment
+// POST /api/appointments
+// ===============================
 // ===============================
 // CREATE Appointment
 // POST /api/appointments
 // ===============================
 router.post('/', auth, async (req, res) => {
+  console.log('📩 [CREATE] Incoming request to /api/appointments');
+
   try {
-    const doctorId = req.user.id; 
+    const doctorId = req.user.id;
     const data = req.body;
 
-    console.log('📩 Create Appointment request body:', data);
-    console.log('👨‍⚕️ Doctor ID from token:', doctorId);
+    console.log('👨‍⚕️ [CREATE] Doctor ID from token:', doctorId);
+    console.log('📦 [CREATE] Raw request body:', JSON.stringify(data, null, 2));
+
+    // Step 1: Validate required fields
+    if (!data.clientName) console.error("❌ [CREATE] Missing: clientName");
+    if (!data.appointmentType) console.error("❌ [CREATE] Missing: appointmentType");
+    if (!data.date) console.error("❌ [CREATE] Missing: date");
+    if (!data.time) console.error("❌ [CREATE] Missing: time");
+    if (!data.location) console.error("❌ [CREATE] Missing: location");
 
     if (!data.clientName || !data.appointmentType || !data.date || !data.time || !data.location) {
-      console.warn('⚠️ Missing required fields:', data);
+      console.warn('⚠️ [CREATE] Missing required fields →', {
+        clientName: data.clientName,
+        appointmentType: data.appointmentType,
+        date: data.date,
+        time: data.time,
+        location: data.location,
+      });
       return res.status(400).json({
         success: false,
         message: 'Missing required fields',
@@ -25,7 +43,9 @@ router.post('/', auth, async (req, res) => {
       });
     }
 
-    const appointment = await Appointment.create({
+    // Step 2: Construct new appointment
+    console.log("🛠️ [CREATE] Constructing appointment object...");
+    const appointmentData = {
       doctorId,
       patientId: data.patientId || null,
       clientName: data.clientName,
@@ -42,17 +62,23 @@ router.post('/', auth, async (req, res) => {
       chiefComplaint: data.chiefComplaint,
       vitals: data.vitals,
       status: data.status || 'Scheduled',
-    });
+    };
+    console.log("📝 [CREATE] Appointment payload ready:", JSON.stringify(appointmentData, null, 2));
 
-    console.log('✅ Appointment created:', appointment._id);
+    // Step 3: Save appointment to DB
+    const appointment = await Appointment.create(appointmentData);
 
+    console.log('✅ [CREATE] Appointment successfully created with ID:', appointment._id);
+
+    // Step 4: Send response
     res.status(201).json({
       success: true,
       message: '✅ Appointment created successfully',
       appointment,
     });
   } catch (err) {
-    console.error('❌ Error creating appointment:', err);
+    console.error('💥 [CREATE] Unexpected error while creating appointment:', err.message);
+    console.error(err.stack);
     res.status(500).json({
       success: false,
       message: 'Failed to create appointment',
@@ -69,22 +95,25 @@ router.post('/', auth, async (req, res) => {
 router.get('/', auth, async (req, res) => {
   try {
     const doctorId = req.user.id;
-    console.log('📥 Fetching all appointments for doctor:', doctorId);
+    console.log('📥 [GET ALL] Fetching appointments for doctor:', doctorId);
 
     const appointments = await Appointment.find({ doctorId })
       .populate('patientId', 'firstName lastName phone email');
 
-    console.log(`📊 Found ${appointments.length} appointments`);
-    res.status(200).json(appointments);
+    console.log(`📊 [GET ALL] Found ${appointments.length} appointments`);
+    res.status(200).json({
+      success: true,
+      appointments,
+    });
   } catch (err) {
-    console.error('❌ Error fetching appointments:', err);
+    console.error('❌ [GET ALL] Error fetching appointments:', err);
     res.status(500).json({
+      success: false,
       message: 'Failed to fetch appointments',
       errorCode: 5001,
     });
   }
 });
-
 
 // ===============================
 // GET Appointment by ID
@@ -92,30 +121,34 @@ router.get('/', auth, async (req, res) => {
 // ===============================
 router.get('/:id', auth, async (req, res) => {
   try {
-    console.log('🔎 Fetching appointment by ID:', req.params.id);
+    console.log('🔎 [GET BY ID] Appointment ID:', req.params.id);
 
     const appointment = await Appointment.findById(req.params.id)
       .populate('patientId', 'firstName lastName phone email');
 
     if (!appointment) {
-      console.warn('⚠️ Appointment not found:', req.params.id);
+      console.warn('⚠️ [GET BY ID] Not found:', req.params.id);
       return res.status(404).json({
+        success: false,
         message: 'Appointment not found',
         errorCode: 1007,
       });
     }
 
-    console.log('✅ Appointment found:', appointment._id);
-    res.status(200).json(appointment);
+    console.log('✅ [GET BY ID] Found appointment:', appointment._id);
+    res.status(200).json({
+      success: true,
+      appointment,
+    });
   } catch (err) {
-    console.error('❌ Error fetching appointment by ID:', err);
+    console.error('❌ [GET BY ID] Error:', err);
     res.status(500).json({
+      success: false,
       message: 'Failed to fetch appointment',
       errorCode: 5002,
     });
   }
 });
-
 
 // ===============================
 // UPDATE Appointment Status
@@ -124,11 +157,12 @@ router.get('/:id', auth, async (req, res) => {
 router.patch('/:id/status', auth, async (req, res) => {
   try {
     const { status } = req.body;
-    console.log(`✏️ Updating status for appointment ${req.params.id} → ${status}`);
+    console.log(`✏️ [STATUS UPDATE] ${req.params.id} → ${status}`);
 
     if (!status) {
-      console.warn('⚠️ Missing status field');
+      console.warn('⚠️ [STATUS UPDATE] Missing status field');
       return res.status(400).json({
+        success: false,
         message: 'Status is required',
         errorCode: 1008,
       });
@@ -141,27 +175,29 @@ router.patch('/:id/status', auth, async (req, res) => {
     );
 
     if (!appointment) {
-      console.warn('⚠️ Appointment not found for update:', req.params.id);
+      console.warn('⚠️ [STATUS UPDATE] Not found:', req.params.id);
       return res.status(404).json({
+        success: false,
         message: 'Appointment not found',
         errorCode: 1007,
       });
     }
 
-    console.log('✅ Status updated:', appointment._id, '→', appointment.status);
+    console.log('✅ [STATUS UPDATE] Updated:', appointment._id, '→', appointment.status);
     res.status(200).json({
+      success: true,
       message: '✅ Appointment status updated',
       appointment,
     });
   } catch (err) {
-    console.error('❌ Error updating appointment status:', err);
+    console.error('❌ [STATUS UPDATE] Error:', err);
     res.status(500).json({
+      success: false,
       message: 'Failed to update appointment status',
       errorCode: 5003,
     });
   }
 });
-
 
 // ===============================
 // DELETE Appointment
@@ -169,30 +205,95 @@ router.patch('/:id/status', auth, async (req, res) => {
 // ===============================
 router.delete('/:id', auth, async (req, res) => {
   try {
-    console.log('🗑️ Deleting appointment ID:', req.params.id);
+    console.log('🗑️ [DELETE] Appointment ID:', req.params.id);
 
     const appointment = await Appointment.findByIdAndDelete(req.params.id);
 
     if (!appointment) {
-      console.warn('⚠️ Appointment not found for deletion:', req.params.id);
+      console.warn('⚠️ [DELETE] Not found:', req.params.id);
       return res.status(404).json({
+        success: false,
         message: 'Appointment not found',
         errorCode: 1007,
       });
     }
 
-    console.log('✅ Appointment deleted:', appointment._id);
+    console.log('✅ [DELETE] Appointment deleted:', appointment._id);
     res.status(200).json({
+      success: true,
       message: '🗑️ Appointment deleted successfully',
     });
   } catch (err) {
-    console.error('❌ Error deleting appointment:', err);
+    console.error('❌ [DELETE] Error:', err);
     res.status(500).json({
+      success: false,
       message: 'Failed to delete appointment',
       errorCode: 5004,
     });
   }
 });
 
+// ===============================
+// UPDATE Appointment (full edit)
+// PUT /api/appointments/:id
+// ===============================
+router.put('/:id', auth, async (req, res) => {
+  try {
+    console.log('✏️ [FULL UPDATE] Appointment ID:', req.params.id);
+    const data = req.body;
+    console.log('📦 [FULL UPDATE] Incoming data:', JSON.stringify(data, null, 2));
+
+    const appointment = await Appointment.findByIdAndUpdate(
+      req.params.id,
+      {
+        clientName: data.clientName,
+        appointmentType: data.appointmentType,
+        date: data.date,
+        time: data.time,
+        location: data.location,
+        notes: data.notes,
+        gender: data.gender,
+        patientId: data.patientId || null,
+        phoneNumber: data.phoneNumber,
+        mode: data.mode,
+        priority: data.priority,
+        durationMinutes: data.durationMinutes,
+        reminder: data.reminder,
+        chiefComplaint: data.chiefComplaint,
+        heightCm: data.heightCm,
+        weightKg: data.weightKg,
+        bp: data.bp,
+        heartRate: data.heartRate,
+        spo2: data.spo2,
+        status: data.status || 'Scheduled',
+        updatedAt: Date.now(),
+      },
+      { new: true, runValidators: true }
+    );
+
+    if (!appointment) {
+      console.warn('⚠️ [FULL UPDATE] Not found:', req.params.id);
+      return res.status(404).json({
+        success: false,
+        message: 'Appointment not found',
+        errorCode: 1007,
+      });
+    }
+
+    console.log('✅ [FULL UPDATE] Updated appointment:', appointment._id);
+    res.status(200).json({
+      success: true,
+      message: '✅ Appointment updated successfully',
+      appointment,
+    });
+  } catch (err) {
+    console.error('❌ [FULL UPDATE] Error:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update appointment',
+      errorCode: 5005,
+    });
+  }
+});
 
 module.exports = router;

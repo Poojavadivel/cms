@@ -19,10 +19,6 @@ class AuthResult {
 }
 
 /// AuthService: Orchestrates the entire authentication flow.
-///
-/// This service acts as a bridge between the UI and the low-level ApiHandler.
-/// It contains the business logic for signing in, signing out, and validating
-/// a user's session on app startup.
 class AuthService {
   // 🔑 Singleton setup
   AuthService._privateConstructor();
@@ -119,7 +115,7 @@ class AuthService {
     }
   }
 
-
+  /// Fetch all appointments
   Future<List<DashboardAppointments>> fetchAppointments() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -132,16 +128,24 @@ class AuthService {
         token: token,
       );
 
-      return (response as List)
-          .map((json) => DashboardAppointments.fromJson(json))
-          .toList();
+      // ✅ handle both `{ appointments: [...] }` and raw `[...]`
+      List data;
+      if (response is List) {
+        data = response;
+      } else if (response is Map && response.containsKey('appointments')) {
+        data = response['appointments'] as List;
+      } else {
+        throw ApiException("Unexpected response format: $response");
+      }
+
+      return data.map((json) => DashboardAppointments.fromJson(json)).toList();
     } catch (e) {
       print("❌ Failed to fetch appointments: $e");
       rethrow;
     }
   }
 
-
+  /// Delete appointment
   Future<bool> deleteAppointment(String appointmentId) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -167,11 +171,56 @@ class AuthService {
     }
   }
 
+  /// Edit appointment
+  Future<bool> editAppointment(AppointmentDraft draft) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('x-auth-token');
+
+      if (token == null) throw ApiException("Not logged in");
+
+      final response = await _apiHandler.put(
+        ApiEndpoints.updateAppointment(draft.id!).url,
+        body: draft.toJson(),
+        token: token,
+      );
+
+      return response["success"] == true || response["status"] == 200;
+    } catch (e) {
+      print("❌ Failed to edit appointment: $e");
+      rethrow;
+    }
+  }
+
+  /// Fetch appointment by ID
+  Future<AppointmentDraft> fetchAppointmentById(String id) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('x-auth-token');
+
+      if (token == null) throw ApiException("Not logged in");
+
+      final response = await _apiHandler.get(
+        ApiEndpoints.getAppointmentById(id).url,
+        token: token,
+      );
+
+      print("📦 API response for appointment $id: $response");
+
+      // unwrap `{ appointment: {...} }`
+      final data = (response is Map && response.containsKey('appointment'))
+          ? response['appointment']
+          : response;
+
+      return AppointmentDraft.fromJson(data);
+    } catch (e) {
+      print("❌ Failed to fetch appointment by ID: $e");
+      rethrow;
+    }
+  }
 
 
-
-  /// A private helper to parse the user data map and create the correct
-  /// Admin or Doctor model based on the 'role' field.
+  /// Parse role
   dynamic _parseUserRole(Map<String, dynamic> userData) {
     final baseUser = User.fromMap(userData);
 

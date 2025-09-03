@@ -484,20 +484,13 @@ class _AppointmentDataView extends StatelessWidget {
           backgroundColor: Colors.transparent,
           insetPadding: const EdgeInsets.all(16),
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 600),
+            constraints: const BoxConstraints(maxWidth: 1500),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
               child: Material(
                 color: Colors.white,
                 child: EditAppointmentForm(
-                  initial: AppointmentDraft(
-                    clientName: appt.patientName,
-                    appointmentType: appt.service,
-                    date: DateTime.tryParse(appt.date) ?? DateTime.now(),
-                    time: const TimeOfDay(hour: 10, minute: 30),
-                    location: "Clinic Room 101",
-                    notes: appt.reason,
-                  ),
+                  appointmentId: appt.id, // 👈 Pass the backend ID
                   onSave: (updated) {
                     Navigator.pop(context);
                     debugPrint('Updated: ${updated.toJson()}');
@@ -508,6 +501,7 @@ class _AppointmentDataView extends StatelessWidget {
                     debugPrint('Deleted appointment for ${appt.patientName}');
                   },
                 ),
+
               ),
             ),
           ),
