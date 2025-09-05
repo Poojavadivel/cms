@@ -1,0 +1,11 @@
+2025-09-05 14:22:15,557 - DEBUG - [NLP] Loaded spaCy model: en_core_web_trf
+2025-09-05 14:22:19,135 - DEBUG - [NLP] Loaded zero-shot classification model: facebook/bart-large-mnli
+2025-09-05 14:23:16,119 - DEBUG - [NLP] Loaded spaCy model: en_core_web_trf
+2025-09-05 14:23:18,312 - DEBUG - [NLP] Loaded zero-shot classification model: facebook/bart-large-mnli
+2025-09-05 14:23:19,155 - DEBUG - [RAG] ✅ Azure OpenAI client initialized.
+2025-09-05 14:27:03,622 - DEBUG - [NLP] Loaded spaCy model: en_core_web_trf
+2025-09-05 14:27:07,322 - DEBUG - [NLP] Loaded zero-shot classification model: facebook/bart-large-mnli
+2025-09-05 14:27:08,098 - DEBUG - [RAG] ✅ Azure OpenAI client initialized.
+2025-09-05 14:31:30,949 - DEBUG - [NLP] Loaded spaCy model: en_core_web_trf
+2025-09-05 14:31:33,005 - DEBUG - [NLP] Loaded zero-shot classification model: facebook/bart-large-mnli
+2025-09-05 14:31:33,685 - DEBUG - [RAG] ✅ Azure OpenAI client initialized.
