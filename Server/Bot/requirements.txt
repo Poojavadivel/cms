@@ -8,8 +8,9 @@ azure-cognitiveservices-speech
 fastapi
 uvicorn[standard]
 dateparser
-nest_asyncio
 spacy
 langdetect
 transformers
 torch
+# spaCy Transformer model (large, ~500MB, GPU recommended)
+https://github.com/explosion/spacy-models/releases/download/en_core_web_trf-3.7.3/en_core_web_trf-3.7.3-py3-none-any.whl
