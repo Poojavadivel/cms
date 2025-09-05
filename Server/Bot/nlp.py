@@ -27,12 +27,19 @@ if not logger.handlers:
 
 # ---------------------------- Load spaCy NER ----------------------------
 
+# ---------------------------- Load spaCy NER ----------------------------
 try:
     nlp_spacy = spacy.load("en_core_web_trf")
     logger.debug("[NLP] Loaded spaCy model: en_core_web_trf")
 except OSError:
-    logger.exception("[NLP] spaCy model not found. Run: python -m spacy download en_core_web_trf")
-    raise
+    try:
+        logger.warning("[NLP] Falling back to spaCy model: en_core_web_sm")
+        nlp_spacy = spacy.load("en_core_web_sm")
+    except OSError:
+        logger.exception("[NLP] No spaCy model available. Install with: "
+                         "python -m spacy download en_core_web_sm")
+        raise
+
 
 # ---------------------------- Load Intent Classifier ----------------------------
 
