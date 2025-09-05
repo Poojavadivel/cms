@@ -1,17 +1,22 @@
-streamlit
-pymongo
-openai
-python-dotenv
-nest_asyncio
-streamlit_webrtc
-azure-cognitiveservices-speech
-fastapi
-uvicorn[standard]
-dateparser
-spacy
-langdetect
-transformers
-torch
-# spaCy Transformer model (large, ~500MB, GPU recommended)
+# Core dependencies
+streamlit==1.38.0
+pymongo==4.10.1
+openai==1.47.0
+python-dotenv==1.0.1
+nest_asyncio==1.6.0
+streamlit-webrtc==0.47.9
+azure-cognitiveservices-speech==1.38.0
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+dateparser==1.2.0
+langdetect==1.0.9
+
+# NLP / ML stack (pinned for Python 3.11 compatibility)
+spacy==3.7.2
+blis==0.7.11
+transformers==4.44.2
+torch==2.4.1
+
+# spaCy models (downloaded as wheels during install)
 https://github.com/explosion/spacy-models/releases/download/en_core_web_trf-3.7.3/en_core_web_trf-3.7.3-py3-none-any.whl
 https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.7.1/en_core_web_sm-3.7.1-py3-none-any.whl
