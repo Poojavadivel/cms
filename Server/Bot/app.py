@@ -6,6 +6,7 @@ Maintains original intents and adds new ones for CSV‐based lookups.
 import logging
 from datetime import datetime, timedelta
 import dateparser
+from fastapi import FastAPI
 from nlp import detect_intent_and_entity
 from mongo import (
     get_patient_history,
@@ -35,6 +36,7 @@ EXTRA_INTENTS = [
     "admissions_for_patient", "lab_applications_for_patient", "lab_items_list",
     "diagnosis_for_admission", "prescriptions_for_admission", "notes_for_admission"
 ]
+app = FastAPI(title="Doctor Chatbot API", version="1.0")
 
 async def process_query(user_query: str) -> str:
     logger.debug("[MAIN] Query: %s", user_query)

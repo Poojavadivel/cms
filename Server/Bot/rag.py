@@ -6,7 +6,7 @@ import json
 import logging
 import hashlib
 from openai import AzureOpenAI
-from backend.config import (
+from config import (
     AZURE_OPENAI_API_KEY,
     AZURE_OPENAI_ENDPOINT,
     AZURE_OPENAI_DEPLOYMENT,
