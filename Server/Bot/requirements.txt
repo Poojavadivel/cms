@@ -11,12 +11,12 @@ uvicorn[standard]==0.30.6
 dateparser==1.2.0
 langdetect==1.0.9
 
-# NLP / ML stack (pinned for Python 3.11 compatibility)
+# NLP / ML stack (pinned to stable wheels)
 spacy==3.7.2
 blis==0.7.11
 transformers==4.44.2
 torch==2.4.1
 
-# spaCy models (downloaded as wheels during install)
+# spaCy models
 https://github.com/explosion/spacy-models/releases/download/en_core_web_trf-3.7.3/en_core_web_trf-3.7.3-py3-none-any.whl
 https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.7.1/en_core_web_sm-3.7.1-py3-none-any.whl
