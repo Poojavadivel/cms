@@ -10,3 +10,7 @@ uvicorn[standard]
 dateparser
 nest_asyncio
 spacy
+langdetect
+transformers
+hashlib
+torch
