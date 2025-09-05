@@ -1,0 +1,7 @@
+streamlit
+pymongo
+openai
+python-dotenv
+nest_asyncio
+streamlit_webrtc
+azure-cognitiveservices-speech
