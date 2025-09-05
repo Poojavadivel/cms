@@ -7,3 +7,5 @@ streamlit_webrtc
 azure-cognitiveservices-speech
 fastapi
 uvicorn[standard]
+dateparser
+nest_asyncio
