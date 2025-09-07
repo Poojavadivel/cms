@@ -64,8 +64,8 @@ class _AdminRootPageState extends State<AdminRootPage> {
       {
         // Material icon for invoice (safe)
         'icon': Icons.receipt_long_rounded,
-        'label': 'Invoice',
-        'screen': const InvoiceScreen(),
+        'label': 'Payroll',
+        'screen': const PayrollScreen(),
       },
       {
         // Material icon: Iconsax lacks 'biotech' — use Material

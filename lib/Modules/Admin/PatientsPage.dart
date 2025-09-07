@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-// --- App Theme Colors ---
-const Color primaryColor = Color(0xFFEF4444);
-const Color primaryColorLight = Color(0xFFFEE2E2);
-const Color backgroundColor = Color(0xFFF8FAFC);
-const Color cardBackgroundColor = Color(0xFFFFFFFF);
-const Color textPrimaryColor = Color(0xFF1F2937);
-const Color textSecondaryColor = Color(0xFF6B7280);
+// Import our new generic table
+// Adjust these imports to your project
+import '../../Models/Staff.dart';
+import '../../Utils/Colors.dart';
+import 'widget/generic_data_table.dart';
+// ---------------------------------------------------------------------
 
 // --- Data Models ---
 class Patient {
@@ -16,7 +15,9 @@ class Patient {
   final int age;
   final String gender;
   final String lastVisit;
-  final String status;
+  final String doctor;
+  final String condition;
+  final String reason;
 
   Patient({
     required this.id,
@@ -24,7 +25,9 @@ class Patient {
     required this.age,
     required this.gender,
     required this.lastVisit,
-    required this.status,
+    required this.doctor,
+    required this.condition,
+    required this.reason,
   });
 
   factory Patient.fromMap(Map<String, dynamic> map) {
@@ -34,36 +37,42 @@ class Patient {
       age: map['age'],
       gender: map['gender'],
       lastVisit: map['lastVisit'],
-      status: map['status'],
+      doctor: map['doctor'],
+      condition: map['condition'],
+      reason: map['reason'],
     );
   }
 }
 
 // --- Simulated API Data ---
 const List<Map<String, dynamic>> _patientsApiData = [
-  {'id': 'PAT-001', 'name': 'Arthur', 'age': 45, 'gender': 'Male', 'lastVisit': '2025-08-14', 'status': 'Active'},
-  {'id': 'PAT-002', 'name': 'John Philips', 'age': 32, 'gender': 'Male', 'lastVisit': '2025-08-14', 'status': 'Active'},
-  {'id': 'PAT-003', 'name': 'Regina', 'age': 28, 'gender': 'Female', 'lastVisit': '2025-08-15', 'status': 'Active'},
-  {'id': 'PAT-004', 'name': 'David', 'age': 51, 'gender': 'Male', 'lastVisit': '2025-08-15', 'status': 'Inactive'},
-  {'id': 'PAT-005', 'name': 'Joseph', 'age': 60, 'gender': 'Male', 'lastVisit': '2025-08-16', 'status': 'Active'},
-  {'id': 'PAT-006', 'name': 'Lokesh', 'age': 25, 'gender': 'Male', 'lastVisit': '2025-08-16', 'status': 'Active'},
-  {'id': 'PAT-007', 'name': 'Sophia Miller', 'age': 38, 'gender': 'Female', 'lastVisit': '2025-08-17', 'status': 'Active'},
-  {'id': 'PAT-008', 'name': 'James Wilson', 'age': 42, 'gender': 'Male', 'lastVisit': '2025-08-17', 'status': 'Active'},
-  {'id': 'PAT-009', 'name': 'Olivia Garcia', 'age': 22, 'gender': 'Female', 'lastVisit': '2025-08-18', 'status': 'Active'},
-  {'id': 'PAT-010', 'name': 'Liam Martinez', 'age': 30, 'gender': 'Male', 'lastVisit': '2025-08-18', 'status': 'Inactive'},
-  {'id': 'PAT-011', 'name': 'Emma Anderson', 'age': 29, 'gender': 'Female', 'lastVisit': '2025-08-19', 'status': 'Active'},
-  {'id': 'PAT-012', 'name': 'Noah Taylor', 'age': 35, 'gender': 'Male', 'lastVisit': '2025-08-19', 'status': 'Active'},
-  {'id': 'PAT-013', 'name': 'Ava Thomas', 'age': 41, 'gender': 'Female', 'lastVisit': '2025-08-20', 'status': 'Active'},
-  {'id': 'PAT-014', 'name': 'Isabella White', 'age': 26, 'gender': 'Female', 'lastVisit': '2025-08-20', 'status': 'Active'},
-  {'id': 'PAT-015', 'name': 'Mason Harris', 'age': 55, 'gender': 'Male', 'lastVisit': '2025-08-21', 'status': 'Active'},
-  {'id': 'PAT-016', 'name': 'Mia Clark', 'age': 33, 'gender': 'Female', 'lastVisit': '2025-08-21', 'status': 'Inactive'},
-  {'id': 'PAT-017', 'name': 'Ethan Lewis', 'age': 27, 'gender': 'Male', 'lastVisit': '2025-08-22', 'status': 'Active'},
-  {'id': 'PAT-018', 'name': 'Abigail Robinson', 'age': 39, 'gender': 'Female', 'lastVisit': '2025-08-22', 'status': 'Active'},
-  {'id': 'PAT-019', 'name': 'Michael Walker', 'age': 48, 'gender': 'Male', 'lastVisit': '2025-08-23', 'status': 'Active'},
-  {'id': 'PAT-020', 'name': 'Emily Hall', 'age': 31, 'gender': 'Female', 'lastVisit': '2025-08-23', 'status': 'Active'},
+  {'id': 'PAT-001', 'name': 'Arthur', 'age': 45, 'gender': 'Male', 'lastVisit': '2025-08-14', 'doctor': 'Dr. Harper', 'condition': 'Hypertension', 'reason': 'Follow-up'},
+  {'id': 'PAT-002', 'name': 'John Philips', 'age': 32, 'gender': 'Male', 'lastVisit': '2025-08-14', 'doctor': 'Dr. Johnson', 'condition': 'Asthma', 'reason': 'New prescription'},
+  {'id': 'PAT-003', 'name': 'Regina', 'age': 28, 'gender': 'Female', 'lastVisit': '2025-08-15', 'doctor': 'Dr. Harper', 'condition': 'Dermatitis', 'reason': 'Routine check-up'},
+  {'id': 'PAT-004', 'name': 'David', 'age': 51, 'gender': 'Male', 'lastVisit': '2025-08-15', 'doctor': 'Dr. Johnson', 'condition': 'Diabetes', 'reason': 'Annual exam'},
+  {'id': 'PAT-005', 'name': 'Joseph', 'age': 60, 'gender': 'Male', 'lastVisit': '2025-08-16', 'doctor': 'Dr. Harper', 'condition': 'High Cholesterol', 'reason': 'Follow-up'},
+  {'id': 'PAT-006', 'name': 'Lokesh', 'age': 25, 'gender': 'Male', 'lastVisit': '2025-08-16', 'doctor': 'Dr. Miller', 'condition': 'Flu', 'reason': 'Initial visit'},
+  {'id': 'PAT-007', 'name': 'Sophia Miller', 'age': 38, 'gender': 'Female', 'lastVisit': '2025-08-17', 'doctor': 'Dr. Wilson', 'condition': 'Anxiety', 'reason': 'Therapy session'},
+  {'id': 'PAT-008', 'name': 'James Wilson', 'age': 42, 'gender': 'Male', 'lastVisit': '2025-08-17', 'doctor': 'Dr. Harper', 'condition': 'Migraines', 'reason': 'Consultation'},
+  {'id': 'PAT-009', 'name': 'Olivia Garcia', 'age': 22, 'gender': 'Female', 'lastVisit': '2025-08-18', 'doctor': 'Dr. Johnson', 'condition': 'Acne', 'reason': 'Check-up'},
+  {'id': 'PAT-010', 'name': 'Liam Martinez', 'age': 30, 'gender': 'Male', 'lastVisit': '2025-08-18', 'doctor': 'Dr. Miller', 'condition': 'Sprained Ankle', 'reason': 'Injury report'},
+  {'id': 'PAT-011', 'name': 'Emma Anderson', 'age': 29, 'gender': 'Female', 'lastVisit': '2025-08-19', 'doctor': 'Dr. Wilson', 'condition': 'Depression', 'reason': 'Follow-up'},
+  {'id': 'PAT-012', 'name': 'Noah Taylor', 'age': 35, 'gender': 'Male', 'lastVisit': '2025-08-19', 'doctor': 'Dr. Harper', 'condition': 'Eczema', 'reason': 'New treatment'},
+  {'id': 'PAT-013', 'name': 'Ava Thomas', 'age': 41, 'gender': 'Female', 'lastVisit': '2025-08-20', 'doctor': 'Dr. Wilson', 'condition': 'High Blood Pressure', 'reason': 'Routine check-up'},
+  {'id': 'PAT-014', 'name': 'Isabella White', 'age': 26, 'gender': 'Female', 'lastVisit': '2025-08-20', 'doctor': 'Dr. Miller', 'condition': 'Sore Throat', 'reason': 'Initial visit'},
+  {'id': 'PAT-015', 'name': 'Mason Harris', 'age': 55, 'gender': 'Male', 'lastVisit': '2025-08-21', 'doctor': 'Dr. Johnson', 'condition': 'Arthritis', 'reason': 'Follow-up'},
+  {'id': 'PAT-016', 'name': 'Mia Clark', 'age': 33, 'gender': 'Female', 'lastVisit': '2025-08-21', 'doctor': 'Dr. Wilson', 'condition': 'Cough', 'reason': 'Initial visit'},
+  {'id': 'PAT-017', 'name': 'Ethan Lewis', 'age': 27, 'gender': 'Male', 'lastVisit': '2025-08-22', 'doctor': 'Dr. Miller', 'condition': 'Allergies', 'reason': 'New medication'},
+  {'id': 'PAT-018', 'name': 'Abigail Robinson', 'age': 39, 'gender': 'Female', 'lastVisit': '2025-08-22', 'doctor': 'Dr. Harper', 'condition': 'Hypothyroidism', 'reason': 'Follow-up'},
+  {'id': 'PAT-019', 'name': 'Michael Walker', 'age': 48, 'gender': 'Male', 'lastVisit': '2025-08-23', 'doctor': 'Dr. Johnson', 'condition': 'Back Pain', 'reason': 'Consultation'},
+  {'id': 'PAT-020', 'name': 'Emily Hall', 'age': 31, 'gender': 'Female', 'lastVisit': '2025-08-23', 'doctor': 'Dr. Miller', 'condition': 'Tinnitus', 'reason': 'Follow-up'},
+  {'id': 'PAT-021', 'name': 'Daniel Lee', 'age': 55, 'gender': 'Male', 'lastVisit': '2025-08-24', 'doctor': 'Dr. Harper', 'condition': 'Heart Disease', 'reason': 'Annual check-up'},
+  {'id': 'PAT-022', 'name': 'Chloe King', 'age': 25, 'gender': 'Female', 'lastVisit': '2025-08-24', 'doctor': 'Dr. Johnson', 'condition': 'Celiac Disease', 'reason': 'Follow-up'},
+  {'id': 'PAT-023', 'name': 'Samuel Green', 'age': 42, 'gender': 'Male', 'lastVisit': '2025-08-25', 'doctor': 'Dr. Wilson', 'condition': 'Arthritis', 'reason': 'New treatment'},
+  {'id': 'PAT-024', 'name': 'Zoe Scott', 'age': 29, 'gender': 'Female', 'lastVisit': '2025-08-25', 'doctor': 'Dr. Harper', 'condition': 'Pneumonia', 'reason': 'Initial visit'},
+  {'id': 'PAT-025', 'name': 'Matthew Adams', 'age': 36, 'gender': 'Male', 'lastVisit': '2025-08-26', 'doctor': 'Dr. Miller', 'condition': 'Kidney Stones', 'reason': 'Consultation'},
 ];
 
-// --- Main Patients Screen Widget ---
 class PatientsScreen extends StatefulWidget {
   const PatientsScreen({super.key});
 
@@ -71,295 +80,196 @@ class PatientsScreen extends StatefulWidget {
   State<PatientsScreen> createState() => _PatientsScreenState();
 }
 
-class _PatientsScreenState extends State<PatientsScreen> with SingleTickerProviderStateMixin {
-  late Future<List<Patient>> _patientsFuture;
+class _PatientsScreenState extends State<PatientsScreen> {
+  List<Patient> _allPatients = [];
+  bool _isLoading = true;
   String _searchQuery = '';
-  late AnimationController _animationController;
-  late Animation<double> _fadeAnimation;
+  int _currentPage = 0;
+  String _doctorFilter = 'All';
 
   @override
   void initState() {
     super.initState();
-    _patientsFuture = _fetchPatients();
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 500),
-    );
-    _fadeAnimation = CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
+    _fetchPatients();
+  }
+
+  Future<void> _fetchPatients() async {
+    setState(() {
+      _isLoading = true;
+    });
+    await Future.delayed(const Duration(milliseconds: 700));
+    final fetchedData = _patientsApiData.map((m) => Patient.fromMap(m)).toList();
+    setState(() {
+      _allPatients = fetchedData;
+      _isLoading = false;
+    });
+  }
+
+  Future<void> _onAddPressed() async {
+    setState(() => _isLoading = true);
+    await Future.delayed(const Duration(milliseconds: 600));
+    setState(() => _isLoading = false);
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Open Add Patient (demo)')));
+  }
+
+  void _onSearchChanged(String q) {
+    setState(() {
+      _searchQuery = q;
+      _currentPage = 0;
+    });
+  }
+
+  void _nextPage() => setState(() => _currentPage++);
+  void _prevPage() { if (_currentPage > 0) setState(() => _currentPage--); }
+
+  void _onView(int index, List<Patient> list) {
+    final patient = list[index];
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Viewing details for ${patient.name}")),
     );
   }
 
-  @override
-  void dispose() {
-    _animationController.dispose();
-    super.dispose();
+  void _onEdit(int index, List<Patient> list) {
+    final patient = list[index];
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Editing ${patient.name}")),
+    );
   }
 
-  Future<List<Patient>> _fetchPatients() async {
-    await Future.delayed(const Duration(seconds: 2));
-    _animationController.forward();
-    return _patientsApiData.map((data) => Patient.fromMap(data)).toList();
+  Future<void> _onDelete(int index, List<Patient> list) async {
+    final patient = list[index];
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Entry'),
+        content: Text('Delete ${patient.name}?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete', style: TextStyle(color: Colors.red))),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    setState(() => _isLoading = true);
+    await Future.delayed(const Duration(milliseconds: 600));
+
+    // Find the original data map and remove it from the list
+    _patientsApiData.removeWhere((item) => item['id'] == patient.id);
+
+    // Refresh the UI by removing from the in-memory list
+    _allPatients.removeWhere((p) => p.id == patient.id);
+
+    setState(() {
+      _isLoading = false;
+      // Reset page to 0 if the current page is no longer valid
+      final filteredItems = _getFilteredPatients();
+      if (_currentPage * 10 >= filteredItems.length && _currentPage > 0) {
+        _currentPage = 0;
+      }
+    });
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Deleted ${patient.name} (demo)')));
+  }
+
+  // Method to get the filtered list of patients
+  List<Patient> _getFilteredPatients() {
+    return _allPatients.where((p) {
+      final q = _searchQuery.trim().toLowerCase();
+      final matchesSearch = p.name.toLowerCase().contains(q) || p.id.toLowerCase().contains(q);
+      final matchesFilter = _doctorFilter == 'All' || p.doctor == _doctorFilter;
+      return matchesSearch && matchesFilter;
+    }).toList();
+  }
+
+  Widget _genderIcon(String gender) {
+    String imagePath;
+    if (gender.toLowerCase() == 'male') {
+      imagePath = 'assets/boyicon.png';
+    } else {
+      imagePath = 'assets/girlicon.png';
+    }
+    return SizedBox(
+      width: 24,
+      height: 24,
+      child: Image.asset(imagePath),
+    );
+  }
+
+  // New filter widget for patient status using an icon button
+  Widget _buildDoctorFilter() {
+    final doctors = {'All', ..._patientsApiData.map((s) => s['doctor'] as String).toSet()};
+    return PopupMenuButton<String>(
+      icon: const Icon(Icons.filter_list),
+      onSelected: (String newValue) {
+        setState(() {
+          _doctorFilter = newValue;
+          _currentPage = 0;
+        });
+      },
+      itemBuilder: (BuildContext context) {
+        return doctors.map((String value) {
+          return PopupMenuItem<String>(
+            value: value,
+            child: Text(value, style: GoogleFonts.inter()),
+          );
+        }).toList();
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: backgroundColor,
-      body: FutureBuilder<List<Patient>>(
-        future: _patientsFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: primaryColor));
-          } else if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          } else if (snapshot.hasData) {
-            return FadeTransition(
-              opacity: _fadeAnimation,
-              child: _buildPatientsContent(context, snapshot.data!),
-            );
-          } else {
-            return const Center(child: Text('No patients found.'));
-          }
-        },
-      ),
-    );
-  }
+    final filtered = _getFilteredPatients();
 
-  Widget _buildPatientsContent(BuildContext context, List<Patient> patients) {
-    final filteredPatients = patients
-        .where((p) =>
-    p.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-        p.id.toLowerCase().contains(_searchQuery.toLowerCase()))
-        .toList();
+    final startIndex = _currentPage * 10;
+    final endIndex = (startIndex + 10).clamp(0, filtered.length);
+    final paginatedPatients = startIndex >= filtered.length
+        ? <Patient>[]
+        : filtered.sublist(startIndex, endIndex);
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(32.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Patient Management',
-                style: GoogleFonts.poppins(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: textPrimaryColor,
-                ),
-              ),
-              ElevatedButton.icon(
-                onPressed: () {},
-                icon: const Icon(Icons.add, size: 20),
-                label: Text('Add Patient', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: primaryColor,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                  elevation: 2,
-                  shadowColor: primaryColor.withOpacity(0.4),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          TextField(
-            onChanged: (value) => setState(() => _searchQuery = value),
-            decoration: InputDecoration(
-              hintText: 'Search by patient name or ID',
-              hintStyle: GoogleFonts.poppins(color: textSecondaryColor),
-              prefixIcon: const Icon(Icons.search, color: textSecondaryColor),
-              filled: true,
-              fillColor: Colors.grey[50],
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
-              contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-            ),
-          ),
-          const SizedBox(height: 24),
-          _buildPatientsTable(context, filteredPatients),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPatientsTable(BuildContext context, List<Patient> patients) {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: cardBackgroundColor,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
-          )
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: DataTable(
-          headingRowColor: MaterialStateProperty.all(Colors.grey[50]),
-          headingTextStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: textSecondaryColor),
-          dataTextStyle: GoogleFonts.poppins(color: textPrimaryColor),
-          columnSpacing: 20,
-          dataRowHeight: 64,
-          columns: const [
-            DataColumn(label: Text('PATIENT ID')),
-            DataColumn(label: Text('NAME')),
-            DataColumn(label: Text('AGE')),
-            DataColumn(label: Text('GENDER')),
-            DataColumn(label: Text('LAST VISIT')),
-            DataColumn(label: Center(child: Text('STATUS'))),
-            DataColumn(label: Center(child: Text('ACTIONS'))),
+    // Prepare headers and rows for the generic table
+    final headers = const ['NAME', 'AGE', 'GENDER', 'LAST VISIT', 'DOCTOR', 'CONDITION'];
+    final rows = paginatedPatients.map((p) {
+      return [
+        Row(
+          children: [
+            _genderIcon(p.gender),
+            const SizedBox(width: 8),
+            Text(p.name, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: textPrimaryColor)),
           ],
-          rows: patients.map((p) => _buildDataRow(context, p)).toList(),
         ),
-      ),
-    );
-  }
+        Text(p.age.toString(), style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: textPrimaryColor)),
+        Text(p.gender, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: textPrimaryColor)),
+        Text(p.lastVisit, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: textPrimaryColor)),
+        Text(p.doctor, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: textPrimaryColor)),
+        Text(p.condition, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: textPrimaryColor)),
+      ];
+    }).toList();
 
-  DataRow _buildDataRow(BuildContext context, Patient patient) {
-    return DataRow(
-      cells: [
-        DataCell(Text(patient.id)),
-        DataCell(Text(patient.name, style: GoogleFonts.poppins(fontWeight: FontWeight.w500))),
-        DataCell(Text(patient.age.toString())),
-        DataCell(Text(patient.gender)),
-        DataCell(Text(patient.lastVisit)),
-        DataCell(
-          Center(
-            child: Chip(
-              label: Text(patient.status),
-              backgroundColor: patient.status == 'Active' ? const Color(0xFFD1FAE5) : const Color(0xFFFEE2E2),
-              labelStyle: GoogleFonts.poppins(
-                color: patient.status == 'Active' ? const Color(0xFF065F46) : const Color(0xFF991B1B),
-                fontWeight: FontWeight.w600,
-              ),
-              side: BorderSide.none,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            ),
-          ),
-        ),
-        DataCell(
-          Center(
-            child: TextButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => PatientDetailScreen(patient: patient),
-                  ),
-                );
-              },
-              child: Text(
-                'View Details',
-                style: GoogleFonts.poppins(
-                  color: primaryColor,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// --- Patient Detail Screen ---
-class PatientDetailScreen extends StatelessWidget {
-  final Patient patient;
-
-  const PatientDetailScreen({super.key, required this.patient});
-
-  @override
-  Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: backgroundColor,
-      appBar: AppBar(
-        title: Text('Patient Details', style: GoogleFonts.poppins(color: textPrimaryColor)),
-        backgroundColor: cardBackgroundColor,
-        elevation: 1,
-        iconTheme: const IconThemeData(color: textPrimaryColor),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(32.0),
-        child: Container(
-          padding: const EdgeInsets.all(32.0),
-          decoration: BoxDecoration(
-            color: cardBackgroundColor,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 15,
-                offset: const Offset(0, 5),
-              )
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                patient.name,
-                style: GoogleFonts.poppins(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: textPrimaryColor,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Chip(
-                label: Text(patient.status),
-                backgroundColor: patient.status == 'Active' ? const Color(0xFFD1FAE5) : const Color(0xFFFEE2E2),
-                labelStyle: GoogleFonts.poppins(
-                  color: patient.status == 'Active' ? const Color(0xFF065F46) : const Color(0xFF991B1B),
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 24),
-              const Divider(),
-              const SizedBox(height: 24),
-              _buildDetailRow('Patient ID', patient.id),
-              _buildDetailRow('Age', '${patient.age} years'),
-              _buildDetailRow('Gender', patient.gender),
-              _buildDetailRow('Last Visit', patient.lastVisit),
-            ],
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
+          child: GenericDataTable(
+            title: "Patients",
+            headers: headers,
+            rows: rows,
+            searchQuery: _searchQuery,
+            onSearchChanged: _onSearchChanged,
+            currentPage: _currentPage,
+            totalItems: filtered.length,
+            itemsPerPage: 10,
+            onPreviousPage: _prevPage,
+            onNextPage: _nextPage,
+            isLoading: _isLoading,
+            onAddPressed: _onAddPressed,
+            filters: [_buildDoctorFilter()],
+            hideHorizontalScrollbar: true,
+            // Pass action callbacks to show the action buttons
+            onView: (i) => _onView(i, paginatedPatients),
+            onEdit: (i) => _onEdit(i, paginatedPatients),
+            onDelete: (i) => _onDelete(i, paginatedPatients),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildDetailRow(String title, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            title,
-            style: GoogleFonts.poppins(
-              fontSize: 16,
-              color: textSecondaryColor,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          Text(
-            value,
-            style: GoogleFonts.poppins(
-              fontSize: 16,
-              color: textPrimaryColor,
-            ),
-          ),
-        ],
       ),
     );
   }

@@ -1,6 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+// Import our new generic table
+// Adjust these imports to your project
+import '../../Models/Staff.dart';
+import '../../Utils/Colors.dart';
+import 'widget/generic_data_table.dart';
+// ---------------------------------------------------------------------
+
 // --- App Theme Colors ---
 const Color primaryColor = Color(0xFFEF4444);
 const Color primaryColorLight = Color(0xFFFEE2E2);
@@ -17,6 +24,8 @@ class Appointment {
   final String date;
   final String time;
   final String status;
+  final String gender;
+  final String reason;
 
   Appointment({
     required this.id,
@@ -25,6 +34,8 @@ class Appointment {
     required this.date,
     required this.time,
     required this.status,
+    required this.gender,
+    required this.reason,
   });
 
   factory Appointment.fromMap(Map<String, dynamic> map) {
@@ -35,35 +46,36 @@ class Appointment {
       date: map['date'],
       time: map['time'],
       status: map['status'],
+      gender: map['gender'],
+      reason: map['reason'],
     );
   }
 }
 
 // --- Simulated API Data ---
 const List<Map<String, dynamic>> _appointmentsApiData = [
-  {'id': 'APT-001', 'patientName': 'Arthur', 'doctor': 'Dr. John', 'date': '2025-08-14', 'time': '9:30 AM', 'status': 'Completed'},
-  {'id': 'APT-002', 'patientName': 'John Philips', 'doctor': 'Dr. Joel', 'date': '2025-08-14', 'time': '10:00 AM', 'status': 'Completed'},
-  {'id': 'APT-003', 'patientName': 'Regina', 'doctor': 'Dr. Joel', 'date': '2025-08-15', 'time': '10:30 AM', 'status': 'Pending'},
-  {'id': 'APT-004', 'patientName': 'David', 'doctor': 'Dr. John', 'date': '2025-08-15', 'time': '11:00 AM', 'status': 'Cancelled'},
-  {'id': 'APT-005', 'patientName': 'Joseph', 'doctor': 'Dr. John', 'date': '2025-08-16', 'time': '11:30 AM', 'status': 'Pending'},
-  {'id': 'APT-006', 'patientName': 'Lokesh', 'doctor': 'Dr. Amelia', 'date': '2025-08-16', 'time': '12:00 PM', 'status': 'Completed'},
-  {'id': 'APT-007', 'patientName': 'Sophia Miller', 'doctor': 'Dr. Evelyn', 'date': '2025-08-17', 'time': '9:00 AM', 'status': 'Pending'},
-  {'id': 'APT-008', 'patientName': 'James Wilson', 'doctor': 'Dr. John', 'date': '2025-08-17', 'time': '9:30 AM', 'status': 'Completed'},
-  {'id': 'APT-009', 'patientName': 'Olivia Garcia', 'doctor': 'Dr. Amelia', 'date': '2025-08-18', 'time': '10:00 AM', 'status': 'Pending'},
-  {'id': 'APT-010', 'patientName': 'Liam Martinez', 'doctor': 'Dr. Joel', 'date': '2025-08-18', 'time': '10:30 AM', 'status': 'Cancelled'},
-  {'id': 'APT-011', 'patientName': 'Emma Anderson', 'doctor': 'Dr. Evelyn', 'date': '2025-08-19', 'time': '11:00 AM', 'status': 'Completed'},
-  {'id': 'APT-012', 'patientName': 'Noah Taylor', 'doctor': 'Dr. John', 'date': '2025-08-19', 'time': '11:30 AM', 'status': 'Pending'},
-  {'id': 'APT-013', 'patientName': 'Ava Thomas', 'doctor': 'Dr. Amelia', 'date': '2025-08-20', 'time': '1:00 PM', 'status': 'Completed'},
-  {'id': 'APT-014', 'patientName': 'Isabella White', 'doctor': 'Dr. Joel', 'date': '2025-08-20', 'time': '1:30 PM', 'status': 'Pending'},
-  {'id': 'APT-015', 'patientName': 'Mason Harris', 'doctor': 'Dr. Evelyn', 'date': '2025-08-21', 'time': '2:00 PM', 'status': 'Completed'},
-  {'id': 'APT-016', 'patientName': 'Mia Clark', 'doctor': 'Dr. John', 'date': '2025-08-21', 'time': '2:30 PM', 'status': 'Cancelled'},
-  {'id': 'APT-017', 'patientName': 'Ethan Lewis', 'doctor': 'Dr. Amelia', 'date': '2025-08-22', 'time': '3:00 PM', 'status': 'Pending'},
-  {'id': 'APT-018', 'patientName': 'Abigail Robinson', 'doctor': 'Dr. Joel', 'date': '2025-08-22', 'time': '3:30 PM', 'status': 'Completed'},
-  {'id': 'APT-019', 'patientName': 'Michael Walker', 'doctor': 'Dr. John', 'date': '2025-08-23', 'time': '4:00 PM', 'status': 'Pending'},
-  {'id': 'APT-020', 'patientName': 'Emily Hall', 'doctor': 'Dr. Evelyn', 'date': '2025-08-23', 'time': '4:30 PM', 'status': 'Completed'},
+  {'id': 'APT-001', 'patientName': 'Arthur', 'gender': 'Male', 'doctor': 'Dr. John', 'date': '2025-08-14', 'time': '9:30 AM', 'status': 'Completed', 'reason': 'General Checkup'},
+  {'id': 'APT-002', 'patientName': 'John Philips', 'gender': 'Male', 'doctor': 'Dr. Joel', 'date': '2025-08-14', 'time': '10:00 AM', 'status': 'Completed', 'reason': 'Follow-up Consultation'},
+  {'id': 'APT-003', 'patientName': 'Regina', 'gender': 'Female', 'doctor': 'Dr. Joel', 'date': '2025-08-15', 'time': '10:30 AM', 'status': 'Pending', 'reason': 'Sickness'},
+  {'id': 'APT-004', 'patientName': 'David', 'gender': 'Male', 'doctor': 'Dr. John', 'date': '2025-08-15', 'time': '11:00 AM', 'status': 'Cancelled', 'reason': 'Injury Evaluation'},
+  {'id': 'APT-005', 'patientName': 'Joseph', 'gender': 'Male', 'doctor': 'Dr. John', 'date': '2025-08-16', 'time': '11:30 AM', 'status': 'Pending', 'reason': 'General Checkup'},
+  {'id': 'APT-006', 'patientName': 'Lokesh', 'gender': 'Male', 'doctor': 'Dr. Amelia', 'date': '2025-08-16', 'time': '12:00 PM', 'status': 'Completed', 'reason': 'Medical Report Review'},
+  {'id': 'APT-007', 'patientName': 'Sophia Miller', 'gender': 'Female', 'doctor': 'Dr. Evelyn', 'date': '2025-08-17', 'time': '9:00 AM', 'status': 'Pending', 'reason': 'Sickness'},
+  {'id': 'APT-008', 'patientName': 'James Wilson', 'gender': 'Male', 'doctor': 'Dr. John', 'date': '2025-08-17', 'time': '9:30 AM', 'status': 'Completed', 'reason': 'Vaccination'},
+  {'id': 'APT-009', 'patientName': 'Olivia Garcia', 'gender': 'Female', 'doctor': 'Dr. Amelia', 'date': '2025-08-18', 'time': '10:00 AM', 'status': 'Pending', 'reason': 'General Checkup'},
+  {'id': 'APT-010', 'patientName': 'Liam Martinez', 'gender': 'Male', 'doctor': 'Dr. Joel', 'date': '2025-08-18', 'time': '10:30 AM', 'status': 'Cancelled', 'reason': 'Injury Evaluation'},
+  {'id': 'APT-011', 'patientName': 'Emma Anderson', 'gender': 'Female', 'doctor': 'Dr. Evelyn', 'date': '2025-08-19', 'time': '11:00 AM', 'status': 'Completed', 'reason': 'Follow-up Consultation'},
+  {'id': 'APT-012', 'patientName': 'Noah Taylor', 'gender': 'Male', 'doctor': 'Dr. John', 'date': '2025-08-19', 'time': '11:30 AM', 'status': 'Pending', 'reason': 'Sickness'},
+  {'id': 'APT-013', 'patientName': 'Ava Thomas', 'gender': 'Female', 'doctor': 'Dr. Amelia', 'date': '2025-08-20', 'time': '1:00 PM', 'status': 'Completed', 'reason': 'General Checkup'},
+  {'id': 'APT-014', 'patientName': 'Isabella White', 'gender': 'Female', 'doctor': 'Dr. Joel', 'date': '2025-08-20', 'time': '1:30 PM', 'status': 'Pending', 'reason': 'Medical Report Review'},
+  {'id': 'APT-015', 'patientName': 'Mason Harris', 'gender': 'Male', 'doctor': 'Dr. Evelyn', 'date': '2025-08-21', 'time': '2:00 PM', 'status': 'Completed', 'reason': 'Sickness'},
+  {'id': 'APT-016', 'patientName': 'Mia Clark', 'gender': 'Female', 'doctor': 'Dr. John', 'date': '2025-08-21', 'time': '2:30 PM', 'status': 'Cancelled', 'reason': 'Injury Evaluation'},
+  {'id': 'APT-017', 'patientName': 'Ethan Lewis', 'gender': 'Male', 'doctor': 'Dr. Amelia', 'date': '2025-08-22', 'time': '3:00 PM', 'status': 'Pending', 'reason': 'General Checkup'},
+  {'id': 'APT-018', 'patientName': 'Abigail Robinson', 'gender': 'Female', 'doctor': 'Dr. Joel', 'date': '2025-08-22', 'time': '3:30 PM', 'status': 'Completed', 'reason': 'Follow-up Consultation'},
+  {'id': 'APT-019', 'patientName': 'Michael Walker', 'gender': 'Male', 'doctor': 'Dr. John', 'date': '2025-08-23', 'time': '4:00 PM', 'status': 'Pending', 'reason': 'Sickness'},
+  {'id': 'APT-020', 'patientName': 'Emily Hall', 'gender': 'Female', 'doctor': 'Dr. Evelyn', 'date': '2025-08-23', 'time': '4:30 PM', 'status': 'Completed', 'reason': 'Vaccination'},
 ];
 
-// --- Main Appointments Screen Widget ---
 class AppointmentsScreen extends StatefulWidget {
   const AppointmentsScreen({super.key});
 
@@ -71,215 +83,228 @@ class AppointmentsScreen extends StatefulWidget {
   State<AppointmentsScreen> createState() => _AppointmentsScreenState();
 }
 
-class _AppointmentsScreenState extends State<AppointmentsScreen> with SingleTickerProviderStateMixin {
-  late Future<List<Appointment>> _appointmentsFuture;
+class _AppointmentsScreenState extends State<AppointmentsScreen> {
+  List<Appointment> _allAppointments = [];
+  bool _isLoading = true;
   String _searchQuery = '';
-  late AnimationController _animationController;
-  late Animation<double> _fadeAnimation;
+  int _currentPage = 0;
+  String _doctorFilter = 'All';
 
   @override
   void initState() {
     super.initState();
-    _appointmentsFuture = _fetchAppointments();
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 500),
-    );
-    _fadeAnimation = CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
+    _fetchAppointments();
+  }
+
+  Future<void> _fetchAppointments() async {
+    setState(() {
+      _isLoading = true;
+    });
+    await Future.delayed(const Duration(milliseconds: 700));
+    final fetchedData = _appointmentsApiData.map((m) => Appointment.fromMap(m)).toList();
+    setState(() {
+      _allAppointments = fetchedData;
+      _isLoading = false;
+    });
+  }
+
+  Future<void> _onAddPressed() async {
+    setState(() => _isLoading = true);
+    await Future.delayed(const Duration(milliseconds: 600));
+    setState(() => _isLoading = false);
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Open Add Appointment (demo)')));
+  }
+
+  void _onSearchChanged(String q) {
+    setState(() {
+      _searchQuery = q;
+      _currentPage = 0;
+    });
+  }
+
+  void _nextPage() => setState(() => _currentPage++);
+  void _prevPage() { if (_currentPage > 0) setState(() => _currentPage--); }
+
+  void _onView(int index, List<Appointment> list) {
+    final appointment = list[index];
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Viewing appointment for ${appointment.patientName}")),
     );
   }
 
-  @override
-  void dispose() {
-    _animationController.dispose();
-    super.dispose();
+  void _onEdit(int index, List<Appointment> list) {
+    final appointment = list[index];
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Editing appointment for ${appointment.patientName}")),
+    );
   }
 
-  Future<List<Appointment>> _fetchAppointments() async {
-    await Future.delayed(const Duration(seconds: 2));
-    _animationController.forward();
-    return _appointmentsApiData.map((data) => Appointment.fromMap(data)).toList();
+  Future<void> _onDelete(int index, List<Appointment> list) async {
+    final appointment = list[index];
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Entry'),
+        content: Text('Delete appointment for ${appointment.patientName}?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete', style: TextStyle(color: Colors.red))),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    setState(() => _isLoading = true);
+    await Future.delayed(const Duration(milliseconds: 600));
+
+    // Find the original data map and remove it from the list
+    _appointmentsApiData.removeWhere((item) => item['id'] == appointment.id);
+
+    // Refresh the UI by removing from the in-memory list
+    _allAppointments.removeWhere((a) => a.id == appointment.id);
+
+    setState(() {
+      _isLoading = false;
+      final filteredItems = _getFilteredAppointments();
+      if (_currentPage * 10 >= filteredItems.length && _currentPage > 0) {
+        _currentPage = 0;
+      }
+    });
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Deleted appointment for ${appointment.patientName} (demo)')));
+  }
+
+  // Method to get the filtered list of appointments
+  List<Appointment> _getFilteredAppointments() {
+    return _allAppointments.where((a) {
+      final q = _searchQuery.trim().toLowerCase();
+      final matchesSearch = a.patientName.toLowerCase().contains(q) || a.id.toLowerCase().contains(q) || a.doctor.toLowerCase().contains(q);
+      final matchesFilter = _doctorFilter == 'All' || a.doctor == _doctorFilter;
+      return matchesSearch && matchesFilter;
+    }).toList();
+  }
+
+  Widget _statusChip(String status) {
+    Color bg;
+    Color fg;
+
+    switch (status) {
+      case 'Completed':
+        bg = Colors.green.withOpacity(0.12);
+        fg = Colors.green;
+        break;
+      case 'Pending':
+        bg = Colors.orange.withOpacity(0.12);
+        fg = Colors.orange;
+        break;
+      case 'Cancelled':
+        bg = Colors.red.withOpacity(0.12);
+        fg = Colors.red;
+        break;
+      default:
+        bg = Colors.grey.withOpacity(0.12);
+        fg = Colors.grey;
+        break;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        status,
+        style: GoogleFonts.inter(
+          fontWeight: FontWeight.w600,
+          fontSize: 13,
+          color: fg,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDoctorFilter() {
+    final doctors = {'All', ..._appointmentsApiData.map((s) => s['doctor'] as String).toSet()};
+    return PopupMenuButton<String>(
+      icon: const Icon(Icons.filter_list),
+      onSelected: (String newValue) {
+        setState(() {
+          _doctorFilter = newValue;
+          _currentPage = 0;
+        });
+      },
+      itemBuilder: (BuildContext context) {
+        return doctors.map((String value) {
+          return PopupMenuItem<String>(
+            value: value,
+            child: Text(value, style: GoogleFonts.inter()),
+          );
+        }).toList();
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: backgroundColor,
-      body: FutureBuilder<List<Appointment>>(
-        future: _appointmentsFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: primaryColor));
-          } else if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          } else if (snapshot.hasData) {
-            return FadeTransition(
-              opacity: _fadeAnimation,
-              child: _buildAppointmentsContent(context, snapshot.data!),
-            );
-          } else {
-            return const Center(child: Text('No appointments found.'));
-          }
-        },
-      ),
-    );
-  }
+    final filtered = _getFilteredAppointments();
 
-  Widget _buildAppointmentsContent(BuildContext context, List<Appointment> appointments) {
-    final filteredAppointments = appointments
-        .where((a) =>
-    a.patientName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-        a.doctor.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-        a.id.toLowerCase().contains(_searchQuery.toLowerCase()))
-        .toList();
+    final startIndex = _currentPage * 10;
+    final endIndex = (startIndex + 10).clamp(0, filtered.length);
+    final paginatedAppointments = startIndex >= filtered.length
+        ? <Appointment>[]
+        : filtered.sublist(startIndex, endIndex);
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(32.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Appointments',
-                style: GoogleFonts.poppins(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: textPrimaryColor,
-                ),
-              ),
-              ElevatedButton.icon(
-                onPressed: () {},
-                icon: const Icon(Icons.add, size: 20),
-                label: Text('Add Appointment', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: primaryColor,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                  elevation: 2,
-                  shadowColor: primaryColor.withOpacity(0.4),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          TextField(
-            onChanged: (value) => setState(() => _searchQuery = value),
-            decoration: InputDecoration(
-              hintText: 'Search by patient, doctor, or ID',
-              hintStyle: GoogleFonts.poppins(color: textSecondaryColor),
-              prefixIcon: const Icon(Icons.search, color: textSecondaryColor),
-              filled: true,
-              fillColor: Colors.grey[50],
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
-              contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+    // Prepare headers and rows for the generic table
+    final headers = const ['PATIENT NAME', 'DOCTOR NAME', 'DATE', 'TIME', 'REASON', 'STATUS'];
+    final rows = paginatedAppointments.map((a) {
+      return [
+        // Custom widget for patient name with icon
+        Row(
+          children: [
+            Image.asset(
+              a.gender.toLowerCase() == 'male' ? 'assets/boyicon.png' : 'assets/girlicon.png',
+              height: 24,
+              width: 24,
             ),
-          ),
-          const SizedBox(height: 24),
-          _buildAppointmentsTable(context, filteredAppointments),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAppointmentsTable(BuildContext context, List<Appointment> appointments) {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: cardBackgroundColor,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
-          )
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: DataTable(
-          headingRowColor: MaterialStateProperty.all(Colors.grey[50]),
-          headingTextStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: textSecondaryColor),
-          dataTextStyle: GoogleFonts.poppins(color: textPrimaryColor),
-          columnSpacing: 20,
-          dataRowHeight: 64,
-          columns: const [
-            DataColumn(label: Text('APPOINTMENT ID')),
-            DataColumn(label: Text('PATIENT')),
-            DataColumn(label: Text('DOCTOR')),
-            DataColumn(label: Text('DATE')),
-            DataColumn(label: Text('TIME')),
-            DataColumn(label: Center(child: Text('STATUS'))),
-            DataColumn(label: Center(child: Text('ACTIONS'))),
+            const SizedBox(width: 8),
+            Text(
+              a.patientName,
+              style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: textPrimaryColor),
+            ),
           ],
-          rows: appointments.map((a) => _buildDataRow(a)).toList(),
+        ),
+        Text(a.doctor, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: textPrimaryColor)),
+        Text(a.date, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: textPrimaryColor)),
+        Text(a.time, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: textPrimaryColor)),
+        Text(a.reason, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: textPrimaryColor)),
+        _statusChip(a.status),
+      ];
+    }).toList();
+
+    return Scaffold(
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
+          child: GenericDataTable(
+            title: "Appointments",
+            headers: headers,
+            rows: rows,
+            searchQuery: _searchQuery,
+            onSearchChanged: _onSearchChanged,
+            currentPage: _currentPage,
+            totalItems: filtered.length,
+            itemsPerPage: 10,
+            onPreviousPage: _prevPage,
+            onNextPage: _nextPage,
+            isLoading: _isLoading,
+            onAddPressed: _onAddPressed,
+            filters: [_buildDoctorFilter()],
+            hideHorizontalScrollbar: true,
+            onView: (i) => _onView(i, paginatedAppointments),
+            onEdit: (i) => _onEdit(i, paginatedAppointments),
+            onDelete: (i) => _onDelete(i, paginatedAppointments),
+          ),
         ),
       ),
-    );
-  }
-
-  DataRow _buildDataRow(Appointment appointment) {
-    Color statusColor;
-    Color statusBackgroundColor;
-
-    switch (appointment.status) {
-      case 'Completed':
-        statusColor = const Color(0xFF065F46);
-        statusBackgroundColor = const Color(0xFFD1FAE5);
-        break;
-      case 'Pending':
-        statusColor = const Color(0xFF92400E);
-        statusBackgroundColor = const Color(0xFFFEF3C7);
-        break;
-      case 'Cancelled':
-        statusColor = const Color(0xFF991B1B);
-        statusBackgroundColor = const Color(0xFFFEE2E2);
-        break;
-      default:
-        statusColor = textSecondaryColor;
-        statusBackgroundColor = Colors.grey.shade200;
-    }
-
-    return DataRow(
-      cells: [
-        DataCell(Text(appointment.id)),
-        DataCell(Text(appointment.patientName, style: GoogleFonts.poppins(fontWeight: FontWeight.w500))),
-        DataCell(Text(appointment.doctor)),
-        DataCell(Text(appointment.date)),
-        DataCell(Text(appointment.time)),
-        DataCell(
-          Center(
-            child: Chip(
-              label: Text(appointment.status),
-              backgroundColor: statusBackgroundColor,
-              labelStyle: GoogleFonts.poppins(
-                color: statusColor,
-                fontWeight: FontWeight.w600,
-              ),
-              side: BorderSide.none,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            ),
-          ),
-        ),
-        DataCell(
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              IconButton(icon: const Icon(Icons.visibility_rounded), onPressed: () {}, color: textSecondaryColor, tooltip: 'View Details'),
-              IconButton(icon: const Icon(Icons.edit_rounded), onPressed: () {}, color: textSecondaryColor, tooltip: 'Edit'),
-              IconButton(icon: const Icon(Icons.delete_rounded), onPressed: () {}, color: textSecondaryColor, tooltip: 'Delete'),
-            ],
-          ),
-        ),
-      ],
     );
   }
 }

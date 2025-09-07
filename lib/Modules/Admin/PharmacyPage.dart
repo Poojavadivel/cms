@@ -1,6 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+// Import our new generic table
+// Adjust these imports to your project
+import '../../Models/Staff.dart';
+import '../../Utils/Colors.dart';
+import 'widget/generic_data_table.dart';
+// ---------------------------------------------------------------------
+
 // --- App Theme Colors ---
 const Color primaryColor = Color(0xFFEF4444);
 const Color primaryColorLight = Color(0xFFFEE2E2);
@@ -58,9 +65,13 @@ const List<Map<String, dynamic>> _pharmacyApiData = [
   {'id': 'MED-018', 'name': 'Levothyroxine', 'brand': 'Sun Pharma', 'stock': 5, 'status': 'Low Stock'},
   {'id': 'MED-019', 'name': 'Rosuvastatin', 'brand': 'Dr. Reddy\'s', 'stock': 130, 'status': 'In Stock'},
   {'id': 'MED-020', 'name': 'Zolpidem', 'brand': 'Lupin', 'stock': 40, 'status': 'In Stock'},
+  {'id': 'MED-021', 'name': 'Lisinopril', 'brand': 'Cipla', 'stock': 95, 'status': 'In Stock'},
+  {'id': 'MED-022', 'name': 'Ranitidine', 'brand': 'Sun Pharma', 'stock': 12, 'status': 'Low Stock'},
+  {'id': 'MED-023', 'name': 'Cetirizine', 'brand': 'Dr. Reddy\'s', 'stock': 0, 'status': 'Out of Stock'},
+  {'id': 'MED-024', 'name': 'Metoprolol', 'brand': 'Lupin', 'stock': 88, 'status': 'In Stock'},
+  {'id': 'MED-025', 'name': 'Pantoprazole', 'brand': 'Cipla', 'stock': 15, 'status': 'Low Stock'},
 ];
 
-// --- Main Pharmacy Screen Widget ---
 class PharmacyScreen extends StatefulWidget {
   const PharmacyScreen({super.key});
 
@@ -68,332 +79,212 @@ class PharmacyScreen extends StatefulWidget {
   State<PharmacyScreen> createState() => _PharmacyScreenState();
 }
 
-class _PharmacyScreenState extends State<PharmacyScreen> with SingleTickerProviderStateMixin {
-  late Future<List<Medicine>> _medicinesFuture;
+class _PharmacyScreenState extends State<PharmacyScreen> {
+  List<Medicine> _allMedicines = [];
+  bool _isLoading = true;
   String _searchQuery = '';
-  late AnimationController _animationController;
-  late Animation<double> _fadeAnimation;
+  int _currentPage = 0;
+  String _statusFilter = 'All';
 
   @override
   void initState() {
     super.initState();
-    _medicinesFuture = _fetchMedicines();
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 500),
-    );
-    _fadeAnimation = CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
-    );
+    _fetchMedicines();
   }
 
-  @override
-  void dispose() {
-    _animationController.dispose();
-    super.dispose();
+  Future<void> _fetchMedicines() async {
+    setState(() {
+      _isLoading = true;
+    });
+    await Future.delayed(const Duration(milliseconds: 700));
+    final fetchedData = _pharmacyApiData.map((m) => Medicine.fromMap(m)).toList();
+    setState(() {
+      _allMedicines = fetchedData;
+      _isLoading = false;
+    });
   }
 
-  Future<List<Medicine>> _fetchMedicines() async {
-    await Future.delayed(const Duration(seconds: 2));
-    _animationController.forward();
-    return _pharmacyApiData.map((data) => Medicine.fromMap(data)).toList();
+  Future<void> _onAddPressed() async {
+    setState(() => _isLoading = true);
+    await Future.delayed(const Duration(milliseconds: 600));
+    setState(() => _isLoading = false);
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Open Add Medicine (demo)')));
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: backgroundColor,
-      body: FutureBuilder<List<Medicine>>(
-        future: _medicinesFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: primaryColor));
-          } else if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          } else if (snapshot.hasData) {
-            return FadeTransition(
-              opacity: _fadeAnimation,
-              child: _buildPharmacyContent(context, snapshot.data!),
-            );
-          } else {
-            return const Center(child: Text('No medicines found.'));
-          }
-        },
-      ),
+  void _onSearchChanged(String q) {
+    setState(() {
+      _searchQuery = q;
+      _currentPage = 0;
+    });
+  }
+
+  void _nextPage() => setState(() => _currentPage++);
+  void _prevPage() { if (_currentPage > 0) setState(() => _currentPage--); }
+
+  void _onView(int index, List<Medicine> list) {
+    final medicine = list[index];
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Viewing details for ${medicine.name}")),
     );
   }
 
-  Widget _buildPharmacyContent(BuildContext context, List<Medicine> medicines) {
-    final filteredMedicines = medicines
-        .where((m) =>
-    m.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-        m.brand.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-        m.id.toLowerCase().contains(_searchQuery.toLowerCase()))
-        .toList();
+  void _onEdit(int index, List<Medicine> list) {
+    final medicine = list[index];
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Editing ${medicine.name}")),
+    );
+  }
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(32.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Pharmacy Inventory',
-                style: GoogleFonts.poppins(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: textPrimaryColor,
-                ),
-              ),
-              ElevatedButton.icon(
-                onPressed: () {},
-                icon: const Icon(Icons.add, size: 20),
-                label: Text('Add Medicine', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: primaryColor,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                  elevation: 2,
-                  shadowColor: primaryColor.withOpacity(0.4),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          TextField(
-            onChanged: (value) => setState(() => _searchQuery = value),
-            decoration: InputDecoration(
-              hintText: 'Search by name, brand, or ID',
-              hintStyle: GoogleFonts.poppins(color: textSecondaryColor),
-              prefixIcon: const Icon(Icons.search, color: textSecondaryColor),
-              filled: true,
-              fillColor: Colors.grey[50],
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
-              contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-            ),
-          ),
-          const SizedBox(height: 24),
-          _buildMedicinesTable(context, filteredMedicines),
+  Future<void> _onDelete(int index, List<Medicine> list) async {
+    final medicine = list[index];
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Entry'),
+        content: Text('Delete ${medicine.name}?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete', style: TextStyle(color: Colors.red))),
         ],
       ),
     );
+    if (confirm != true) return;
+    setState(() => _isLoading = true);
+    await Future.delayed(const Duration(milliseconds: 600));
+
+    // Find the original data map and remove it from the list
+    _pharmacyApiData.removeWhere((item) => item['id'] == medicine.id);
+
+    // Refresh the UI by removing from the in-memory list
+    _allMedicines.removeWhere((m) => m.id == medicine.id);
+
+    setState(() {
+      _isLoading = false;
+      final filteredItems = _getFilteredMedicines();
+      if (_currentPage * 10 >= filteredItems.length && _currentPage > 0) {
+        _currentPage = 0;
+      }
+    });
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Deleted ${medicine.name} (demo)')));
   }
 
-  Widget _buildMedicinesTable(BuildContext context, List<Medicine> medicines) {
+  // Method to get the filtered list of medicines
+  List<Medicine> _getFilteredMedicines() {
+    return _allMedicines.where((m) {
+      final q = _searchQuery.trim().toLowerCase();
+      final matchesSearch = m.name.toLowerCase().contains(q) || m.id.toLowerCase().contains(q) || m.brand.toLowerCase().contains(q);
+      final matchesFilter = _statusFilter == 'All' || m.status == _statusFilter;
+      return matchesSearch && matchesFilter;
+    }).toList();
+  }
+
+  Widget _statusChip(String status) {
+    Color bg;
+    Color fg;
+
+    switch (status) {
+      case 'In Stock':
+        bg = const Color(0xFFD1FAE5);
+        fg = const Color(0xFF065F46);
+        break;
+      case 'Low Stock':
+        bg = const Color(0xFFFEF3C7);
+        fg = const Color(0xFF92400E);
+        break;
+      case 'Out of Stock':
+        bg = const Color(0xFFFEE2E2);
+        fg = const Color(0xFF991B1B);
+        break;
+      default:
+        bg = Colors.grey.withOpacity(0.12);
+        fg = Colors.grey;
+        break;
+    }
+
     return Container(
-      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: cardBackgroundColor,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
-          )
-        ],
+        color: bg,
+        borderRadius: BorderRadius.circular(999),
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: DataTable(
-          headingRowColor: MaterialStateProperty.all(Colors.grey[50]),
-          headingTextStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: textSecondaryColor),
-          dataTextStyle: GoogleFonts.poppins(color: textPrimaryColor),
-          columnSpacing: 20,
-          dataRowHeight: 64,
-          columns: const [
-            DataColumn(label: Text('MEDICINE ID')),
-            DataColumn(label: Text('NAME')),
-            DataColumn(label: Text('BRAND')),
-            DataColumn(label: Text('STOCK')),
-            DataColumn(label: Center(child: Text('STATUS'))),
-            DataColumn(label: Center(child: Text('ACTIONS'))),
-          ],
-          rows: medicines.map((m) => _buildDataRow(context, m)).toList(),
+      child: Text(
+        status,
+        style: GoogleFonts.inter(
+          fontWeight: FontWeight.w600,
+          fontSize: 13,
+          color: fg,
         ),
       ),
     );
   }
 
-  DataRow _buildDataRow(BuildContext context, Medicine medicine) {
-    return DataRow(
-      cells: [
-        DataCell(Text(medicine.id)),
-        DataCell(Text(medicine.name, style: GoogleFonts.poppins(fontWeight: FontWeight.w500))),
-        DataCell(Text(medicine.brand)),
-        DataCell(Text(medicine.stock.toString())),
-        DataCell(
-          Center(
-            child: Chip(
-              label: Text(medicine.status),
-              backgroundColor: medicine.status == 'In Stock'
-                  ? const Color(0xFFD1FAE5)
-                  : medicine.status == 'Low Stock'
-                  ? const Color(0xFFFEF3C7)
-                  : const Color(0xFFFEE2E2),
-              labelStyle: GoogleFonts.poppins(
-                color: medicine.status == 'In Stock'
-                    ? const Color(0xFF065F46)
-                    : medicine.status == 'Low Stock'
-                    ? const Color(0xFF92400E)
-                    : const Color(0xFF991B1B),
-                fontWeight: FontWeight.w600,
-              ),
-              side: BorderSide.none,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            ),
-          ),
-        ),
-        DataCell(
-          Center(
-            child: TextButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => MedicineDetailScreen(medicine: medicine),
-                  ),
-                );
-              },
-              child: Text(
-                'View Details',
-                style: GoogleFonts.poppins(
-                  color: primaryColor,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
+  Widget _buildStatusFilter() {
+    final statuses = {'All', ..._pharmacyApiData.map((s) => s['status'] as String).toSet()};
+    return PopupMenuButton<String>(
+      icon: const Icon(Icons.filter_list),
+      onSelected: (String newValue) {
+        setState(() {
+          _statusFilter = newValue;
+          _currentPage = 0;
+        });
+      },
+      itemBuilder: (BuildContext context) {
+        return statuses.map((String value) {
+          return PopupMenuItem<String>(
+            value: value,
+            child: Text(value, style: GoogleFonts.inter()),
+          );
+        }).toList();
+      },
     );
   }
-}
-
-// --- Medicine Detail Screen ---
-class MedicineDetailScreen extends StatelessWidget {
-  final Medicine medicine;
-
-  const MedicineDetailScreen({super.key, required this.medicine});
 
   @override
   Widget build(BuildContext context) {
+    final filtered = _getFilteredMedicines();
+
+    final startIndex = _currentPage * 10;
+    final endIndex = (startIndex + 10).clamp(0, filtered.length);
+    final paginatedMedicines = startIndex >= filtered.length
+        ? <Medicine>[]
+        : filtered.sublist(startIndex, endIndex);
+
+    // Prepare headers and rows for the generic table
+    final headers = const ['MEDICINE ID', 'NAME', 'BRAND', 'STOCK', 'STATUS'];
+    final rows = paginatedMedicines.map((m) {
+      return [
+        Text(m.id, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: textPrimaryColor)),
+        Text(m.name, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: textPrimaryColor)),
+        Text(m.brand, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: textPrimaryColor)),
+        Text(m.stock.toString(), style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: textPrimaryColor)),
+        _statusChip(m.status),
+      ];
+    }).toList();
+
     return Scaffold(
-      backgroundColor: backgroundColor,
-      appBar: AppBar(
-        title: Text('Medicine Details', style: GoogleFonts.poppins(color: textPrimaryColor)),
-        backgroundColor: cardBackgroundColor,
-        elevation: 1,
-        iconTheme: const IconThemeData(color: textPrimaryColor),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(32.0),
-        child: Container(
-          padding: const EdgeInsets.all(32.0),
-          decoration: BoxDecoration(
-            color: cardBackgroundColor,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 15,
-                offset: const Offset(0, 5),
-              )
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    medicine.name,
-                    style: GoogleFonts.poppins(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: textPrimaryColor,
-                    ),
-                  ),
-                  Chip(
-                    label: Text(medicine.status),
-                    backgroundColor: medicine.status == 'In Stock'
-                        ? const Color(0xFFD1FAE5)
-                        : medicine.status == 'Low Stock'
-                        ? const Color(0xFFFEF3C7)
-                        : const Color(0xFFFEE2E2),
-                    labelStyle: GoogleFonts.poppins(
-                      color: medicine.status == 'In Stock'
-                          ? const Color(0xFF065F46)
-                          : medicine.status == 'Low Stock'
-                          ? const Color(0xFF92400E)
-                          : const Color(0xFF991B1B),
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              const Divider(),
-              const SizedBox(height: 24),
-              _buildDetailRow('Medicine ID', medicine.id),
-              _buildDetailRow('Brand', medicine.brand),
-              _buildDetailRow('Stock', medicine.stock.toString()),
-              _buildDetailRow('Last Updated', '2025-08-24'),
-              const SizedBox(height: 24),
-              Text(
-                'Description',
-                style: GoogleFonts.poppins(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: textPrimaryColor,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'A common pain reliever and fever reducer. Used to treat many conditions such as headache, muscle aches, arthritis, backache, toothaches, colds, and fevers.',
-                style: GoogleFonts.poppins(
-                  fontSize: 16,
-                  color: textSecondaryColor,
-                  height: 1.5,
-                ),
-              ),
-            ],
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
+          child: GenericDataTable(
+            title: "Pharmacy Inventory",
+            headers: headers,
+            rows: rows,
+            searchQuery: _searchQuery,
+            onSearchChanged: _onSearchChanged,
+            currentPage: _currentPage,
+            totalItems: filtered.length,
+            itemsPerPage: 10,
+            onPreviousPage: _prevPage,
+            onNextPage: _nextPage,
+            isLoading: _isLoading,
+            onAddPressed: _onAddPressed,
+            filters: [_buildStatusFilter()],
+            hideHorizontalScrollbar: true,
+            onView: (i) => _onView(i, paginatedMedicines),
+            onEdit: (i) => _onEdit(i, paginatedMedicines),
+            onDelete: (i) => _onDelete(i, paginatedMedicines),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildDetailRow(String title, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            title,
-            style: GoogleFonts.poppins(
-              fontSize: 16,
-              color: textSecondaryColor,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          Text(
-            value,
-            style: GoogleFonts.poppins(
-              fontSize: 16,
-              color: textPrimaryColor,
-            ),
-          ),
-        ],
       ),
     );
   }
