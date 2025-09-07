@@ -1,59 +1,42 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-// --- App Theme Colors ---
-const Color primaryColor = Color(0xFFEF4444);
-const Color primaryColorLight = Color(0xFFFEE2E2);
-const Color backgroundColor = Color(0xFFF8FAFC);
-const Color cardBackgroundColor = Color(0xFFFFFFFF);
-const Color textPrimaryColor = Color(0xFF1F2937);
-const Color textSecondaryColor = Color(0xFF6B7280);
+// Import our new generic table
+// Adjust these imports to your project
+import '../../Models/Staff.dart';
+import '../../Utils/Colors.dart';
+import 'widget/generic_data_table.dart';
+// ---------------------------------------------------------------------
 
-// --- Data Models ---
-class Staff {
-  final String id;
-  final String name;
-  final String designation;
-  final String department;
-  final String contact;
-  final String status;
-
-  Staff({
-    required this.id,
-    required this.name,
-    required this.designation,
-    required this.department,
-    required this.contact,
-    required this.status,
-  });
-
-  factory Staff.fromMap(Map<String, dynamic> map) {
-    return Staff(
-      id: map['id'],
-      name: map['name'],
-      designation: map['designation'],
-      department: map['department'],
-      contact: map['contact'],
-      status: map['status'],
-    );
-  }
-}
-
-// --- Simulated API Data ---
-const List<Map<String, dynamic>> _staffApiData = [
+// Dummy staff data (your sample)
+List<Map<String, dynamic>> _staffApiData = [
   {'id': 'DOC102', 'name': 'Dr. Amelia Harper', 'designation': 'Cardiologist', 'department': 'Cardiology', 'contact': '+1-555-123-4567', 'status': 'Available'},
   {'id': 'NUR534', 'name': 'Nurse Ethan Bennett', 'designation': 'Nurse', 'department': 'Orthopedics', 'contact': '+1-555-987-6543', 'status': 'On Leave'},
   {'id': 'LAB789', 'name': 'Liam Carter', 'designation': 'Lab Technician', 'department': 'Pathology', 'contact': '+1-555-246-8013', 'status': 'Available'},
   {'id': 'ADM456', 'name': 'Sophia Clark', 'designation': 'Admin Staff', 'department': 'General', 'contact': '+1-555-135-7912', 'status': 'Off Duty'},
   {'id': 'PHM210', 'name': 'Ava Morgan', 'designation': 'Pharmacist', 'department': 'Pharmacy', 'contact': '+1-555-369-2580', 'status': 'Available'},
-  {'id': 'DOC102', 'name': 'Dr. Amelia Harper', 'designation': 'Cardiologist', 'department': 'Cardiology', 'contact': '+1-555-123-4567', 'status': 'Available'},
-  {'id': 'NUR534', 'name': 'Nurse Ethan Bennett', 'designation': 'Nurse', 'department': 'Orthopedics', 'contact': '+1-555-987-6543', 'status': 'On Leave'},
-  {'id': 'LAB789', 'name': 'Liam Carter', 'designation': 'Lab Technician', 'department': 'Pathology', 'contact': '+1-555-246-8013', 'status': 'Available'},
-  {'id': 'ADM456', 'name': 'Sophia Clark', 'designation': 'Admin Staff', 'department': 'General', 'contact': '+1-555-135-7912', 'status': 'Off Duty'},
-  {'id': 'PHM210', 'name': 'Ava Morgan', 'designation': 'Pharmacist', 'department': 'Pharmacy', 'contact': '+1-555-369-2580', 'status': 'Available'},
+  {'id': 'DOC103', 'name': 'Dr. Ben Johnson', 'designation': 'Neurologist', 'department': 'Neurology', 'contact': '+1-555-123-4568', 'status': 'Available'},
+  {'id': 'NUR535', 'name': 'Nurse Emily White', 'designation': 'Nurse', 'department': 'Pediatrics', 'contact': '+1-555-987-6544', 'status': 'On Leave'},
+  {'id': 'LAB790', 'name': 'Noah Brown', 'designation': 'Lab Technician', 'department': 'Pathology', 'contact': '+1-555-246-8014', 'status': 'Available'},
+  {'id': 'ADM457', 'name': 'Olivia Green', 'designation': 'Admin Staff', 'department': 'General', 'contact': '+1-555-135-7913', 'status': 'Off Duty'},
+  {'id': 'PHM211', 'name': 'William Davis', 'designation': 'Pharmacist', 'department': 'Pharmacy', 'contact': '+1-555-369-2581', 'status': 'Available'},
+  {'id': 'DOC104', 'name': 'Dr. Clara Miller', 'designation': 'Psychiatrist', 'department': 'Psychiatry', 'contact': '+1-555-123-4569', 'status': 'On Leave'},
+  {'id': 'NUR536', 'name': 'Nurse James Wilson', 'designation': 'Nurse', 'department': 'General', 'contact': '+1-555-987-6545', 'status': 'Available'},
+  {'id': 'DOC105', 'name': 'Dr. Adam Lee', 'designation': 'Orthopedist', 'department': 'Orthopedics', 'contact': '+1-555-123-4570', 'status': 'Available'},
+  {'id': 'NUR537', 'name': 'Nurse Grace Hall', 'designation': 'Nurse', 'department': 'Dermatology', 'contact': '+1-555-987-6546', 'status': 'On Leave'},
+  {'id': 'LAB791', 'name': 'Charlotte King', 'designation': 'Lab Technician', 'department': 'Pathology', 'contact': '+1-555-246-8015', 'status': 'Available'},
+  {'id': 'ADM458', 'name': 'Daniel Scott', 'designation': 'Admin Staff', 'department': 'General', 'contact': '+1-555-135-7914', 'status': 'Off Duty'},
+  {'id': 'PHM212', 'name': 'Chloe Baker', 'designation': 'Pharmacist', 'department': 'Pharmacy', 'contact': '+1-555-369-2582', 'status': 'Available'},
+  {'id': 'DOC106', 'name': 'Dr. Lucas Adams', 'designation': 'Pediatrician', 'department': 'Pediatrics', 'contact': '+1-555-123-4571', 'status': 'Available'},
+  {'id': 'NUR538', 'name': 'Nurse Mia Rogers', 'designation': 'Nurse', 'department': 'Cardiology', 'contact': '+1-555-987-6547', 'status': 'On Leave'},
+  {'id': 'LAB792', 'name': 'Henry Foster', 'designation': 'Lab Technician', 'department': 'Pathology', 'contact': '+1-555-246-8016', 'status': 'Available'},
+  {'id': 'ADM459', 'name': 'Lily Evans', 'designation': 'Admin Staff', 'department': 'General', 'contact': '+1-555-135-7915', 'status': 'Off Duty'},
+  {'id': 'PHM213', 'name': 'Noah Clark', 'designation': 'Pharmacist', 'department': 'Pharmacy', 'contact': '+1-555-369-2583', 'status': 'Available'},
+  {'id': 'DOC107', 'name': 'Dr. Zoe Wilson', 'designation': 'Radiologist', 'department': 'Radiology', 'contact': '+1-555-123-4572', 'status': 'Available'},
+  {'id': 'NUR539', 'name': 'Nurse Oliver King', 'designation': 'Nurse', 'department': 'Orthopedics', 'contact': '+1-555-987-6548', 'status': 'On Leave'},
+  {'id': 'LAB793', 'name': 'Penelope White', 'designation': 'Lab Technician', 'department': 'Pathology', 'contact': '+1-555-246-8017', 'status': 'Available'},
 ];
 
-// --- Main Staff Screen Widget ---
 class StaffScreen extends StatefulWidget {
   const StaffScreen({super.key});
 
@@ -61,211 +44,201 @@ class StaffScreen extends StatefulWidget {
   State<StaffScreen> createState() => _StaffScreenState();
 }
 
-class _StaffScreenState extends State<StaffScreen> with SingleTickerProviderStateMixin {
-  late Future<List<Staff>> _staffFuture;
+class _StaffScreenState extends State<StaffScreen> {
+  List<Staff> _allStaff = [];
+  bool _isLoading = true;
   String _searchQuery = '';
-  late AnimationController _animationController;
-  late Animation<double> _fadeAnimation;
+  int _currentPage = 0;
+  String _departmentFilter = 'All';
 
   @override
   void initState() {
     super.initState();
-    _staffFuture = _fetchStaff();
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 500),
-    );
-    _fadeAnimation = CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
+    _fetchStaff();
+  }
+
+  Future<void> _fetchStaff() async {
+    setState(() {
+      _isLoading = true;
+    });
+    await Future.delayed(const Duration(milliseconds: 700));
+    final fetchedData = _staffApiData.map((m) => Staff.fromMap(m)).toList();
+    setState(() {
+      _allStaff = fetchedData;
+      _isLoading = false;
+    });
+  }
+
+  // Callbacks passed to GenericDataTable
+  Future<void> _onAddPressed() async {
+    setState(() => _isLoading = true);
+    await Future.delayed(const Duration(milliseconds: 600));
+    setState(() => _isLoading = false);
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Open Add Staff (demo)')));
+  }
+
+  void _onSearchChanged(String q) {
+    setState(() {
+      _searchQuery = q;
+      _currentPage = 0;
+    });
+  }
+
+  void _nextPage() => setState(() => _currentPage++);
+  void _prevPage() { if (_currentPage > 0) setState(() => _currentPage--); }
+
+  void _onView(int index, List<Staff> list) {
+    final staffMember = list[index];
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Viewing details for ${staffMember.name}")),
     );
   }
 
-  @override
-  void dispose() {
-    _animationController.dispose();
-    super.dispose();
+  void _onEdit(int index, List<Staff> list) {
+    final staffMember = list[index];
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Editing ${staffMember.name}")),
+    );
   }
 
-  Future<List<Staff>> _fetchStaff() async {
-    await Future.delayed(const Duration(seconds: 2));
-    _animationController.forward();
-    return _staffApiData.map((data) => Staff.fromMap(data)).toList();
+  Future<void> _onDelete(int index, List<Staff> list) async {
+    final staffMember = list[index];
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Entry'),
+        content: Text('Delete ${staffMember.name}?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete', style: TextStyle(color: Colors.red))),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    setState(() => _isLoading = true);
+    await Future.delayed(const Duration(milliseconds: 600));
+
+    // Find the original data map and remove it from the list
+    _staffApiData.removeWhere((item) => item['id'] == staffMember.id);
+
+    // Refresh the UI by fetching the new list
+    _allStaff.removeWhere((staff) => staff.id == staffMember.id);
+
+    setState(() {
+      _isLoading = false;
+      // Reset page to 0 if the current page is no longer valid
+      final filteredItems = _getFilteredStaff();
+      if (_currentPage * 10 >= filteredItems.length && _currentPage > 0) {
+        _currentPage = 0;
+      }
+    });
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Deleted ${staffMember.name} (demo)')));
   }
+
+  // Method to get the filtered list of staff
+  List<Staff> _getFilteredStaff() {
+    return _allStaff.where((s) {
+      final q = _searchQuery.trim().toLowerCase();
+      final matchesSearch = s.name.toLowerCase().contains(q) || s.id.toLowerCase().contains(q) || s.department.toLowerCase().contains(q);
+      final matchesFilter = _departmentFilter == 'All' || s.department == _departmentFilter;
+      return matchesSearch && matchesFilter;
+    }).toList();
+  }
+
+  Widget _statusChip(String status) {
+    final isAvailable = status.toLowerCase() == 'available';
+    final bg = isAvailable ? Colors.green.withOpacity(0.12) : AppColors.primary600.withOpacity(0.12);
+    final fg = isAvailable ? Colors.green : AppColors.primary600;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        status,
+        style: GoogleFonts.inter(
+          fontWeight: FontWeight.w600,
+          fontSize: 13,
+          color: fg,
+        ),
+      ),
+    );
+  }
+
+  // New filter widget for departments using an icon button
+  Widget _buildDepartmentFilter() {
+    final departments = {'All', ..._staffApiData.map((s) => s['department'] as String).toSet()};
+    return PopupMenuButton<String>(
+      icon: const Icon(Icons.filter_list),
+      onSelected: (String newValue) {
+        setState(() {
+          _departmentFilter = newValue;
+          _currentPage = 0;
+        });
+      },
+      itemBuilder: (BuildContext context) {
+        return departments.map((String value) {
+          return PopupMenuItem<String>(
+            value: value,
+            child: Text(value, style: GoogleFonts.inter()),
+          );
+        }).toList();
+      },
+    );
+  }
+
 
   @override
   Widget build(BuildContext context) {
+    final filtered = _getFilteredStaff();
+
+    final startIndex = _currentPage * 10;
+    final endIndex = (startIndex + 10).clamp(0, filtered.length);
+    final paginatedStaff = startIndex >= filtered.length
+        ? <Staff>[]
+        : filtered.sublist(startIndex, endIndex);
+
+    // Prepare headers and rows for the generic table
+    final headers = const ['STAFF ID', 'STAFF NAME', 'DESIGNATION', 'DEPARTMENT', 'CONTACT', 'STATUS'];
+    final rows = paginatedStaff.map((s) {
+      return [
+        Text(s.id, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: textPrimaryColor)),
+        Text(s.name, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: textPrimaryColor)),
+        Text(s.designation, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: textPrimaryColor)),
+        Text(s.department, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: textPrimaryColor)),
+        Text(s.contact, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: textPrimaryColor)),
+        _statusChip(s.status),
+      ];
+    }).toList();
+
     return Scaffold(
-      backgroundColor: backgroundColor,
-      body: FutureBuilder<List<Staff>>(
-        future: _staffFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: primaryColor));
-          } else if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          } else if (snapshot.hasData) {
-            return FadeTransition(
-              opacity: _fadeAnimation,
-              child: _buildStaffContent(context, snapshot.data!),
-            );
-          } else {
-            return const Center(child: Text('No staff found.'));
-          }
-        },
-      ),
-    );
-  }
-
-  Widget _buildStaffContent(BuildContext context, List<Staff> staff) {
-    final filteredStaff = staff
-        .where((s) =>
-    s.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-        s.id.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-        s.department.toLowerCase().contains(_searchQuery.toLowerCase()))
-        .toList();
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(32.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Staff Management',
-                style: GoogleFonts.poppins(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: textPrimaryColor,
-                ),
-              ),
-              ElevatedButton.icon(
-                onPressed: () {},
-                icon: const Icon(Icons.add, size: 20),
-                label: Text('Add Staff', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: primaryColor,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                  elevation: 2,
-                  shadowColor: primaryColor.withOpacity(0.4),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          TextField(
-            onChanged: (value) => setState(() => _searchQuery = value),
-            decoration: InputDecoration(
-              hintText: 'Search by name, ID, or department',
-              hintStyle: GoogleFonts.poppins(color: textSecondaryColor),
-              prefixIcon: const Icon(Icons.search, color: textSecondaryColor),
-              filled: true,
-              fillColor: Colors.grey[50],
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
-              contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-            ),
-          ),
-          const SizedBox(height: 24),
-          _buildStaffTable(context, filteredStaff),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStaffTable(BuildContext context, List<Staff> staff) {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: cardBackgroundColor,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
-          )
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: DataTable(
-          headingRowColor: MaterialStateProperty.all(Colors.grey[50]),
-          headingTextStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: textSecondaryColor),
-          dataTextStyle: GoogleFonts.poppins(color: textPrimaryColor),
-          columnSpacing: 20,
-          dataRowHeight: 64,
-          columns: const [
-            DataColumn(label: Text('STAFF ID')),
-            DataColumn(label: Text('NAME')),
-            DataColumn(label: Text('DESIGNATION')),
-            DataColumn(label: Text('DEPARTMENT')),
-            DataColumn(label: Text('CONTACT')),
-            DataColumn(label: Center(child: Text('STATUS'))),
-            DataColumn(label: Center(child: Text('ACTIONS'))),
-          ],
-          rows: staff.map((s) => _buildDataRow(s)).toList(),
-        ),
-      ),
-    );
-  }
-
-  DataRow _buildDataRow(Staff staff) {
-    Color statusColor;
-    Color statusBackgroundColor;
-
-    switch (staff.status) {
-      case 'Available':
-        statusColor = const Color(0xFF065F46);
-        statusBackgroundColor = const Color(0xFFD1FAE5);
-        break;
-      case 'On Leave':
-        statusColor = const Color(0xFF92400E);
-        statusBackgroundColor = const Color(0xFFFEF3C7);
-        break;
-      default:
-        statusColor = textSecondaryColor;
-        statusBackgroundColor = Colors.grey.shade200;
-    }
-
-    return DataRow(
-      cells: [
-        DataCell(Text(staff.id)),
-        DataCell(Text(staff.name, style: GoogleFonts.poppins(fontWeight: FontWeight.w500))),
-        DataCell(Text(staff.designation)),
-        DataCell(Text(staff.department)),
-        DataCell(Text(staff.contact)),
-        DataCell(
-          Center(
-            child: Chip(
-              label: Text(staff.status),
-              backgroundColor: statusBackgroundColor,
-              labelStyle: GoogleFonts.poppins(
-                color: statusColor,
-                fontWeight: FontWeight.w600,
-              ),
-              side: BorderSide.none,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            ),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
+          child: GenericDataTable(
+            title: "Staff",
+            headers: headers,
+            rows: rows,
+            searchQuery: _searchQuery,
+            onSearchChanged: _onSearchChanged,
+            currentPage: _currentPage,
+            totalItems: filtered.length,
+            itemsPerPage: 10,
+            onPreviousPage: _prevPage,
+            onNextPage: _nextPage,
+            isLoading: _isLoading,
+            onAddPressed: _onAddPressed,
+            filters: [_buildDepartmentFilter()],
+            hideHorizontalScrollbar: true,
+            // Pass action callbacks to show the action buttons
+            onView: (i) => _onView(i, paginatedStaff),
+            onEdit: (i) => _onEdit(i, paginatedStaff),
+            onDelete: (i) => _onDelete(i, paginatedStaff),
           ),
         ),
-        DataCell(
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              IconButton(icon: const Icon(Icons.visibility_rounded), onPressed: () {}, color: textSecondaryColor, tooltip: 'View Details'),
-              IconButton(icon: const Icon(Icons.edit_rounded), onPressed: () {}, color: textSecondaryColor, tooltip: 'Edit'),
-              IconButton(icon: const Icon(Icons.delete_rounded), onPressed: () {}, color: textSecondaryColor, tooltip: 'Delete'),
-            ],
-          ),
-        ),
-      ],
+      ),
     );
   }
 }
