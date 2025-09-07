@@ -13,6 +13,8 @@ dependencies:
   cupertino_icons: ^1.0.8
   flutter_typeahead: ^5.2.0
   data_table_2: ^2.5.7
+  fl_chart: ^0.68.0
+  table_calendar: ^3.1.2
   http: ^1.4.0
   flutter_riverpod: ^2.5.1
   provider: ^6.1.5

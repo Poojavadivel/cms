@@ -1,323 +1,324 @@
+// dashboard_page.dart
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
+import 'package:shimmer/shimmer.dart';
+import 'package:fl_chart/fl_chart.dart';
+import 'package:table_calendar/table_calendar.dart';
 import 'dart:math' as math;
 
-// --- App Theme Colors ---
-const Color primaryColor = Color(0xFFEF4444);
-const Color primaryColorLight = Color(0xFFFEE2E2);
-const Color backgroundColor = Color(0xFFF8FAFC);
-const Color cardBackgroundColor = Color(0xFFFFFFFF);
-const Color textPrimaryColor = Color(0xFF1F2937);
-const Color textSecondaryColor = Color(0xFF6B7280);
 
-// --- Simulated API Data ---
-// This represents the raw JSON data you would get from an API call.
-const List<Map<String, dynamic>> _apiData = [
-  {'patientName': 'Arthur', 'patientImage': 'A', 'date': '12 May, 2023', 'time': '9:30 AM', 'doctor': 'Dr. John', 'reason': 'Fever', 'isCompleted': true},
-  {'patientName': 'John Philips', 'patientImage': 'JP', 'date': '12 May, 2023', 'time': '9:30 AM', 'doctor': 'Dr. Joel', 'reason': 'Injury', 'isCompleted': true},
-  {'patientName': 'Regina', 'patientImage': 'R', 'date': '11 May, 2023', 'time': '10:30 AM', 'doctor': 'Dr. Joel', 'reason': 'Knee Pain', 'isCompleted': true},
-  {'patientName': 'David', 'patientImage': 'D', 'date': '11 May, 2023', 'time': '11:00 AM', 'doctor': 'Dr. John', 'reason': 'Fever', 'isCompleted': true},
-  {'patientName': 'Joseph', 'patientImage': 'J', 'date': '10 May, 2023', 'time': '11:30 AM', 'doctor': 'Dr. John', 'reason': 'Throat pain', 'isCompleted': true},
-  {'patientName': 'Lokesh', 'patientImage': 'L', 'date': '10 May, 2023', 'time': '11:00 AM', 'doctor': 'Dr. John', 'reason': 'Cold', 'isCompleted': true},
-  {'patientName': 'Kanagaraj', 'patientImage': 'K', 'date': '09 May, 2023', 'time': '11:00 AM', 'doctor': 'Dr. John', 'reason': 'Cold', 'isCompleted': false},
-];
+/// THEME
+const _kBg = Color(0xFFF8FAFC);
+const _kCard = Colors.white;
+const _kTextPrimary = Color(0xFF1E293B);
+const _kTextSecondary = Color(0xFF64748B);
+const _kSuccess = Color(0xFF22C55E);
+const _kDanger = Color(0xFFEF4444);
+const _kInfo = Color(0xFF3B82F6);
+const _kMuted = Color(0xFFE2E8F0);
+const _kCFBlue = Color.fromRGBO(52, 67, 204, 1); // #3443CC
 
 
-// --- Data Models ---
-class Appointment {
-  final String patientName;
-  final String patientImage; // Can be a URL or an initial
-  final String date;
-  final String time;
-  final String doctor;
-  final String reason;
-  final bool isCompleted;
-
-  Appointment({
-    required this.patientName,
-    required this.patientImage,
-    required this.date,
-    required this.time,
-    required this.doctor,
-    required this.reason,
-    required this.isCompleted,
-  });
-
-  // Factory constructor to create an Appointment from a map (simulating JSON parsing)
-  factory Appointment.fromMap(Map<String, dynamic> map) {
-    return Appointment(
-      patientName: map['patientName'],
-      patientImage: map['patientImage'],
-      date: map['date'],
-      time: map['time'],
-      doctor: map['doctor'],
-      reason: map['reason'],
-      isCompleted: map['isCompleted'],
-    );
-  }
-}
-
-// --- Main Dashboard Widget ---
-class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key});
+class DashboardPage extends StatefulWidget {
+  const DashboardPage({super.key});
 
   @override
-  State<DashboardScreen> createState() => _DashboardScreenState();
+  State<DashboardPage> createState() => _DashboardPageState();
 }
 
-class _DashboardScreenState extends State<DashboardScreen> {
-  late Future<List<Appointment>> _appointmentsFuture;
-  String _searchQuery = '';
+class _DashboardPageState extends State<DashboardPage> {
+  late Future<Map<String, dynamic>> _futureData;
+  int _revenueTab = 0;
+  DateTime? _selectedDay;
+  String _selectedAppointmentFilter = 'All';
+  DateTime _focusedDay = DateTime.now();
+
+  // State field for selected quick filter
+  String _selectedReportFilter = 'All';
+  final List<String> _filters = [
+    "All",
+    "Consultation",
+    "Surgery",
+    "Meetings",
+    "Training",
+    "Audits"
+  ];
+
 
   @override
   void initState() {
     super.initState();
-    _appointmentsFuture = _fetchAppointments();
+    _futureData = _loadDashboardData();
+    _selectedDay = _focusedDay;
   }
 
-  // Simulates fetching and parsing data from an API
-  Future<List<Appointment>> _fetchAppointments() async {
-    // Simulate a network delay
-    await Future.delayed(const Duration(seconds: 2));
-    // Parse the raw data into a list of Appointment objects
-    return _apiData.map((data) => Appointment.fromMap(data)).toList();
+  Future<Map<String, dynamic>> _loadDashboardData() async {
+    await Future.delayed(const Duration(seconds: 2)); // simulate API
+    return {
+      "invoice": 1287,
+      "patients": 965,
+      "appointments": 128,
+      "beds": 315,
+    };
   }
+  final Map<DateTime, List<Map<String, dynamic>>> _events = {
+    // keys use DateTime(year, month, day) for exact-day match
+    DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day): [
+      {"title": "Morning Staff Meeting", "time": "08:00 - 09:00", "color": Colors.teal},
+      {"title": "Patient Consultation - General Medicine", "time": "10:00 - 12:00", "color": Colors.blue},
+      {"title": "Surgery - Orthopedics", "time": "13:00 - 15:00", "color": Colors.red},
+      {"title": "Training Session", "time": "16:00 - 17:00", "color": Colors.purple},
+    ],
+    // sample previous day
+    DateTime.now().subtract(const Duration(days: 1)).toLocal(): [
+      {"title": "Inventory Audit", "time": "11:00 - 11:45", "color": Colors.orange},
+    ],
+  };
 
-
+// helper to get events for a day (normalizes date)
+  List<Map<String, dynamic>> _getEventsForDay(DateTime day) {
+    final key = DateTime(day.year, day.month, day.day);
+    return _events[key] ?? [];
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: backgroundColor,
-      body: FutureBuilder<List<Appointment>>(
-        future: _appointmentsFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: primaryColor));
-          } else if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          } else if (snapshot.hasData) {
-            final appointments = snapshot.data!;
-            return _buildDashboardContent(context, appointments);
-          } else {
-            return const Center(child: Text('No appointments found.'));
-          }
-        },
+      backgroundColor: _kBg,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: FutureBuilder<Map<String, dynamic>>(
+            future: _futureData,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return _buildSkeleton();
+              } else if (snapshot.hasError) {
+                return Center(child: Text("Error: ${snapshot.error}"));
+              } else if (snapshot.hasData) {
+                return _buildDashboard(snapshot.data!);
+              }
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
       ),
     );
   }
 
-  // Builds the main content of the dashboard once data is loaded
-  Widget _buildDashboardContent(BuildContext context, List<Appointment> appointments) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(32.0),
+  /// Skeleton Loader
+  Widget _buildSkeleton() {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey.shade200,
+      highlightColor: Colors.grey.shade100,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildHeader(),
-          const SizedBox(height: 32),
-          _buildSummaryCards(context),
-          const SizedBox(height: 32),
-          _buildAppointmentsTable(context, appointments),
+          Container(height: 40, width: 200, color: Colors.white),
+          const SizedBox(height: 16),
+          Row(
+            children: List.generate(
+              4,
+                  (i) =>
+                  Expanded(
+                    child: Container(
+                      height: 80,
+                      margin: EdgeInsets.only(right: i < 3 ? 12 : 0),
+                      color: Colors.white,
+                    ),
+                  ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Expanded(child: Container(color: Colors.white)),
         ],
       ),
     );
   }
 
-  // --- WIDGET BUILDER METHODS ---
-
-  Widget _buildHeader() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  /// Full Dashboard Layout
+  Widget _buildDashboard(Map<String, dynamic> data) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Dashboard',
-          style: GoogleFonts.poppins(
-            fontSize: 32,
-            fontWeight: FontWeight.bold,
-            color: textPrimaryColor,
-          ),
-        ),
+
+        /// HEADER
         Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Stack(
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.notifications_none_rounded, size: 30, color: textSecondaryColor),
-                  onPressed: () {},
-                ),
-                Positioned(
-                  right: 8,
-                  top: 8,
-                  child: Container(
-                    padding: const EdgeInsets.all(2),
-                    decoration: BoxDecoration(
-                      color: primaryColor,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    constraints: const BoxConstraints(minWidth: 14, minHeight: 14),
-                    child: const Text(
-                      '3',
-                      style: TextStyle(color: Colors.white, fontSize: 8),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(width: 20),
+            Text("Dashboard",
+                style: GoogleFonts.lexend(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w600,
+                    color: _kTextPrimary)),
             const CircleAvatar(
-              backgroundImage: NetworkImage('https://placehold.co/100x100/EFEFEF/A9A9A9?text=Admin'),
-              radius: 24,
-            ),
-            const SizedBox(width: 12),
-            Text(
-              'Admin',
-              style: GoogleFonts.poppins(
-                fontWeight: FontWeight.w600,
-                color: textPrimaryColor,
-              ),
-            ),
+              backgroundImage: NetworkImage(
+                  "https://placehold.co/100x100/EFEFEF/A9A9A9?text=Admin"),
+              radius: 20,
+            )
           ],
         ),
+        const SizedBox(height: 16),
+
+        /// TOP STATS CARDS
+        Row(
+        children: [
+        Expanded(
+        child: _statCard(
+        "Total Invoice",
+        data["invoice"],
+        "56 more than yesterday",
+        icon: Icons.receipt_long,
+        iconColor: _kCFBlue,
+        ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+        child: _statCard(
+        "Total Patients",
+        data["patients"],
+        "45 more than yesterday",
+        icon: Icons.people,
+        iconColor: _kSuccess,
+        ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+    child: _statCard(
+    "Appointments",
+    data["appointments"],
+    "18 less than yesterday",
+    icon: Icons.calendar_today,
+    iconColor: _kDanger,
+    ),
+    ),
+    const SizedBox(width: 12),
+    Expanded(
+    child: _statCard(
+    "Bedroom",
+    data["beds"],
+    "56 more than yesterday",
+    icon: Icons.bed,
+    iconColor: _kCFBlue,
+    ),
+    ),
+    ],
+    ),
+
+    const SizedBox(height: 16),
+
+        Expanded(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              /// LEFT MAIN
+              Expanded(
+                flex: 3,
+                child: Column(
+                  children: [
+                    /// Top row (Patient Overview + Revenue)
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Expanded(child: _patientOverviewCard()),
+                          const SizedBox(width: 12),
+                          Expanded(child: _revenueCard()),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    /// Bottom row (Patient Dept + Doctors + Reports)
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Expanded(child: _patientDeptCard()),
+                          const SizedBox(width: 12),
+                          // Expanded(child: _doctorScheduleCard()),
+                          const SizedBox(width: 12),
+                          Expanded(child: _reportCard()),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(width: 16),
+
+              /// RIGHT SIDEBAR (Calendar + Daily Schedule)
+              Expanded(
+                flex: 1,
+                child: _calendarCard(),
+              ),
+            ],
+          ),
+        )
+
       ],
     );
   }
 
-  Widget _buildSummaryCards(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        bool isWide = constraints.maxWidth > 900;
-        return isWide
-            ? Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(flex: 2, child: _buildWelcomeCard(isWide)),
-            const SizedBox(width: 24),
-            Expanded(flex: 1, child: _buildWeeklyTargetCard()),
-          ],
-        )
-            : Column(
-          children: [
-            _buildWelcomeCard(isWide),
-            const SizedBox(height: 24),
-            _buildWeeklyTargetCard(),
-          ],
-        );
-      },
-    );
-  }
+  /// -----------------
+  /// Widgets
+  /// -----------------
 
-  Widget _buildWelcomeCard(bool isWide) {
+  Widget _statCard(
+      String title,
+      int value,
+      String subtitle, {
+        required IconData icon,
+        required Color iconColor,
+      }) {
     return Container(
-      padding: const EdgeInsets.all(32),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        gradient: const LinearGradient(
-          colors: [primaryColor, Color(0xFFFF6B6B)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: primaryColor.withOpacity(0.3),
-            blurRadius: 15,
-            offset: const Offset(0, 10),
-          )
-        ],
-      ),
+      padding: const EdgeInsets.all(16),
+      decoration: _cardDecoration(),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
+          // Icon
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: iconColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: iconColor, size: 20),
+          ),
+          const SizedBox(width: 12),
+
+          // Texts
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Welcome,',
-                  style: GoogleFonts.poppins(color: Colors.white70, fontSize: 18),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Admin',
-                  style: GoogleFonts.poppins(
-                    color: Colors.white,
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
+                  title,
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    color: _kTextSecondary,
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 4),
                 Text(
-                  'Here is the summary of the clinic activities and performance.',
-                  style: GoogleFonts.poppins(color: Colors.white.withOpacity(0.9), height: 1.5),
+                  "$value",
+                  style: GoogleFonts.lexend(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w600,
+                    color: _kTextPrimary,
+                  ),
                 ),
-              ],
-            ),
-          ),
-          if (isWide)
-            Image.network(
-              'https://lh3.googleusercontent.com/aida-public/AB6AXuBagy25Cnmp324FbolwuK96LQOpnQOb4qYl5iTcVLe8GazBi_LP4O7Tph4dAqKKVCYGOKZrq-iX1Zz4_tRHv4qqgizLB2gHErY90foWhYArFfNld869JWB_03xT6EOaRumVZx1AvoP69qZ_1AUi2Ln2ZSf4XpRD7tnZ_9BzFxJc3PG_us24IbfU0w6KUsmjKWoriDaXKJSrW5FqYkDv6PNX73FTX5sfGVQCNTzPpyDn2zZX5C9RJC1JQtH-YvdMDzpGukA8vdaKfq0',
-              width: 150,
-              height: 150,
-              fit: BoxFit.contain,
-            )
-        ],
-      ),
-    );
-  }
-
-  Widget _buildWeeklyTargetCard() {
-    return Container(
-      padding: const EdgeInsets.all(32),
-      decoration: BoxDecoration(
-        color: cardBackgroundColor,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
-          )
-        ],
-      ),
-      child: Column(
-        children: [
-          SizedBox(
-            width: 140,
-            height: 140,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                CircularProgressIndicator(
-                  value: 1.0,
-                  strokeWidth: 12,
-                  backgroundColor: primaryColorLight,
-                  color: primaryColorLight.withOpacity(0.5),
-                ),
-                CircularProgressIndicator(
-                  value: 0.65,
-                  strokeWidth: 12,
-                  valueColor: const AlwaysStoppedAnimation<Color>(primaryColor),
-                  strokeCap: StrokeCap.round,
-                ),
-                Center(
-                  child: Text(
-                    '65%',
-                    style: GoogleFonts.poppins(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      color: textPrimaryColor,
-                    ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    color: _kTextSecondary,
                   ),
                 ),
               ],
-            ),
-          ),
-          const SizedBox(height: 24),
-          Text(
-            'Weekly Target',
-            style: GoogleFonts.poppins(
-              fontWeight: FontWeight.w600,
-              color: textSecondaryColor,
-              fontSize: 16,
             ),
           ),
         ],
@@ -325,101 +326,135 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildAppointmentsTable(BuildContext context, List<Appointment> appointments) {
-    final filteredAppointments = appointments
-        .where((appt) => appt.patientName.toLowerCase().contains(_searchQuery.toLowerCase()))
-        .toList();
 
-    return Container(
-      padding: const EdgeInsets.all(32),
-      decoration: BoxDecoration(
-        color: cardBackgroundColor,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
-          )
-        ],
-      ),
+
+  Widget _patientOverviewCard() {
+    return _chartCard(
+      title: "Patient Overview",
+      subtitle: "by Age Stages",
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'APPOINTMENTS',
-                style: GoogleFonts.poppins(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: textPrimaryColor,
-                ),
-              ),
-              Row(
-                children: [
-                  SizedBox(
-                    width: 250,
-                    child: TextField(
-                      onChanged: (value) => setState(() => _searchQuery = value),
-                      decoration: InputDecoration(
-                        hintText: 'Search patient...',
-                        hintStyle: GoogleFonts.poppins(color: textSecondaryColor),
-                        prefixIcon: const Icon(Icons.search, color: textSecondaryColor),
-                        filled: true,
-                        fillColor: Colors.grey[50],
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+          // Chart area (keeps safe padding so nothing overflows)
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(left: 8, right: 8, top: 4, bottom: 6),
+              child: BarChart(
+                BarChartData(
+                  maxY: 180, // cap the max to avoid overflow
+                  groupsSpace: 18,
+                  gridData: FlGridData(
+                    show: true,
+                    drawVerticalLine: false,
+                    drawHorizontalLine: true,
+                    horizontalInterval: 40,
+                    getDrawingHorizontalLine: (value) =>
+                        FlLine(color: _kMuted, strokeWidth: 0.6),
+                  ),
+                  titlesData: FlTitlesData(
+                    leftTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 28,
+                        interval: 40,
+                        getTitlesWidget: (value, meta) {
+                          return Text(
+                            "${value.toInt()}",
+                            style:
+                            GoogleFonts.inter(fontSize: 10, color: _kTextSecondary),
+                          );
+                        },
                       ),
                     ),
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        getTitlesWidget: (value, meta) {
+                          final labels = [
+                            "4 Jul",
+                            "5 Jul",
+                            "6 Jul",
+                            "7 Jul",
+                            "8 Jul",
+                            "9 Jul",
+                            "10 Jul",
+                            "11 Jul"
+                          ];
+                          final idx = value.toInt();
+                          if (idx >= 0 && idx < labels.length) {
+                            return Padding(
+                              padding: const EdgeInsets.only(top: 6),
+                              child: Text(
+                                labels[idx],
+                                style: GoogleFonts.inter(
+                                    fontSize: 10, color: _kTextSecondary),
+                              ),
+                            );
+                          }
+                          return const SizedBox.shrink();
+                        },
+                      ),
+                    ),
+                    rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
                   ),
-                  const SizedBox(width: 16),
-                  ElevatedButton.icon(
-                    onPressed: () { /* Handle new appointment */ },
-                    icon: const Icon(Icons.add, size: 20),
-                    label: Text('New', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: primaryColor,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                      elevation: 2,
-                      shadowColor: primaryColor.withOpacity(0.4),
+                  borderData: FlBorderData(show: false),
+                  barTouchData: BarTouchData(
+                    enabled: true,
+                    // Only using getTooltipItem (no tooltipBgColor param)
+                    touchTooltipData: BarTouchTooltipData(
+                      getTooltipItem:
+                          (group, groupIndex, rod, rodIndex) {
+                        // rodIndex is index of the rod in the group: 0=Child,1=Adult,2=Elderly
+                        final labels = ["Child", "Adult", "Elderly"];
+                        final label = (rodIndex >= 0 && rodIndex < labels.length)
+                            ? labels[rodIndex]
+                            : "Value";
+                        return BarTooltipItem(
+                          "$label\n${rod.toY.toInt()}",
+                          GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: _kTextPrimary,
+                          ).copyWith(height: 1.05),
+                        );
+                      },
                     ),
                   ),
-                ],
+                  barGroups: List.generate(8, (i) {
+                    // Data tuned so the group fits and looks balanced.
+                    final childVal = (95 + (i * 6)).toDouble();
+                    final adultVal = (80 + (i * 5)).toDouble();
+                    final elderVal = (50 + (i * 4)).toDouble();
+
+                    return BarChartGroupData(
+                      x: i,
+                      barsSpace: 6,
+                      barRods: [
+                        BarChartRodData(toY: childVal, color: _kInfo, width: 8),
+                        BarChartRodData(toY: adultVal, color: _kSuccess, width: 8),
+                        BarChartRodData(toY: elderVal, color: _kDanger, width: 8),
+                      ],
+                      // optionally show initial tooltip indicators:
+                      // showingTooltipIndicators: [[0],[1],[2]],
+                    );
+                  }),
+                ),
               ),
-            ],
+            ),
           ),
-          const SizedBox(height: 24),
-          SizedBox(
-            width: double.infinity,
-            child: DataTable(
-              headingRowHeight: 56,
-              dataRowMinHeight: 64,
-              dataRowMaxHeight: 64,
-              columnSpacing: 20,
-              headingTextStyle: GoogleFonts.poppins(
-                fontWeight: FontWeight.w600,
-                color: textSecondaryColor,
-              ),
-              dataTextStyle: GoogleFonts.poppins(
-                color: textPrimaryColor,
-              ),
-              columns: const [
-                DataColumn(label: Text('PATIENT')),
-                DataColumn(label: Text('DATE')),
-                DataColumn(label: Text('TIME')),
-                DataColumn(label: Text('DOCTOR')),
-                DataColumn(label: Text('REASON')),
-                DataColumn(label: Center(child: Text('STATUS'))),
-                DataColumn(label: Center(child: Text('ACTIONS'))),
+
+          // Legends under the chart (keeps within card bounds)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            child: Row(
+              children: [
+                _legendDot(_kInfo, "Child"),
+                const SizedBox(width: 14),
+                _legendDot(_kSuccess, "Adult"),
+                const SizedBox(width: 14),
+                _legendDot(_kDanger, "Elderly"),
               ],
-              rows: filteredAppointments.map((appt) => _buildDataRow(appt)).toList(),
             ),
           ),
         ],
@@ -427,47 +462,879 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  DataRow _buildDataRow(Appointment appt) {
-    return DataRow(
-      cells: [
-        DataCell(Row(
-          children: [
-            CircleAvatar(
-              backgroundColor: Color((appt.patientName.hashCode * 0xFFFFFF).toInt()).withOpacity(1.0),
-              child: Text(
-                appt.patientImage,
-                style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Text(appt.patientName),
-          ],
-        )),
-        DataCell(Text(appt.date)),
-        DataCell(Text(appt.time)),
-        DataCell(Text(appt.doctor)),
-        DataCell(Text(appt.reason)),
-        DataCell(Center(
-          child: Chip(
-            label: Text(appt.isCompleted ? 'Completed' : 'Incomplete'),
-            backgroundColor: appt.isCompleted ? const Color(0xFFD1FAE5) : primaryColorLight,
-            labelStyle: GoogleFonts.poppins(
-              color: appt.isCompleted ? const Color(0xFF065F46) : primaryColor,
-              fontWeight: FontWeight.w600,
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            side: BorderSide.none,
-          ),
-        )),
-        DataCell(Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            IconButton(icon: const Icon(Icons.visibility_rounded), onPressed: () {}, color: textSecondaryColor, tooltip: 'View Details'),
-            IconButton(icon: const Icon(Icons.edit_rounded), onPressed: () {}, color: textSecondaryColor, tooltip: 'Edit'),
-            IconButton(icon: const Icon(Icons.delete_rounded), onPressed: () {}, color: textSecondaryColor, tooltip: 'Delete'),
-          ],
-        )),
+  Widget _legendDot(Color color, String text) {
+    return Row(
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 6),
+        Text(text, style: GoogleFonts.inter(fontSize: 11, color: _kTextSecondary)),
       ],
     );
+  }
+
+
+  Widget _revenueCard() {
+    return _chartCard(
+      title: "Revenue",
+      child: Column(
+        children: [
+          Row(
+            children: ["Week", "Month", "Year"]
+                .asMap()
+                .entries
+                .map((e) {
+              final i = e.key;
+              final t = e.value;
+              final active = _revenueTab == i;
+              return GestureDetector(
+                onTap: () => setState(() => _revenueTab = i),
+                child: Container(
+                  margin: const EdgeInsets.only(right: 8),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: active ? _kInfo.withOpacity(.1) : Colors.transparent,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(t, style: GoogleFonts.inter(
+                      fontSize: 12, color: active ? _kInfo : _kTextSecondary)),
+                ),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 8),
+          Expanded(child: LineChart(
+            LineChartData(
+              gridData: FlGridData(
+                  show: true, drawHorizontalLine: true, horizontalInterval: 400,
+                  getDrawingHorizontalLine: (v) =>
+                      FlLine(color: _kMuted, strokeWidth: 0.5)),
+              titlesData: FlTitlesData(
+                leftTitles: AxisTitles(
+                    sideTitles: SideTitles(showTitles: true, interval: 400,
+                        getTitlesWidget: (v, c) =>
+                            Text(v == 0 ? "0" : "${v.toInt()}",
+                                style: GoogleFonts.inter(
+                                    fontSize: 10, color: _kTextSecondary)))),
+                bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(showTitles: true,
+                        getTitlesWidget: (v, c) {
+                          final labels = [
+                            "Sun",
+                            "Mon",
+                            "Tue",
+                            "Wed",
+                            "Thu",
+                            "Fri",
+                            "Sat"
+                          ];
+                          if (v.toInt() < labels.length) {
+                            return Text(labels[v.toInt()],
+                                style: GoogleFonts.inter(
+                                    fontSize: 10, color: _kTextSecondary));
+                          }
+                          return const SizedBox.shrink();
+                        })),
+                rightTitles: AxisTitles(
+                    sideTitles: SideTitles(showTitles: false)),
+                topTitles: AxisTitles(
+                    sideTitles: SideTitles(showTitles: false)),
+              ),
+              borderData: FlBorderData(show: false),
+              lineBarsData: [
+                LineChartBarData(isCurved: true,
+                    spots: [
+                      FlSpot(0, 800),
+                      FlSpot(1, 1200),
+                      FlSpot(2, 1000),
+                      FlSpot(3, 1495),
+                      FlSpot(4, 1100),
+                      FlSpot(5, 1200),
+                      FlSpot(6, 1150)
+                    ],
+                    color: _kTextPrimary,
+                    dotData: FlDotData(show: true)),
+                LineChartBarData(isCurved: true,
+                    spots: [
+                      FlSpot(0, 600),
+                      FlSpot(1, 700),
+                      FlSpot(2, 900),
+                      FlSpot(3, 1000),
+                      FlSpot(4, 950),
+                      FlSpot(5, 970),
+                      FlSpot(6, 930)
+                    ],
+                    color: _kInfo,
+                    dotData: FlDotData(show: true)),
+              ],
+            ),
+          ))
+        ],
+      ),
+    );
+  }
+
+  /// Helpers
+  BoxDecoration _cardDecoration() =>
+      BoxDecoration(color: _kCard,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+                color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))
+          ]);
+
+  // Widget _chartCard(
+  //     {required String title, String? subtitle, required Widget child}) {
+  //   return Container(
+  //     padding: const EdgeInsets.all(16),
+  //     decoration: _cardDecoration(),
+  //     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+  //       Row(
+  //         mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  //         children: [
+  //           Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+  //             Text(title, style: GoogleFonts.lexend(fontSize: 15,
+  //                 fontWeight: FontWeight.w600,
+  //                 color: _kTextPrimary)),
+  //             if(subtitle != null) Text(subtitle, style: GoogleFonts.inter(
+  //                 fontSize: 11, color: _kTextSecondary)),
+  //           ]),
+  //           Container(
+  //             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+  //             decoration: BoxDecoration(
+  //                 color: _kMuted, borderRadius: BorderRadius.circular(6)),
+  //             child: Row(children: [
+  //               Text("Last 8 Days", style: GoogleFonts.inter(
+  //                   fontSize: 10, color: _kTextPrimary)),
+  //               const Icon(
+  //                   Icons.arrow_drop_down, size: 16, color: _kTextPrimary)
+  //             ]),
+  //           )
+  //         ],
+  //       ),
+  //       const SizedBox(height: 12),
+  //       Expanded(child: child),
+  //     ]),
+  //   );
+  // }
+
+  /// -----------------
+  /// Lower Row
+  /// -----------------
+  // Updated chartCard to make the small pill (Last 8 Days) safe and non-overflowing.
+// Note: Title here uses Inter (not Lexend) to avoid large font pushing layout.
+  Widget _chartCard({required String title, String? subtitle, required Widget child}) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: _cardDecoration(),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(title,
+                          style: GoogleFonts.inter(
+                              fontSize: 15, fontWeight: FontWeight.w700, color: _kTextPrimary)),
+                      if (subtitle != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4.0),
+                          child: Text(subtitle,
+                              style: GoogleFonts.inter(fontSize: 11, color: _kTextSecondary)),
+                        ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(width: 10),
+
+                // Safe pill: IntrinsicWidth + FittedBox ensures it never overflows.
+              ],
+            ),
+            const SizedBox(height: 12),
+            Expanded(child: child),
+          ],
+        ),
+      ),
+    );
+  }
+
+
+// Finalized, shrinked and balanced Patient Dept card (won't overflow)
+  Widget _patientDeptCard() {
+    // Full upcoming appointments dataset (typed)
+    final List<Map<String, String>> upcoming = [
+      {"name": "Arthur Morgan", "doctor": "Dr. John", "time": "10:00 AM - 10:30 AM", "status": "Confirmed"},
+      {"name": "Regina Mills", "doctor": "Dr. Joel", "time": "10:30 AM - 11:00 AM", "status": "Confirmed"},
+      {"name": "David Warner", "doctor": "Dr. John", "time": "11:00 AM - 11:30 AM", "status": "Pending"},
+      {"name": "Joseph King", "doctor": "Dr. John", "time": "11:30 AM - 12:00 PM", "status": "Confirmed"},
+      {"name": "Lokesh", "doctor": "Dr. John", "time": "12:00 PM - 12:30 PM", "status": "Cancelled"},
+      {"name": "Kanagaraj", "doctor": "Dr. John", "time": "12:30 PM - 01:00 PM", "status": "Confirmed"},
+      {"name": "Priya", "doctor": "Dr. Olivia", "time": "01:00 PM - 01:30 PM", "status": "Confirmed"},
+      {"name": "Suresh K", "doctor": "Dr. Petra", "time": "01:30 PM - 02:00 PM", "status": "Pending"},
+      {"name": "Anita", "doctor": "Dr. Ameena", "time": "02:00 PM - 02:30 PM", "status": "Confirmed"},
+      {"name": "Ravi", "doctor": "Dr. Damian", "time": "02:30 PM - 03:00 PM", "status": "Confirmed"},
+      {"name": "Extra Patient", "doctor": "Dr. Chloe", "time": "03:00 PM - 03:30 PM", "status": "Pending"},
+    ];
+
+    // Quick filter options
+    final List<String> filters = ['All', 'Confirmed', 'Pending', 'Cancelled', 'By Doctor'];
+
+    // Apply quick filter
+    List<Map<String, String>> filtered;
+    if (_selectedAppointmentFilter == 'All') {
+      filtered = upcoming;
+    } else if (_selectedAppointmentFilter == 'By Doctor') {
+      final String doctorToShow = 'Dr. John';
+      filtered = upcoming.where((a) => (a['doctor'] ?? '') == doctorToShow).toList();
+    } else {
+      filtered = upcoming
+          .where((a) => (a['status'] ?? '').toLowerCase() == _selectedAppointmentFilter.toLowerCase())
+          .toList();
+    }
+
+    final items = filtered.take(10).toList();
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: _cardDecoration(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header (title + quick filters dropdown pill)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Upcoming Appointments",
+                    style: GoogleFonts.inter(
+                        fontSize: 15, fontWeight: FontWeight.w700, color: _kTextPrimary),
+                  ),
+                  const SizedBox(height: 4),
+                  Text("Next scheduled visits",
+                      style: GoogleFonts.inter(fontSize: 11, color: _kTextSecondary)),
+                ],
+              ),
+              Container(
+                height: 30,
+                width: 80,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  color: _kMuted,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: _selectedAppointmentFilter,
+                    isExpanded: true,
+                    alignment: Alignment.centerLeft,
+                    style: GoogleFonts.inter(fontSize: 12, color: _kTextPrimary),
+                    items: filters.map((f) {
+                      return DropdownMenuItem<String>(
+                        value: f,
+                        child: Text(
+                          f,
+                          style: GoogleFonts.inter(fontSize: 12, color: _kTextPrimary),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (v) {
+                      if (v == null) return;
+                      if (v == 'By Doctor') {
+                        showDialog(
+                          context: context,
+                          builder: (ctx) {
+                            return AlertDialog(
+                              title: Text('Select Doctor',
+                                  style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+                              content: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  for (var d in ['Dr. John', 'Dr. Joel', 'Dr. Olivia'])
+                                    ListTile(
+                                      title: Text(d, style: GoogleFonts.inter()),
+                                      onTap: () {
+                                        setState(() => _selectedAppointmentFilter = 'By Doctor');
+                                        Navigator.of(ctx).pop();
+                                      },
+                                    ),
+                                ],
+                              ),
+                            );
+                          },
+                        );
+                      } else {
+                        setState(() => _selectedAppointmentFilter = v);
+                      }
+                    },
+                    icon: const Center(
+                      child: Icon(Icons.arrow_drop_down, size: 16),
+                    ),
+                    dropdownColor: _kCard,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Scrollable list (internal scroll only, scrollbar hidden)
+          Expanded(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: ScrollConfiguration(
+                behavior: _NoScrollbarBehavior(),
+                child: ListView.separated(
+                  physics: const BouncingScrollPhysics(),
+                  itemCount: items.length,
+                  separatorBuilder: (_, __) =>
+                  const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                  itemBuilder: (context, index) {
+                    final it = items[index];
+                    final String name = it['name'] ?? '';
+                    final String doctor = it['doctor'] ?? '';
+                    final String time = it['time'] ?? '';
+                    final String status = it['status'] ?? '';
+                    final bool confirmed = status.toLowerCase() == 'confirmed';
+                    final bool cancelled = status.toLowerCase() == 'cancelled';
+
+                    // 🔹 Decide icon: boy or girl
+                    final bool isGirl = name.toLowerCase().endsWith('a') ||
+                        name.toLowerCase().endsWith('i') ||
+                        name.toLowerCase().endsWith('y');
+
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Row(
+                        children: [
+                          // Avatar (icon instead of initials)
+                          CircleAvatar(
+                            radius: 18,
+                            backgroundColor: Colors.grey.shade200,
+                            backgroundImage: AssetImage(
+                              isGirl ? 'assets/girlicon.png' : 'assets/boyicon.png',
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+
+                          // Name + doctor/time
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(name,
+                                    style: GoogleFonts.inter(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                        color: _kTextPrimary)),
+                                const SizedBox(height: 2),
+                                Text("$doctor • $time",
+                                    style: GoogleFonts.inter(
+                                        fontSize: 11, color: _kTextSecondary)),
+                              ],
+                            ),
+                          ),
+
+                          // Status chip
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: cancelled
+                                  ? Colors.red.shade50
+                                  : (confirmed
+                                  ? Colors.green.shade50
+                                  : Colors.yellow.shade50),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: Text(
+                              status,
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                color: cancelled
+                                    ? Colors.red.shade700
+                                    : (confirmed
+                                    ? Colors.green.shade700
+                                    : Colors.orange.shade700),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+
+
+
+
+  // Widget _doctorScheduleCard() {
+  //   final doctors = [
+  //     {
+  //       "name": "Dr. Petra Winsburry",
+  //       "dept": "General Medicine",
+  //       "time": "09:00 AM - 12:00 PM",
+  //       "status": "Available"
+  //     },
+  //     {
+  //       "name": "Dr. Ameena Karim",
+  //       "dept": "Orthopedics",
+  //       "time": "10:00 AM - 01:00 PM",
+  //       "status": "Unavailable"
+  //     },
+  //     {
+  //       "name": "Dr. Olivia Martinez",
+  //       "dept": "Cardiology",
+  //       "time": "10:00 AM - 01:00 PM",
+  //       "status": "Available"
+  //     },
+  //     {
+  //       "name": "Dr. Damian Sanchez",
+  //       "dept": "Pediatrics",
+  //       "time": "11:00 AM - 02:00 PM",
+  //       "status": "Available"
+  //     },
+  //     {
+  //       "name": "Dr. Chloe Harrington",
+  //       "dept": "Dermatology",
+  //       "time": "11:00 AM - 02:00 PM",
+  //       "status": "Unavailable"
+  //     },
+  //   ];
+  //   return _chartCard(
+  //     title: "Doctors' Schedule",
+  //     child: ListView.builder(
+  //       physics: const NeverScrollableScrollPhysics(),
+  //       itemCount: doctors.length,
+  //       itemBuilder: (context, i) {
+  //         final d = doctors[i];
+  //         final isAvailable = d["status"] == "Available";
+  //         return Padding(
+  //           padding: const EdgeInsets.only(bottom: 8),
+  //           child: Row(
+  //             children: [
+  //               const CircleAvatar(
+  //                   backgroundImage: NetworkImage("https://placehold.co/48x48"),
+  //                   radius: 16),
+  //               const SizedBox(width: 8),
+  //               Expanded(
+  //                 child: Column(
+  //                   crossAxisAlignment: CrossAxisAlignment.start,
+  //                   children: [
+  //                     Text(d["name"]!, style: GoogleFonts.inter(fontSize: 12,
+  //                         fontWeight: FontWeight.w500,
+  //                         color: _kTextPrimary)),
+  //                     Text(d["dept"]!, style: GoogleFonts.inter(
+  //                         fontSize: 11, color: _kTextSecondary)),
+  //                   ],
+  //                 ),
+  //               ),
+  //               Text(d["time"]!, style: GoogleFonts.inter(
+  //                   fontSize: 11, color: _kTextSecondary)),
+  //               const SizedBox(width: 6),
+  //               Container(
+  //                 padding: const EdgeInsets.symmetric(
+  //                     horizontal: 8, vertical: 4),
+  //                 decoration: BoxDecoration(
+  //                   color: isAvailable ? Colors.green.shade100 : Colors.red
+  //                       .shade100,
+  //                   borderRadius: BorderRadius.circular(12),
+  //                 ),
+  //                 child: Text(d["status"]!, style: GoogleFonts.inter(
+  //                     fontSize: 11,
+  //                     color: isAvailable ? Colors.green.shade700 : Colors.red
+  //                         .shade700)),
+  //               )
+  //             ],
+  //           ),
+  //         );
+  //       },
+  //     ),
+  //   );
+  // }
+
+  Widget _reportCard() {
+    // Quick filter options
+    final List<String> filters = [
+      'All', 'Cleaning', 'Equipment', 'Medication', 'HVAC', 'Transport'
+    ];
+
+    // Full reports dataset (typed)
+    final List<Map<String, dynamic>> reports = [
+      {"icon": Icons.cleaning_services, "title": "Room Cleaning Needed", "time": "1 min ago", "tag": "Cleaning"},
+      {"icon": Icons.build, "title": "Equipment Maintenance", "time": "3 min ago", "tag": "Equipment"},
+      {"icon": Icons.medical_services, "title": "Medication Restock", "time": "5 min ago", "tag": "Medication"},
+      {"icon": Icons.ac_unit, "title": "HVAC System Issue", "time": "1 hour ago", "tag": "HVAC"},
+      {"icon": Icons.local_shipping, "title": "Patient Transport Required", "time": "Yesterday", "tag": "Transport"},
+      {"icon": Icons.cleaning_services, "title": "Ward Sanitization Overdue", "time": "2 hours ago", "tag": "Cleaning"},
+      {"icon": Icons.build, "title": "X-Ray Calibration", "time": "3 hours ago", "tag": "Equipment"},
+      {"icon": Icons.medical_services, "title": "Vaccine Stock Low", "time": "4 hours ago", "tag": "Medication"},
+      {"icon": Icons.ac_unit, "title": "Ventilation Check", "time": "5 hours ago", "tag": "HVAC"},
+      {"icon": Icons.local_shipping, "title": "Wheelchair Request", "time": "Yesterday", "tag": "Transport"},
+      {"icon": Icons.build, "title": "MRI Maintenance", "time": "Yesterday", "tag": "Equipment"},
+    ];
+
+    // Apply quick filter
+    final filtered = (_selectedReportFilter == 'All')
+        ? reports
+        : reports.where((r) =>
+    (r['tag'] as String).toLowerCase() ==
+        _selectedReportFilter.toLowerCase()).toList();
+
+    // ✅ Show all filtered reports (no 10/10 cap)
+    final items = filtered;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: _cardDecoration(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header: title + quick-filter pill
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text("Report",
+                      style: GoogleFonts.inter(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: _kTextPrimary)),
+                  const SizedBox(height: 4),
+                  Text("Recent system & facility reports",
+                      style: GoogleFonts.inter(
+                          fontSize: 11, color: _kTextSecondary)),
+                ],
+              ),
+
+              // ✅ Compact quick filter dropdown pill
+              Container(
+                height: 30,
+                width: 100,
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: _kMuted,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: _selectedReportFilter,
+                    isDense: true,
+                    style: GoogleFonts.inter(fontSize: 12, color: _kTextPrimary),
+                    items: filters.map((f) {
+                      return DropdownMenuItem<String>(
+                        value: f,
+                        child: Text(
+                          f,
+                          style: GoogleFonts.inter(fontSize: 12, color: _kTextPrimary),
+                          overflow: TextOverflow.ellipsis, // ✅ prevent overflow
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (v) {
+                      if (v == null) return;
+                      setState(() {
+                        _selectedReportFilter = v;
+                      });
+                    },
+                    icon: const Icon(Icons.arrow_drop_down, size: 16),
+                    dropdownColor: _kCard,
+                    // ✅ fixes the "10/10" fallback
+                    isExpanded: false,
+                  ),
+                ),
+              ),
+
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Scrollable list (internal scroll only, scrollbar hidden)
+          Expanded(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: ScrollConfiguration(
+                behavior: _NoScrollbarBehavior(),
+                child: ListView.separated(
+                  physics: const BouncingScrollPhysics(),
+                  itemCount: items.length,
+                  separatorBuilder: (_, __) =>
+                  const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                  itemBuilder: (context, index) {
+                    final r = items[index];
+                    final IconData icon = r['icon'] as IconData;
+                    final String title = r['title'] as String;
+                    final String time = r['time'] as String;
+
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 6),
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 8, horizontal: 10),
+                      decoration: BoxDecoration(
+                          color: _kBg,
+                          borderRadius: BorderRadius.circular(8)),
+                      child: Row(
+                        children: [
+                          Icon(icon, size: 18, color: _kInfo),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(title,
+                                    style: GoogleFonts.inter(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: _kTextPrimary)),
+                                const SizedBox(height: 4),
+                                Text(time,
+                                    style: GoogleFonts.inter(
+                                        fontSize: 11,
+                                        color: _kTextSecondary)),
+                              ],
+                            ),
+                          ),
+                          const Icon(Icons.arrow_forward_ios,
+                              size: 14, color: _kTextSecondary),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+
+ // put at the top of the file if not already imported
+
+  Widget _calendarCard() {
+    final now = DateTime.now();
+
+    return _chartCard(
+      title: 'Calendar',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // ---- COMPACT CALENDAR ----
+          TableCalendar(
+            focusedDay: _focusedDay,
+            firstDay: DateTime.utc(2020, 1, 1),
+            lastDay: DateTime.utc(2030, 12, 31),
+            selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+            onDaySelected: (selected, focused) {
+              setState(() {
+                _selectedDay = selected;
+                _focusedDay = focused;
+              });
+            },
+
+            // 🔹 Reduce row height (compact calendar)
+            rowHeight: 36,
+
+            headerStyle: HeaderStyle(
+              titleCentered: true,
+              formatButtonVisible: false,
+              titleTextStyle: GoogleFonts.lexend(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: _kTextPrimary,
+              ),
+              leftChevronIcon: const Icon(Icons.chevron_left, size: 16),
+              rightChevronIcon: const Icon(Icons.chevron_right, size: 16),
+            ),
+            calendarStyle: CalendarStyle(
+              // 🔹 Reduce padding inside cells
+              cellMargin: const EdgeInsets.all(2),
+              cellPadding: const EdgeInsets.symmetric(vertical: 2),
+
+              todayDecoration: BoxDecoration(
+                color: _kInfo.withOpacity(.6),
+                shape: BoxShape.circle,
+              ),
+              selectedDecoration: BoxDecoration(
+                color: _kInfo,
+                shape: BoxShape.circle,
+              ),
+              defaultTextStyle: GoogleFonts.inter(
+                fontSize: 12,
+                color: _kTextPrimary,
+              ),
+              weekendTextStyle: GoogleFonts.inter(
+                fontSize: 12,
+                color: _kDanger,
+              ),
+              todayTextStyle: GoogleFonts.inter(
+                fontSize: 12,
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            daysOfWeekStyle: DaysOfWeekStyle(
+              weekdayStyle: GoogleFonts.inter(
+                fontSize: 11,
+                color: _kTextSecondary,
+              ),
+              weekendStyle: GoogleFonts.inter(
+                fontSize: 11,
+                color: _kDanger,
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 8),
+
+          // ---- ACTIVITIES HEADER ----
+          Row(
+            children: [
+              Text(
+                'Activities',
+                style: GoogleFonts.lexend(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: _kTextPrimary,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                DateFormat('EEE, d MMM').format(_selectedDay ?? _focusedDay),
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  color: _kTextSecondary,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 6),
+
+          // ---- SCROLLABLE EVENTS LIST ----
+          Expanded(
+            child: ScrollConfiguration(
+              behavior: _NoScrollbarBehavior(),
+              child: ListView.builder(
+                physics: const BouncingScrollPhysics(),
+                itemCount: _getEventsForDay(_selectedDay ?? _focusedDay).length,
+                itemBuilder: (context, idx) {
+                  final ev = _getEventsForDay(_selectedDay ?? _focusedDay)[idx];
+                  return _eventTile(
+                    ev['title'] as String,
+                    ev['time'] as String,
+                    ev['color'] as Color,
+                  );
+                },
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+
+
+
+
+
+
+
+// ---------------------------
+// Helper widgets
+// ---------------------------
+
+  Widget _eventTile(String title, String time, Color color) {
+    return InkWell(
+      onTap: () {
+        // add navigation or modal open
+      },
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.01),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: color.withOpacity(0.08)),
+          boxShadow: [
+            BoxShadow(color: color.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 6)),
+          ],
+        ),
+        child: Row(
+          children: [
+            // vertical accent
+            Container(
+              width: 8,
+              height: 48,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(colors: [color.withOpacity(.9), color.withOpacity(.6)], begin: Alignment.topCenter, end: Alignment.bottomCenter),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              margin: const EdgeInsets.only(right: 12),
+            ),
+            // text
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: _kTextPrimary)),
+                  const SizedBox(height: 6),
+                  Text(time, style: GoogleFonts.inter(fontSize: 12, color: _kTextSecondary)),
+                ],
+              ),
+            ),
+            // action
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.chevron_right, size: 18),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+class _NoScrollbarBehavior extends ScrollBehavior {
+  @override
+  Widget buildOverscrollIndicator(BuildContext context, Widget child, ScrollableDetails details) {
+    // remove the glowing effect on Android
+    return child;
+  }
+
+  @override
+  Widget buildScrollbar(BuildContext context, Widget child, ScrollableDetails details) {
+    // prevents default Scrollbar from being added
+    return child;
   }
 }

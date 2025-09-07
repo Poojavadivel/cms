@@ -1,6 +1,8 @@
+// AdminRootPage.dart
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'dart:ui';
+import 'package:iconsax/iconsax.dart';
+
 import 'AppoimentsScreen.dart';
 import 'DashboardPage.dart';
 import 'HelpPage.dart';
@@ -11,8 +13,7 @@ import 'PharmacyPage.dart';
 import 'SettingsPage.dart';
 import 'StaffPage.dart';
 
-
-// --- App Theme Colors ---
+/// Theme tokens (shared with Doctor root page)
 const Color primaryColor = Color(0xFFEF4444);
 const Color primaryColorLight = Color(0xFFFEE2E2);
 const Color backgroundColor = Color(0xFFF8FAFC);
@@ -20,7 +21,6 @@ const Color cardBackgroundColor = Color(0xFFFFFFFF);
 const Color textPrimaryColor = Color(0xFF1F2937);
 const Color textSecondaryColor = Color(0xFF6B7280);
 
-// --- Main Root Page Widget ---
 class AdminRootPage extends StatefulWidget {
   const AdminRootPage({super.key});
 
@@ -33,42 +33,82 @@ class _AdminRootPageState extends State<AdminRootPage> {
   bool _isChatbotOpen = false;
   bool _isChatbotMaximized = false;
 
-  final List<Map<String, dynamic>> _navItems = [
-    {'icon': Icons.dashboard_rounded, 'label': 'Dashboard', 'screen': const DashboardScreen()},
-    {'icon': Icons.groups_rounded, 'label': 'Staff', 'screen': const StaffScreen()},
-    {'icon': Icons.calendar_today_rounded, 'label': 'Appointments', 'screen': const AppointmentsScreen()},
-    {'icon': Icons.personal_injury_rounded, 'label': 'Patients', 'screen': const PatientsScreen()},
-    {'icon': Icons.receipt_long_rounded, 'label': 'Invoice', 'screen': const InvoiceScreen()},
-    {'icon': Icons.biotech_rounded, 'label': 'Pathology', 'screen': const PathologyScreen()},
-    {'icon': Icons.local_pharmacy_rounded, 'label': 'Pharmacy', 'screen': const PharmacyScreen()},
-    {'icon': Icons.settings_rounded, 'label': 'Settings', 'screen': const SettingsScreen()},
-    {'icon': Icons.help_outline_rounded, 'label': 'Help & feedback', 'screen': const HelpScreen()},
-  ];
+  late final List<Map<String, dynamic>> _navItems;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Use Iconsax where available; fallback to Material for specialized icons.
+    _navItems = [
+      {
+        'icon': Iconsax.category,
+        'label': 'Dashboard',
+        'screen': const DashboardPage(),
+      },
+      {
+        'icon': Iconsax.profile_2user,
+        'label': 'Staff',
+        'screen': const StaffScreen(),
+      },
+      {
+        'icon': Iconsax.calendar,
+        'label': 'Appointments',
+        'screen': const AppointmentsScreen(),
+      },
+      {
+        'icon': Iconsax.user,
+        'label': 'Patients',
+        'screen': const PatientsScreen(),
+      },
+      {
+        // Material icon for invoice (safe)
+        'icon': Icons.receipt_long_rounded,
+        'label': 'Invoice',
+        'screen': const InvoiceScreen(),
+      },
+      {
+        // Material icon: Iconsax lacks 'biotech' — use Material
+        'icon': Icons.biotech_rounded,
+        'label': 'Pathology',
+        'screen': const PathologyScreen(),
+      },
+      {
+        // Material icon for pharmacy
+        'icon': Icons.local_pharmacy_rounded,
+        'label': 'Pharmacy',
+        'screen': const PharmacyScreen(),
+      },
+      {
+        'icon': Iconsax.setting_2,
+        'label': 'Settings',
+        'screen': const SettingsScreen(),
+      },
+      {
+        // help: use Material to be safe
+        'icon': Icons.help_outline_rounded,
+        'label': 'Help & feedback',
+        'screen': const HelpScreen(),
+      },
+    ];
+  }
 
   void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
+    setState(() => _selectedIndex = index);
   }
 
   void _toggleChatbot() {
     setState(() {
       _isChatbotOpen = !_isChatbotOpen;
-      if (!_isChatbotOpen) {
-        _isChatbotMaximized = false; // Reset size when closing
-      }
+      if (!_isChatbotOpen) _isChatbotMaximized = false;
     });
   }
 
-  void _toggleChatbotSize() {
-    setState(() {
-      _isChatbotMaximized = !_isChatbotMaximized;
-    });
-  }
+  void _toggleChatbotSize() => setState(() => _isChatbotMaximized = !_isChatbotMaximized);
 
   @override
   Widget build(BuildContext context) {
-    final Widget selectedScreen = _navItems[_selectedIndex]['screen'];
+    final Widget selectedScreen = _navItems[_selectedIndex]['screen'] as Widget;
     final screenSize = MediaQuery.of(context).size;
 
     return Scaffold(
@@ -77,17 +117,16 @@ class _AdminRootPageState extends State<AdminRootPage> {
         children: [
           Row(
             children: <Widget>[
-              SidebarNavigation(
+              AdminSidebarNavigation(
                 selectedIndex: _selectedIndex,
                 onItemTapped: _onItemTapped,
                 navItems: _navItems,
               ),
-              Expanded(
-                child: selectedScreen,
-              ),
+              Expanded(child: selectedScreen),
             ],
           ),
-          // Chatbot Window
+
+          // Chatbot window (same sizes & animation as doctor page)
           if (_isChatbotOpen)
             Positioned(
               bottom: 32,
@@ -96,7 +135,7 @@ class _AdminRootPageState extends State<AdminRootPage> {
                 duration: const Duration(milliseconds: 300),
                 curve: Curves.easeInOut,
                 width: _isChatbotMaximized ? 800 : 350,
-                height: _isChatbotMaximized ? screenSize.height * 0.88 : 500,
+                height: _isChatbotMaximized ? screenSize.height * 0.79 : 500,
                 child: ChatbotWidget(
                   onClose: _toggleChatbot,
                   onToggleSize: _toggleChatbotSize,
@@ -104,7 +143,8 @@ class _AdminRootPageState extends State<AdminRootPage> {
                 ),
               ),
             ),
-          // Chatbot Launcher Icon
+
+          // Chatbot launcher (closed state)
           if (!_isChatbotOpen)
             Positioned(
               bottom: 32,
@@ -129,9 +169,8 @@ class _AdminRootPageState extends State<AdminRootPage> {
                       ),
                       child: ClipOval(
                         child: Image.asset(
-                          'assets/chatbotimg.png', // Your asset path
+                          'assets/chatbotimg.png',
                           fit: BoxFit.cover,
-                          alignment: Alignment.center,
                         ),
                       ),
                     ),
@@ -153,13 +192,13 @@ class _AdminRootPageState extends State<AdminRootPage> {
   }
 }
 
-// --- Sidebar Navigation ---
-class SidebarNavigation extends StatelessWidget {
+/// Collapsible Sidebar (stateful) — contains working hamburger open/close
+class AdminSidebarNavigation extends StatefulWidget {
   final int selectedIndex;
   final Function(int) onItemTapped;
   final List<Map<String, dynamic>> navItems;
 
-  const SidebarNavigation({
+  const AdminSidebarNavigation({
     super.key,
     required this.selectedIndex,
     required this.onItemTapped,
@@ -167,62 +206,149 @@ class SidebarNavigation extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final mainNavItems = navItems.take(7).toList();
-    final bottomNavItems = navItems.skip(7).toList();
+  State<AdminSidebarNavigation> createState() => _AdminSidebarNavigationState();
+}
 
-    return Container(
-      width: 256,
-      color: cardBackgroundColor,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
-            child: Text(
-              'Glow Skin & Gro Hair',
-              style: GoogleFonts.inter(
-                fontWeight: FontWeight.bold,
-                fontSize: 20,
-                color: primaryColor,
+class _AdminSidebarNavigationState extends State<AdminSidebarNavigation>
+    with SingleTickerProviderStateMixin {
+  bool _isCollapsed = false;
+  late final AnimationController _animationController;
+  late final Animation<double> _widthAnimation;
+
+  final double expandedWidth = 256;
+  final double collapsedWidth = 72;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    _widthAnimation = Tween<double>(
+      begin: expandedWidth,
+      end: collapsedWidth,
+    ).animate(CurvedAnimation(parent: _animationController, curve: Curves.easeInOut));
+  }
+
+  void _toggleSidebar() {
+    setState(() {
+      _isCollapsed = !_isCollapsed;
+      if (_isCollapsed) {
+        _animationController.forward();
+      } else {
+        _animationController.reverse();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final mainNavItems = widget.navItems.take(7).toList();
+    final bottomNavItems = widget.navItems.skip(7).toList();
+
+    return AnimatedBuilder(
+      animation: _widthAnimation,
+      builder: (context, child) {
+        return Container(
+          width: _widthAnimation.value,
+          color: cardBackgroundColor,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // hamburger + title
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 28),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      InkWell(
+                        onTap: _toggleSidebar,
+                        child: Container(
+                          width: 30,
+                          alignment: Alignment.center,
+                          child: Icon(
+                            _isCollapsed ? Icons.menu_open : Icons.menu,
+                            size: 30,
+                            color: primaryColor,
+                          ),
+                        ),
+                      ),
+                      if (!_isCollapsed) ...[
+                        const SizedBox(width: 12),
+                        ConstrainedBox(
+                          constraints: BoxConstraints(maxWidth: expandedWidth - 60),
+                          child: Text(
+                            'Glow Skin & Gro Hair',
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.lexend(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 16,
+                              color: primaryColor,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
               ),
-            ),
-          ),
-          Divider(height: 1, color: Colors.grey[200]),
-          Expanded(
-            child: ListView.builder(
-              itemCount: mainNavItems.length,
-              itemBuilder: (context, index) {
-                final item = mainNavItems[index];
+
+              Divider(height: 1, color: Colors.grey[200]),
+
+              // main nav list
+              Expanded(
+                child: ListView.builder(
+                  itemCount: mainNavItems.length,
+                  itemBuilder: (context, index) {
+                    final item = mainNavItems[index];
+                    return _buildNavItem(
+                      icon: item['icon'] as IconData,
+                      label: item['label'] as String,
+                      isSelected: widget.selectedIndex == index,
+                      onTap: () => widget.onItemTapped(index),
+                    );
+                  },
+                ),
+              ),
+
+              Divider(height: 1, color: Colors.grey[200]),
+
+              // bottom nav items
+              ...List.generate(bottomNavItems.length, (index) {
+                final item = bottomNavItems[index];
+                final actualIndex = index + mainNavItems.length;
                 return _buildNavItem(
-                  context,
                   icon: item['icon'] as IconData,
                   label: item['label'] as String,
-                  isSelected: selectedIndex == index,
-                  onTap: () => onItemTapped(index),
+                  isSelected: widget.selectedIndex == actualIndex,
+                  onTap: () => widget.onItemTapped(actualIndex),
                 );
-              },
-            ),
+              }),
+
+              const SizedBox(height: 20),
+            ],
           ),
-          Divider(height: 1, color: Colors.grey[200]),
-          ...List.generate(bottomNavItems.length, (index) {
-            final item = bottomNavItems[index];
-            final actualIndex = index + mainNavItems.length;
-            return _buildNavItem(
-              context,
-              icon: item['icon'] as IconData,
-              label: item['label'] as String,
-              isSelected: selectedIndex == actualIndex,
-              onTap: () => onItemTapped(actualIndex),
-            );
-          }),
-          const SizedBox(height: 20),
-        ],
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildNavItem(BuildContext context, {required IconData icon, required String label, required bool isSelected, required VoidCallback onTap}) {
+  Widget _buildNavItem({
+    required IconData icon,
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
     final color = isSelected ? primaryColor : textSecondaryColor;
 
     return Material(
@@ -233,12 +359,27 @@ class SidebarNavigation extends StatelessWidget {
           decoration: BoxDecoration(
             border: isSelected ? const Border(left: BorderSide(color: primaryColor, width: 4)) : null,
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           child: Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, color: color),
-              const SizedBox(width: 16),
-              Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w500, fontSize: 15)),
+              Icon(icon, color: color, size: 22),
+              if (!_isCollapsed) ...[
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Text(
+                    label,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.lexend(
+                      color: color,
+                      fontSize: 15,
+                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                ),
+              ],
+              if (_isCollapsed) const Spacer(),
             ],
           ),
         ),
@@ -247,7 +388,7 @@ class SidebarNavigation extends StatelessWidget {
   }
 }
 
-// --- Chatbot Widget ---
+/// Chatbot (same visuals as DoctorRootPage)
 class ChatbotWidget extends StatefulWidget {
   final VoidCallback onClose;
   final VoidCallback onToggleSize;
@@ -269,13 +410,12 @@ class _ChatbotWidgetState extends State<ChatbotWidget> {
   final List<String> _messages = [];
 
   void _sendMessage() {
-    if (_controller.text.isNotEmpty) {
-      setState(() {
-        _messages.add(_controller.text);
-        _messages.add('Bot: You said "${_controller.text}"');
-        _controller.clear();
-      });
-    }
+    if (_controller.text.isEmpty) return;
+    setState(() {
+      _messages.add(_controller.text);
+      _messages.add('Bot: You said "${_controller.text}"');
+      _controller.clear();
+    });
   }
 
   @override
@@ -285,20 +425,17 @@ class _ChatbotWidgetState extends State<ChatbotWidget> {
       elevation: 10,
       child: Column(
         children: [
-          // Chatbot Header
+          // header
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             decoration: BoxDecoration(
               color: Colors.grey[100],
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(20),
-                topRight: Radius.circular(20),
-              ),
+              borderRadius: const BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20)),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('MOVI Assistant', style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+                Text('Movi Assistant', style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
                 Row(
                   children: [
                     IconButton(
@@ -316,7 +453,8 @@ class _ChatbotWidgetState extends State<ChatbotWidget> {
               ],
             ),
           ),
-          // Messages
+
+          // messages
           Expanded(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -335,9 +473,7 @@ class _ChatbotWidgetState extends State<ChatbotWidget> {
                       ),
                       child: Text(
                         _messages[index],
-                        style: GoogleFonts.poppins(
-                          color: isUserMessage ? Colors.white : textPrimaryColor,
-                        ),
+                        style: GoogleFonts.poppins(color: isUserMessage ? Colors.white : textPrimaryColor),
                       ),
                     ),
                   );
@@ -345,7 +481,8 @@ class _ChatbotWidgetState extends State<ChatbotWidget> {
               ),
             ),
           ),
-          // Input Field
+
+          // input
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Row(
@@ -357,20 +494,14 @@ class _ChatbotWidgetState extends State<ChatbotWidget> {
                       hintText: 'Type a message...',
                       filled: true,
                       fillColor: Colors.grey[100],
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                       contentPadding: const EdgeInsets.symmetric(horizontal: 16),
                     ),
                     onSubmitted: (_) => _sendMessage(),
                   ),
                 ),
                 const SizedBox(width: 8),
-                IconButton(
-                  icon: const Icon(Icons.send, color: primaryColor),
-                  onPressed: _sendMessage,
-                ),
+                IconButton(icon: const Icon(Icons.send, color: primaryColor), onPressed: _sendMessage),
               ],
             ),
           ),
