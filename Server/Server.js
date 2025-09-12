@@ -21,7 +21,7 @@ const webAppPath = path.join(__dirname, 'web');
 // --- API Route Definitions ---
 app.use('/api/auth', authRoutes);
 app.use('/api/appointments', appointmentRoutes);
-
+app.use('/api/staff', require('./routes/staff'));
 app.use(express.static(webAppPath));
 app.get('/', (req, res) => {
   res.sendFile(path.join(webAppPath, 'index.html'));

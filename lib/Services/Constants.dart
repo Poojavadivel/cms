@@ -17,8 +17,8 @@ class ApiConstants {
   // --- Base URL ---
   /// The base URL for the backend API.
   /// Change this to your actual server address during development/production.
-  // static const String baseUrl = "http://10.40.68.132:3000";
- static const String baseUrl = "https://glowhair-skin.onrender.com";// <-- IMPORTANT: Replace with your actual backend URL
+  static const String baseUrl = "http://10.40.68.132:3000";
+ //  static const String baseUrl = "https://glowhair-skin.onrender.com";// <-- IMPORTANT: Replace with your actual backend URL
 
   // --- HTTP Methods ---
   static const String post = 'POST';
@@ -47,6 +47,22 @@ class ApiEndpoints {
   static RestApi getAppointmentById(String id) =>
       RestApi(url: '/api/appointments/$id', method: ApiConstants.get);
 
+  // --- Staff endpoints (add inside ApiEndpoints) ---
+  // ----------------- Staff Endpoints -----------------
+  static RestApi createStaff() =>
+      RestApi(url: '/api/staff', method: ApiConstants.post);
+
+  static RestApi getStaffs() =>
+      RestApi(url: '/api/staff', method: ApiConstants.get);
+
+  static RestApi getStaffById(String id) =>
+      RestApi(url: '/api/staff/$id', method: ApiConstants.get);
+
+  static RestApi updateStaff(String id) =>
+      RestApi(url: '/api/staff/$id', method: ApiConstants.put);
+
+  static RestApi deleteStaff(String id) =>
+      RestApi(url: '/api/staff/$id', method: ApiConstants.delete);
 
 
 

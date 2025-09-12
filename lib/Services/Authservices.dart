@@ -7,6 +7,7 @@ import '../Models/Doctor.dart';
 import '../Models/User.dart';
 import '../Models/appointment_draft.dart';
 import '../Models/dashboardmodels.dart';
+import '../Models/staff.dart';
 import '../Utils/Api_handler.dart';
 import 'constants.dart';
 
@@ -26,6 +27,38 @@ class AuthService {
 
   final ApiHandler _apiHandler = ApiHandler.instance;
 
+  // -------------------- Token helpers & keys --------------------
+  static const String _tokenKey = 'x-auth-token';
+
+  Future<String?> _getToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_tokenKey);
+  }
+
+  Future<void> _saveToken(String token) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_tokenKey, token);
+  }
+
+  Future<void> _clearToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_tokenKey);
+  }
+
+  Future<T> _withAuth<T>(Future<T> Function(String token) fn) async {
+    final token = await _getToken();
+    if (token == null) throw ApiException('Not logged in');
+    return await fn(token);
+  }
+
+  // -------------------- Staff cache (kept in AuthService) --------------------
+  List<Staff> _staffList = [];
+  Staff? _currentStaff;
+
+  List<Staff> get staffList => List.unmodifiable(_staffList);
+  Staff? get currentStaff => _currentStaff;
+
+  // ---------------------------------------------------------------------------
   /// Signs in the user with their email and password.
   Future<AuthResult> signIn({
     required String email,
@@ -43,8 +76,7 @@ class AuthService {
       final String token = response['token'];
       final Map<String, dynamic> userData = response['user'];
 
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('x-auth-token', token);
+      await _saveToken(token);
 
       final user = _parseUserRole(userData);
 
@@ -61,8 +93,7 @@ class AuthService {
   /// Retrieves and validates the user's data using a stored token.
   Future<AuthResult?> getUserData() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final String? token = prefs.getString('x-auth-token');
+      final String? token = await _getToken();
 
       if (token == null) {
         return null;
@@ -83,15 +114,15 @@ class AuthService {
 
   /// Signs the user out by clearing their session token.
   Future<void> signOut() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('x-auth-token');
+    await _clearToken();
   }
+
+  // -------------------- Appointments (existing methods) --------------------
 
   /// Creates a new appointment in the backend.
   Future<bool> createAppointment(AppointmentDraft draft) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('x-auth-token');
+      final token = await _getToken();
 
       if (token == null) {
         print("⚠️ No auth token found. User may not be logged in.");
@@ -118,8 +149,7 @@ class AuthService {
   /// Fetch all appointments
   Future<List<DashboardAppointments>> fetchAppointments() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('x-auth-token');
+      final token = await _getToken();
 
       if (token == null) throw ApiException("Not logged in");
 
@@ -148,8 +178,7 @@ class AuthService {
   /// Delete appointment
   Future<bool> deleteAppointment(String appointmentId) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('x-auth-token');
+      final token = await _getToken();
 
       if (token == null) throw ApiException("Not logged in");
 
@@ -174,8 +203,7 @@ class AuthService {
   /// Edit appointment
   Future<bool> editAppointment(AppointmentDraft draft) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('x-auth-token');
+      final token = await _getToken();
 
       if (token == null) throw ApiException("Not logged in");
 
@@ -195,8 +223,7 @@ class AuthService {
   /// Fetch appointment by ID
   Future<AppointmentDraft> fetchAppointmentById(String id) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('x-auth-token');
+      final token = await _getToken();
 
       if (token == null) throw ApiException("Not logged in");
 
@@ -219,8 +246,170 @@ class AuthService {
     }
   }
 
+  // -------------------- Staff CRUD (inserted into AuthService) --------------------
 
-  /// Parse role
+  /// Fetch all staff (supports raw list or wrapped response)
+  Future<List<Staff>> fetchStaffs({bool forceRefresh = false}) async {
+    try {
+      if (_staffList.isNotEmpty && !forceRefresh) return _staffList;
+
+      return await _withAuth<List<Staff>>((token) async {
+        final response = await _apiHandler.get(ApiEndpoints.getStaffs().url, token: token);
+
+        List data;
+        if (response is List) {
+          data = response;
+        } else if (response is Map && (response.containsKey('staff') || response.containsKey('data'))) {
+          data = (response['staff'] ?? response['data']) as List;
+        } else {
+          throw ApiException('Unexpected response format while fetching staff: $response');
+        }
+
+        _staffList = data.map((j) => Staff.fromMap(Map<String, dynamic>.from(j))).toList();
+        return _staffList;
+      });
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Fetch single staff by id
+  Future<Staff> fetchStaffById(String id) async {
+    try {
+      return await _withAuth<Staff>((token) async {
+        final response = await _apiHandler.get(ApiEndpoints.getStaffById(id).url, token: token);
+
+        final data = (response is Map && (response.containsKey('staff') || response.containsKey('data')))
+            ? (response['staff'] ?? response['data'])
+            : response;
+
+        final staff = Staff.fromMap(Map<String, dynamic>.from(data));
+        _currentStaff = staff;
+
+        final idx = _staffList.indexWhere((s) => s.id == staff.id);
+        if (idx == -1) {
+          _staffList.add(staff);
+        } else {
+          _staffList[idx] = staff;
+        }
+
+        return staff;
+      });
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Create staff
+  Future<Staff?> createStaff(Staff staffDraft) async {
+    try {
+      return await _withAuth<Staff?>((token) async {
+        final response = await _apiHandler.post(
+          ApiEndpoints.createStaff().url,
+          token: token,
+          body: staffDraft.toJson(),
+        );
+
+        final data = (response is Map && (response.containsKey('staff') || response.containsKey('data')))
+            ? (response['staff'] ?? response['data'])
+            : response;
+
+        if (data == null) return null;
+        final created = Staff.fromMap(Map<String, dynamic>.from(data));
+
+        _staffList.add(created);
+        return created;
+      });
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Update staff
+  Future<bool> updateStaff(Staff staffDraft) async {
+    try {
+      if (staffDraft.id.isEmpty) throw ApiException('Staff id is required for update');
+
+      return await _withAuth<bool>((token) async {
+        final response = await _apiHandler.put(
+          ApiEndpoints.updateStaff(staffDraft.id).url,
+          token: token,
+          body: staffDraft.toJson(),
+        );
+
+        if (response is Map && (response['success'] == true || response['status'] == 200)) {
+          final idx = _staffList.indexWhere((s) => s.id == staffDraft.id);
+          if (idx != -1) _staffList[idx] = staffDraft;
+          if (_currentStaff?.id == staffDraft.id) _currentStaff = staffDraft;
+          return true;
+        }
+
+        final data = (response is Map && (response.containsKey('staff') || response.containsKey('data')))
+            ? (response['staff'] ?? response['data'])
+            : response;
+
+        if (data is Map) {
+          final updated = Staff.fromMap(Map<String, dynamic>.from(data));
+          final idx = _staffList.indexWhere((s) => s.id == updated.id);
+          if (idx != -1) {
+            _staffList[idx] = updated;
+          } else {
+            _staffList.add(updated);
+          }
+          if (_currentStaff?.id == updated.id) _currentStaff = updated;
+          return true;
+        }
+
+        return false;
+      });
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Delete staff
+  Future<bool> deleteStaff(String id) async {
+    try {
+      return await _withAuth<bool>((token) async {
+        final response = await _apiHandler.delete(ApiEndpoints.deleteStaff(id).url, token: token);
+
+        if (response is Map && (response['success'] == true || response['status'] == 200)) {
+          _staffList.removeWhere((s) => s.id == id);
+          if (_currentStaff?.id == id) _currentStaff = null;
+          return true;
+        }
+
+        if (response is Map && (response['deletedId'] == id || response['id'] == id || response['_id'] == id)) {
+          _staffList.removeWhere((s) => s.id == id);
+          if (_currentStaff?.id == id) _currentStaff = null;
+          return true;
+        }
+
+        return false;
+      });
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // -------------------- Staff utilities --------------------
+
+  /// Find staff locally (no network)
+  Staff? findLocalStaffById(String id) {
+    try {
+      return _staffList.firstWhere((s) => s.id == id);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Clear staff cache (useful on logout)
+  void clearStaffCache() {
+    _staffList = [];
+    _currentStaff = null;
+  }
+
+  // -------------------- Role parsing --------------------
   dynamic _parseUserRole(Map<String, dynamic> userData) {
     final baseUser = User.fromMap(userData);
 

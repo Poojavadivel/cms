@@ -1,4 +1,4 @@
-// models/staff.dart
+// lib/Models/staff.dart
 import 'package:flutter/foundation.dart';
 
 class Staff {
@@ -61,8 +61,8 @@ class Staff {
     this.isSelected = false,
   });
 
-  // ----------------- New: fromMap factory -----------------
-  /// Create Staff from a plain Map (e.g. local test data or Firebase snapshot)
+  // ----------------- New: fromMap factory (defensive) -----------------
+  /// Create Staff from a plain Map (e.g. API response)
   factory Staff.fromMap(Map<String, dynamic> map) {
     DateTime? parseDate(dynamic v) {
       if (v == null) return null;
@@ -71,6 +71,25 @@ class Staff {
       } catch (_) {
         return null;
       }
+    }
+
+    Map<String, String> parseNotes(dynamic n) {
+      if (n == null) return <String, String>{};
+      if (n is Map) {
+        try {
+          return n.map((k, v) => MapEntry(k.toString(), v?.toString() ?? ''));
+        } catch (_) {
+          return <String, String>{};
+        }
+      }
+      return <String, String>{};
+    }
+
+    List<String> parseStringList(dynamic v) {
+      if (v == null) return <String>[];
+      if (v is List) return v.map((e) => e.toString()).toList();
+      if (v is String) return v.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
+      return <String>[];
     }
 
     return Staff(
@@ -85,31 +104,28 @@ class Staff {
       gender: map['gender']?.toString() ?? '',
       status: map['status']?.toString() ?? 'Off Duty',
       shift: map['shift']?.toString() ?? '',
-      roles: (map['roles'] as List?)?.map((e) => e.toString()).toList() ?? [],
-      qualifications: (map['qualifications'] as List?)?.map((e) => e.toString()).toList() ?? [],
+      roles: parseStringList(map['roles']),
+      qualifications: parseStringList(map['qualifications']),
       experienceYears: int.tryParse((map['experienceYears'] ?? map['experience'] ?? 0).toString()) ?? 0,
       joinedAt: parseDate(map['joinedAt'] ?? map['createdAt']),
       lastActiveAt: parseDate(map['lastActiveAt'] ?? map['updatedAt']),
       location: map['location']?.toString() ?? '',
       dob: map['dob']?.toString() ?? '',
-      notes: map['notes'] != null ? Map<String, String>.from(map['notes']) : <String, String>{},
+      notes: parseNotes(map['notes']),
       appointmentsCount: int.tryParse((map['appointmentsCount'] ?? map['apptCount'] ?? 0).toString()) ?? 0,
-      tags: (map['tags'] as List?)?.map((e) => e.toString()).toList() ?? [],
+      tags: parseStringList(map['tags']),
       isSelected: map['isSelected'] == true,
     );
   }
-  // --------------------------------------------------------
+  // -------------------------------------------------------------------
 
-  /// Create Staff from API/JSON map (keeps for backward compatibility)
-  factory Staff.fromJson(Map<String, dynamic> json) {
-    // reuse fromMap parsing logic for consistency
-    return Staff.fromMap(json);
-  }
+  /// Backwards-compatible JSON factory
+  factory Staff.fromJson(Map<String, dynamic> json) => Staff.fromMap(json);
 
   /// Convert to JSON for API or local storage
   Map<String, dynamic> toJson() {
     return {
-      '_id': id,
+      if (id.isNotEmpty) '_id': id,
       'name': name,
       'designation': designation,
       'department': department,

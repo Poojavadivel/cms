@@ -71,11 +71,11 @@ const User = sequelize.define(
 );
 
 // ===============================
-// MongoDB (Mongoose) - Patient & Appointment Models
+// MongoDB (Mongoose) - Models
 // ===============================
 const mongoose = require('mongoose');
 
-// --- Patient Model (lives in Mongo) ---
+// --- Patient Model (Mongo) ---
 const PatientSchema = new mongoose.Schema({
   firstName: { type: String, required: true },
   lastName: { type: String, required: true },
@@ -88,6 +88,9 @@ const PatientSchema = new mongoose.Schema({
     state: String,
     city: String,
   },
+
+  // 🔗 Link to Postgres Doctor (User.id UUID)
+  doctorId: { type: String, required: true },
 
   medicalHistory: [String], // ["Diabetes", "Allergy"]
 
@@ -111,7 +114,7 @@ const PatientSchema = new mongoose.Schema({
     {
       reportType: String,
       fileUrl: String, // link to S3 or server
-      uploadedBy: String, // doctorId/adminId
+      uploadedBy: String, // doctorId/adminId (Postgres UUID)
       appointmentId: String,
       createdAt: { type: Date, default: Date.now },
     },
@@ -125,10 +128,10 @@ const PatientSchema = new mongoose.Schema({
 
 const Patient = mongoose.model('Patient', PatientSchema);
 
-// --- Appointment Model (matches Flutter AppointmentDraft.toJson) ---
+// --- Appointment Model (Mongo) ---
 const AppointmentSchema = new mongoose.Schema({
-  doctorId: { type: String, required: true },  // Postgres User.id (from JWT)
-  patientId: { type: String },                 // ✅ changed to String for easier handling
+  doctorId: { type: String, required: true },  // Postgres User.id (UUID from JWT)
+  patientId: { type: String },                 // Mongo Patient._id
 
   clientName: { type: String, required: true },
   appointmentType: { type: String, required: true },
@@ -165,11 +168,49 @@ const AppointmentSchema = new mongoose.Schema({
 
 const Appointment = mongoose.model('Appointment', AppointmentSchema);
 
+// --- Pathology Model (Mongo) ---
+const PathologySchema = new mongoose.Schema({
+  patientId: { type: String, required: true }, // Mongo Patient._id
+  doctorId: { type: String, required: true },  // Postgres User.id (UUID)
+  testName: String,
+  reportUrl: String,
+  date: { type: Date, default: Date.now },
+});
+const Pathology = mongoose.model('Pathology', PathologySchema);
+
+// --- Pharmacy Model (Mongo) ---
+const PharmacySchema = new mongoose.Schema({
+  patientId: { type: String, required: true },   // Mongo Patient._id
+  doctorId: { type: String, required: true },    // Postgres User.id (UUID)
+  appointmentId: { type: String },               // Mongo Appointment._id
+  medicineName: String,
+  quantity: Number,
+  dosage: String,
+  duration: String,
+  issuedAt: { type: Date, default: Date.now },
+});
+const Pharmacy = mongoose.model('Pharmacy', PharmacySchema);
+
+// --- Staff Model (Mongo) ---
+const StaffSchema = new mongoose.Schema({
+  doctorId: { type: String, required: true }, // Postgres User.id (UUID)
+  name: String,
+  role: { type: String, enum: ['Nurse', 'Technician', 'Receptionist'] },
+  department: String,
+  phone: String,
+  email: String,
+  createdAt: { type: Date, default: Date.now },
+});
+const Staff = mongoose.model('Staff', StaffSchema);
+
 // ===============================
 // Exports
 // ===============================
 module.exports = {
-  User,         // Postgres (Admins + Doctors)
-  Patient,      // Mongo
-  Appointment,  // Mongo
+  User,       // Postgres (Admins + Doctors)
+  Patient,    // Mongo
+  Appointment,// Mongo
+  Pathology,  // Mongo
+  Pharmacy,   // Mongo
+  Staff,      // Mongo
 };
