@@ -1,90 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-// Import our new generic table
-// Adjust these imports to your project
-import '../../Models/Staff.dart';
+import 'package:glowhair/Modules/Doctor/widgets/Editappoimentspage.dart';
+import '../../Models/appointment_draft.dart';
+import '../../Models/dashboardmodels.dart';
+import '../../Services/Authservices.dart';
 import '../../Utils/Colors.dart';
+import '../Doctor/widgets/doctor_appointment_preview.dart';
 import 'widget/generic_data_table.dart';
+
+// ---------------------------------------------------------------------
+// Appointments Screen (supports Admin + Doctor; uses backend `doctor` field)
+// - Uses DashboardAppointments model
+// - Shows Doctor column (admin-only extra)
+// - fetch / delete / edit / view use AuthService.instance
 // ---------------------------------------------------------------------
 
-// --- App Theme Colors ---
-const Color primaryColor = Color(0xFFEF4444);
-const Color primaryColorLight = Color(0xFFFEE2E2);
-const Color backgroundColor = Color(0xFFF8FAFC);
-const Color cardBackgroundColor = Color(0xFFFFFFFF);
 const Color textPrimaryColor = Color(0xFF1F2937);
 const Color textSecondaryColor = Color(0xFF6B7280);
 
-// --- Data Models ---
-class Appointment {
-  final String id;
-  final String patientName;
-  final String doctor;
-  final String date;
-  final String time;
-  final String status;
-  final String gender;
-  final String reason;
-
-  Appointment({
-    required this.id,
-    required this.patientName,
-    required this.doctor,
-    required this.date,
-    required this.time,
-    required this.status,
-    required this.gender,
-    required this.reason,
-  });
-
-  factory Appointment.fromMap(Map<String, dynamic> map) {
-    return Appointment(
-      id: map['id'],
-      patientName: map['patientName'],
-      doctor: map['doctor'],
-      date: map['date'],
-      time: map['time'],
-      status: map['status'],
-      gender: map['gender'],
-      reason: map['reason'],
-    );
-  }
-}
-
-// --- Simulated API Data ---
-const List<Map<String, dynamic>> _appointmentsApiData = [
-  {'id': 'APT-001', 'patientName': 'Arthur', 'gender': 'Male', 'doctor': 'Dr. John', 'date': '2025-08-14', 'time': '9:30 AM', 'status': 'Completed', 'reason': 'General Checkup'},
-  {'id': 'APT-002', 'patientName': 'John Philips', 'gender': 'Male', 'doctor': 'Dr. Joel', 'date': '2025-08-14', 'time': '10:00 AM', 'status': 'Completed', 'reason': 'Follow-up Consultation'},
-  {'id': 'APT-003', 'patientName': 'Regina', 'gender': 'Female', 'doctor': 'Dr. Joel', 'date': '2025-08-15', 'time': '10:30 AM', 'status': 'Pending', 'reason': 'Sickness'},
-  {'id': 'APT-004', 'patientName': 'David', 'gender': 'Male', 'doctor': 'Dr. John', 'date': '2025-08-15', 'time': '11:00 AM', 'status': 'Cancelled', 'reason': 'Injury Evaluation'},
-  {'id': 'APT-005', 'patientName': 'Joseph', 'gender': 'Male', 'doctor': 'Dr. John', 'date': '2025-08-16', 'time': '11:30 AM', 'status': 'Pending', 'reason': 'General Checkup'},
-  {'id': 'APT-006', 'patientName': 'Lokesh', 'gender': 'Male', 'doctor': 'Dr. Amelia', 'date': '2025-08-16', 'time': '12:00 PM', 'status': 'Completed', 'reason': 'Medical Report Review'},
-  {'id': 'APT-007', 'patientName': 'Sophia Miller', 'gender': 'Female', 'doctor': 'Dr. Evelyn', 'date': '2025-08-17', 'time': '9:00 AM', 'status': 'Pending', 'reason': 'Sickness'},
-  {'id': 'APT-008', 'patientName': 'James Wilson', 'gender': 'Male', 'doctor': 'Dr. John', 'date': '2025-08-17', 'time': '9:30 AM', 'status': 'Completed', 'reason': 'Vaccination'},
-  {'id': 'APT-009', 'patientName': 'Olivia Garcia', 'gender': 'Female', 'doctor': 'Dr. Amelia', 'date': '2025-08-18', 'time': '10:00 AM', 'status': 'Pending', 'reason': 'General Checkup'},
-  {'id': 'APT-010', 'patientName': 'Liam Martinez', 'gender': 'Male', 'doctor': 'Dr. Joel', 'date': '2025-08-18', 'time': '10:30 AM', 'status': 'Cancelled', 'reason': 'Injury Evaluation'},
-  {'id': 'APT-011', 'patientName': 'Emma Anderson', 'gender': 'Female', 'doctor': 'Dr. Evelyn', 'date': '2025-08-19', 'time': '11:00 AM', 'status': 'Completed', 'reason': 'Follow-up Consultation'},
-  {'id': 'APT-012', 'patientName': 'Noah Taylor', 'gender': 'Male', 'doctor': 'Dr. John', 'date': '2025-08-19', 'time': '11:30 AM', 'status': 'Pending', 'reason': 'Sickness'},
-  {'id': 'APT-013', 'patientName': 'Ava Thomas', 'gender': 'Female', 'doctor': 'Dr. Amelia', 'date': '2025-08-20', 'time': '1:00 PM', 'status': 'Completed', 'reason': 'General Checkup'},
-  {'id': 'APT-014', 'patientName': 'Isabella White', 'gender': 'Female', 'doctor': 'Dr. Joel', 'date': '2025-08-20', 'time': '1:30 PM', 'status': 'Pending', 'reason': 'Medical Report Review'},
-  {'id': 'APT-015', 'patientName': 'Mason Harris', 'gender': 'Male', 'doctor': 'Dr. Evelyn', 'date': '2025-08-21', 'time': '2:00 PM', 'status': 'Completed', 'reason': 'Sickness'},
-  {'id': 'APT-016', 'patientName': 'Mia Clark', 'gender': 'Female', 'doctor': 'Dr. John', 'date': '2025-08-21', 'time': '2:30 PM', 'status': 'Cancelled', 'reason': 'Injury Evaluation'},
-  {'id': 'APT-017', 'patientName': 'Ethan Lewis', 'gender': 'Male', 'doctor': 'Dr. Amelia', 'date': '2025-08-22', 'time': '3:00 PM', 'status': 'Pending', 'reason': 'General Checkup'},
-  {'id': 'APT-018', 'patientName': 'Abigail Robinson', 'gender': 'Female', 'doctor': 'Dr. Joel', 'date': '2025-08-22', 'time': '3:30 PM', 'status': 'Completed', 'reason': 'Follow-up Consultation'},
-  {'id': 'APT-019', 'patientName': 'Michael Walker', 'gender': 'Male', 'doctor': 'Dr. John', 'date': '2025-08-23', 'time': '4:00 PM', 'status': 'Pending', 'reason': 'Sickness'},
-  {'id': 'APT-020', 'patientName': 'Emily Hall', 'gender': 'Female', 'doctor': 'Dr. Evelyn', 'date': '2025-08-23', 'time': '4:30 PM', 'status': 'Completed', 'reason': 'Vaccination'},
-];
-
-class AppointmentsScreen extends StatefulWidget {
-  const AppointmentsScreen({super.key});
+class AdminAppointmentsScreen extends StatefulWidget {
+  const AdminAppointmentsScreen({super.key});
 
   @override
-  State<AppointmentsScreen> createState() => _AppointmentsScreenState();
+  State<AdminAppointmentsScreen> createState() => _AdminAppointmentsScreenState();
 }
 
-class _AppointmentsScreenState extends State<AppointmentsScreen> {
-  List<Appointment> _allAppointments = [];
+class _AdminAppointmentsScreenState extends State<AdminAppointmentsScreen> {
+  List<DashboardAppointments> _allAppointments = [];
   bool _isLoading = true;
   String _searchQuery = '';
   int _currentPage = 0;
@@ -97,22 +40,30 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
   }
 
   Future<void> _fetchAppointments() async {
-    setState(() {
-      _isLoading = true;
-    });
-    await Future.delayed(const Duration(milliseconds: 700));
-    final fetchedData = _appointmentsApiData.map((m) => Appointment.fromMap(m)).toList();
-    setState(() {
-      _allAppointments = fetchedData;
-      _isLoading = false;
-    });
+    setState(() => _isLoading = true);
+    try {
+      final appointments = await AuthService.instance.fetchAppointments();
+      setState(() {
+        _allAppointments = appointments;
+      });
+    } catch (e) {
+      debugPrint('❌ fetchAppointments error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Failed to load appointments: $e'),
+        ));
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   Future<void> _onAddPressed() async {
-    setState(() => _isLoading = true);
-    await Future.delayed(const Duration(milliseconds: 600));
-    setState(() => _isLoading = false);
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Open Add Appointment (demo)')));
+    // Hook to admin add flow — replace with your add page when available
+    if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Open Add Appointment (admin)')));
+    // Optionally open Add page and refresh on success:
+    // final created = await Navigator.push(...);
+    // if (created == true) await _fetchAppointments();
   }
 
   void _onSearchChanged(String q) {
@@ -123,23 +74,125 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
   }
 
   void _nextPage() => setState(() => _currentPage++);
-  void _prevPage() { if (_currentPage > 0) setState(() => _currentPage--); }
-
-  void _onView(int index, List<Appointment> list) {
-    final appointment = list[index];
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Viewing appointment for ${appointment.patientName}")),
-    );
+  void _prevPage() {
+    if (_currentPage > 0) setState(() => _currentPage--);
   }
 
-  void _onEdit(int index, List<Appointment> list) {
+  Future<void> _onView(int index, List<DashboardAppointments> list) async {
     final appointment = list[index];
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Editing appointment for ${appointment.patientName}")),
-    );
+    try {
+      // Fetch full details if backend supports it; fallback to using DashboardAppointments
+      AppointmentDraft? draft;
+      try {
+        draft = await AuthService.instance.fetchAppointmentById(appointment.id);
+      } catch (_) {
+        draft = null;
+      }
+
+      await showDialog(
+        context: context,
+        builder: (_) => DoctorAppointmentPreview(appointment: appointment),
+      );
+    } catch (e) {
+      debugPrint('❌ view error: $e');
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to open preview: $e')));
+    }
   }
 
-  Future<void> _onDelete(int index, List<Appointment> list) async {
+  Future<void> _onEdit(int index, List<DashboardAppointments> list) async {
+    final appointment = list[index];
+
+    try {
+      // Try to fetch full draft to edit
+      AppointmentDraft draft;
+      try {
+        draft = await AuthService.instance.fetchAppointmentById(appointment.id);
+      } catch (_) {
+        // fallback create basic draft from available fields
+        draft = AppointmentDraft(
+          id: appointment.id,
+          clientName: appointment.patientName,
+          appointmentType: appointment.service,
+          date: DateTime.tryParse(appointment.date) ?? DateTime.now(),
+          time: TimeOfDay(
+            hour: int.tryParse(appointment.time.split(':').first) ?? 0,
+            minute: appointment.time.contains(':')
+                ? int.tryParse(appointment.time.split(':').last.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0
+                : 0,
+          ),
+          location: appointment.location,
+          notes: appointment.currentNotes,
+          gender: appointment.gender,
+          patientId: appointment.patientId,
+          phoneNumber: null,
+          mode: 'In-clinic',
+          priority: 'Normal',
+          durationMinutes: 20,
+          reminder: true,
+          chiefComplaint: appointment.reason,
+          status: appointment.status,
+        );
+      }
+
+      // Navigate to edit form and expect AppointmentDraft returned on save
+      final result = await Navigator.push<AppointmentDraft?>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Material(
+              color: Colors.white,
+              child: EditAppointmentForm(
+                appointmentId: appointment.id,
+                onSave: (updatedDraft) {
+                  Navigator.pop(context, updatedDraft); // 👈 Return the draft
+                  debugPrint('Updated: ${updatedDraft.toJson()}');
+                },
+                onCancel: () => Navigator.pop(context, null), // 👈 Return null
+                onDelete: () {
+                  Navigator.pop(context, null); // 👈 Or handle deletion separately
+                  debugPrint('Deleted appointment for ${appointment.patientName}');
+                },
+              ),
+            ),
+          ),
+        ),
+      );
+
+      // If user saved changes, call editAppointment
+      if (result != null) {
+        if (mounted) setState(() => _isLoading = true);
+        try {
+          final success = await AuthService.instance.editAppointment(result);
+          if (success) {
+            await _fetchAppointments();
+            if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Appointment updated'))
+            );
+          } else {
+            if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Failed to update appointment'))
+            );
+          }
+        } catch (e) {
+          debugPrint('❌ edit API error: $e');
+          if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Error updating: $e'))
+          );
+        } finally {
+          if (mounted) setState(() => _isLoading = false);
+        }
+      }
+    } catch (e) {
+      debugPrint('❌ edit error: $e');
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to edit: $e'))
+      );
+    }
+  }
+
+
+  Future<void> _onDelete(int index, List<DashboardAppointments> list) async {
     final appointment = list[index];
     final confirm = await showDialog<bool>(
       context: context,
@@ -153,30 +206,31 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
       ),
     );
     if (confirm != true) return;
+
     setState(() => _isLoading = true);
-    await Future.delayed(const Duration(milliseconds: 600));
-
-    // Find the original data map and remove it from the list
-    _appointmentsApiData.removeWhere((item) => item['id'] == appointment.id);
-
-    // Refresh the UI by removing from the in-memory list
-    _allAppointments.removeWhere((a) => a.id == appointment.id);
-
-    setState(() {
-      _isLoading = false;
-      final filteredItems = _getFilteredAppointments();
-      if (_currentPage * 10 >= filteredItems.length && _currentPage > 0) {
-        _currentPage = 0;
+    try {
+      final success = await AuthService.instance.deleteAppointment(appointment.id);
+      if (success) {
+        await _fetchAppointments();
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Deleted appointment for ${appointment.patientName}')));
+      } else {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to delete appointment')));
+        if (mounted) setState(() => _isLoading = false);
       }
-    });
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Deleted appointment for ${appointment.patientName} (demo)')));
+    } catch (e) {
+      debugPrint('❌ delete error: $e');
+      if (mounted) setState(() => _isLoading = false);
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error deleting: $e')));
+    }
   }
 
-  // Method to get the filtered list of appointments
-  List<Appointment> _getFilteredAppointments() {
+  List<DashboardAppointments> _getFilteredAppointments() {
+    final q = _searchQuery.trim().toLowerCase();
     return _allAppointments.where((a) {
-      final q = _searchQuery.trim().toLowerCase();
-      final matchesSearch = a.patientName.toLowerCase().contains(q) || a.id.toLowerCase().contains(q) || a.doctor.toLowerCase().contains(q);
+      final matchesSearch = a.patientName.toLowerCase().contains(q) ||
+          a.id.toLowerCase().contains(q) ||
+          a.doctor.toLowerCase().contains(q) ||
+          a.patientId.toLowerCase().contains(q);
       final matchesFilter = _doctorFilter == 'All' || a.doctor == _doctorFilter;
       return matchesSearch && matchesFilter;
     }).toList();
@@ -223,7 +277,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
   }
 
   Widget _buildDoctorFilter() {
-    final doctors = {'All', ..._appointmentsApiData.map((s) => s['doctor'] as String).toSet()};
+    final doctors = {'All', ..._allAppointments.map((s) => s.doctor).where((d) => d.isNotEmpty).toSet()};
     return PopupMenuButton<String>(
       icon: const Icon(Icons.filter_list),
       onSelected: (String newValue) {
@@ -249,26 +303,25 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
 
     final startIndex = _currentPage * 10;
     final endIndex = (startIndex + 10).clamp(0, filtered.length);
-    final paginatedAppointments = startIndex >= filtered.length
-        ? <Appointment>[]
-        : filtered.sublist(startIndex, endIndex);
+    final paginatedAppointments = startIndex >= filtered.length ? <DashboardAppointments>[] : filtered.sublist(startIndex, endIndex);
 
-    // Prepare headers and rows for the generic table
     final headers = const ['PATIENT NAME', 'DOCTOR NAME', 'DATE', 'TIME', 'REASON', 'STATUS'];
     final rows = paginatedAppointments.map((a) {
       return [
-        // Custom widget for patient name with icon
         Row(
           children: [
             Image.asset(
-              a.gender.toLowerCase() == 'male' ? 'assets/boyicon.png' : 'assets/girlicon.png',
-              height: 24,
-              width: 24,
+              (a.gender).toLowerCase() == 'male' ? 'assets/boyicon.png' : 'assets/girlicon.png',
+              height: 28,
+              width: 28,
             ),
-            const SizedBox(width: 8),
-            Text(
-              a.patientName,
-              style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: textPrimaryColor),
+            const SizedBox(width: 10),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(a.patientName, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: textPrimaryColor)),
+                Text('${a.patientAge} yrs • ${a.patientId}', style: GoogleFonts.inter(fontSize: 12, color: textSecondaryColor)),
+              ],
             ),
           ],
         ),
@@ -281,6 +334,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
     }).toList();
 
     return Scaffold(
+
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),

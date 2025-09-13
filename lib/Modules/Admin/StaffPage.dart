@@ -30,13 +30,29 @@ class _StaffScreenState extends State<StaffScreen> {
     _fetchStaff();
   }
 
+  // ---------------- Helper: dedupe ----------------
+  List<Staff> _dedupeById(List<Staff> input) {
+    final seen = <String>{};
+    final out = <Staff>[];
+    for (final s in input) {
+      final key = (s.id.isNotEmpty) ? s.id : '\$tmp-${s.hashCode}';
+      if (!seen.contains(key)) {
+        seen.add(key);
+        out.add(s);
+      }
+    }
+    return out;
+  }
+
   // ---------------- Fetch from API ----------------
   Future<void> _fetchStaff({bool forceRefresh = false}) async {
     setState(() => _isLoading = true);
     try {
       final fetched = await AuthService.instance.fetchStaffs(forceRefresh: forceRefresh);
+      // dedupe server list to avoid duplicates
+      final unique = _dedupeById(fetched);
       setState(() {
-        _allStaff = fetched;
+        _allStaff = unique;
         if (_currentPage < 0) _currentPage = 0;
       });
     } catch (e) {
@@ -66,7 +82,9 @@ class _StaffScreenState extends State<StaffScreen> {
       final matchesSearch = q.isEmpty ||
           s.name.toLowerCase().contains(q) ||
           s.id.toLowerCase().contains(q) ||
-          s.department.toLowerCase().contains(q);
+          s.department.toLowerCase().contains(q) ||
+          s.designation.toLowerCase().contains(q) ||
+          s.contact.toLowerCase().contains(q);
       final matchesFilter = _departmentFilter == 'All' || s.department == _departmentFilter;
       return matchesSearch && matchesFilter;
     }).toList();
@@ -121,8 +139,15 @@ class _StaffScreenState extends State<StaffScreen> {
       final created = await showStaffFormPopup(context);
       if (created == null) return;
 
-      // optimistic insert
-      setState(() => _allStaff.insert(0, created));
+      // optimistic insert OR replace existing (prevent duplicates)
+      setState(() {
+        final idx = _allStaff.indexWhere((s) => s.id == created.id);
+        if (idx == -1) {
+          _allStaff.insert(0, created);
+        } else {
+          _allStaff[idx] = created;
+        }
+      });
 
       // If temp id, try to resync so server id replaces temp
       if (created.id.startsWith('temp-')) {
@@ -232,21 +257,45 @@ class _StaffScreenState extends State<StaffScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final filtered = _getFilteredStaff();
+    // ensure we use a deduped filtered list for pagination and rendering
+    final filtered = _dedupeById(_getFilteredStaff());
 
     final startIndex = _currentPage * 10;
     final endIndex = (startIndex + 10).clamp(0, filtered.length);
     final paginatedStaff = startIndex >= filtered.length ? <Staff>[] : filtered.sublist(startIndex, endIndex);
 
     final headers = const ['STAFF ID', 'STAFF NAME', 'DESIGNATION', 'DEPARTMENT', 'CONTACT', 'STATUS'];
+
+    final cellStyle = GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: textPrimaryColor ?? Colors.black);
+
+    Widget _cell(String txt, {double width = 140}) {
+      return SizedBox(
+        width: width,
+        child: Text(
+          txt,
+          textAlign: TextAlign.center,
+          overflow: TextOverflow.ellipsis,
+          maxLines: 1,
+          style: cellStyle,
+        ),
+      );
+    }
+
     final rows = paginatedStaff.map((s) {
+      final id = s.id;
+      final name = s.name.isNotEmpty ? s.name : '-';
+      final designation = s.designation.isNotEmpty ? s.designation : '-';
+      final department = s.department.isNotEmpty ? s.department : '-';
+      final contact = s.contact.isNotEmpty ? s.contact : '-';
+      final status = s.status.isNotEmpty ? s.status : '-';
+
       return [
-        Text(s.id, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: textPrimaryColor)),
-        Text(s.name, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: textPrimaryColor)),
-        Text(s.designation, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: textPrimaryColor)),
-        Text(s.department, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: textPrimaryColor)),
-        Text(s.contact, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: textPrimaryColor)),
-        _statusChip(s.status),
+        _cell(id, width: 150),
+        _cell(name, width: 200),
+        _cell(designation, width: 160),
+        _cell(department, width: 140),
+        _cell(contact, width: 150),
+        SizedBox(width: 120, child: _statusChip(status)),
       ];
     }).toList();
 
@@ -282,34 +331,45 @@ class _StaffScreenState extends State<StaffScreen> {
 // ================= StaffFormPopup + helper =================
 
 /// Shows centered 3/4-width popup that returns created/updated Staff or null
+
+// assume Staff and AuthService are defined elsewhere in your project
+
+
+// assume Staff and AuthService are defined elsewhere in your project
+
 Future<Staff?> showStaffFormPopup(BuildContext context, {Staff? initial}) {
-  return showDialog<Staff>(
-    context: context,
-    barrierDismissible: false,
-    builder: (ctx) => Dialog(
-      insetPadding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 4.0),
-      backgroundColor: Colors.transparent,
-      child: Center(
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxWidth: (MediaQuery.of(ctx).size.width * 0.98),
-            maxHeight: MediaQuery.of(ctx).size.height * 0.98,
-          ),
-          child: Material(
-            color: Colors.white,
-            elevation: 6,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+  final width = MediaQuery.of(context).size.width;
+  // On narrow screens open full-screen, on wide screens show centered dialog-like page.
+  if (width < 900) {
+    return Navigator.of(context).push<Staff>(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => StaffFormPage(initial: initial),
+      ),
+    );
+  } else {
+    // For wide screens: show single centered dialog card (no extra Material wrapper).
+    return showDialog<Staff>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        final maxW = MediaQuery.of(ctx).size.width * 0.95;
+        final maxH = MediaQuery.of(ctx).size.height * 0.9;
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: maxW, maxHeight: maxH),
+            // <-- IMPORTANT: return StaffFormPage directly (it contains the single container)
             child: StaffFormPage(initial: initial),
           ),
-        ),
-      ),
-    ),
-  );
+        );
+      },
+    );
+  }
 }
 
-
-// Full-page Staff form (¾ width dialog style)
-
+// Full-page Staff form (single card container — NO AppBar, NO avatar/upload)
 class StaffFormPage extends StatefulWidget {
   final Staff? initial;
   const StaffFormPage({super.key, this.initial});
@@ -378,10 +438,9 @@ class _StaffFormPageState extends State<StaffFormPage> {
     _status = initial?.status ?? 'Available';
     _shift = initial?.shift ?? 'Morning';
     _joinedAt = initial?.joinedAt;
-    _dob = initial?.lastActiveAt; // if your model uses dob, change accordingly; defaulting to lastActiveAt if present
+    _dob = initial?.lastActiveAt;
     if (initial?.roles != null) _selectedRoles.addAll(initial!.roles);
 
-    // if initial has a patientFacingId, prefer manual id mode
     if ((initial?.patientFacingId ?? '').isNotEmpty) _useAutoId = false;
   }
 
@@ -484,29 +543,6 @@ class _StaffFormPageState extends State<StaffFormPage> {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text('Roles', style: _labelStyle),
       const SizedBox(height: 6),
-      Row(children: [
-        Expanded(
-          child: DropdownButtonFormField<String>(
-            isExpanded: true,
-            decoration: _dec(hintText: 'Add a role'),
-            items: _roleOptions.map((r) => DropdownMenuItem(value: r, child: Text(r, style: GoogleFonts.inter()))).toList(),
-            onChanged: (val) {
-              if (val == null) return;
-              if (!_selectedRoles.contains(val)) setState(() => _selectedRoles.add(val));
-            },
-            hint: Text('Select role', style: GoogleFonts.inter()),
-          ),
-        ),
-        const SizedBox(width: 12),
-        ElevatedButton(
-          onPressed: () {
-            // quick-add: if user typed a custom role into qualifications field (or similar) not implemented here
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Select a role then tap the + on chip to remove.')));
-          },
-          style: ElevatedButton.styleFrom(backgroundColor: Colors.grey.shade100, elevation: 0),
-          child: Text('Help', style: GoogleFonts.inter(color: Colors.grey.shade700)),
-        ),
-      ]),
       const SizedBox(height: 10),
       Wrap(
         spacing: 8,
@@ -594,248 +630,213 @@ class _StaffFormPageState extends State<StaffFormPage> {
     }
   }
 
-  Widget _avatarTile() {
-    final avatarUrl = widget.initial?.avatarUrl;
-    return Column(children: [
-      GestureDetector(
-        onTap: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Avatar not implemented'))),
-        child: CircleAvatar(
-          radius: 36,
-          backgroundColor: Colors.grey.shade100,
-          backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty) ? NetworkImage(avatarUrl) as ImageProvider : null,
-          child: (avatarUrl == null || avatarUrl.isEmpty)
-              ? Text((widget.initial?.name.isNotEmpty == true ? widget.initial!.name[0] : 'U').toUpperCase(),
-              style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.grey[700]))
-              : null,
-        ),
-      ),
-      const SizedBox(height: 8),
-      TextButton(onPressed: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Upload not implemented'))), child: Text('Upload', style: GoogleFonts.inter()))
-    ]);
-  }
-
   @override
   Widget build(BuildContext context) {
     final isEdit = widget.initial != null;
     final width = MediaQuery.of(context).size.width;
-    final contentWidth = (width > 1100) ? 1000.0 : width * 0.95;
+    final contentWidth =  width * 0.95;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(isEdit ? 'Edit Staff' : 'Add Staff', style: GoogleFonts.lexend()),
-        backgroundColor: const Color(0xFFEF4444),
-        elevation: 2,
-        actions: [
-          TextButton(
-            onPressed: _isSaving ? null : _submit,
-            child: _isSaving
-                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                : Text('Save', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w700)),
-          ),
-          const SizedBox(width: 12),
-        ],
-      ),
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(vertical: 20),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: contentWidth),
-            child: Container(
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey.shade200),
-                boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 4))],
-              ),
-              child: Form(
-                key: _formKey,
-                child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                  // header row
-                  Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-                    Expanded(
+    // --- SINGLE VISIBLE CONTAINER CARD ---
+    return ScrollConfiguration(behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: contentWidth),
+          child: Container(
+            // <-- This is the single container you will see (borderRadius, shadow, etc.)
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey.shade200),
+              boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 4))],
+            ),
+            child: Form(
+              key: _formKey,
+              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                // header (title + subtitle) — no AppBar, no avatar upload
+                Text(isEdit ? 'Edit Staff' : 'Add New Staff', style: GoogleFonts.lexend(fontSize: 20, fontWeight: FontWeight.w800)),
+                const SizedBox(height: 6),
+                Text('Profile, contact and staff details', style: GoogleFonts.inter(color: Colors.grey[600])),
+                const SizedBox(height: 18),
+
+                // responsive grid
+                LayoutBuilder(builder: (ctx, cons) {
+                  final isWide = cons.maxWidth >= 760;
+                  final colW = isWide ? (cons.maxWidth - 20) / 2 : cons.maxWidth;
+                  return Wrap(spacing: 20, runSpacing: 14, children: [
+                    SizedBox(
+                        width: colW,
+                        child: _field(
+                            label: 'Full name',
+                            controller: _nameCtrl,
+                            hint: 'e.g. Dr. John Doe',
+                            prefix: const Icon(Icons.person_outline),
+                            validator: (v) => (v == null || v.trim().isEmpty) ? 'Name required' : null)),
+                    SizedBox(width: colW, child: _field(label: 'Designation', controller: _designationCtrl, hint: 'e.g. Cardiologist', prefix: const Icon(Icons.work_outline))),
+                    SizedBox(width: colW, child: _field(label: 'Department', controller: _departmentCtrl, hint: 'e.g. Cardiology', prefix: const Icon(Icons.local_hospital_outlined))),
+
+                    // Staff ID (auto/manual)
+                    SizedBox(
+                      width: colW,
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text(isEdit ? 'Edit Staff' : 'Add New Staff', style: GoogleFonts.lexend(fontSize: 20, fontWeight: FontWeight.w800)),
+                        Text('Staff ID', style: _labelStyle),
                         const SizedBox(height: 6),
-                        Text('Profile, contact and staff details', style: GoogleFonts.inter(color: Colors.grey[600])),
+                        Row(children: [
+                          Expanded(
+                            child: DropdownButtonFormField<String>(
+                              decoration: _dec(hintText: 'ID mode'),
+                              value: _useAutoId ? 'Auto' : 'Manual',
+                              items: const [
+                                DropdownMenuItem(value: 'Auto', child: Text('Auto-generate')),
+                                DropdownMenuItem(value: 'Manual', child: Text('Manual entry')),
+                              ],
+                              onChanged: (v) {
+                                if (v == null) return;
+                                setState(() {
+                                  _useAutoId = v == 'Auto';
+                                  if (_useAutoId) _codeCtrl.text = _genAutoId(_designationCtrl.text);
+                                });
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          ElevatedButton.icon(
+                            onPressed: _useAutoId ? () => setState(() => _codeCtrl.text = _genAutoId(_designationCtrl.text)) : null,
+                            icon: const Icon(Icons.refresh, size: 18),
+                            label: Text('New', style: GoogleFonts.inter()),
+                            style: ElevatedButton.styleFrom(backgroundColor: Colors.grey.shade100, foregroundColor: Colors.black, elevation: 0),
+                          ),
+                        ]),
+                        const SizedBox(height: 8),
+                        TextFormField(
+                          controller: _codeCtrl,
+                          decoration: _dec(hintText: 'e.g. DOC102'),
+                          readOnly: _useAutoId,
+                          validator: (v) => (v == null || v.trim().isEmpty) ? 'ID required' : null,
+                        ),
                       ]),
                     ),
-                    _avatarTile(),
-                  ]),
-                  const SizedBox(height: 18),
 
-                  // responsive grid
-                  LayoutBuilder(builder: (ctx, cons) {
-                    final isWide = cons.maxWidth >= 760;
-                    final colW = isWide ? (cons.maxWidth - 20) / 2 : cons.maxWidth;
-                    return Wrap(spacing: 20, runSpacing: 14, children: [
-                      SizedBox(
-                          width: colW,
-                          child: _field(
-                              label: 'Full name',
-                              controller: _nameCtrl,
-                              hint: 'e.g. Dr. John Doe',
-                              prefix: const Icon(Icons.person_outline),
-                              validator: (v) => (v == null || v.trim().isEmpty) ? 'Name required' : null)),
-                      SizedBox(width: colW, child: _field(label: 'Designation', controller: _designationCtrl, hint: 'e.g. Cardiologist', prefix: const Icon(Icons.work_outline))),
-                      SizedBox(width: colW, child: _field(label: 'Department', controller: _departmentCtrl, hint: 'e.g. Cardiology', prefix: const Icon(Icons.local_hospital_outlined))),
+                    SizedBox(width: colW, child: _field(label: 'Contact', controller: _contactCtrl, hint: '+91 9XXXXXXXXX', prefix: const Icon(Icons.phone_outlined), keyboardType: TextInputType.phone)),
+                    SizedBox(width: colW, child: _field(label: 'Email', controller: _emailCtrl, hint: 'you@clinic.com', prefix: const Icon(Icons.email_outlined), keyboardType: TextInputType.emailAddress)),
 
-                      // Staff ID (auto/manual)
-                      SizedBox(
-                        width: colW,
-                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Text('Staff ID', style: _labelStyle),
-                          const SizedBox(height: 6),
-                          Row(children: [
-                            Expanded(
-                              child: DropdownButtonFormField<String>(
-                                decoration: _dec(hintText: 'ID mode'),
-                                value: _useAutoId ? 'Auto' : 'Manual',
-                                items: const [
-                                  DropdownMenuItem(value: 'Auto', child: Text('Auto-generate')),
-                                  DropdownMenuItem(value: 'Manual', child: Text('Manual entry')),
-                                ],
-                                onChanged: (v) {
-                                  if (v == null) return;
-                                  setState(() {
-                                    _useAutoId = v == 'Auto';
-                                    if (_useAutoId) _codeCtrl.text = _genAutoId(_designationCtrl.text);
-                                  });
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            ElevatedButton.icon(
-                              onPressed: _useAutoId ? () => setState(() => _codeCtrl.text = _genAutoId(_designationCtrl.text)) : null,
-                              icon: const Icon(Icons.refresh, size: 18),
-                              label: Text('New', style: GoogleFonts.inter()),
-                              style: ElevatedButton.styleFrom(backgroundColor: Colors.grey.shade100, foregroundColor: Colors.black, elevation: 0),
-                            ),
-                          ]),
-                          const SizedBox(height: 8),
-                          TextFormField(
-                            controller: _codeCtrl,
-                            decoration: _dec(hintText: 'e.g. DOC102'),
-                            readOnly: _useAutoId,
-                            validator: (v) => (v == null || v.trim().isEmpty) ? 'ID required' : null,
-                          ),
-                        ]),
-                      ),
-
-                      SizedBox(width: colW, child: _field(label: 'Contact', controller: _contactCtrl, hint: '+91 9XXXXXXXXX', prefix: const Icon(Icons.phone_outlined), keyboardType: TextInputType.phone)),
-                      SizedBox(width: colW, child: _field(label: 'Email', controller: _emailCtrl, hint: 'you@clinic.com', prefix: const Icon(Icons.email_outlined), keyboardType: TextInputType.emailAddress)),
-
-                      // Status dropdown
-                      SizedBox(
-                        width: colW,
-                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Text('Status', style: _labelStyle),
-                          const SizedBox(height: 6),
-                          DropdownButtonFormField<String>(
-                            decoration: _dec(hintText: 'Select status'),
-                            value: _status,
-                            items: _statusOptions.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
-                            onChanged: (v) => setState(() => _status = v ?? 'Available'),
-                          ),
-                        ]),
-                      ),
-
-                      // Shift dropdown
-                      SizedBox(
-                        width: colW,
-                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Text('Shift', style: _labelStyle),
-                          const SizedBox(height: 6),
-                          DropdownButtonFormField<String>(
-                            decoration: _dec(hintText: 'Select shift'),
-                            value: _shift,
-                            items: _shiftOptions.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
-                            onChanged: (v) => setState(() => _shift = v ?? 'Morning'),
-                          ),
-                        ]),
-                      ),
-
-                      // Joined at & DOB
-                      SizedBox(
-                        width: colW,
-                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Text('Joining date', style: _labelStyle),
-                          const SizedBox(height: 6),
-                          InkWell(
-                            onTap: _pickJoinedAt,
-                            child: IgnorePointer(
-                              child: TextFormField(
-                                decoration: _dec(hintText: 'Select joining date'),
-                                controller: TextEditingController(text: _fmtDate(_joinedAt)),
-                                validator: (_) => null,
-                                enabled: !_isSaving,
-                              ),
-                            ),
-                          )
-                        ]),
-                      ),
-
-                      SizedBox(
-                        width: colW,
-                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Text('Date of Birth', style: _labelStyle),
-                          const SizedBox(height: 6),
-                          InkWell(
-                            onTap: _pickDob,
-                            child: IgnorePointer(
-                              child: TextFormField(
-                                decoration: _dec(hintText: 'Select DOB'),
-                                controller: TextEditingController(text: _fmtDate(_dob)),
-                                enabled: !_isSaving,
-                              ),
-                            ),
-                          )
-                        ]),
-                      ),
-
-                      // Experience & location
-                      SizedBox(width: colW, child: _field(label: 'Experience (years)', controller: _experienceCtrl, hint: 'e.g. 5', keyboardType: TextInputType.number)),
-                      SizedBox(width: colW, child: _field(label: 'Location / Branch', controller: _locationCtrl, hint: 'e.g. Main Clinic')),
-
-                      // Roles selector (full width cell)
-                      SizedBox(width: cons.maxWidth, child: _rolesSelector()),
-
-                      // Qualifications and notes (full width)
-                      SizedBox(
-                        width: cons.maxWidth,
-                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Text('Qualifications (comma separated)', style: _labelStyle),
-                          const SizedBox(height: 6),
-                          TextFormField(controller: _qualCtrl, decoration: _dec(hintText: 'MBBS, MD Cardiology'), maxLines: 2),
-                          const SizedBox(height: 12),
-                          Text('Notes', style: _sectionTitle),
-                          const SizedBox(height: 8),
-                          TextFormField(controller: _notesCtrl, decoration: _dec(hintText: 'Short notes or remarks'), maxLines: 4),
-                        ]),
-                      ),
-                    ]);
-                  }),
-
-                  const SizedBox(height: 18),
-
-                  // actions
-                  Row(children: [
-                    OutlinedButton.icon(
-                      onPressed: _isSaving ? null : () => Navigator.of(context).maybePop(),
-                      icon: const Icon(Icons.close),
-                      label: Text('Cancel', style: GoogleFonts.inter()),
+                    // Status dropdown
+                    SizedBox(
+                      width: colW,
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text('Status', style: _labelStyle),
+                        const SizedBox(height: 6),
+                        DropdownButtonFormField<String>(
+                          decoration: _dec(hintText: 'Select status'),
+                          value: _status,
+                          items: _statusOptions.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+                          onChanged: (v) => setState(() => _status = v ?? 'Available'),
+                        ),
+                      ]),
                     ),
-                    const SizedBox(width: 12),
-                    const Spacer(),
-                    ElevatedButton.icon(
-                      onPressed: _isSaving ? null : _submit,
-                      icon: const Icon(Icons.save, color: Colors.white),
-                      label: Text(_isSaving ? 'Saving...' : 'Save staff', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
-                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFDC2626), padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14)),
+
+                    // Shift dropdown
+                    SizedBox(
+                      width: colW,
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text('Shift', style: _labelStyle),
+                        const SizedBox(height: 6),
+                        DropdownButtonFormField<String>(
+                          decoration: _dec(hintText: 'Select shift'),
+                          value: _shift,
+                          items: _shiftOptions.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+                          onChanged: (v) => setState(() => _shift = v ?? 'Morning'),
+                        ),
+                      ]),
                     ),
-                  ]),
+
+                    // Joined at & DOB
+                    SizedBox(
+                      width: colW,
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text('Joining date', style: _labelStyle),
+                        const SizedBox(height: 6),
+                        InkWell(
+                          onTap: _pickJoinedAt,
+                          child: IgnorePointer(
+                            child: TextFormField(
+                              decoration: _dec(hintText: 'Select joining date'),
+                              controller: TextEditingController(text: _fmtDate(_joinedAt)),
+                              validator: (_) => null,
+                              enabled: !_isSaving,
+                            ),
+                          ),
+                        )
+                      ]),
+                    ),
+
+                    SizedBox(
+                      width: colW,
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text('Date of Birth', style: _labelStyle),
+                        const SizedBox(height: 6),
+                        InkWell(
+                          onTap: _pickDob,
+                          child: IgnorePointer(
+                            child: TextFormField(
+                              decoration: _dec(hintText: 'Select DOB'),
+                              controller: TextEditingController(text: _fmtDate(_dob)),
+                              enabled: !_isSaving,
+                            ),
+                          ),
+                        )
+                      ]),
+                    ),
+
+                    // Experience & location
+                    SizedBox(width: colW, child: _field(label: 'Experience (years)', controller: _experienceCtrl, hint: 'e.g. 5', keyboardType: TextInputType.number)),
+                    SizedBox(width: colW, child: _field(label: 'Location / Branch', controller: _locationCtrl, hint: 'e.g. Main Clinic')),
+
+                    // Roles selector (full width cell)
+                    SizedBox(width: cons.maxWidth, child: _rolesSelector()),
+
+                    // Qualifications and notes (full width)
+                    SizedBox(
+                      width: cons.maxWidth,
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text('Qualifications (comma separated)', style: _labelStyle),
+                        const SizedBox(height: 6),
+                        TextFormField(controller: _qualCtrl, decoration: _dec(hintText: 'MBBS, MD Cardiology'), maxLines: 2),
+                        const SizedBox(height: 12),
+                        Text('Notes', style: _sectionTitle),
+                        const SizedBox(height: 8),
+                        TextFormField(controller: _notesCtrl, decoration: _dec(hintText: 'Short notes or remarks'), maxLines: 4),
+                      ]),
+                    ),
+                  ]);
+                }),
+
+                const SizedBox(height: 18),
+
+                // actions
+                Row(children: [
+                  OutlinedButton.icon(
+                    onPressed: _isSaving ? null : () => Navigator.of(context).maybePop(),
+                    icon: const Icon(Icons.close),
+                    label: Text('Cancel', style: GoogleFonts.inter()),
+                  ),
+                  const SizedBox(width: 12),
+                  const Spacer(),
+                  ElevatedButton.icon(
+                    onPressed: _isSaving ? null : _submit,
+                    icon: const Icon(Icons.save, color: Colors.white),
+                    label: Text(
+                      _isSaving ? 'Saving...' : 'Save staff',
+                      style: GoogleFonts.inter(
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,   // 🔹 Force text color to white
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFDC2626), padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14)),
+                  ),
                 ]),
-              ),
+              ]),
             ),
           ),
         ),

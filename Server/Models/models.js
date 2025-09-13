@@ -193,14 +193,18 @@ const Pharmacy = mongoose.model('Pharmacy', PharmacySchema);
 
 // --- Staff Model (Mongo) ---
 const StaffSchema = new mongoose.Schema({
-  doctorId: { type: String, required: true }, // Postgres User.id (UUID)
-  name: String,
-  role: { type: String, enum: ['Nurse', 'Technician', 'Receptionist'] },
+  doctorId: { type: String, required: false }, // Postgres User.id (UUID) - optional
+  name: { type: String, required: true },
+  designation: { type: String },               // 👈 add this
   department: String,
-  phone: String,
+  contact: { type: String },                   // 👈 add this
+  role: { type: String, enum: ['Nurse', 'Technician', 'Receptionist', 'Doctor'] },
+  phone: String,                               // (you can keep this if needed separately)
   email: String,
   createdAt: { type: Date, default: Date.now },
 });
+
+
 const Staff = mongoose.model('Staff', StaffSchema);
 
 // ===============================

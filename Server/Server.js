@@ -9,7 +9,7 @@ const { sequelize, connectPostgres, connectMongo } = require('./Config/Dbconfig'
 const { User } = require('./Models/models');
 const authRoutes = require('./routes/auth');
 const appointmentRoutes = require('./routes/appointment');
-const path = require("path"); 
+const path = require("path");
 // --- Initialization ---
 const app = express();
 const PORT = process.env.PORT || 3000;

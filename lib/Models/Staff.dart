@@ -92,13 +92,33 @@ class Staff {
       return <String>[];
     }
 
+    String _stringFallback(List<dynamic> keys) {
+      for (final k in keys) {
+        final val = map[k];
+        if (val != null) {
+          final s = val.toString().trim();
+          if (s.isNotEmpty) return s;
+        }
+      }
+      return '';
+    }
+
+    // Guarantee readable defaults for designation/contact so UI won't be empty.
+    final designationValue = _stringFallback(['designation', 'role', 'title']).isNotEmpty
+        ? _stringFallback(['designation', 'role', 'title'])
+        : '-';
+
+    final contactValue = _stringFallback(['contact', 'phone', 'phoneNumber', 'contactNumber']).isNotEmpty
+        ? _stringFallback(['contact', 'phone', 'phoneNumber', 'contactNumber'])
+        : '-';
+
     return Staff(
       id: map['_id']?.toString() ?? map['id']?.toString() ?? '',
-      name: map['name']?.toString() ?? '',
-      designation: map['designation']?.toString() ?? map['role']?.toString() ?? '',
-      department: map['department']?.toString() ?? '',
-      patientFacingId: map['code']?.toString() ?? '',
-      contact: map['contact']?.toString() ?? map['phone']?.toString() ?? '',
+      name: (map['name']?.toString() ?? map['fullName']?.toString() ?? '').toString(),
+      designation: designationValue,
+      department: map['department']?.toString() ?? map['dept']?.toString() ?? '',
+      patientFacingId: map['code']?.toString() ?? map['patientFacingId']?.toString() ?? '',
+      contact: contactValue,
       email: map['email']?.toString() ?? '',
       avatarUrl: map['avatarUrl']?.toString() ?? map['photo']?.toString() ?? '',
       gender: map['gender']?.toString() ?? '',

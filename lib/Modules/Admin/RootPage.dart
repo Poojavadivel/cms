@@ -54,7 +54,7 @@ class _AdminRootPageState extends State<AdminRootPage> {
       {
         'icon': Iconsax.calendar,
         'label': 'Appointments',
-        'screen': const AppointmentsScreen(),
+        'screen': const AdminAppointmentsScreen(),
       },
       {
         'icon': Iconsax.user,
