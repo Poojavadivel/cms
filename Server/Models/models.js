@@ -76,55 +76,59 @@ const User = sequelize.define(
 const mongoose = require('mongoose');
 
 // --- Patient Model (Mongo) ---
-const PatientSchema = new mongoose.Schema({
-  firstName: { type: String, required: true },
-  lastName: { type: String, required: true },
-  dateOfBirth: Date,
-  gender: { type: String, enum: ['Male', 'Female', 'Other'] },
-  phone: String,
-  email: { type: String, unique: true },
-  address: {
-    country: String,
-    state: String,
-    city: String,
+const PatientSchema = new mongoose.Schema(
+  {
+    firstName: { type: String, required: true },
+
+    // Last name optional, defaults to ""
+    lastName: { type: String, required: false, default: "" },
+
+    dateOfBirth: Date,
+    gender: { type: String, enum: ['Male', 'Female', 'Other'] },
+    phone: String,
+    email: { type: String, default: null  },
+
+    address: {
+      country: String,
+      state: String,
+      city: String,
+    },
+
+    // 🔗 Link to Postgres Doctor (User.id UUID)
+    doctorId: { type: String, required: true },
+
+    medicalHistory: [String], // ["Diabetes", "Allergy"]
+
+    prescriptions: [
+      {
+        appointmentId: { type: String }, // Mongo Appointment._id
+        doctorId: { type: String },      // Postgres User.id
+        medicines: [
+          {
+            name: String,
+            dosage: String,
+            duration: String,
+          },
+        ],
+        notes: String,
+        issuedAt: { type: Date, default: Date.now },
+      },
+    ],
+
+    labReports: [
+      {
+        reportType: String,
+        fileUrl: String, // link to S3 or server
+        uploadedBy: String, // doctorId/adminId (Postgres UUID)
+        appointmentId: String,
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
+
+    allergies: [String],
   },
-
-  // 🔗 Link to Postgres Doctor (User.id UUID)
-  doctorId: { type: String, required: true },
-
-  medicalHistory: [String], // ["Diabetes", "Allergy"]
-
-  prescriptions: [
-    {
-      appointmentId: { type: String }, // Mongo Appointment._id
-      doctorId: { type: String },      // Postgres User.id
-      medicines: [
-        {
-          name: String,
-          dosage: String,
-          duration: String,
-        },
-      ],
-      notes: String,
-      issuedAt: { type: Date, default: Date.now },
-    },
-  ],
-
-  labReports: [
-    {
-      reportType: String,
-      fileUrl: String, // link to S3 or server
-      uploadedBy: String, // doctorId/adminId (Postgres UUID)
-      appointmentId: String,
-      createdAt: { type: Date, default: Date.now },
-    },
-  ],
-
-  allergies: [String],
-
-  createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now },
-});
+  { timestamps: true } // ⏰ Auto-manage createdAt & updatedAt
+);
 
 const Patient = mongoose.model('Patient', PatientSchema);
 

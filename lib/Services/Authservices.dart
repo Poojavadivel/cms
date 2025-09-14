@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../Models/Admin.dart';
 import '../Models/Doctor.dart';
+import '../Models/Patients.dart';
 import '../Models/User.dart';
 import '../Models/appointment_draft.dart';
 import '../Models/dashboardmodels.dart';
@@ -22,6 +23,7 @@ class AuthResult {
 /// AuthService: Orchestrates the entire authentication flow.
 class AuthService {
   // 🔑 Singleton setup
+
   AuthService._privateConstructor();
   static final AuthService instance = AuthService._privateConstructor();
 
@@ -409,6 +411,211 @@ class AuthService {
     _currentStaff = null;
   }
 
+
+  // -------------------- Patients --------------------
+  /// Fetch all patients (supports pagination & search)
+  Future<List<PatientDetails>> fetchPatients({
+    bool forceRefresh = false,
+    int page = 0,
+    int limit = 50,
+    String q = '',
+    String status = '',
+  }) async {
+    try {
+      return await _withAuth<List<PatientDetails>>((token) async {
+        final uri = ApiEndpoints.getPatients().url +
+            '?page=$page&limit=$limit' +
+            (q.isNotEmpty ? '&q=${Uri.encodeComponent(q)}' : '') +
+            (status.isNotEmpty ? '&status=${Uri.encodeComponent(status)}' : '');
+
+        print('📡 [FETCH PATIENTS] Requesting: $uri');
+
+        final response = await _apiHandler.get(uri, token: token);
+
+        // Debug: print raw response
+        print('📥 [FETCH PATIENTS] Raw response: $response');
+
+        List data;
+        if (response is Map && response.containsKey('patients')) {
+          data = response['patients'] as List;
+        } else if (response is List) {
+          data = response;
+        } else if (response is Map && response.containsKey('data')) {
+          data = response['data'] as List;
+        } else {
+          throw ApiException(
+            'Unexpected response format while fetching patients: $response',
+          );
+        }
+
+        // Debug: print mapped patients count and sample
+        print('📦 [FETCH PATIENTS] Parsed ${data.length} patients');
+        if (data.isNotEmpty) {
+          print('👤 [FETCH PATIENTS] First patient: ${data.first}');
+        }
+
+        final patients = data
+            .map((j) => PatientDetails.fromMap(Map<String, dynamic>.from(j)))
+            .toList();
+
+// Debug: print all patients after mapping
+        if (patients.isNotEmpty) {
+          print('✅ [FETCH PATIENTS] Total: ${patients.length}');
+          for (var i = 0; i < patients.length; i++) {
+            final p = patients[i];
+            print('👤 Patient ${i + 1}: ${p.name}, id: ${p.patientId}');
+          }
+        } else {
+          print('⚠️ [FETCH PATIENTS] No patients mapped.');
+        }
+
+
+        return patients;
+      });
+    } catch (e) {
+      print('❌ [FETCH PATIENTS] Error: $e');
+      rethrow;
+    }
+  }
+
+  Future<List<Doctor>> fetchAllDoctors() async {
+    try {
+      print('➡️ Starting fetchAllDoctors');
+      return await _withAuth<List<Doctor>>((token) async {
+        print('🔑 Auth token available: $token');
+
+        final response = await _apiHandler.get(ApiEndpoints.getAllDoctors().url, token: token);
+        print('📥 Response received: $response');
+
+        // Accept either: [{...}, {...}]  OR  { "doctors": [{...}, {...}] }
+        final raw = (response is Map && response.containsKey('doctors'))
+            ? response['doctors']
+            : response;
+        print('📦 Raw data extracted: $raw');
+
+        final items = (raw is List) ? raw : <dynamic>[];
+        print('📄 Items list: ${items.length} items');
+
+        final mapped = items.map((e) {
+          try {
+            final doctor = Doctor.fromMap(Map<String, dynamic>.from(e));
+            print('✅ Mapped doctor: $doctor');
+            return doctor;
+          } catch (error) {
+            print('⚠️ Failed to map doctor entry: $e, error: $error');
+            return null;
+          }
+        })
+            .whereType<Doctor>()
+            .toList();
+
+        print('📊 Final mapped doctors count: ${mapped.length}');
+        return mapped;
+      });
+    } catch (e) {
+      print('❌ Error in fetchAllDoctors: $e');
+      rethrow;
+    }
+  }
+
+
+
+
+
+  /// Fetch single patient by id
+  Future<PatientDetails> fetchPatientById(String id) async {
+    try {
+      return await _withAuth<PatientDetails>((token) async {
+        final response =
+        await _apiHandler.get(ApiEndpoints.getPatientById(id).url, token: token);
+
+        final data = (response is Map && response.containsKey('patient'))
+            ? response['patient']
+            : response;
+
+        return PatientDetails.fromMap(Map<String, dynamic>.from(data));
+      });
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Create patient
+  Future<PatientDetails?> createPatient(PatientDetails payload) async {
+    try {
+      return await _withAuth<PatientDetails?>((token) async {
+        final response = await _apiHandler.post(
+          ApiEndpoints.createPatient().url,
+          token: token,
+          body: payload.toJson(),
+        );
+
+        final data = (response is Map && response.containsKey('patient'))
+            ? response['patient']
+            : (response is Map && response.containsKey('data'))
+            ? response['data']
+            : response;
+
+        if (data == null) return null;
+        return PatientDetails.fromMap(Map<String, dynamic>.from(data));
+      });
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Update patient
+  Future<bool> updatePatient(PatientDetails payload) async {
+    try {
+      if (payload.patientId.isEmpty) {
+        throw ApiException('Patient id is required for update');
+      }
+
+      return await _withAuth<bool>((token) async {
+        final response = await _apiHandler.put(
+          ApiEndpoints.updatePatient(payload.patientId).url,
+          token: token,
+          body: payload.toJson(),
+        );
+
+        if (response is Map && (response['success'] == true)) {
+          return true;
+        }
+
+        final data = (response is Map && response.containsKey('patient'))
+            ? response['patient']
+            : (response is Map && response.containsKey('data'))
+            ? response['data']
+            : response;
+
+        return data != null;
+      });
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Delete patient
+  Future<bool> deletePatient(String id) async {
+    try {
+      return await _withAuth<bool>((token) async {
+        final response =
+        await _apiHandler.delete(ApiEndpoints.deletePatient(id).url, token: token);
+
+        if (response is Map &&
+            (response['success'] == true ||
+                response['deletedId'] == id ||
+                response['id'] == id ||
+                response['_id'] == id)) {
+          return true;
+        }
+        return false;
+      });
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   // -------------------- Role parsing --------------------
   dynamic _parseUserRole(Map<String, dynamic> userData) {
     final baseUser = User.fromMap(userData);
@@ -421,4 +628,5 @@ class AuthService {
       throw ApiException('Invalid user role received from server.');
     }
   }
+
 }

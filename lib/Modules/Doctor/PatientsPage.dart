@@ -33,7 +33,7 @@ final _patientApiData = PatientDashboardData(
       phone: '+91 6382255960', city: 'London', address: '123 Baker St', pincode: 'SW1A 0AA',
       insuranceNumber: 'AA234-875490', expiryDate: '16.09.2026',
       avatarUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuB4mvEgM4k-gfOz9apSQFT7ySJ3xYpQefFrN4Qnn6CrPXXLca2wQ2Hy38Gf9WQkN4HNTrLk4usF2EgOtUKx_rlmphLhpUs-hCm9tYCyKjxdF66dLbtiCviBysuTv-KbLAAzN_KUIIMSx1UlKxrT2ZafD-FmZA_fpXxj6bQCBUnSJNb5jnyySYyslom4WXLMk3Lj5zDgYmHIdJ2-L0e5ycjqcUZZbHYLR_maoiZ5qQQCetseFehIktghS3y3_nq2Jtq6U9JMNsGYzf4A',
-      dateOfBirth: '1990-08-15', lastVisitDate: '2022-12-05',
+      dateOfBirth: '1990-08-15', lastVisitDate: '2022-12-05', doctorId: '',
     ),
     PatientDetails(
       patientId: '#PTN002', name: 'John Doe', age: 28, gender: 'Male',
@@ -42,7 +42,7 @@ final _patientApiData = PatientDashboardData(
       phone: '+91 6382255960', city: 'New York', address: '456 Main St', pincode: '10001',
       insuranceNumber: 'BB567-123456', expiryDate: '22.11.2025',
       avatarUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAe6hXNS2HpqQn7YkbB-pUVflFRpqFkOXW7bENE83NCZJ-U6m5ixkO1RAU_YcjxqCDi4-qA4TcovvoNdLv6MAgNES0_yUJ7W05kd7vPz-l_rCLbokB638oNokMGNY4QImoYxHH83cMR8mKWKodHG4mD_M6YV5MqdU1xIieXcmxqg_dB9kzodcjmvEp2rYqT5FomcQk1wPyK_i_24jtTk761yGgGBydNZhrWVJUIMUHV-bII1VHrz_tHjzep1tgjWw5GWZuT1778Irx5',
-      dateOfBirth: '1994-05-22', lastVisitDate: '2022-12-05',
+      dateOfBirth: '1994-05-22', lastVisitDate: '2022-12-05',doctorId: '',
     ),
     PatientDetails(
       patientId: '#PTN003', name: 'Bhavana Sharma', age: 22, gender: 'Female',
@@ -51,7 +51,7 @@ final _patientApiData = PatientDashboardData(
       phone: '+91 6382255960', city: 'Mumbai', address: '789 Ocean View', pincode: '400001',
       insuranceNumber: 'CC890-789012', expiryDate: '01.05.2027',
       avatarUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuB2jHBBSTdPIFBjw7fp3GXQiQzTkMG7AKnlRzMUjkUnnHSUtnshRDkv8Fy1B7RTF28v0Qbv_alfAmQMj7cNEMX85CuAMuZc-Sr5JKCiIk3EY82tDUthlbKzY8S4vlRJp4wrWDeGK7lY7Ro0T280s8E-ry2I7VOUgLLHFtLnXSeE1kvYWEH1pIpqTZCDp_92VE98DZfD1O4zt4_gZSo38ly7gekgdJmLKv68Ly88BiB8xfKKaAAKxM9eUvcSnNkc6lDQTryjOcrNsOIL',
-      dateOfBirth: '2002-11-30', lastVisitDate: '2025-08-19',
+      dateOfBirth: '2002-11-30', lastVisitDate: '2025-08-19',doctorId: '',
     ),
     PatientDetails(
       patientId: '#PTN004', name: 'David Lee', age: 40, gender: 'Male',
@@ -60,7 +60,7 @@ final _patientApiData = PatientDashboardData(
       phone: '+91 6382255960', city: 'London', address: '10 Downing St', pincode: 'SW1A 2AA',
       insuranceNumber: 'DD123-456789', expiryDate: '10.03.2028',
       avatarUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBAhShsj_sjsFP8yqmRAwdcWbYW61IWCk8Y9y8zTdK2A3HYqbXyRekqrj0rmwMd5VWCVLDRXfh8vMxcigzVCUFTRrMW43jyj86M9cnXvVRCNFQZnoWHZYsVlppW0oTjlwBrbFLxBKe3pMDd3mm6SD_BRVNb1it0eV_VJ_vDBWd0VSSZCnHD03ErqsjLPc_FjAJW3aj8ScUdSdOiDebY7VrZtk_GDy9nA0z2irr6iT20DpnxFZAvQM1i9ewkd_O2aQPg0f0kd_-LzXBD',
-      dateOfBirth: '1996-01-01', lastVisitDate: '2022-12-05',
+      dateOfBirth: '1996-01-01', lastVisitDate: '2022-12-05',doctorId: '',
     ),
     PatientDetails(
       patientId: '#PTN005', name: 'Joseph King', age: 78, gender: 'Male',
@@ -69,7 +69,7 @@ final _patientApiData = PatientDashboardData(
       phone: '+91 6382255960', city: 'San Francisco', address: 'Golden Gate Ave', pincode: '94101',
       insuranceNumber: 'EE456-789012', expiryDate: '05.08.2025',
       avatarUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCgN1WEjGylzuwySvo6RPwP6q8eGUmCQzgvAvkNpHQIdLlm2luVjRD0GpeGbj9qi7WwU7T3cZayQPcsqyyA1ksPG6obZ0tdbYRShdlVXemxy-XdT2RAMN4Z4IBGVAB-fK8uE75Phu2lSBKu-oFQsOI4xWUm-5xLW7JYTWJM0_UBx6npQ9PjoWDWb8GXgG7DdTYuR0kyZRg08vJ4riXKqSiDh54vFfjSK9qYdZp1QVPgRa2SHP4S2c77vp5P3NSIxt4jAY2Me3m3MQIT',
-      dateOfBirth: '1945-06-12', lastVisitDate: '2022-12-05',
+      dateOfBirth: '1945-06-12', lastVisitDate: '2022-12-05',doctorId: '',
     ),
     PatientDetails(
       patientId: '#PTN006', name: 'Lakesh Patel', age: 48, gender: 'Male',
@@ -78,7 +78,7 @@ final _patientApiData = PatientDashboardData(
       phone: '+91 6382255960', city: 'Ahmedabad', address: '101 Gandhi Rd', pincode: '380001',
       insuranceNumber: 'FF789-012345', expiryDate: '18.12.2027',
       avatarUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBG1aJkNbuPWmDs1QFIpfW2KQByEl-QqBnC9GyeU3JveDWSveLHh-THzaFIlW_FPjUBUcExOPt-xi0hA-5rhEmT9uNtR_Ide8IOvuJvu6Issur4u_SGfsv-pqHxNgqiyvUscYMk9EFE7-5jeD04xXxu5ENG2rkXxguK4rjSliln75B0PHS2u769pAXx08ddZYVWWH2TWVJSPoK0sm9HbW0_2faFHaPyz2--ZvNPuHe8lfMbUKja1dfKvdE6SFrzST_WbK-f8tomHoN_',
-      dateOfBirth: '1977-09-18', lastVisitDate: '2022-12-05',
+      dateOfBirth: '1977-09-18', lastVisitDate: '2022-12-05',doctorId: '',
     ),
     PatientDetails(
       patientId: '#PTN007', name: 'Maria Garcia', age: 30, gender: 'Female',
@@ -87,7 +87,7 @@ final _patientApiData = PatientDashboardData(
       phone: '+91 6382255960', city: 'Madrid', address: 'Calle Mayor 1', pincode: '28001',
       insuranceNumber: 'GG012-345678', expiryDate: '20.07.2026',
       avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=1964&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-      dateOfBirth: '1994-03-10', lastVisitDate: '2023-11-20',
+      dateOfBirth: '1994-03-10', lastVisitDate: '2023-11-20',doctorId: '',
     ),
     PatientDetails(
       patientId: '#PTN008', name: 'Chen Wei', age: 55, gender: 'Male',
@@ -96,7 +96,7 @@ final _patientApiData = PatientDashboardData(
       phone: '+91 6382255960', city: 'Beijing', address: 'Wangfujing St', pincode: '100006',
       insuranceNumber: 'HH345-678901', expiryDate: '11.09.2025',
       avatarUrl: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=1974&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-      dateOfBirth: '1969-07-01', lastVisitDate: '2024-01-15',
+      dateOfBirth: '1969-07-01', lastVisitDate: '2024-01-15',doctorId: '',
     ),
     PatientDetails(
       patientId: '#PTN009', name: 'Fatima Ahmed', age: 29, gender: 'Female',
@@ -105,7 +105,7 @@ final _patientApiData = PatientDashboardData(
       phone: '+91 6382255960', city: 'Dubai', address: 'Sheikh Zayed Rd', pincode: '00000',
       insuranceNumber: 'II678-901234', expiryDate: '03.04.2027',
       avatarUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=1976&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-      dateOfBirth: '1995-12-01', lastVisitDate: '2024-02-28',
+      dateOfBirth: '1995-12-01', lastVisitDate: '2024-02-28',doctorId: '',
     ),
     PatientDetails(
       patientId: '#PTN010', name: 'Hiroshi Tanaka', age: 68, gender: 'Male',
@@ -114,7 +114,7 @@ final _patientApiData = PatientDashboardData(
       phone: '+91 6382255960', city: 'Tokyo', address: 'Shibuya Crossing', pincode: '150-0042',
       insuranceNumber: 'JJ901-234567', expiryDate: '25.01.2026',
       avatarUrl: 'https://images.unsplash.com/photo-1552058544-ab7967980206?q=80&w=1964&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-      dateOfBirth: '1956-02-10', lastVisitDate: '2023-09-01',
+      dateOfBirth: '1956-02-10', lastVisitDate: '2023-09-01',doctorId: '',
     ),
     PatientDetails(
       patientId: '#PTN011', name: 'Sophie Dupont', age: 42, gender: 'Female',
@@ -123,7 +123,7 @@ final _patientApiData = PatientDashboardData(
       phone: '+91 6382255960', city: 'Paris', address: 'Champs-Élysées', pincode: '75008',
       insuranceNumber: 'KK234-567890', expiryDate: '14.06.2027',
       avatarUrl: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?q=80&w=1961&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-      dateOfBirth: '1982-04-20', lastVisitDate: '2024-03-10',
+      dateOfBirth: '1982-04-20', lastVisitDate: '2024-03-10',doctorId: '',
     ),
     PatientDetails(
       patientId: '#PTN012', name: 'Carlos Santos', age: 60, gender: 'Male',
@@ -132,7 +132,7 @@ final _patientApiData = PatientDashboardData(
       phone: '+91 6382255960', city: 'São Paulo', address: 'Av. Paulista', pincode: '01310-000',
       insuranceNumber: 'LL567-890123', expiryDate: '08.02.2026',
       avatarUrl: 'https://images.unsplash.com/photo-1564564321837-a57b7070acf7?q=80&w=1976&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-      dateOfBirth: '1964-09-05', lastVisitDate: '2024-05-01',
+      dateOfBirth: '1964-09-05', lastVisitDate: '2024-05-01',doctorId: '',
     ),
     PatientDetails(
       patientId: '#PTN013', name: 'Elena Petrova', age: 31, gender: 'Female',
@@ -141,7 +141,7 @@ final _patientApiData = PatientDashboardData(
       phone: '+91 6382255960', city: 'Moscow', address: 'Red Square', pincode: '109012',
       insuranceNumber: 'MM890-123456', expiryDate: '19.03.2028',
       avatarUrl: 'https://images.unsplash.com/photo-1546484497-cc5273760456?q=80&w=1974&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-      dateOfBirth: '1993-11-11', lastVisitDate: '2023-12-25',
+      dateOfBirth: '1993-11-11', lastVisitDate: '2023-12-25',doctorId: '',
     ),
     PatientDetails(
       patientId: '#PTN014', name: 'Hans Müller', age: 67, gender: 'Male',
@@ -150,7 +150,7 @@ final _patientApiData = PatientDashboardData(
       phone: '+91 6382255960', city: 'Berlin', address: 'Brandenburg Gate', pincode: '10117',
       insuranceNumber: 'NN123-456789', expiryDate: '07.10.2025',
       avatarUrl: 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-      dateOfBirth: '1957-01-01', lastVisitDate: '2024-04-01',
+      dateOfBirth: '1957-01-01', lastVisitDate: '2024-04-01',doctorId: '',
     ),
     PatientDetails(
       patientId: '#PTN015', name: 'Aisha Khan', age: 25, gender: 'Female',
@@ -159,7 +159,7 @@ final _patientApiData = PatientDashboardData(
       phone: '+91 6382255960', city: 'Karachi', address: 'Clifton Beach', pincode: '75600',
       insuranceNumber: 'OO456-789012', expiryDate: '28.02.2027',
       avatarUrl: 'https://images.unsplash.com/photo-1508214751196-edcd4a317245?q=80&w=1974&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-      dateOfBirth: '1999-06-15', lastVisitDate: '2024-01-01',
+      dateOfBirth: '1999-06-15', lastVisitDate: '2024-01-01',doctorId: '',
     ),
     PatientDetails(
       patientId: '#PTN016', name: 'Giovanni Rossi', age: 50, gender: 'Male',
@@ -168,7 +168,7 @@ final _patientApiData = PatientDashboardData(
       phone: '+91 6382255960', city: 'Rome', address: 'Colosseum', pincode: '00184',
       insuranceNumber: 'PP789-012345', expiryDate: '04.09.2026',
       avatarUrl: 'https://images.unsplash.com/photo-1547425260-76bc422930b2?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-      dateOfBirth: '1974-03-20', lastVisitDate: '2023-10-10',
+      dateOfBirth: '1974-03-20', lastVisitDate: '2023-10-10',doctorId: '',
     ),
     PatientDetails(
       patientId: '#PTN017', name: 'Kimiko Sato', age: 38, gender: 'Female',
@@ -177,7 +177,7 @@ final _patientApiData = PatientDashboardData(
       phone: '+91 6382255960', city: 'Kyoto', address: 'Fushimi Inari', pincode: '612-0882',
       insuranceNumber: 'QQ012-345678', expiryDate: '17.11.2027',
       avatarUrl: 'https://images.unsplash.com/photo-1544725176-7c4095c52c6f?q=80&w=1974&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-      dateOfBirth: '1986-07-07', lastVisitDate: '2024-02-01',
+      dateOfBirth: '1986-07-07', lastVisitDate: '2024-02-01',doctorId: '',
     ),
     PatientDetails(
       patientId: '#PTN018', name: 'Mohammed Ali', age: 70, gender: 'Male',
@@ -186,7 +186,7 @@ final _patientApiData = PatientDashboardData(
       phone: '+91 6382255960', city: 'Cairo', address: 'Pyramids Rd', pincode: '12556',
       insuranceNumber: 'RR345-678901', expiryDate: '09.01.2026',
       avatarUrl: 'https://images.unsplash.com/photo-1531427186611-ad02f06b4640?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-      dateOfBirth: '1954-09-10', lastVisitDate: '2024-04-20',
+      dateOfBirth: '1954-09-10', lastVisitDate: '2024-04-20',doctorId: '',
     ),
     PatientDetails(
       patientId: '#PTN019', name: 'Chloe Dubois', age: 28, gender: 'Female',
@@ -195,7 +195,7 @@ final _patientApiData = PatientDashboardData(
       phone: '+91 6382255960', city: 'Marseille', address: 'Vieux-Port', pincode: '13001',
       insuranceNumber: 'SS678-901234', expiryDate: '21.05.2027',
       avatarUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=1976&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-      dateOfBirth: '1996-03-01', lastVisitDate: '2023-11-01',
+      dateOfBirth: '1996-03-01', lastVisitDate: '2023-11-01',doctorId: '',
     ),
     PatientDetails(
       patientId: '#PTN020', name: 'David Smith', age: 45, gender: 'Male',
@@ -204,7 +204,7 @@ final _patientApiData = PatientDashboardData(
       phone: '+91 6382255960', city: 'Sydney', address: 'Opera House', pincode: '2000',
       insuranceNumber: 'TT901-234567', expiryDate: '13.08.2026',
       avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=1974&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-      dateOfBirth: '1979-01-01', lastVisitDate: '2024-03-15',
+      dateOfBirth: '1979-01-01', lastVisitDate: '2024-03-15',doctorId: '',
     ),
   ],
 );
