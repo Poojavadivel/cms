@@ -24,6 +24,7 @@ app.use('/api/appointments', appointmentRoutes);
 app.use('/api/staff', require('./routes/staff'));
 app.use('/api/patients', require('./routes/patients'));
 app.use('/api/doctors', require('./routes/doctors'));
+app.use('/api/pharmacy', require('./routes/pharmacy'));
 app.use(express.static(webAppPath));
 app.get('/', (req, res) => {
   res.sendFile(path.join(webAppPath, 'index.html'));

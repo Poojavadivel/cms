@@ -616,6 +616,149 @@ class AuthService {
     }
   }
 
+
+  // ===============================
+// --- Pharmacy Inventory ---
+// ===============================
+
+  /// Fetch all medicines (supports pagination & search)
+  Future<List<Map<String, dynamic>>> fetchMedicines({
+    bool forceRefresh = false,
+    int page = 0,
+    int limit = 50,
+    String q = '',
+    String status = '',
+  }) async {
+    try {
+      return await _withAuth<List<Map<String, dynamic>>>((token) async {
+        final uri = ApiEndpoints.getPharmacyMedicines().url +
+            '?page=$page&limit=$limit' +
+            (q.isNotEmpty ? '&q=${Uri.encodeComponent(q)}' : '') +
+            (status.isNotEmpty ? '&status=${Uri.encodeComponent(status)}' : '');
+
+        final response = await _apiHandler.get(uri, token: token);
+
+        // Normalize response: support plain list OR { medicines: [...] }
+        List data;
+        if (response is List) {
+          data = response;
+        } else if (response is Map && (response.containsKey('medicines') || response.containsKey('data'))) {
+          data = (response['medicines'] ?? response['data']) as List;
+        } else {
+          throw ApiException('Unexpected response format while fetching medicines: $response');
+        }
+
+        return data.map((j) => Map<String, dynamic>.from(j)).toList();
+      });
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Fetch single medicine by id
+  Future<Map<String, dynamic>> fetchMedicineById(String id) async {
+    try {
+      print("➡️ fetchMedicineById called with id: $id");
+
+      return await _withAuth<Map<String, dynamic>>((token) async {
+        print("➡️ Auth token retrieved: $token");
+
+        final url = ApiEndpoints.getPharmacyMedicineById(id).url;
+        print("➡️ Making GET request to: $url");
+
+        final response = await _apiHandler.get(url, token: token);
+        print("➡️ Response received: $response");
+
+        final data = (response is Map && (response.containsKey('medicine') || response.containsKey('data')))
+            ? (response['medicine'] ?? response['data'])
+            : response;
+
+        print("➡️ Extracted data: $data");
+
+        final result = Map<String, dynamic>.from(data);
+        print("➡️ Final result map: $result");
+
+        return result;
+      });
+    } catch (e, stackTrace) {
+      print("❌ Error occurred: $e");
+      print("📜 Stack trace: $stackTrace");
+      rethrow;
+    }
+  }
+
+
+  /// Create new medicine
+  Future<Map<String, dynamic>?> createMedicine(Map<String, dynamic> payload) async {
+    try {
+      return await _withAuth<Map<String, dynamic>?>((token) async {
+        final response = await _apiHandler.post(
+          ApiEndpoints.createPharmacyMedicine().url,
+          token: token,
+          body: payload,
+        );
+
+        final data = (response is Map && (response.containsKey('medicine') || response.containsKey('data')))
+            ? (response['medicine'] ?? response['data'])
+            : response;
+
+        if (data == null) return null;
+        return Map<String, dynamic>.from(data);
+      });
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Update medicine
+  Future<bool> updateMedicine(String id, Map<String, dynamic> payload) async {
+    try {
+      if (id.isEmpty) {
+        throw ApiException('Medicine id is required for update');
+      }
+
+      return await _withAuth<bool>((token) async {
+        final response = await _apiHandler.put(
+          ApiEndpoints.updatePharmacyMedicine(id).url,
+          token: token,
+          body: payload,
+        );
+
+        if (response is Map && (response['success'] == true)) {
+          return true;
+        }
+
+        final data = (response is Map && (response.containsKey('medicine') || response.containsKey('data')))
+            ? (response['medicine'] ?? response['data'])
+            : response;
+
+        return data != null;
+      });
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Delete medicine
+  Future<bool> deleteMedicine(String id) async {
+    try {
+      return await _withAuth<bool>((token) async {
+        final response = await _apiHandler.delete(ApiEndpoints.deletePharmacyMedicine(id).url, token: token);
+
+        if (response is Map &&
+            (response['success'] == true ||
+                response['deletedId'] == id ||
+                response['id'] == id ||
+                response['_id'] == id)) {
+          return true;
+        }
+        return false;
+      });
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   // -------------------- Role parsing --------------------
   dynamic _parseUserRole(Map<String, dynamic> userData) {
     final baseUser = User.fromMap(userData);

@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-// Import our new generic table
-// Adjust these imports to your project
+// Adjust these imports to your project structure
 import '../../Models/Staff.dart';
 import '../../Utils/Colors.dart';
+import '../../Services/Authservices.dart';
 import 'widget/generic_data_table.dart';
+
 // ---------------------------------------------------------------------
 
 // --- App Theme Colors ---
@@ -19,10 +20,11 @@ const Color textSecondaryColor = Color(0xFF6B7280);
 // --- Data Models ---
 class Medicine {
   final String id;
-  final String name;
-  final String brand;
-  final int stock;
-  final String status;
+  String name;
+  String brand;
+  int stock;
+  String status;
+  double? salePrice;
 
   Medicine({
     required this.id,
@@ -30,48 +32,35 @@ class Medicine {
     required this.brand,
     required this.stock,
     required this.status,
+    this.salePrice,
   });
 
   factory Medicine.fromMap(Map<String, dynamic> map) {
     return Medicine(
-      id: map['id'],
-      name: map['name'],
-      brand: map['brand'],
-      stock: map['stock'],
-      status: map['status'],
+      id: map['id'] ?? map['_id']?.toString() ?? '',
+      name: map['name'] ?? '',
+      brand: map['brand'] ?? '',
+      stock: map['stock'] is int ? map['stock'] : int.tryParse(map['stock']?.toString() ?? '0') ?? 0,
+      status: map['status'] ?? 'In Stock',
+      salePrice: map.containsKey('salePrice')
+          ? (map['salePrice'] is num ? (map['salePrice'] as num).toDouble() : double.tryParse(map['salePrice'].toString()))
+          : null,
     );
   }
+
+  Map<String, dynamic> toMap() => {
+    'id': id,
+    'name': name,
+    'brand': brand,
+    'stock': stock,
+    'status': status,
+    if (salePrice != null) 'salePrice': salePrice,
+  };
 }
 
-// --- Simulated API Data ---
-const List<Map<String, dynamic>> _pharmacyApiData = [
-  {'id': 'MED-001', 'name': 'Paracetamol', 'brand': 'Cipla', 'stock': 150, 'status': 'In Stock'},
-  {'id': 'MED-002', 'name': 'Amoxicillin', 'brand': 'Sun Pharma', 'stock': 80, 'status': 'In Stock'},
-  {'id': 'MED-003', 'name': 'Ibuprofen', 'brand': 'Dr. Reddy\'s', 'stock': 20, 'status': 'Low Stock'},
-  {'id': 'MED-004', 'name': 'Aspirin', 'brand': 'Lupin', 'stock': 0, 'status': 'Out of Stock'},
-  {'id': 'MED-005', 'name': 'Metformin', 'brand': 'Cipla', 'stock': 120, 'status': 'In Stock'},
-  {'id': 'MED-006', 'name': 'Atorvastatin', 'brand': 'Sun Pharma', 'stock': 90, 'status': 'In Stock'},
-  {'id': 'MED-007', 'name': 'Omeprazole', 'brand': 'Dr. Reddy\'s', 'stock': 15, 'status': 'Low Stock'},
-  {'id': 'MED-008', 'name': 'Losartan', 'brand': 'Lupin', 'stock': 200, 'status': 'In Stock'},
-  {'id': 'MED-009', 'name': 'Amlodipine', 'brand': 'Cipla', 'stock': 0, 'status': 'Out of Stock'},
-  {'id': 'MED-010', 'name': 'Gabapentin', 'brand': 'Sun Pharma', 'stock': 60, 'status': 'In Stock'},
-  {'id': 'MED-011', 'name': 'Hydrochlorothiazide', 'brand': 'Dr. Reddy\'s', 'stock': 25, 'status': 'Low Stock'},
-  {'id': 'MED-012', 'name': 'Sertraline', 'brand': 'Lupin', 'stock': 180, 'status': 'In Stock'},
-  {'id': 'MED-013', 'name': 'Tamsulosin', 'brand': 'Cipla', 'stock': 50, 'status': 'In Stock'},
-  {'id': 'MED-014', 'name': 'Furosemide', 'brand': 'Sun Pharma', 'stock': 10, 'status': 'Low Stock'},
-  {'id': 'MED-015', 'name': 'Alprazolam', 'brand': 'Dr. Reddy\'s', 'stock': 0, 'status': 'Out of Stock'},
-  {'id': 'MED-016', 'name': 'Citalopram', 'brand': 'Lupin', 'stock': 100, 'status': 'In Stock'},
-  {'id': 'MED-017', 'name': 'Insulin Glargine', 'brand': 'Cipla', 'stock': 30, 'status': 'In Stock'},
-  {'id': 'MED-018', 'name': 'Levothyroxine', 'brand': 'Sun Pharma', 'stock': 5, 'status': 'Low Stock'},
-  {'id': 'MED-019', 'name': 'Rosuvastatin', 'brand': 'Dr. Reddy\'s', 'stock': 130, 'status': 'In Stock'},
-  {'id': 'MED-020', 'name': 'Zolpidem', 'brand': 'Lupin', 'stock': 40, 'status': 'In Stock'},
-  {'id': 'MED-021', 'name': 'Lisinopril', 'brand': 'Cipla', 'stock': 95, 'status': 'In Stock'},
-  {'id': 'MED-022', 'name': 'Ranitidine', 'brand': 'Sun Pharma', 'stock': 12, 'status': 'Low Stock'},
-  {'id': 'MED-023', 'name': 'Cetirizine', 'brand': 'Dr. Reddy\'s', 'stock': 0, 'status': 'Out of Stock'},
-  {'id': 'MED-024', 'name': 'Metoprolol', 'brand': 'Lupin', 'stock': 88, 'status': 'In Stock'},
-  {'id': 'MED-025', 'name': 'Pantoprazole', 'brand': 'Cipla', 'stock': 15, 'status': 'Low Stock'},
-];
-
+// ----------------------------
+// Main screen widget
+// ----------------------------
 class PharmacyScreen extends StatefulWidget {
   const PharmacyScreen({super.key});
 
@@ -84,6 +73,8 @@ class _PharmacyScreenState extends State<PharmacyScreen> {
   bool _isLoading = true;
   String _searchQuery = '';
   int _currentPage = 0;
+  final int _limit = 10;
+  int _totalItems = 0;
   String _statusFilter = 'All';
 
   @override
@@ -92,23 +83,44 @@ class _PharmacyScreenState extends State<PharmacyScreen> {
     _fetchMedicines();
   }
 
-  Future<void> _fetchMedicines() async {
+  Future<void> _fetchMedicines({int page = 0}) async {
     setState(() {
       _isLoading = true;
     });
-    await Future.delayed(const Duration(milliseconds: 700));
-    final fetchedData = _pharmacyApiData.map((m) => Medicine.fromMap(m)).toList();
-    setState(() {
-      _allMedicines = fetchedData;
-      _isLoading = false;
-    });
+
+    try {
+      // AuthService.fetchMedicines returns List<Map<String,dynamic>> (as per provided AuthService)
+      final raw = await AuthService.instance.fetchMedicines(
+        page: page,
+        limit: _limit,
+        q: _searchQuery,
+        status: _statusFilter == 'All' ? '' : _statusFilter,
+      );
+
+      // `raw` expected as List<Map<String,dynamic>>
+      final mapped = raw.map((m) => Medicine.fromMap(m)).toList();
+
+      setState(() {
+        _allMedicines = mapped;
+        _currentPage = page;
+        // _totalItems not provided by simple list endpoint; if your server returns meta adjust here
+        _totalItems = mapped.length; // fallback
+      });
+    } catch (e, st) {
+      debugPrint('❌ fetchMedicines error: $e\n$st');
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to load medicines')));
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   Future<void> _onAddPressed() async {
-    setState(() => _isLoading = true);
-    await Future.delayed(const Duration(milliseconds: 600));
-    setState(() => _isLoading = false);
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Open Add Medicine (demo)')));
+    final created = await _showAddMedicineDialog();
+    if (created == true) {
+      await _fetchMedicines(page: 0);
+    }
   }
 
   void _onSearchChanged(String q) {
@@ -116,23 +128,56 @@ class _PharmacyScreenState extends State<PharmacyScreen> {
       _searchQuery = q;
       _currentPage = 0;
     });
+    // fetch from server new search results
+    _fetchMedicines(page: 0);
   }
 
-  void _nextPage() => setState(() => _currentPage++);
-  void _prevPage() { if (_currentPage > 0) setState(() => _currentPage--); }
+  void _nextPage() {
+    setState(() => _currentPage++);
+    _fetchMedicines(page: _currentPage);
+  }
+
+  void _prevPage() {
+    if (_currentPage > 0) {
+      setState(() => _currentPage--);
+      _fetchMedicines(page: _currentPage);
+    }
+  }
 
   void _onView(int index, List<Medicine> list) {
     final medicine = list[index];
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Viewing details for ${medicine.name}")),
+    // show details or navigate to detail page
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(medicine.name),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('SKU: ${medicine.id}'),
+            const SizedBox(height: 6),
+            Text('Brand: ${medicine.brand}'),
+            const SizedBox(height: 6),
+            Text('Stock: ${medicine.stock}'),
+            const SizedBox(height: 6),
+            Text('Status: ${medicine.status}'),
+            if (medicine.salePrice != null) ...[
+              const SizedBox(height: 6),
+              Text('Price: ₹${medicine.salePrice!}'),
+            ],
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
+        ],
+      ),
     );
   }
 
   void _onEdit(int index, List<Medicine> list) {
     final medicine = list[index];
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Editing ${medicine.name}")),
-    );
+    _showEditDialog(medicine);
   }
 
   Future<void> _onDelete(int index, List<Medicine> list) async {
@@ -141,7 +186,7 @@ class _PharmacyScreenState extends State<PharmacyScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Delete Entry'),
-        content: Text('Delete ${medicine.name}?'),
+        content: Text('Delete ${medicine.name}? This action cannot be undone.'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
           TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete', style: TextStyle(color: Colors.red))),
@@ -149,30 +194,264 @@ class _PharmacyScreenState extends State<PharmacyScreen> {
       ),
     );
     if (confirm != true) return;
+
     setState(() => _isLoading = true);
-    await Future.delayed(const Duration(milliseconds: 600));
-
-    // Find the original data map and remove it from the list
-    _pharmacyApiData.removeWhere((item) => item['id'] == medicine.id);
-
-    // Refresh the UI by removing from the in-memory list
-    _allMedicines.removeWhere((m) => m.id == medicine.id);
-
-    setState(() {
-      _isLoading = false;
-      final filteredItems = _getFilteredMedicines();
-      if (_currentPage * 10 >= filteredItems.length && _currentPage > 0) {
-        _currentPage = 0;
+    try {
+      final ok = await AuthService.instance.deleteMedicine(medicine.id);
+      if (ok) {
+        await _fetchMedicines(page: _currentPage);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Deleted ${medicine.name}')));
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Delete failed')));
       }
-    });
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Deleted ${medicine.name} (demo)')));
+    } catch (e) {
+      debugPrint('Delete error: $e');
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Delete failed')));
+    } finally {
+      setState(() => _isLoading = false);
+    }
   }
 
-  // Method to get the filtered list of medicines
+  // Method to show Add dialog and call createMedicine
+  Future<bool?> _showAddMedicineDialog() {
+    final _formKey = GlobalKey<FormState>();
+    String sku = '';
+    String name = '';
+    String brand = '';
+    String stock = '0';
+    String status = 'In Stock';
+    String salePrice = '';
+
+    return showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: Text('Add Medicine', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+          content: StatefulBuilder(builder: (ctx2, setStateModal) {
+            return SizedBox(
+              width: 520,
+              child: Form(
+                key: _formKey,
+                child: SingleChildScrollView(
+                  child: Column(mainAxisSize: MainAxisSize.min, children: [
+                    TextFormField(
+                      decoration: InputDecoration(labelText: 'SKU', border: OutlineInputBorder(borderRadius: BorderRadius.circular(8))),
+                      validator: (v) => (v == null || v.trim().isEmpty) ? 'SKU required' : null,
+                      onChanged: (v) => sku = v.trim(),
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      decoration: InputDecoration(labelText: 'Name', border: OutlineInputBorder(borderRadius: BorderRadius.circular(8))),
+                      validator: (v) => (v == null || v.trim().isEmpty) ? 'Name required' : null,
+                      onChanged: (v) => name = v.trim(),
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      decoration: InputDecoration(labelText: 'Brand', border: OutlineInputBorder(borderRadius: BorderRadius.circular(8))),
+                      onChanged: (v) => brand = v.trim(),
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      initialValue: '0',
+                      decoration: InputDecoration(labelText: 'Stock', border: OutlineInputBorder(borderRadius: BorderRadius.circular(8))),
+                      keyboardType: TextInputType.number,
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) return 'Stock required';
+                        if (int.tryParse(v) == null) return 'Enter valid number';
+                        return null;
+                      },
+                      onChanged: (v) => stock = v.trim(),
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      decoration: InputDecoration(labelText: 'Sale Price (optional)', border: OutlineInputBorder(borderRadius: BorderRadius.circular(8))),
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      onChanged: (v) => salePrice = v.trim(),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      value: status,
+                      items: ['In Stock', 'Low Stock', 'Out of Stock', 'Discontinued']
+                          .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                          .toList(),
+                      onChanged: (v) => setStateModal(() => status = v ?? status),
+                      decoration: InputDecoration(labelText: 'Status', border: OutlineInputBorder(borderRadius: BorderRadius.circular(8))),
+                    ),
+                  ]),
+                ),
+              ),
+            );
+          }),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: primaryColor),
+              onPressed: () async {
+                if (!(_formKey.currentState?.validate() ?? false)) return;
+
+                Navigator.pop(ctx, true); // close while we call backend
+
+                final payload = <String, dynamic>{
+                  'sku': sku,
+                  'name': name,
+                  'brand': brand.isEmpty ? null : brand,
+                  'stock': int.tryParse(stock) ?? 0,
+                  'status': status,
+                };
+                if (salePrice.isNotEmpty) {
+                  payload['salePrice'] = double.tryParse(salePrice) ?? 0.0;
+                }
+
+                setState(() => _isLoading = true);
+                try {
+                  final created = await AuthService.instance.createMedicine(payload);
+                  if (created != null) {
+                    await _fetchMedicines(page: 0);
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Medicine created')));
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Create failed')));
+                  }
+                } catch (e) {
+                  debugPrint('Create error: $e');
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Create failed')));
+                } finally {
+                  setState(() => _isLoading = false);
+                }
+              },
+              child: const Text('Create'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Show edit dialog and call updateMedicine
+  void _showEditDialog(Medicine medicine) {
+    final _formKey = GlobalKey<FormState>();
+    String name = medicine.name;
+    String brand = medicine.brand;
+    String status = medicine.status;
+    String stock = medicine.stock.toString();
+    String salePrice = medicine.salePrice?.toString() ?? '';
+
+    showDialog<void>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Edit Medicine', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+          content: StatefulBuilder(builder: (context, setStateModal) {
+            return SizedBox(
+              width: 520,
+              child: Form(
+                key: _formKey,
+                child: SingleChildScrollView(
+                  child: Column(mainAxisSize: MainAxisSize.min, children: [
+                    // SKU read-only
+                    TextFormField(
+                      initialValue: medicine.id,
+                      enabled: false,
+                      decoration: InputDecoration(labelText: 'SKU', border: OutlineInputBorder(borderRadius: BorderRadius.circular(8))),
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      initialValue: name,
+                      decoration: InputDecoration(labelText: 'Name', border: OutlineInputBorder(borderRadius: BorderRadius.circular(8))),
+                      validator: (v) => (v == null || v.trim().isEmpty) ? 'Name required' : null,
+                      onChanged: (v) => setStateModal(() => name = v),
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      initialValue: brand,
+                      decoration: InputDecoration(labelText: 'Brand', border: OutlineInputBorder(borderRadius: BorderRadius.circular(8))),
+                      onChanged: (v) => setStateModal(() => brand = v),
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      initialValue: stock,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(labelText: 'Stock', border: OutlineInputBorder(borderRadius: BorderRadius.circular(8))),
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) return 'Stock required';
+                        final n = int.tryParse(v);
+                        if (n == null || n < 0) return 'Enter valid non-negative integer';
+                        return null;
+                      },
+                      onChanged: (v) => setStateModal(() => stock = v),
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      initialValue: salePrice,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      decoration: InputDecoration(labelText: 'Sale Price (optional)', border: OutlineInputBorder(borderRadius: BorderRadius.circular(8))),
+                      validator: (v) {
+                        if (v == null || v.isEmpty) return null;
+                        final d = double.tryParse(v);
+                        if (d == null || d < 0) return 'Enter valid price';
+                        return null;
+                      },
+                      onChanged: (v) => setStateModal(() => salePrice = v),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      value: status,
+                      items: ['In Stock', 'Low Stock', 'Out of Stock', 'Discontinued'].map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+                      onChanged: (v) => setStateModal(() => status = v ?? status),
+                      decoration: InputDecoration(labelText: 'Status', border: OutlineInputBorder(borderRadius: BorderRadius.circular(8))),
+                    ),
+                  ]),
+                ),
+              ),
+            );
+          }),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: primaryColor),
+              onPressed: () async {
+                if (!(_formKey.currentState?.validate() ?? false)) return;
+
+                final parsedStock = int.tryParse(stock) ?? 0;
+                final parsedPrice = salePrice.isNotEmpty ? double.tryParse(salePrice) : null;
+                final payload = {
+                  'name': name.trim(),
+                  'brand': brand.trim(),
+                  'stock': parsedStock,
+                  'status': status,
+                };
+                if (parsedPrice != null) payload['salePrice'] = parsedPrice;
+
+                Navigator.pop(context);
+                setState(() => _isLoading = true);
+                try {
+                  final ok = await AuthService.instance.updateMedicine(medicine.id, payload);
+                  if (ok) {
+                    await _fetchMedicines(page: _currentPage);
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Medicine updated')));
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Update failed')));
+                  }
+                } catch (e) {
+                  debugPrint('Update error: $e');
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Update failed')));
+                } finally {
+                  setState(() => _isLoading = false);
+                }
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Method to get the filtered list of medicines locally
+  // (we still call server on search/filter but keep this as a final filter for UI)
   List<Medicine> _getFilteredMedicines() {
     return _allMedicines.where((m) {
       final q = _searchQuery.trim().toLowerCase();
-      final matchesSearch = m.name.toLowerCase().contains(q) || m.id.toLowerCase().contains(q) || m.brand.toLowerCase().contains(q);
+      final matchesSearch = q.isEmpty || m.name.toLowerCase().contains(q) || m.id.toLowerCase().contains(q) || m.brand.toLowerCase().contains(q);
       final matchesFilter = _statusFilter == 'All' || m.status == _statusFilter;
       return matchesSearch && matchesFilter;
     }).toList();
@@ -219,7 +498,8 @@ class _PharmacyScreenState extends State<PharmacyScreen> {
   }
 
   Widget _buildStatusFilter() {
-    final statuses = {'All', ..._pharmacyApiData.map((s) => s['status'] as String).toSet()};
+    // If you'd like server-provided statuses, call an endpoint — for now keep commonly used ones
+    final statuses = {'All', 'In Stock', 'Low Stock', 'Out of Stock', 'Discontinued'};
     return PopupMenuButton<String>(
       icon: const Icon(Icons.filter_list),
       onSelected: (String newValue) {
@@ -227,6 +507,7 @@ class _PharmacyScreenState extends State<PharmacyScreen> {
           _statusFilter = newValue;
           _currentPage = 0;
         });
+        _fetchMedicines(page: 0);
       },
       itemBuilder: (BuildContext context) {
         return statuses.map((String value) {
@@ -243,11 +524,9 @@ class _PharmacyScreenState extends State<PharmacyScreen> {
   Widget build(BuildContext context) {
     final filtered = _getFilteredMedicines();
 
-    final startIndex = _currentPage * 10;
-    final endIndex = (startIndex + 10).clamp(0, filtered.length);
-    final paginatedMedicines = startIndex >= filtered.length
-        ? <Medicine>[]
-        : filtered.sublist(startIndex, endIndex);
+    final startIndex = _currentPage * _limit;
+    final endIndex = (startIndex + _limit).clamp(0, filtered.length);
+    final paginatedMedicines = startIndex >= filtered.length ? <Medicine>[] : filtered.sublist(startIndex, endIndex);
 
     // Prepare headers and rows for the generic table
     final headers = const ['MEDICINE ID', 'NAME', 'BRAND', 'STOCK', 'STATUS'];
@@ -272,8 +551,8 @@ class _PharmacyScreenState extends State<PharmacyScreen> {
             searchQuery: _searchQuery,
             onSearchChanged: _onSearchChanged,
             currentPage: _currentPage,
-            totalItems: filtered.length,
-            itemsPerPage: 10,
+            totalItems: _totalItems,
+            itemsPerPage: _limit,
             onPreviousPage: _prevPage,
             onNextPage: _nextPage,
             isLoading: _isLoading,
