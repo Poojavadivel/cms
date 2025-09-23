@@ -1,0 +1,21 @@
+# === Streamlit frontend ===
+streamlit==1.35.0
+
+# === OCR and Image Processing ===
+pytesseract==0.3.10
+Pillow==10.3.0
+pdf2image==1.17.0
+opencv-python==4.10.0.82  # optional, for image cleaning if needed
+
+# === NLP & Text Parsing ===
+regex==2023.12.25
+
+# === MongoDB ===
+pymongo==4.6.3
+
+# === Logging and Utilities ===
+loguru==0.7.2
+python-magic==0.4.27  # optional, for file type detection
+
+# === Optional dev tools ===
+python-dotenv==1.0.1  # if you want .env support

@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 /**
  * Middleware to check JWT and attach user info to request.
  */
+
 const auth = (req, res, next) => {
   const token = req.header('x-auth-token');
   if (!token) {

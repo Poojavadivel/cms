@@ -1,0 +1,14 @@
+# Core build tools
+build-essential
+python3-dev
+gcc
+g++
+make
+
+# Libraries for ML/NLP packages
+libpq-dev         # PostgreSQL support if needed
+libjpeg-dev       # Pillow / image processing
+zlib1g-dev        # Compression support
+
+# Optional: libssl-dev for some crypto packages
+libssl-dev
