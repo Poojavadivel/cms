@@ -17,8 +17,8 @@ class ApiConstants {
   // --- Base URL ---
   /// The base URL for the backend API.
   /// Change this to your actual server address during development/production.
-  // static const String baseUrl = "http://10.154.59.132:3000";
-  static const String baseUrl = "https://glowhair-skin.onrender.com";// <-- IMPORTANT: Replace with your actual backend URL
+   static const String baseUrl = "http://192.168.246.132:3000";
+  // static const String baseUrl = "https://glowhair-skin.onrender.com";// <-- IMPORTANT: Replace with your actual backend URL
 
   // --- HTTP Methods ---
   static const String post = 'POST';
@@ -112,3 +112,4 @@ class ApiErrors {
     return _errorMessages[code] ?? 'A network error occurred. Please check your connection and try again.';
   }
 }
+

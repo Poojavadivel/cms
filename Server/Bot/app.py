@@ -1,4 +1,3 @@
-# app.py
 """
 Doctor Chatbot service wrapper.
 Keeps original process_query logic, exposes HTTP endpoints,
@@ -15,47 +14,56 @@ import dateparser
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import spacy
-from spacy.cli.download import download as spacy_download
+import subprocess
 
-# ------------------ Paths ------------------
+# =========================
+# Paths & directories
+# =========================
 BASE = Path(__file__).parent
 LOG_DIR = BASE / "logs"
-MODELS_DIR = BASE / "models"
-
-# Ensure directories exist
 LOG_DIR.mkdir(parents=True, exist_ok=True)
-MODELS_DIR.mkdir(parents=True, exist_ok=True)
 
-# ------------------ Logger ------------------
+MODEL_DIR = BASE / "models"
+MODEL_DIR.mkdir(parents=True, exist_ok=True)
+
+# =========================
+# Logger
+# =========================
 logger = logging.getLogger("chatbot")
 logger.setLevel(logging.DEBUG)
 if not logger.handlers:
     ch = logging.StreamHandler()
     ch.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
     logger.addHandler(ch)
+
     if os.getenv("LOG_TO_FILE", "0") == "1":
         fh = logging.FileHandler(LOG_DIR / "chatbot.log", encoding="utf-8")
         fh.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
         logger.addHandler(fh)
 
-# ------------------ Load SpaCy model ------------------
-EN_CORE_WEB_TRF_PATH = MODELS_DIR / "en_core_web_trf"
-try:
-    if not EN_CORE_WEB_TRF_PATH.exists():
-        logger.info("SpaCy transformer model not found locally. Downloading...")
-        spacy_download("en_core_web_trf")
-        # Move downloaded model to ./models
-        import shutil
-        import en_core_web_trf
-        shutil.move(en_core_web_trf.__path__[0], EN_CORE_WEB_TRF_PATH)
-        logger.info(f"Model saved to {EN_CORE_WEB_TRF_PATH}")
-    nlp = spacy.load(EN_CORE_WEB_TRF_PATH)
-    logger.info("SpaCy transformer model loaded successfully!")
-except Exception as e:
-    logger.exception("Failed to load SpaCy transformer model: %s", e)
-    raise
+# =========================
+# spaCy model auto-download
+# =========================
+def download_spacy_model(model_name: str, output_dir: Path):
+    try:
+        # Check if already exists
+        model_path = output_dir / model_name
+        if not model_path.exists():
+            logger.info("Downloading spaCy model: %s", model_name)
+            spacy.cli.download(model_name, output_dir=str(output_dir))
+        else:
+            logger.info("spaCy model %s already exists", model_name)
+    except Exception as e:
+        logger.exception("Failed to download spaCy model %s: %s", model_name, e)
+        raise
 
-# ------------------ Import local modules ------------------
+# Download models at startup
+download_spacy_model("en_core_web_sm", MODEL_DIR)
+download_spacy_model("en_core_web_trf", MODEL_DIR)
+
+# =========================
+# Import local modules
+# =========================
 try:
     from nlp import detect_intent_and_entity
     from mongo import (
@@ -77,8 +85,11 @@ except Exception as e:
     logger.exception("Failed to import local modules (nlp/mongo/rag): %s", e)
     raise
 
-# ------------------ FastAPI app ------------------
+# =========================
+# FastAPI app
+# =========================
 app = FastAPI(title="Doctor Chatbot API", version="1.0")
+
 EXTRA_INTENTS = [
     "get_patient_dob",
     "get_patient_contact",
@@ -90,7 +101,9 @@ EXTRA_INTENTS = [
     "notes_for_admission",
 ]
 
-# ------------------ Business logic ------------------
+# =========================
+# Business logic
+# =========================
 async def process_query(user_query: str) -> str:
     logger.debug("[MAIN] Query: %s", user_query)
     intent, entity = detect_intent_and_entity(user_query)
@@ -153,11 +166,14 @@ async def process_query(user_query: str) -> str:
             return "🤖 Sorry, I didn’t understand. Ask about appointments, staff, or patient records."
 
         return generate_response(user_query, data)
+
     except Exception as e:
         logger.exception("[MAIN] Error processing %s: %s", intent, e)
         return "❌ Internal error, please try again later."
 
-# ------------------ API models ------------------
+# =========================
+# API Models
+# =========================
 class ChatRequest(BaseModel):
     message: str
     context: Optional[dict] = None
@@ -165,7 +181,9 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     reply: str
 
-# ------------------ Endpoints ------------------
+# =========================
+# Endpoints
+# =========================
 @app.post("/chat", response_model=ChatResponse)
 async def chat_endpoint(req: ChatRequest):
     msg = (req.message or "").strip()
@@ -177,9 +195,15 @@ async def chat_endpoint(req: ChatRequest):
 
 @app.get("/healthz")
 async def healthz():
-    return {"ok": True}
+    try:
+        return {"ok": True}
+    except Exception as e:
+        logger.exception("Health check failed: %s", e)
+        return {"ok": False, "details": str(e)}
 
-# ------------------ Startup / Shutdown ------------------
+# =========================
+# Startup / Shutdown hooks
+# =========================
 @app.on_event("startup")
 async def on_startup():
     logger.info("Chatbot service starting up. CWD=%s", BASE)

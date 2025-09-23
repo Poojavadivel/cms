@@ -6,6 +6,7 @@ import '../../Models/appointment_draft.dart';
 import '../../Models/dashboardmodels.dart';
 import '../../Services/Authservices.dart';
 import '../../Utils/Colors.dart';
+import '../Doctor/widgets/Addnewappoiments.dart';
 import '../Doctor/widgets/doctor_appointment_preview.dart';
 import 'widget/generic_data_table.dart';
 
@@ -59,12 +60,25 @@ class _AdminAppointmentsScreenState extends State<AdminAppointmentsScreen> {
   }
 
   Future<void> _onAddPressed() async {
-    // Hook to admin add flow — replace with your add page when available
-    if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Open Add Appointment (admin)')));
-    // Optionally open Add page and refresh on success:
-    // final created = await Navigator.push(...);
-    // if (created == true) await _fetchAppointments();
+    if (!mounted) return;
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => Dialog(
+        child: SizedBox(
+          width: 800, // makes it wide on web/desktop
+          child: const AddAppointmentForm(),
+        ),
+      ),
+    );
+
+    if (result == true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Appointment saved ✅")),
+      );
+    }
   }
+
 
   void _onSearchChanged(String q) {
     setState(() {
