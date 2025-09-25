@@ -10,14 +10,7 @@ import 'DashboardPage.dart';
 import 'PatientsPage.dart';
 import 'SchedulePage.dart';
 import 'SettingsPAge.dart';
-
-// --- App Theme Colors ---
-const Color primaryColor = Color(0xFFEF4444);
-const Color primaryColorLight = Color(0xFFFEE2E2);
-const Color backgroundColor = Color(0xFFF8FAFC);
-const Color cardBackgroundColor = Color(0xFFFFFFFF);
-const Color textPrimaryColor = Color(0xFF1F2937);
-const Color textSecondaryColor = Color(0xFF6B7280);
+import '../../Utils/Colors.dart'; // <-- Your new AppColors file
 
 // --- Main Doctor Root Page Widget ---
 class DoctorRootPage extends StatefulWidget {
@@ -122,7 +115,6 @@ class _DoctorRootPageState extends State<DoctorRootPage> {
 
   void _onNewAppointmentPressed() async {
     debugPrint("➕ New Appointment Pressed");
-    // TODO: open AddAppointmentForm dialog
     await _loadAppointments();
   }
 
@@ -152,14 +144,14 @@ class _DoctorRootPageState extends State<DoctorRootPage> {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content:
           Text("🗑️ Appointment for ${appt.patientName} deleted successfully"),
-          backgroundColor: Colors.green,
+          backgroundColor: AppColors.kSuccess,
         ));
         await _loadAppointments();
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text("💥 Error while deleting ${appt.patientName}: $e"),
-        backgroundColor: Colors.orange,
+        backgroundColor: AppColors.kDanger,
       ));
     }
   }
@@ -209,7 +201,7 @@ class _DoctorRootPageState extends State<DoctorRootPage> {
     final screenSize = MediaQuery.of(context).size;
 
     return Scaffold(
-      backgroundColor: backgroundColor,
+      backgroundColor: AppColors.background,
       body: Stack(
         children: [
           Row(
@@ -250,10 +242,10 @@ class _DoctorRootPageState extends State<DoctorRootPage> {
                       height: 60,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: primaryColor,
+                        color: AppColors.primary,
                         boxShadow: [
                           BoxShadow(
-                            color: primaryColor.withOpacity(0.4),
+                            color: AppColors.primary.withOpacity(0.4),
                             blurRadius: 10,
                             offset: const Offset(0, 4),
                           )
@@ -271,7 +263,7 @@ class _DoctorRootPageState extends State<DoctorRootPage> {
                       'Ask Movi',
                       style: GoogleFonts.inter(
                         fontWeight: FontWeight.bold,
-                        color: textPrimaryColor,
+                        color: AppColors.kTextPrimary,
                       ),
                     )
                   ],
@@ -353,11 +345,11 @@ class _DoctorSidebarNavigationState extends State<DoctorSidebarNavigation>
       builder: (context, child) {
         return Container(
           width: _widthAnimation.value,
-          color: cardBackgroundColor,
+          color: AppColors.cardBackground,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Hamburger & Logo (overflow-proof)
+              // Hamburger & Logo
               Padding(
                 padding:
                 const EdgeInsets.symmetric(horizontal: 16, vertical: 28),
@@ -375,7 +367,7 @@ class _DoctorSidebarNavigationState extends State<DoctorSidebarNavigation>
                           child: Icon(
                             _isCollapsed ? Icons.menu_open : Icons.menu,
                             size: 30,
-                            color: primaryColor,
+                            color: AppColors.primary,
                           ),
                         ),
                       ),
@@ -385,12 +377,12 @@ class _DoctorSidebarNavigationState extends State<DoctorSidebarNavigation>
                           constraints:
                           BoxConstraints(maxWidth: expandedWidth - 60),
                           child: Text(
-                            'Glow Skin & Gro Hair',
+                            'Karur Gastro Foundation',
                             overflow: TextOverflow.ellipsis,
                             style: GoogleFonts.lexend(
                               fontWeight: FontWeight.w600,
                               fontSize: 16,
-                              color: primaryColor,
+                              color: AppColors.primary,
                             ),
                           ),
                         ),
@@ -399,7 +391,7 @@ class _DoctorSidebarNavigationState extends State<DoctorSidebarNavigation>
                   ),
                 ),
               ),
-              Divider(height: 1, color: Colors.grey[200]),
+              Divider(height: 1, color: AppColors.grey200),
               // Main Nav Items
               Expanded(
                 child: ListView.builder(
@@ -415,7 +407,7 @@ class _DoctorSidebarNavigationState extends State<DoctorSidebarNavigation>
                   },
                 ),
               ),
-              Divider(height: 1, color: Colors.grey[200]),
+              Divider(height: 1, color: AppColors.grey200),
               // Bottom Nav Items
               ...List.generate(bottomNavItems.length, (index) {
                 final item = bottomNavItems[index];
@@ -441,41 +433,47 @@ class _DoctorSidebarNavigationState extends State<DoctorSidebarNavigation>
     required bool isSelected,
     required VoidCallback onTap,
   }) {
-    final color = isSelected ? primaryColor : textSecondaryColor;
+    final color = isSelected ? AppColors.primary : AppColors.kTextSecondary;
 
-    return Material(
-      color: isSelected ? primaryColorLight : Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        child: Container(
-          decoration: BoxDecoration(
-            border: isSelected
-                ? const Border(left: BorderSide(color: primaryColor, width: 4))
-                : null,
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, color: color, size: 22),
-              if (!_isCollapsed) ...[
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Text(
-                    label,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.lexend(
-                      color: color,
-                      fontSize: 15,
-                      fontWeight:
-                      isSelected ? FontWeight.w600 : FontWeight.w500,
-                      letterSpacing: 0.2,
+    return Tooltip(
+      message: label,
+      waitDuration: const Duration(milliseconds: 500),
+      child: Material(
+        color: isSelected ? AppColors.primary600.withOpacity(0.08) : Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          child: Container(
+            decoration: BoxDecoration(
+              border: isSelected
+                  ? Border(
+                left: BorderSide(color: AppColors.primary, width: 4),
+              )
+                  : null,
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, color: color, size: 22),
+                if (!_isCollapsed) ...[
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Text(
+                      label,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.lexend(
+                        color: color,
+                        fontSize: 15,
+                        fontWeight:
+                        isSelected ? FontWeight.w600 : FontWeight.w500,
+                        letterSpacing: 0.2,
+                      ),
                     ),
                   ),
-                ),
+                ],
+                if (_isCollapsed) const Spacer(),
               ],
-              if (_isCollapsed) const Spacer(), // center icon when collapsed
-            ],
+            ),
           ),
         ),
       ),
@@ -525,7 +523,7 @@ class _ChatbotWidgetState extends State<ChatbotWidget> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             decoration: BoxDecoration(
-              color: Colors.grey[100],
+              color: AppColors.grey100,
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(20),
                 topRight: Radius.circular(20),
@@ -539,16 +537,20 @@ class _ChatbotWidgetState extends State<ChatbotWidget> {
                 Row(
                   children: [
                     IconButton(
+                      tooltip: widget.isMaximized
+                          ? "Restore size"
+                          : "Maximize",
                       icon: Icon(widget.isMaximized
                           ? Icons.fullscreen_exit
                           : Icons.fullscreen),
                       onPressed: widget.onToggleSize,
-                      color: textSecondaryColor,
+                      color: AppColors.kTextSecondary,
                     ),
                     IconButton(
+                      tooltip: "Close",
                       icon: const Icon(Icons.close),
                       onPressed: widget.onClose,
-                      color: textSecondaryColor,
+                      color: AppColors.kTextSecondary,
                     ),
                   ],
                 ),
@@ -571,14 +573,17 @@ class _ChatbotWidgetState extends State<ChatbotWidget> {
                       margin: const EdgeInsets.symmetric(vertical: 4),
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: isUserMessage ? primaryColor : Colors.grey[200],
+                        color: isUserMessage
+                            ? AppColors.primary
+                            : AppColors.grey100,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
                         _messages[index],
                         style: GoogleFonts.poppins(
-                          color:
-                          isUserMessage ? Colors.white : textPrimaryColor,
+                          color: isUserMessage
+                              ? AppColors.white
+                              : AppColors.kTextPrimary,
                         ),
                       ),
                     ),
@@ -598,7 +603,7 @@ class _ChatbotWidgetState extends State<ChatbotWidget> {
                     decoration: InputDecoration(
                       hintText: 'Type a message...',
                       filled: true,
-                      fillColor: Colors.grey[100],
+                      fillColor: AppColors.grey100,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide.none,
@@ -611,7 +616,8 @@ class _ChatbotWidgetState extends State<ChatbotWidget> {
                 ),
                 const SizedBox(width: 8),
                 IconButton(
-                  icon: const Icon(Icons.send, color: primaryColor),
+                  tooltip: "Send",
+                  icon: Icon(Icons.send, color: AppColors.primary),
                   onPressed: _sendMessage,
                 ),
               ],

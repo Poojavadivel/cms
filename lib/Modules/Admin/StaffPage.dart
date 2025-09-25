@@ -266,7 +266,7 @@ class _StaffScreenState extends State<StaffScreen> {
 
     final headers = const ['STAFF ID', 'STAFF NAME', 'DESIGNATION', 'DEPARTMENT', 'CONTACT', 'STATUS'];
 
-    final cellStyle = GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: textPrimaryColor ?? Colors.black);
+    final cellStyle = GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.kTextPrimary ?? Colors.black);
 
     Widget _cell(String txt, {double width = 140}) {
       return SizedBox(

@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 class RestApi {
   final String url;
   final String method;
-
   RestApi({
     required this.url,
     required this.method,
@@ -17,8 +16,8 @@ class ApiConstants {
   // --- Base URL ---
   /// The base URL for the backend API.
   /// Change this to your actual server address during development/production.
-   static const String baseUrl = "http://192.168.246.132:3000";
-  // static const String baseUrl = "https://glowhair-skin.onrender.com";// <-- IMPORTANT: Replace with your actual backend URL
+  // static const String baseUrl = "http://192.168.246.132:3000";
+   static const String baseUrl = "https://glowhair-skin.onrender.com";// <-- IMPORTANT: Replace with your actual backend URL
 
   // --- HTTP Methods ---
   static const String post = 'POST';

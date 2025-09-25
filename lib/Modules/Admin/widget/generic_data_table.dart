@@ -1,17 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../../Utils/Colors.dart';
+
 // --- App Theme Colors ---
-const Color primaryColor = Color(0xFFEF4444);
-const Color cardBackgroundColor = Color(0xFFFFFFFF);
-const Color textPrimaryColor = Color(0xFF1F2937);
-const Color textSecondaryColor = Color(0xFF6B7280);
-const Color _appointmentsHeaderColor = Color(0xFFB91C1C);
-const Color _tableHeaderColor = Color(0xFF991B1B);
-const Color _searchBorderColor = Color(0xFFFCA5A5);
-const Color _rowAlternateColor = Color(0xFFFEF2F2);
-const Color _buttonBgColor = Color(0xFFDC2626);
-const Color _statusIncompleteColor = Color(0xFFDC2626);
+
 
 // This is a generic, reusable table widget that can display any data
 // by taking a list of headers and a list of rows (where each row is a list of widgets).
@@ -64,7 +57,7 @@ class GenericDataTable extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            color: cardBackgroundColor,
+            color: AppColors.cardBackground,
             borderRadius: BorderRadius.circular(12),
             boxShadow: [
               BoxShadow(
@@ -152,7 +145,7 @@ class _TableControls extends StatelessWidget {
           style: GoogleFonts.lexend(
             fontSize: 24, // Bigger font size for the title
             fontWeight: FontWeight.bold,
-            color: _appointmentsHeaderColor,
+            color: AppColors.appointmentsHeader,
           ),
         ),
         Row(
@@ -176,16 +169,16 @@ class _TableControls extends StatelessWidget {
                   const EdgeInsets.symmetric(horizontal: 12, vertical: 17),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
-                    borderSide: const BorderSide(color: _searchBorderColor),
+                    borderSide: const BorderSide(color: AppColors.searchBorder),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
-                    borderSide: const BorderSide(color: _searchBorderColor),
+                    borderSide: const BorderSide(color: AppColors.searchBorder),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                     borderSide:
-                    const BorderSide(color: primaryColor, width: 2),
+                    const BorderSide(color: AppColors.primary, width: 2),
                   ),
                 ),
               ),
@@ -206,7 +199,7 @@ class _TableControls extends StatelessWidget {
                     ),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _buttonBgColor,
+                    backgroundColor: AppColors.buttonBg,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                     shape: RoundedRectangleBorder(
@@ -301,7 +294,7 @@ class _TableDataView extends StatelessWidget {
           title,
           style: GoogleFonts.lexend(
             fontWeight: FontWeight.w800,
-            color: _tableHeaderColor,
+            color: AppColors.tableHeader,
             fontSize: 15,
           ),
         ),
@@ -331,7 +324,7 @@ class _TableDataView extends StatelessWidget {
                     icon: const Icon(
                       Icons.remove_red_eye_outlined,
                       size: 16,
-                      color: _buttonBgColor,
+                      color: AppColors.buttonBg,
                     ),
                     onPressed: () => onView!(rowIndex),
                   ),
@@ -342,7 +335,7 @@ class _TableDataView extends StatelessWidget {
                   height: 28,
                   child: IconButton(
                     padding: EdgeInsets.zero,
-                    icon: const Icon(Icons.edit, size: 16, color: _buttonBgColor),
+                    icon: const Icon(Icons.edit, size: 16, color: AppColors.buttonBg),
                     onPressed: () => onEdit!(rowIndex),
                   ),
                 ),
@@ -352,7 +345,7 @@ class _TableDataView extends StatelessWidget {
                   height: 28,
                   child: IconButton(
                     padding: EdgeInsets.zero,
-                    icon: const Icon(Icons.delete, size: 16, color: _buttonBgColor),
+                    icon: const Icon(Icons.delete, size: 16, color: AppColors.buttonBg),
                     onPressed: () => onDelete!(rowIndex),
                   ),
                 ),
@@ -363,7 +356,7 @@ class _TableDataView extends StatelessWidget {
     }
 
     return TableRow(
-      decoration: BoxDecoration(color: rowIndex.isEven ? null : _rowAlternateColor),
+      decoration: BoxDecoration(color: rowIndex.isEven ? null : AppColors.rowAlternate),
       children: children.map((cell) => Center(child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
         child: cell,
@@ -398,7 +391,7 @@ class _PaginationControls extends StatelessWidget {
     return Align(
       alignment: Alignment.bottomRight,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -406,22 +399,22 @@ class _PaginationControls extends StatelessWidget {
               onPressed: isFirstPage ? null : onPrevious,
               icon: const Icon(Icons.arrow_back_ios),
               color: isFirstPage
-                  ? textSecondaryColor.withOpacity(0.5)
-                  : textSecondaryColor,
+                  ? AppColors.kTextSecondary.withOpacity(0.5)
+                  : AppColors.kTextSecondary,
             ),
             Text(
               'Page ${currentPage + 1} of $totalPages',
               style: GoogleFonts.inter(
                 fontSize: 14,
-                color: textSecondaryColor,
+                color: AppColors.kTextSecondary,
               ),
             ),
             IconButton(
               onPressed: isLastPage ? null : onNext,
               icon: const Icon(Icons.arrow_forward_ios),
               color: isLastPage
-                  ? textSecondaryColor.withOpacity(0.5)
-                  : textSecondaryColor,
+                  ? AppColors.kTextSecondary.withOpacity(0.5)
+                  :  AppColors.kTextSecondary,
             ),
           ],
         ),

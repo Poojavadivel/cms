@@ -9,17 +9,10 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'dart:math' as math;
 
+import '../../Utils/Colors.dart';
+
 
 /// THEME
-const _kBg = Color(0xFFF8FAFC);
-const _kCard = Colors.white;
-const _kTextPrimary = Color(0xFF1E293B);
-const _kTextSecondary = Color(0xFF64748B);
-const _kSuccess = Color(0xFF22C55E);
-const _kDanger = Color(0xFFEF4444);
-const _kInfo = Color(0xFF3B82F6);
-const _kMuted = Color(0xFFE2E8F0);
-const _kCFBlue = Color.fromRGBO(52, 67, 204, 1); // #3443CC
 
 
 class DashboardPage extends StatefulWidget {
@@ -86,7 +79,7 @@ class _DashboardPageState extends State<DashboardPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _kBg,
+      backgroundColor: AppColors.kBg,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -152,7 +145,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 style: GoogleFonts.lexend(
                     fontSize: 24,
                     fontWeight: FontWeight.w600,
-                    color: _kTextPrimary)),
+                    color: AppColors.kTextPrimary)),
             const CircleAvatar(
               backgroundImage: NetworkImage(
                   "https://placehold.co/100x100/EFEFEF/A9A9A9?text=Admin"),
@@ -171,7 +164,7 @@ class _DashboardPageState extends State<DashboardPage> {
         data["invoice"],
         "56 more than yesterday",
         icon: Icons.receipt_long,
-        iconColor: _kCFBlue,
+        iconColor: AppColors.kCFBlue,
         ),
         ),
         const SizedBox(width: 12),
@@ -181,7 +174,7 @@ class _DashboardPageState extends State<DashboardPage> {
         data["patients"],
         "45 more than yesterday",
         icon: Icons.people,
-        iconColor: _kSuccess,
+        iconColor: AppColors.kSuccess,
         ),
         ),
         const SizedBox(width: 12),
@@ -191,7 +184,7 @@ class _DashboardPageState extends State<DashboardPage> {
     data["appointments"],
     "18 less than yesterday",
     icon: Icons.calendar_today,
-    iconColor: _kDanger,
+    iconColor: AppColors.kDanger,
     ),
     ),
     const SizedBox(width: 12),
@@ -201,7 +194,7 @@ class _DashboardPageState extends State<DashboardPage> {
     data["beds"],
     "56 more than yesterday",
     icon: Icons.bed,
-    iconColor: _kCFBlue,
+    iconColor: AppColors.kCFBlue,
     ),
     ),
     ],
@@ -298,7 +291,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   title,
                   style: GoogleFonts.inter(
                     fontSize: 13,
-                    color: _kTextSecondary,
+                    color: AppColors.kTextSecondary,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -307,7 +300,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   style: GoogleFonts.lexend(
                     fontSize: 22,
                     fontWeight: FontWeight.w600,
-                    color: _kTextPrimary,
+                    color: AppColors.kTextPrimary,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -315,7 +308,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   subtitle,
                   style: GoogleFonts.inter(
                     fontSize: 11,
-                    color: _kTextSecondary,
+                    color: AppColors.kTextSecondary,
                   ),
                 ),
               ],
@@ -349,7 +342,7 @@ class _DashboardPageState extends State<DashboardPage> {
                     drawHorizontalLine: true,
                     horizontalInterval: 40,
                     getDrawingHorizontalLine: (value) =>
-                        FlLine(color: _kMuted, strokeWidth: 0.6),
+                        FlLine(color: AppColors.kMuted, strokeWidth: 0.6),
                   ),
                   titlesData: FlTitlesData(
                     leftTitles: AxisTitles(
@@ -361,7 +354,7 @@ class _DashboardPageState extends State<DashboardPage> {
                           return Text(
                             "${value.toInt()}",
                             style:
-                            GoogleFonts.inter(fontSize: 10, color: _kTextSecondary),
+                            GoogleFonts.inter(fontSize: 10, color: AppColors.kTextSecondary),
                           );
                         },
                       ),
@@ -387,7 +380,7 @@ class _DashboardPageState extends State<DashboardPage> {
                               child: Text(
                                 labels[idx],
                                 style: GoogleFonts.inter(
-                                    fontSize: 10, color: _kTextSecondary),
+                                    fontSize: 10, color: AppColors.kTextSecondary),
                               ),
                             );
                           }
@@ -415,7 +408,7 @@ class _DashboardPageState extends State<DashboardPage> {
                           GoogleFonts.inter(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color: _kTextPrimary,
+                            color: AppColors.kTextPrimary,
                           ).copyWith(height: 1.05),
                         );
                       },
@@ -431,9 +424,9 @@ class _DashboardPageState extends State<DashboardPage> {
                       x: i,
                       barsSpace: 6,
                       barRods: [
-                        BarChartRodData(toY: childVal, color: _kInfo, width: 8),
-                        BarChartRodData(toY: adultVal, color: _kSuccess, width: 8),
-                        BarChartRodData(toY: elderVal, color: _kDanger, width: 8),
+                        BarChartRodData(toY: childVal, color: AppColors.kInfo, width: 8),
+                        BarChartRodData(toY: adultVal, color: AppColors.kSuccess, width: 8),
+                        BarChartRodData(toY: elderVal, color: AppColors.kDanger, width: 8),
                       ],
                       // optionally show initial tooltip indicators:
                       // showingTooltipIndicators: [[0],[1],[2]],
@@ -449,11 +442,11 @@ class _DashboardPageState extends State<DashboardPage> {
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
             child: Row(
               children: [
-                _legendDot(_kInfo, "Child"),
+                _legendDot(AppColors.kInfo, "Child"),
                 const SizedBox(width: 14),
-                _legendDot(_kSuccess, "Adult"),
+                _legendDot(AppColors.kSuccess, "Adult"),
                 const SizedBox(width: 14),
-                _legendDot(_kDanger, "Elderly"),
+                _legendDot(AppColors.kDanger, "Elderly"),
               ],
             ),
           ),
@@ -471,7 +464,7 @@ class _DashboardPageState extends State<DashboardPage> {
           decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
         const SizedBox(width: 6),
-        Text(text, style: GoogleFonts.inter(fontSize: 11, color: _kTextSecondary)),
+        Text(text, style: GoogleFonts.inter(fontSize: 11, color: AppColors.kTextSecondary)),
       ],
     );
   }
@@ -497,11 +490,11 @@ class _DashboardPageState extends State<DashboardPage> {
                   padding: const EdgeInsets.symmetric(
                       horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: active ? _kInfo.withOpacity(.1) : Colors.transparent,
+                    color: active ? AppColors.kInfo.withOpacity(.1) : Colors.transparent,
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(t, style: GoogleFonts.inter(
-                      fontSize: 12, color: active ? _kInfo : _kTextSecondary)),
+                      fontSize: 12, color: active ? AppColors.kInfo : AppColors.kTextSecondary)),
                 ),
               );
             }).toList(),
@@ -512,14 +505,14 @@ class _DashboardPageState extends State<DashboardPage> {
               gridData: FlGridData(
                   show: true, drawHorizontalLine: true, horizontalInterval: 400,
                   getDrawingHorizontalLine: (v) =>
-                      FlLine(color: _kMuted, strokeWidth: 0.5)),
+                      FlLine(color: AppColors.kMuted, strokeWidth: 0.5)),
               titlesData: FlTitlesData(
                 leftTitles: AxisTitles(
                     sideTitles: SideTitles(showTitles: true, interval: 400,
                         getTitlesWidget: (v, c) =>
                             Text(v == 0 ? "0" : "${v.toInt()}",
                                 style: GoogleFonts.inter(
-                                    fontSize: 10, color: _kTextSecondary)))),
+                                    fontSize: 10, color: AppColors.kTextSecondary)))),
                 bottomTitles: AxisTitles(
                     sideTitles: SideTitles(showTitles: true,
                         getTitlesWidget: (v, c) {
@@ -535,7 +528,7 @@ class _DashboardPageState extends State<DashboardPage> {
                           if (v.toInt() < labels.length) {
                             return Text(labels[v.toInt()],
                                 style: GoogleFonts.inter(
-                                    fontSize: 10, color: _kTextSecondary));
+                                    fontSize: 10, color: AppColors.kTextSecondary));
                           }
                           return const SizedBox.shrink();
                         })),
@@ -556,7 +549,7 @@ class _DashboardPageState extends State<DashboardPage> {
                       FlSpot(5, 1200),
                       FlSpot(6, 1150)
                     ],
-                    color: _kTextPrimary,
+                    color: AppColors.kTextPrimary,
                     dotData: FlDotData(show: true)),
                 LineChartBarData(isCurved: true,
                     spots: [
@@ -568,7 +561,7 @@ class _DashboardPageState extends State<DashboardPage> {
                       FlSpot(5, 970),
                       FlSpot(6, 930)
                     ],
-                    color: _kInfo,
+                    color: AppColors.kInfo,
                     dotData: FlDotData(show: true)),
               ],
             ),
@@ -580,7 +573,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
   /// Helpers
   BoxDecoration _cardDecoration() =>
-      BoxDecoration(color: _kCard,
+      BoxDecoration(color: AppColors.kCard,
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
@@ -599,19 +592,19 @@ class _DashboardPageState extends State<DashboardPage> {
   //           Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
   //             Text(title, style: GoogleFonts.lexend(fontSize: 15,
   //                 fontWeight: FontWeight.w600,
-  //                 color: _kTextPrimary)),
+  //                 color: AppColors.kTextPrimary)),
   //             if(subtitle != null) Text(subtitle, style: GoogleFonts.inter(
-  //                 fontSize: 11, color: _kTextSecondary)),
+  //                 fontSize: 11, color: AppColors.kTextSecondary)),
   //           ]),
   //           Container(
   //             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
   //             decoration: BoxDecoration(
-  //                 color: _kMuted, borderRadius: BorderRadius.circular(6)),
+  //                 color: AppColors.kMuted, borderRadius: BorderRadius.circular(6)),
   //             child: Row(children: [
   //               Text("Last 8 Days", style: GoogleFonts.inter(
-  //                   fontSize: 10, color: _kTextPrimary)),
+  //                   fontSize: 10, color: AppColors.kTextPrimary)),
   //               const Icon(
-  //                   Icons.arrow_drop_down, size: 16, color: _kTextPrimary)
+  //                   Icons.arrow_drop_down, size: 16, color: AppColors.kTextPrimary)
   //             ]),
   //           )
   //         ],
@@ -645,12 +638,12 @@ class _DashboardPageState extends State<DashboardPage> {
                     children: [
                       Text(title,
                           style: GoogleFonts.inter(
-                              fontSize: 15, fontWeight: FontWeight.w700, color: _kTextPrimary)),
+                              fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.kTextPrimary)),
                       if (subtitle != null)
                         Padding(
                           padding: const EdgeInsets.only(top: 4.0),
                           child: Text(subtitle,
-                              style: GoogleFonts.inter(fontSize: 11, color: _kTextSecondary)),
+                              style: GoogleFonts.inter(fontSize: 11, color: AppColors.kTextSecondary)),
                         ),
                     ],
                   ),
@@ -721,11 +714,11 @@ class _DashboardPageState extends State<DashboardPage> {
                   Text(
                     "Upcoming Appointments",
                     style: GoogleFonts.inter(
-                        fontSize: 15, fontWeight: FontWeight.w700, color: _kTextPrimary),
+                        fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.kTextPrimary),
                   ),
                   const SizedBox(height: 4),
                   Text("Next scheduled visits",
-                      style: GoogleFonts.inter(fontSize: 11, color: _kTextSecondary)),
+                      style: GoogleFonts.inter(fontSize: 11, color: AppColors.kTextSecondary)),
                 ],
               ),
               Container(
@@ -733,7 +726,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 width: 80,
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 decoration: BoxDecoration(
-                  color: _kMuted,
+                  color: AppColors.kMuted,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: DropdownButtonHideUnderline(
@@ -741,13 +734,13 @@ class _DashboardPageState extends State<DashboardPage> {
                     value: _selectedAppointmentFilter,
                     isExpanded: true,
                     alignment: Alignment.centerLeft,
-                    style: GoogleFonts.inter(fontSize: 12, color: _kTextPrimary),
+                    style: GoogleFonts.inter(fontSize: 12, color: AppColors.kTextPrimary),
                     items: filters.map((f) {
                       return DropdownMenuItem<String>(
                         value: f,
                         child: Text(
                           f,
-                          style: GoogleFonts.inter(fontSize: 12, color: _kTextPrimary),
+                          style: GoogleFonts.inter(fontSize: 12, color: AppColors.kTextPrimary),
                           overflow: TextOverflow.ellipsis,
                         ),
                       );
@@ -784,7 +777,7 @@ class _DashboardPageState extends State<DashboardPage> {
                     icon: const Center(
                       child: Icon(Icons.arrow_drop_down, size: 16),
                     ),
-                    dropdownColor: _kCard,
+                    dropdownColor: AppColors.kCard,
                   ),
                 ),
               ),
@@ -840,11 +833,11 @@ class _DashboardPageState extends State<DashboardPage> {
                                     style: GoogleFonts.inter(
                                         fontSize: 13,
                                         fontWeight: FontWeight.w600,
-                                        color: _kTextPrimary)),
+                                        color: AppColors.kTextPrimary)),
                                 const SizedBox(height: 2),
                                 Text("$doctor • $time",
                                     style: GoogleFonts.inter(
-                                        fontSize: 11, color: _kTextSecondary)),
+                                        fontSize: 11, color: AppColors.kTextSecondary)),
                               ],
                             ),
                           ),
@@ -945,14 +938,14 @@ class _DashboardPageState extends State<DashboardPage> {
   //                   children: [
   //                     Text(d["name"]!, style: GoogleFonts.inter(fontSize: 12,
   //                         fontWeight: FontWeight.w500,
-  //                         color: _kTextPrimary)),
+  //                         color: AppColors.kTextPrimary)),
   //                     Text(d["dept"]!, style: GoogleFonts.inter(
-  //                         fontSize: 11, color: _kTextSecondary)),
+  //                         fontSize: 11, color: AppColors.kTextSecondary)),
   //                   ],
   //                 ),
   //               ),
   //               Text(d["time"]!, style: GoogleFonts.inter(
-  //                   fontSize: 11, color: _kTextSecondary)),
+  //                   fontSize: 11, color: AppColors.kTextSecondary)),
   //               const SizedBox(width: 6),
   //               Container(
   //                 padding: const EdgeInsets.symmetric(
@@ -1023,11 +1016,11 @@ class _DashboardPageState extends State<DashboardPage> {
                       style: GoogleFonts.inter(
                           fontSize: 15,
                           fontWeight: FontWeight.w700,
-                          color: _kTextPrimary)),
+                          color: AppColors.kTextPrimary)),
                   const SizedBox(height: 4),
                   Text("Recent system & facility reports",
                       style: GoogleFonts.inter(
-                          fontSize: 11, color: _kTextSecondary)),
+                          fontSize: 11, color: AppColors.kTextSecondary)),
                 ],
               ),
 
@@ -1037,20 +1030,20 @@ class _DashboardPageState extends State<DashboardPage> {
                 width: 100,
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: _kMuted,
+                  color: AppColors.kMuted,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<String>(
                     value: _selectedReportFilter,
                     isDense: true,
-                    style: GoogleFonts.inter(fontSize: 12, color: _kTextPrimary),
+                    style: GoogleFonts.inter(fontSize: 12, color: AppColors.kTextPrimary),
                     items: filters.map((f) {
                       return DropdownMenuItem<String>(
                         value: f,
                         child: Text(
                           f,
-                          style: GoogleFonts.inter(fontSize: 12, color: _kTextPrimary),
+                          style: GoogleFonts.inter(fontSize: 12, color: AppColors.kTextPrimary),
                           overflow: TextOverflow.ellipsis, // ✅ prevent overflow
                         ),
                       );
@@ -1062,7 +1055,7 @@ class _DashboardPageState extends State<DashboardPage> {
                       });
                     },
                     icon: const Icon(Icons.arrow_drop_down, size: 16),
-                    dropdownColor: _kCard,
+                    dropdownColor: AppColors.kCard,
                     // ✅ fixes the "10/10" fallback
                     isExpanded: false,
                   ),
@@ -1095,11 +1088,11 @@ class _DashboardPageState extends State<DashboardPage> {
                       padding: const EdgeInsets.symmetric(
                           vertical: 8, horizontal: 10),
                       decoration: BoxDecoration(
-                          color: _kBg,
+                          color: AppColors.kBg,
                           borderRadius: BorderRadius.circular(8)),
                       child: Row(
                         children: [
-                          Icon(icon, size: 18, color: _kInfo),
+                          Icon(icon, size: 18, color: AppColors.kInfo),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Column(
@@ -1109,17 +1102,17 @@ class _DashboardPageState extends State<DashboardPage> {
                                     style: GoogleFonts.inter(
                                         fontSize: 12,
                                         fontWeight: FontWeight.w600,
-                                        color: _kTextPrimary)),
+                                        color: AppColors.kTextPrimary)),
                                 const SizedBox(height: 4),
                                 Text(time,
                                     style: GoogleFonts.inter(
                                         fontSize: 11,
-                                        color: _kTextSecondary)),
+                                        color: AppColors.kTextSecondary)),
                               ],
                             ),
                           ),
                           const Icon(Icons.arrow_forward_ios,
-                              size: 14, color: _kTextSecondary),
+                              size: 14, color: AppColors.kTextSecondary),
                         ],
                       ),
                     );
@@ -1166,7 +1159,7 @@ class _DashboardPageState extends State<DashboardPage> {
               titleTextStyle: GoogleFonts.lexend(
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
-                color: _kTextPrimary,
+                color: AppColors.kTextPrimary,
               ),
               leftChevronIcon: const Icon(Icons.chevron_left, size: 16),
               rightChevronIcon: const Icon(Icons.chevron_right, size: 16),
@@ -1177,20 +1170,20 @@ class _DashboardPageState extends State<DashboardPage> {
               cellPadding: const EdgeInsets.symmetric(vertical: 2),
 
               todayDecoration: BoxDecoration(
-                color: _kInfo.withOpacity(.6),
+                color: AppColors.kInfo.withOpacity(.6),
                 shape: BoxShape.circle,
               ),
               selectedDecoration: BoxDecoration(
-                color: _kInfo,
+                color: AppColors.kInfo,
                 shape: BoxShape.circle,
               ),
               defaultTextStyle: GoogleFonts.inter(
                 fontSize: 12,
-                color: _kTextPrimary,
+                color: AppColors.kTextPrimary,
               ),
               weekendTextStyle: GoogleFonts.inter(
                 fontSize: 12,
-                color: _kDanger,
+                color: AppColors.kDanger,
               ),
               todayTextStyle: GoogleFonts.inter(
                 fontSize: 12,
@@ -1201,11 +1194,11 @@ class _DashboardPageState extends State<DashboardPage> {
             daysOfWeekStyle: DaysOfWeekStyle(
               weekdayStyle: GoogleFonts.inter(
                 fontSize: 11,
-                color: _kTextSecondary,
+                color: AppColors.kTextSecondary,
               ),
               weekendStyle: GoogleFonts.inter(
                 fontSize: 11,
-                color: _kDanger,
+                color: AppColors.kDanger,
               ),
             ),
           ),
@@ -1220,7 +1213,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 style: GoogleFonts.lexend(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
-                  color: _kTextPrimary,
+                  color: AppColors.kTextPrimary,
                 ),
               ),
               const SizedBox(width: 6),
@@ -1228,7 +1221,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 DateFormat('EEE, d MMM').format(_selectedDay ?? _focusedDay),
                 style: GoogleFonts.inter(
                   fontSize: 11,
-                  color: _kTextSecondary,
+                  color: AppColors.kTextSecondary,
                 ),
               ),
             ],
@@ -1304,9 +1297,9 @@ class _DashboardPageState extends State<DashboardPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: _kTextPrimary)),
+                  Text(title, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.kTextPrimary)),
                   const SizedBox(height: 6),
-                  Text(time, style: GoogleFonts.inter(fontSize: 12, color: _kTextSecondary)),
+                  Text(time, style: GoogleFonts.inter(fontSize: 12, color: AppColors.kTextSecondary)),
                 ],
               ),
             ),

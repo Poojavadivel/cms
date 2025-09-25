@@ -220,11 +220,11 @@ class _PathologyScreenState extends State<PathologyScreen> {
     final headers = const ['REPORT ID', 'PATIENT NAME', 'DOCTOR', 'TEST NAME', 'DATE', 'STATUS'];
     final rows = paginatedReports.map((p) {
       return [
-        Text(p.reportId, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: textPrimaryColor)),
-        Text(p.patientName, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: textPrimaryColor)),
-        Text(p.doctorName, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: textPrimaryColor)),
-        Text(p.testName, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: textPrimaryColor)),
-        Text(p.collectionDate, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: textPrimaryColor)),
+        Text(p.reportId, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.kTextPrimary)),
+        Text(p.patientName, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.kTextPrimary)),
+        Text(p.doctorName, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.kTextPrimary)),
+        Text(p.testName, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.kTextPrimary)),
+        Text(p.collectionDate, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.kTextPrimary)),
         _statusChip(p.status),
       ];
     }).toList();

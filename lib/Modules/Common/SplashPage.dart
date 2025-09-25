@@ -3,14 +3,13 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../Providers/app_providers.dart';
 import '../../Services/Authservices.dart';
+import '../../Utils/Colors.dart';
 import '../Admin/RootPage.dart';
 import '../Doctor/RootPage.dart';
 import 'LoginPage.dart'; // Assuming this is your doctor root page file
 
 // --- App Theme Colors ---
-const Color primaryColor = Color(0xFFEF4444);
-const Color backgroundColor = Color(0xFFF8FAFC);
-const Color textPrimaryColor = Color(0xFF1F2937);
+
 
 /// SplashPage: The initial loading screen of the application.
 ///
@@ -84,23 +83,23 @@ class _SplashPageState extends State<SplashPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: backgroundColor,
+      backgroundColor: AppColors.background,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             // Your App Logo/Name
             Text(
-              'Glow Skin & Gro Hair',
+              'Karur Gastro Foundation',
               style: GoogleFonts.inter(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
-                color: textPrimaryColor,
+                color: AppColors.kTextPrimary,
               ),
             ),
             const SizedBox(height: 24),
             const CircularProgressIndicator(
-              color: primaryColor,
+              color: AppColors.primary,
             ),
           ],
         ),
