@@ -16,8 +16,8 @@ class ApiConstants {
   // --- Base URL ---
   /// The base URL for the backend API.
   /// Change this to your actual server address during development/production.
-  // static const String baseUrl = "http://192.168.246.132:3000";
-   static const String baseUrl = "https://glowhair-skin.onrender.com";// <-- IMPORTANT: Replace with your actual backend URL
+  // static const String baseUrl = "http://10.57.158.132:3000";
+   static const String baseUrl = "https://karur-gastro-foundation.onrender.com";// <-- IMPORTANT: Replace with your actual backend URL
 
   // --- HTTP Methods ---
   static const String post = 'POST';
@@ -92,8 +92,39 @@ class ApiEndpoints {
   static RestApi updatePharmacyMedicine(String id) => RestApi(url: '/api/pharmacy/medicines/$id', method: ApiConstants.put);
   static RestApi deletePharmacyMedicine(String id) => RestApi(url: '/api/pharmacy/medicines/$id', method: ApiConstants.delete);
 
+// Chatbot endpoints
+  // --- FIXED Client-Side API Definitions ---
+// URLs have been updated from '/conversations' to '/chats' to match the Node.js backend routes.
+
+  static RestApi chatbot() =>
+      RestApi(url: '/api/bot/chat', method: ApiConstants.post);
+
+// FIX: Changed '/conversations' to '/chats' to match backend's GET /api/bot/chats
+  static RestApi getConversations() =>
+      RestApi(url: '/api/bot/chats', method: ApiConstants.get);
+
+// FIX: Changed '/conversations' to '/chats'.
+// NOTE: The backend still needs a specific route (e.g., GET /api/bot/chats/:id/messages)
+// implemented to handle fetching the full message history.
+  static RestApi getConversationMessages(String convoId) =>
+      RestApi(url: '/api/bot/chats/$convoId/messages', method: ApiConstants.get);
+
+// FIX: Changed '/conversations' to '/chats'.
+// NOTE: This route is currently redundant, as the backend handles chat creation
+// implicitly via the POST /api/bot/chat endpoint if no chatId is provided.
+  static RestApi createConversation() =>
+      RestApi(url: '/api/bot/chats', method: ApiConstants.post);
+
+// FIX: Changed '/conversations' to '/chats' to match backend's DELETE /api/bot/chats/:id
+  static RestApi deleteConversation(String convoId) =>
+      RestApi(url: '/api/bot/chats/$convoId', method: ApiConstants.delete);
 
 }
+
+
+
+
+
 
 /// Maps backend error codes to user-friendly messages.
 class ApiErrors {

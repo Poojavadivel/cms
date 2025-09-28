@@ -3,11 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../Utils/Colors.dart';
 
-// --- App Theme Colors ---
-
-
-// This is a generic, reusable table widget that can display any data
-// by taking a list of headers and a list of rows (where each row is a list of widgets).
+// --- GenericDataTable (enterprise themed) ---
 class GenericDataTable extends StatelessWidget {
   final String title;
   final List<String> headers;
@@ -173,7 +169,8 @@ class _TableControls extends StatelessWidget {
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
-                    borderSide: const BorderSide(color: AppColors.searchBorder),
+                    borderSide:
+                    const BorderSide(color: AppColors.searchBorder),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
@@ -189,7 +186,8 @@ class _TableControls extends StatelessWidget {
                 height: 48,
                 child: ElevatedButton.icon(
                   onPressed: onAddPressed,
-                  icon: const Icon(Icons.add_rounded, size: 18, color: Colors.white),
+                  icon: const Icon(Icons.add_rounded,
+                      size: 18, color: Colors.white),
                   label: Text(
                     'New $title',
                     style: GoogleFonts.inter(
@@ -201,7 +199,8 @@ class _TableControls extends StatelessWidget {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.buttonBg,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                    padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
@@ -255,11 +254,11 @@ class _TableDataView extends StatelessWidget {
               scrollDirection: Axis.vertical,
               child: Table(
                 border: const TableBorder(
-                  horizontalInside: BorderSide(width: 0.5, color: Color(0xFFE5E7EB)),
+                  horizontalInside:
+                  BorderSide(width: 0.5, color: Color(0xFFE5E7EB)),
                 ),
                 columnWidths: {
-                  for (var i = 0; i < allHeaders.length; i++)
-                    i: const FlexColumnWidth(1)
+                  for (var i = 0; i < allHeaders.length; i++) i: const FlexColumnWidth(1)
                 },
                 defaultVerticalAlignment: TableCellVerticalAlignment.middle,
                 children: [
@@ -267,14 +266,12 @@ class _TableDataView extends StatelessWidget {
                   TableRow(
                     decoration: const BoxDecoration(color: Color(0xFFF9FAFB)),
                     children: [
-                      for (final h in allHeaders)
-                        _header(h, Alignment.center),
+                      for (final h in allHeaders) _header(h, Alignment.center),
                     ],
                   ),
 
                   // Rows
-                  for (int i = 0; i < rows.length; i++)
-                    _row(context, rows[i], i),
+                  for (int i = 0; i < rows.length; i++) _row(context, rows[i], i),
                 ],
               ),
             ),
@@ -319,34 +316,45 @@ class _TableDataView extends StatelessWidget {
                 SizedBox(
                   width: 28,
                   height: 28,
-                  child: IconButton(
-                    padding: EdgeInsets.zero,
-                    icon: const Icon(
-                      Icons.remove_red_eye_outlined,
-                      size: 16,
-                      color: AppColors.buttonBg,
+                  child: Tooltip(
+                    message: 'View',
+                    child: IconButton(
+                      padding: EdgeInsets.zero,
+                      icon: const Icon(
+                        Icons.remove_red_eye_outlined,
+                        size: 16,
+                      ),
+                      color: AppColors.kInfo, // distinct color for view
+                      onPressed: () => onView!(rowIndex),
                     ),
-                    onPressed: () => onView!(rowIndex),
                   ),
                 ),
               if (onEdit != null)
                 SizedBox(
                   width: 28,
                   height: 28,
-                  child: IconButton(
-                    padding: EdgeInsets.zero,
-                    icon: const Icon(Icons.edit, size: 16, color: AppColors.buttonBg),
-                    onPressed: () => onEdit!(rowIndex),
+                  child: Tooltip(
+                    message: 'Edit',
+                    child: IconButton(
+                      padding: EdgeInsets.zero,
+                      icon: const Icon(Icons.edit, size: 16),
+                      color: AppColors.primary600, // distinct color for edit
+                      onPressed: () => onEdit!(rowIndex),
+                    ),
                   ),
                 ),
               if (onDelete != null)
                 SizedBox(
                   width: 28,
                   height: 28,
-                  child: IconButton(
-                    padding: EdgeInsets.zero,
-                    icon: const Icon(Icons.delete, size: 16, color: AppColors.buttonBg),
-                    onPressed: () => onDelete!(rowIndex),
+                  child: Tooltip(
+                    message: 'Delete',
+                    child: IconButton(
+                      padding: EdgeInsets.zero,
+                      icon: const Icon(Icons.delete, size: 16),
+                      color: AppColors.kDanger, // distinct color for delete
+                      onPressed: () => onDelete!(rowIndex),
+                    ),
                   ),
                 ),
             ],
@@ -356,15 +364,20 @@ class _TableDataView extends StatelessWidget {
     }
 
     return TableRow(
-      decoration: BoxDecoration(color: rowIndex.isEven ? null : AppColors.rowAlternate),
-      children: children.map((cell) => Center(child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-        child: cell,
-      ))).toList(),
+      decoration:
+      BoxDecoration(color: rowIndex.isEven ? null : AppColors.rowAlternate),
+      children: children
+          .map((cell) => Center(
+        child: Padding(
+          padding:
+          const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+          child: cell,
+        ),
+      ))
+          .toList(),
     );
   }
 }
-
 
 // --- Pagination ---
 class _PaginationControls extends StatelessWidget {
@@ -414,7 +427,7 @@ class _PaginationControls extends StatelessWidget {
               icon: const Icon(Icons.arrow_forward_ios),
               color: isLastPage
                   ? AppColors.kTextSecondary.withOpacity(0.5)
-                  :  AppColors.kTextSecondary,
+                  : AppColors.kTextSecondary,
             ),
           ],
         ),

@@ -759,6 +759,316 @@ class AuthService {
     }
   }
 
+
+  // -------------------- Chatbot: send a message --------------------
+  /// Sends a message to the chatbot backend and returns the bot reply (string) or null.
+  // Updated AuthService methods for chatbot (Dart)
+// Assumes _withAuth<T>((token) => ...) wraps API calls and provides token string.
+// Assumes _apiHandler.post/get accept (path, token: token, body: payload) and return decoded JSON (Map or List).
+
+  // -------------------- Chatbot: send message --------------------
+  // NOTE: Assumes existence of ApiEndpoints class (from your Canvas),
+// _withAuth method, _apiHandler, and ApiConstants.
+
+// -------------------- Chatbot: send message --------------------
+  /// Sends a chat message to the bot. Returns the bot's reply or null on failure.
+  // -------------------- Chatbot: sendChatMessage --------------------
+  Future<String?> sendChatMessage(String message, {String? conversationId, Map<String, dynamic>? metadata}) async {
+    print('DEBUG: [sendChatMessage] Starting request for user message: "$message"');
+    return await _withAuth<String?>((token) async {
+      if (token == null) {
+        print('ERROR: [sendChatMessage] Authentication token is null. Cannot proceed.');
+        return null;
+      }
+      final payload = <String, dynamic>{
+        'message': message,
+        if (conversationId != null) 'chatId': conversationId, // send as chatId for new backend
+        if (metadata != null) 'metadata': metadata,
+      };
+
+      final url = ApiEndpoints.chatbot().url;
+      print('DEBUG: [sendChatMessage] Request URL: $url');
+      print('DEBUG: [sendChatMessage] Request Payload: $payload');
+
+      final response = await _apiHandler.post(
+        url,
+        token: token,
+        body: payload,
+      );
+
+      print('DEBUG: [sendChatMessage] Raw API Response received: $response');
+
+      if (response == null) {
+        print('ERROR: [sendChatMessage] API handler returned null response.');
+        return null;
+      }
+
+      // Start parsing
+      if (response is Map<String, dynamic>) {
+        if (response.containsKey('success') && response['success'] == false) {
+          print('ERROR: [sendChatMessage] API reported failure: ${response['message']}');
+        }
+
+        // 1. Direct reply in root
+        if (response.containsKey('reply') && response['reply'] != null) {
+          final reply = response['reply']?.toString();
+          print('DEBUG: [sendChatMessage] Success. Found reply in root.');
+          return reply;
+        }
+
+        // 2. Direct message in root (used for errors/simple responses)
+        if (response.containsKey('message') && response['message'] != null) {
+          final reply = response['message']?.toString();
+          print('DEBUG: [sendChatMessage] Found reply in "message" key.');
+          return reply;
+        }
+
+        // 3. Nested in data
+        final d = response['data'];
+        if (d is Map<String, dynamic>) {
+          if (d.containsKey('reply') && d['reply'] != null) {
+            final reply = d['reply']?.toString();
+            print('DEBUG: [sendChatMessage] Found reply nested in "data".');
+            return reply;
+          }
+          if (d.containsKey('message') && d['message'] != null) {
+            final reply = d['message']?.toString();
+            print('DEBUG: [sendChatMessage] Found reply in "data.message".');
+            return reply;
+          }
+          // Fallback: try to extract last message from conversation object
+          if (d.containsKey('messages') && d['messages'] is List && (d['messages'] as List).isNotEmpty) {
+            final last = (d['messages'] as List).last;
+            if (last is Map<String, dynamic> && last.containsKey('text')) {
+              final reply = last['text']?.toString();
+              print('DEBUG: [sendChatMessage] Extracted reply from last message in data object.');
+              return reply;
+            }
+          }
+        }
+
+        // 4. Legacy keys
+        if (response.containsKey('botReply') && response['botReply'] != null) {
+          final reply = response['botReply']?.toString();
+          print('DEBUG: [sendChatMessage] Found reply in legacy key "botReply".');
+          return reply;
+        }
+
+        // 5. Reply inside meta
+        final meta = response['meta'];
+        if (meta is Map<String, dynamic> && meta.containsKey('reply')) {
+          final reply = meta['reply']?.toString();
+          print('DEBUG: [sendChatMessage] Found reply nested in "meta".');
+          return reply;
+        }
+      }
+
+      // 6. If server returned a plain string
+      if (response is String) {
+        print('DEBUG: [sendChatMessage] Server returned a raw string response.');
+        return response;
+      }
+
+      print('WARN: [sendChatMessage] Failed to parse expected reply format. Falling back to toString(). Response Type: ${response.runtimeType}');
+      // Fallback: stringify whatever we got
+      return response.toString();
+    });
+  }
+
+  // -------------------- Chatbot: createConversation --------------------
+  /// Creates a new conversation on the server and returns the created conversation object (map) or null.
+  Future<Map<String, dynamic>?> createConversation({String? title, Map<String, dynamic>? metadata}) async {
+    print('DEBUG: [createConversation] Starting request.');
+    return await _withAuth<Map<String, dynamic>?>((token) async {
+      if (token == null) {
+        print('ERROR: [createConversation] Authentication token is null. Cannot proceed.');
+        return null;
+      }
+      final payload = <String, dynamic>{
+        if (title != null) 'title': title,
+        if (metadata != null) 'metadata': metadata,
+      };
+
+      final url = ApiEndpoints.createConversation().url;
+      print('DEBUG: [createConversation] Request URL: $url');
+      print('DEBUG: [createConversation] Request Payload: $payload');
+
+      // The client calls /api/bot/chat with only title. The server now handles this gracefully.
+      final response = await _apiHandler.post(
+        url,
+        token: token,
+        body: payload,
+      );
+
+      print('DEBUG: [createConversation] Raw API Response received: $response');
+
+      if (response == null) {
+        print('ERROR: [createConversation] API handler returned null response.');
+        return null;
+      }
+
+      if (response is Map<String, dynamic>) {
+        if (response.containsKey('success') && response['success'] == false) {
+          print('ERROR: [createConversation] API reported failure: ${response['message']}');
+        }
+
+        // --- UPDATED PARSING LOGIC ---
+        // New server response shape for chat creation is: { success: true, chat: {...}, chatId: "..." }
+        final conv = response['chat'] ?? response['conversation'] ?? response['data'] ?? response;
+
+        if (conv is Map<String, dynamic>) {
+          print('DEBUG: [createConversation] Successfully parsed conversation object.');
+          return Map<String, dynamic>.from(conv);
+        }
+      }
+
+      print('WARN: [createConversation] Failed to parse expected conversation object from response.');
+      return null;
+    });
+  }
+
+
+  // -------------------- Chatbot: getConversations --------------------
+  /// Returns a list of conversation summaries (List<Map>) or empty list.
+  Future<List<Map<String, dynamic>>> getConversations() async {
+    print('DEBUG: [getConversations] Starting request.');
+    return await _withAuth<List<Map<String, dynamic>>>((token) async {
+      if (token == null) {
+        print('ERROR: [getConversations] Authentication token is null. Cannot proceed.');
+        return [];
+      }
+      final url = ApiEndpoints.getConversations().url;
+      print('DEBUG: [getConversations] Request URL: $url');
+
+      final response = await _apiHandler.get(url, token: token);
+
+      print('DEBUG: [getConversations] Raw API Response received: $response');
+
+      if (response == null) {
+        print('ERROR: [getConversations] API handler returned null response.');
+        return [];
+      }
+
+      // Bot backend responses might use "chats", "conversations", "data", or "items"
+      if (response is Map<String, dynamic>) {
+        final list = response['chats'] ?? response['conversations'] ?? response['data'] ?? response['items'];
+        if (list is List) {
+          final result = List<Map<String, dynamic>>.from(list.map((e) => Map<String, dynamic>.from(e as Map)));
+          print('DEBUG: [getConversations] Successfully parsed ${result.length} chats from Map response.');
+          return result;
+        }
+      } else if (response is List) {
+        final result = List<Map<String, dynamic>>.from(response.map((e) => Map<String, dynamic>.from(e as Map)));
+        print('DEBUG: [getConversations] Successfully parsed ${result.length} chats from List response.');
+        return result;
+      }
+
+      print('WARN: [getConversations] Failed to parse expected list format from response.');
+      return [];
+    });
+  }
+
+  // -------------------- Chatbot: getConversationMessages --------------------
+  /// Fetches message history for a conversation. Returns list of messages as Map (sender, text, ts, id...).
+  Future<List<Map<String, dynamic>>> getConversationMessages(String conversationId, {int limit = 100, int offset = 0}) async {
+    if (conversationId.isEmpty) throw Exception('conversationId is required');
+    print('DEBUG: [getConversationMessages] Starting request for ID: $conversationId');
+
+    return await _withAuth<List<Map<String, dynamic>>>((token) async {
+      if (token == null) {
+        print('ERROR: [getConversationMessages] Authentication token is null. Cannot proceed.');
+        return [];
+      }
+
+      // FIX: Only call the implemented route: /api/bot/chats/:id
+      final path = '/api/bot/chats/$conversationId';
+      print('DEBUG: [getConversationMessages] Attempting path: $path');
+      var response = await _apiHandler.get(path, token: token);
+
+      print('DEBUG: [getConversationMessages] Raw API Response received: $response');
+
+      if (response == null) {
+        print('ERROR: [getConversationMessages] API path returned null response.');
+        return [];
+      }
+
+      // Start parsing
+      if (response is Map<String, dynamic>) {
+        if (response.containsKey('success') && response['success'] == false) {
+          print('ERROR: [getConversationMessages] API reported failure: ${response['message']}');
+        }
+
+        // Back-end returns { success: true, chat: {...}, messages: [...] }
+        final listCandidate = response['messages'] ?? response['data'] ?? response['items'] ?? response['conversation'];
+
+        // 1. Check if the messages list is directly in the 'messages' key
+        if (response['messages'] is List) {
+          final m = response['messages'] as List;
+          print('DEBUG: [getConversationMessages] Found messages directly in "messages" key.');
+          return List<Map<String, dynamic>>.from(m.map((e) => Map<String, dynamic>.from(e as Map)));
+        }
+
+        // 2. If 'listCandidate' is a Map (like a full chat object) check for nested 'messages'
+        if (listCandidate is Map<String, dynamic> && listCandidate.containsKey('messages')) {
+          final m = listCandidate['messages'];
+          if (m is List) {
+            print('DEBUG: [getConversationMessages] Found messages nested in list candidate key.');
+            return List<Map<String, dynamic>>.from(m.map((e) => Map<String, dynamic>.from(e as Map)));
+          }
+        }
+
+      } else if (response is List) {
+        print('DEBUG: [getConversationMessages] Response is a bare list of messages.');
+        return List<Map<String, dynamic>>.from(response.map((e) => Map<String, dynamic>.from(e as Map)));
+      }
+
+      print('WARN: [getConversationMessages] Failed to parse expected list of messages format.');
+      return [];
+    });
+  }
+
+  // -------------------- Chatbot: delete a conversation --------------------
+  /// Deletes a conversation by ID. Returns true if successful.
+  Future<bool> deleteConversation(String conversationId) async {
+    if (conversationId.isEmpty) throw Exception('conversationId is required');
+    print('DEBUG: [deleteConversation] Starting request for ID: $conversationId');
+
+    return await _withAuth<bool>((token) async {
+      if (token == null) {
+        print('ERROR: [deleteConversation] Authentication token is null. Cannot proceed.');
+        return false;
+      }
+      final path = ApiEndpoints.deleteConversation(conversationId).url;
+      print('DEBUG: [deleteConversation] Request Path: $path');
+
+      final response = await _apiHandler.delete(path, token: token);
+
+      print('DEBUG: [deleteConversation] Raw API Response received: $response');
+
+      if (response == null) {
+        print('WARN: [deleteConversation] Response was null. Assuming success if status code was 204 (No Content).');
+        return true; // Often, 204 (No Content) returns null/empty body, indicating success.
+      }
+
+      if (response is Map<String, dynamic>) {
+        if (response.containsKey('success') && response['success'] == true) {
+          print('DEBUG: [deleteConversation] API reported success: true.');
+          return true;
+        } else if (response.containsKey('success') && response['success'] == false) {
+          print('ERROR: [deleteConversation] API reported explicit failure: ${response['message'] ?? 'Unknown error'}.');
+          return false;
+        }
+      }
+
+      if (response is String && response.toLowerCase().contains('success')) {
+        print('DEBUG: [deleteConversation] Response string contained "success". Assuming success.');
+        return true;
+      }
+
+      print('WARN: [deleteConversation] Final check failed. Assuming delete failed.');
+      return false;
+    });
+  }
   // -------------------- Role parsing --------------------
   dynamic _parseUserRole(Map<String, dynamic> userData) {
     final baseUser = User.fromMap(userData);

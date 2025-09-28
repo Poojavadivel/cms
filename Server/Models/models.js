@@ -329,6 +329,33 @@ const StaffSchema = new mongoose.Schema({
 
 const Staff = mongoose.model('Staff', StaffSchema);
 
+///// ---------- Bot (Chat History) Model (Mongo) ---------- /////
+// Raw / flexible collection for storing chat history.
+// Always store server-derived userId (Postgres UUID) for ownership.
+const BotSchema = new mongoose.Schema(
+  {
+    userId: { type: String, required: true, index: true }, // Postgres User.id (UUID) from verified token
+    data: { type: mongoose.Schema.Types.Mixed, default: {} }, // free-form JSON for messages, metadata, etc.
+    patientId: { type: String, default: null }, // optional link to Patient._id
+    staffId: { type: String, default: null }, // optional link to Staff._id
+    archived: { type: Boolean, default: false, index: true }, // soft-delete flag
+    model: { type: String, default: '' }, // e.g., "gpt-4o-mini"
+    createdAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date, default: Date.now },
+  },
+  { strict: false } // allow arbitrary fields if you want even outside `data`
+);
+
+// Update 'updatedAt' on save
+BotSchema.pre('save', function (next) {
+  this.updatedAt = new Date();
+  next();
+});
+
+BotSchema.index({ userId: 1, archived: 1, updatedAt: -1 });
+
+const Bot = mongoose.model('Bot', BotSchema);
+
 ///// ---------- Export all models ---------- /////
 module.exports = {
   // Postgres / Sequelize
@@ -343,4 +370,5 @@ module.exports = {
   PharmacyRecord,
   Pharmacy,
   Staff,
+  Bot,
 };
