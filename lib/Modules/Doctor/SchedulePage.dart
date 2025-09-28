@@ -1,13 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-
-// --- App Theme Colors ---
-const Color primaryColor = Color(0xFFEF4444);
-const Color primaryColorLight = Color(0xFFFEE2E2);
-const Color backgroundColor = Color(0xFFF8FAFC);
-const Color cardBackgroundColor = Color(0xFFFFFFFF);
-const Color textPrimaryColor = Color(0xFF1F2937);
-const Color textSecondaryColor = Color(0xFF6B7280);
+import '../../../Utils/Colors.dart'; // make sure path matches your project
 
 // --- Data Models ---
 class ScheduleEvent {
@@ -23,14 +16,14 @@ class ScheduleEvent {
 
   factory ScheduleEvent.fromMap(Map<String, dynamic> map) {
     return ScheduleEvent(
-      title: map['title'],
-      time: map['time'],
-      type: map['type'],
+      title: map['title'] ?? '',
+      time: map['time'] ?? '',
+      type: map['type'] ?? 'appointment',
     );
   }
 }
 
-// --- Simulated API Data ---
+// --- Simulated API Data (Mon-Fri preserved, weekend empty) ---
 final Map<String, List<Map<String, dynamic>>> _scheduleApiData = {
   'Monday': [
     {'title': 'Team Meeting', 'time': '9:00 AM - 10:00 AM', 'type': 'break'},
@@ -51,6 +44,8 @@ final Map<String, List<Map<String, dynamic>>> _scheduleApiData = {
     {'title': 'Follow-ups', 'time': '9:00 AM - 10:00 AM', 'type': 'break'},
     {'title': 'John Philips', 'time': '10:00 AM - 10:30 AM', 'type': 'appointment'},
   ],
+  'Saturday': [],
+  'Sunday': [],
 };
 
 // --- Main Doctor Schedule Screen Widget ---
@@ -66,17 +61,21 @@ class _DoctorScheduleScreenState extends State<DoctorScheduleScreen> with Single
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
 
+  final List<String> _orderedDays = const [
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+    'Sunday',
+  ];
+
   @override
   void initState() {
     super.initState();
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 500),
-    );
-    _fadeAnimation = CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
-    );
+    _animationController = AnimationController(vsync: this, duration: const Duration(milliseconds: 450));
+    _fadeAnimation = CurvedAnimation(parent: _animationController, curve: Curves.easeInOut);
     _scheduleFuture = _fetchSchedule();
   }
 
@@ -87,147 +86,327 @@ class _DoctorScheduleScreenState extends State<DoctorScheduleScreen> with Single
   }
 
   Future<Map<String, List<ScheduleEvent>>> _fetchSchedule() async {
-    await Future.delayed(const Duration(seconds: 2));
+    await Future.delayed(const Duration(milliseconds: 600));
     _animationController.forward();
-    return _scheduleApiData.map((key, value) {
-      return MapEntry(key, value.map((e) => ScheduleEvent.fromMap(e)).toList());
-    });
+    final mapped = <String, List<ScheduleEvent>>{};
+    for (final d in _orderedDays) {
+      final raw = _scheduleApiData[d] ?? [];
+      mapped[d] = raw.map((e) => ScheduleEvent.fromMap(e)).toList();
+    }
+    return mapped;
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: backgroundColor,
-      body: FutureBuilder<Map<String, List<ScheduleEvent>>>(
-        future: _scheduleFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: primaryColor));
-          } else if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          } else if (snapshot.hasData) {
-            return FadeTransition(
-              opacity: _fadeAnimation,
-              child: _buildScheduleContent(context, snapshot.data!),
-            );
-          } else {
-            return const Center(child: Text('No schedule found.'));
-          }
-        },
+      backgroundColor: AppColors.background,
+      body: SafeArea(
+        child: FutureBuilder<Map<String, List<ScheduleEvent>>>(
+          future: _scheduleFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: SizedBox(width: 36, height: 36, child: CircularProgressIndicator()));
+            } else if (snapshot.hasError) {
+              return Center(child: Text('Error: ${snapshot.error}', style: GoogleFonts.inter(color: AppColors.kTextPrimary)));
+            } else if (snapshot.hasData) {
+              return FadeTransition(opacity: _fadeAnimation, child: _buildScheduleContent(context, snapshot.data!));
+            } else {
+              return Center(child: Text('No schedule found', style: GoogleFonts.inter(color: AppColors.kTextSecondary)));
+            }
+          },
+        ),
       ),
     );
   }
 
   Widget _buildScheduleContent(BuildContext context, Map<String, List<ScheduleEvent>> schedule) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(32.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildHeader(),
-          const SizedBox(height: 32),
-          _buildWeekView(schedule),
-        ],
-      ),
-    );
+    return LayoutBuilder(builder: (context, constraints) {
+      final maxWidth = constraints.maxWidth;
+      final maxHeight = constraints.maxHeight;
+
+      // Reserve header area height
+      const headerReserve = 120.0;
+      // available height for schedule card
+      final availableHeight = (maxHeight - headerReserve).clamp(360.0, 900.0);
+      final containerHeight = availableHeight;
+
+      final isNarrow = maxWidth < 1000;
+      // smaller min width so weekend fits on narrower screens
+      final dayMinWidth = isNarrow ? 200.0 : 240.0;
+
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildHeader(maxWidth),
+            const SizedBox(height: 18),
+            SizedBox(
+              height: containerHeight,
+              child: Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: AppColors.kCard,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.grey200),
+                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 18, offset: const Offset(0, 8))],
+                ),
+                padding: const EdgeInsets.all(14),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: LayoutBuilder(builder: (context, innerConstraints) {
+                    // choose layout based on width
+                    if (innerConstraints.maxWidth < 900) {
+                      return _buildScrollableStackedWeek(schedule, dayMinWidth: dayMinWidth, cardHeight: containerHeight);
+                    } else {
+                      return _buildWeekRow(schedule, dayMinWidth: dayMinWidth, cardHeight: containerHeight);
+                    }
+                  }),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    });
   }
 
-  // --- WIDGET BUILDER METHODS ---
-
-  Widget _buildHeader() {
+  Widget _buildHeader(double maxWidth) {
+    final isCompact = maxWidth < 840;
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          'My Schedule',
-          style: GoogleFonts.poppins(
-            fontSize: 32,
-            fontWeight: FontWeight.bold,
-            color: textPrimaryColor,
-          ),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('My Schedule', style: GoogleFonts.poppins(fontSize: 28, fontWeight: FontWeight.w800, color: AppColors.kTextPrimary)),
+            const SizedBox(height: 6),
+            Text('Overview for the week', style: GoogleFonts.inter(color: AppColors.kTextSecondary)),
+          ]),
         ),
-        // const CircleAvatar(
-        //   backgroundImage: NetworkImage('https://images.pexels.com/photos/5215024/pexels-photo-5215024.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1'),
-        //   radius: 32,
-        // ),
+        Row(children: [
+          OutlinedButton.icon(
+            onPressed: () {},
+            icon: Icon(Icons.today, size: 16, color: AppColors.kTextPrimary),
+            label: Text('Today', style: GoogleFonts.inter(color: AppColors.kTextPrimary)),
+            style: OutlinedButton.styleFrom(side: BorderSide(color: AppColors.grey200), backgroundColor: AppColors.kCard, padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10)),
+          ),
+          const SizedBox(width: 10),
+          ElevatedButton.icon(
+            onPressed: () {},
+            icon: const Icon(Icons.add, size: 16),
+            label: Text(isCompact ? 'New' : 'New appointment', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+          ),
+        ]),
       ],
     );
   }
 
-  Widget _buildWeekView(Map<String, List<ScheduleEvent>> schedule) {
-    return Container(
-      decoration: BoxDecoration(
-        color: cardBackgroundColor,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
-          )
-        ],
-      ),
+  Widget _buildWeekRow(Map<String, List<ScheduleEvent>> schedule, {required double dayMinWidth, required double cardHeight}) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: _orderedDays.map((day) {
+        final events = schedule[day] ?? [];
+        return Flexible(
+          fit: FlexFit.tight,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minWidth: dayMinWidth),
+            child: _buildDayColumn(day, events, cardHeight: cardHeight),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildScrollableStackedWeek(Map<String, List<ScheduleEvent>> schedule, {required double dayMinWidth, required double cardHeight}) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: schedule.entries.map((entry) {
-          return Expanded(
-            child: _buildDayColumn(entry.key, entry.value),
-          );
+        children: _orderedDays.map((day) {
+          final events = schedule[day] ?? [];
+          return SizedBox(width: dayMinWidth, child: _buildDayColumn(day, events, cardHeight: cardHeight));
         }).toList(),
       ),
     );
   }
 
-  Widget _buildDayColumn(String day, List<ScheduleEvent> events) {
+  Widget _buildDayColumn(String day, List<ScheduleEvent> events, {required double cardHeight}) {
+    final isWeekend = day == 'Saturday' || day == 'Sunday';
     return Container(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       decoration: BoxDecoration(
-        border: Border(
-          right: BorderSide(color: Colors.grey[200]!, width: 1.0),
-        ),
+        border: Border(right: BorderSide(color: AppColors.grey200, width: 1)),
       ),
+      height: double.infinity,
       child: Column(
         children: [
-          Text(
-            day.toUpperCase(),
-            style: GoogleFonts.poppins(
-              fontWeight: FontWeight.bold,
-              color: textSecondaryColor,
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: Text(day.toUpperCase(), style: GoogleFonts.poppins(fontWeight: FontWeight.w700, color: isWeekend ? AppColors.primary : AppColors.kTextSecondary)),
+              ),
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                decoration: BoxDecoration(
+                  color: isWeekend ? AppColors.primary.withOpacity(0.06) : AppColors.rowAlternate,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text('${events.length}', style: GoogleFonts.inter(fontSize: 12, color: AppColors.kTextSecondary)),
+              ),
+            ],
           ),
-          const SizedBox(height: 16),
-          ...events.map((event) => _buildEventCard(event)).toList(),
+          const SizedBox(height: 10),
+          Expanded(
+            child: events.isEmpty ? _buildEmptyDay() : _buildEventsList(events),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildEventCard(ScheduleEvent event) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      color: event.type == 'appointment' ? primaryColorLight : Colors.grey[100],
-      elevation: 0,
-      child: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              event.title,
-              style: GoogleFonts.poppins(
-                fontWeight: FontWeight.bold,
-                color: textPrimaryColor,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              event.time,
-              style: GoogleFonts.poppins(color: textSecondaryColor),
-            ),
-          ],
-        ),
+  Widget _buildEmptyDay() {
+    return Center(
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Icon(Icons.calendar_month, size: 36, color: AppColors.kTextSecondary.withOpacity(0.6)),
+        const SizedBox(height: 8),
+        Text('No data', style: GoogleFonts.inter(color: AppColors.kTextSecondary)),
+      ]),
+    );
+  }
+
+  Widget _buildEventsList(List<ScheduleEvent> events) {
+    return Scrollbar(
+      thumbVisibility: true,
+      child: ListView.separated(
+        padding: EdgeInsets.zero,
+        itemCount: events.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 10),
+        itemBuilder: (context, idx) {
+          return _buildEventCard(events[idx]);
+        },
       ),
     );
+  }
+
+  Widget _buildEventCard(ScheduleEvent event) {
+    final isAppointment = event.type == 'appointment';
+    final bg = isAppointment ? AppColors.kCFBlue.withOpacity(0.06) : AppColors.rowAlternate;
+    final border = isAppointment ? AppColors.kCFBlue.withOpacity(0.12) : AppColors.grey200;
+    final badgeColor = isAppointment ? AppColors.primary : AppColors.kTextSecondary;
+
+    return LayoutBuilder(builder: (context, constraints) {
+      // compact if narrow column
+      final compact = constraints.maxWidth < 240;
+
+      // We constrain chips and the time box so they cannot push the card wider.
+      final chipMaxWidth = constraints.maxWidth * 0.45;
+      final timeMaxWidth = constraints.maxWidth * 0.45;
+
+      return MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () {},
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              padding: EdgeInsets.all(compact ? 8.0 : 12.0),
+              decoration: BoxDecoration(
+                color: bg,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: border),
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 6, offset: const Offset(0, 4))],
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // left accent
+                  Container(width: 6, height: 46, decoration: BoxDecoration(color: badgeColor, borderRadius: BorderRadius.circular(6))),
+                  const SizedBox(width: 10),
+
+                  // title + chips: this area is flexible and will ellipsize or wrap safely
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Title (wraps up to 2 lines)
+                        Text(
+                          event.title,
+                          maxLines: compact ? 1 : 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.inter(fontSize: compact ? 13 : 14, fontWeight: FontWeight.w700, color: AppColors.kTextPrimary),
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            // Time chip (constrained)
+                            ConstrainedBox(
+                              constraints: BoxConstraints(maxWidth: timeMaxWidth),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                decoration: BoxDecoration(color: AppColors.kCard, borderRadius: BorderRadius.circular(8), border: Border.all(color: AppColors.grey200)),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.schedule, size: 14, color: AppColors.kTextSecondary),
+                                    const SizedBox(width: 6),
+                                    Flexible(
+                                      child: Text(
+                                        event.time,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: GoogleFonts.inter(fontSize: 12, color: AppColors.kTextSecondary),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            // Type badge (constrained)
+                            ConstrainedBox(
+                              constraints: BoxConstraints(maxWidth: chipMaxWidth),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                decoration: BoxDecoration(color: isAppointment ? AppColors.primary.withOpacity(0.08) : AppColors.kTextSecondary.withOpacity(0.08), borderRadius: BorderRadius.circular(8)),
+                                child: Text(
+                                  isAppointment ? 'Appointment' : 'Break',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: badgeColor),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // compact popup actions - doesn't increase layout width
+                  const SizedBox(width: 8),
+                  SizedBox(
+                    width: 36,
+                    height: 36,
+                    child: PopupMenuButton<int>(
+                      tooltip: 'More actions',
+                      padding: EdgeInsets.zero,
+                      icon: Icon(Icons.more_vert, size: 18, color: AppColors.kTextSecondary),
+                      onSelected: (v) {},
+                      itemBuilder: (ctx) => [
+                        PopupMenuItem(value: 1, child: Text('View', style: GoogleFonts.inter())),
+                        PopupMenuItem(value: 2, child: Text('Reschedule', style: GoogleFonts.inter())),
+                        PopupMenuItem(value: 3, child: Text('Cancel', style: GoogleFonts.inter())),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    });
   }
 }

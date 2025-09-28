@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../Models/dashboardmodels.dart';
+import '../../../Utils/Colors.dart';
 
 // ---- Theme ----
-const Color primaryColor = Color(0xFFEF4444);
+
 const Color backgroundColor = Color(0xFFF7FAFC);
 const Color cardBackgroundColor = Color(0xFFFFFFFF);
 const Color textPrimaryColor = Color(0xFF1F2937);
@@ -160,12 +161,12 @@ class AppointmentDetail extends StatelessWidget {
                     ),
                     padding: const EdgeInsets.all(8),
                     child: const Icon(Icons.close_rounded,
-                        color: primaryColor, size: 20),
+                      color: AppColors.primary700,
                   ),
                 ),
               ),
             ),
-          ],
+            ),],
         ),
       ),
     );
@@ -204,7 +205,7 @@ class _SectionCardState extends State<_SectionCard> {
       child: Column(
         children: [
           ListTile(
-            leading: Icon(widget.icon, color: primaryColor),
+            leading: Icon(widget.icon,  color: AppColors.primary700,),
             title: Text(widget.title),
             subtitle: Text(widget.description,
                 style: const TextStyle(color: textSecondaryColor)),
@@ -257,7 +258,7 @@ class _ReadOnlyTable extends StatelessWidget {
               c,
               style: GoogleFonts.poppins(
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF991B1B),
+                color: AppColors.primary700,
                 fontSize: 13,
               ),
             ),
@@ -314,20 +315,13 @@ class _ReadOnlyTable extends StatelessWidget {
 // ---------------- Widgets ----------------
 
 class _ProfileHeaderCard extends StatelessWidget {
-  static const Color kPrimary = Color(0xFFEF4444);
-  static const Color kBg = Color(0xFFF9FAFB);
-  static const Color kCard = Colors.white;
-  static const Color kText = Color(0xFF111827);
-  static const Color kMuted = Color(0xFF6B7280);
-  static const Color kBorder = Color(0xFFE5E7EB);
+  // keep your original tokens so layout stays identical
   static const double kRadius = 16;
+  static const double kAvatar = 128;
+  static const Color kTint = Color(0xFFF9FAFB); // subtle tint behind card
+  static const Color kTintLine = Color(0xFFF3F4F6);
   final DashboardAppointments appt;
   const _ProfileHeaderCard({required this.appt});
-
-  // ---- Tokens
-  static const Color kTint = Color(0xFFFFF1F2);
-  static const Color kTintLine = Color(0xFFFFE4E6);
-  static const double kAvatar = 128;
 
   String _n(num? v, {String? suffix}) =>
       (v == null || v == 0) ? '—' : '${v}${suffix ?? ''}';
@@ -362,30 +356,34 @@ class _ProfileHeaderCard extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(kRadius),
       child: Container(
-        decoration: BoxDecoration(
-          color: kTint,
-          borderRadius: BorderRadius.circular(kRadius),
-          border: Border.all(color: kTintLine),
-        ),
+        color: kTint,
         child: Stack(
           children: [
-            Positioned(
-              top: 8,
-              right: 8,
-              child: _ghostButton(
-                icon: Icons.edit_outlined,
-                onTap: () {},
+            // Card body with subtle border and shadow - enterprise feel
+            Container(
+              margin: const EdgeInsets.all(0),
+              decoration: BoxDecoration(
+                color: AppColors.kCard,
+                borderRadius: BorderRadius.circular(kRadius),
+                border: Border.all(color: kTintLine),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.04),
+                    blurRadius: 18,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: LayoutBuilder(
-                builder: (context, c) {
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: LayoutBuilder(builder: (context, c) {
                   final isTight = c.maxWidth < 980;
-                  return Row(
+                  return Flex(
+                    direction: Axis.horizontal,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
+                      // Left: big avatar + spacing
+                      Flexible(
                         flex: isTight ? 10 : 6,
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.center,
@@ -396,7 +394,10 @@ class _ProfileHeaderCard extends StatelessWidget {
                           ],
                         ),
                       ),
+
                       const SizedBox(width: 16),
+
+                      // Right: vitals grid - keeps original flex behavior
                       if (!isTight)
                         Expanded(flex: 5, child: _vitalsGrid())
                       else
@@ -409,6 +410,18 @@ class _ProfileHeaderCard extends StatelessWidget {
                         ),
                     ],
                   );
+                }),
+              ),
+            ),
+
+            // Floating edit ghost button at top-right (keeps original placement)
+            Positioned(
+              right: 12,
+              top: 12,
+              child: _ghostButton(
+                icon: Icons.edit_outlined,
+                onTap: () {
+                  // leave hook for edit action
                 },
               ),
             ),
@@ -423,25 +436,52 @@ class _ProfileHeaderCard extends StatelessWidget {
       width: kAvatar,
       height: kAvatar,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.kCard,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: kTintLine),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.025),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12),
         child: Image.asset(
           asset,
           fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => const Icon(Icons.person, size: 72),
+          errorBuilder: (_, __, ___) => Container(
+            color: AppColors.rowAlternate,
+            child: Center(
+              child: Text(
+                _initials(_ss(appt.patientName)),
+                style: GoogleFonts.lexend(
+                  fontSize: 36,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.primary700,
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );
+  }
+
+  String _initials(String name) {
+    if (name.trim().isEmpty || name == '—') return '';
+    final parts = name.split(' ');
+    if (parts.length == 1) return parts[0].substring(0, 1).toUpperCase();
+    return (parts[0][0] + parts[1][0]).toUpperCase();
   }
 
   Widget _identityBlock(String name, bool isFemale) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Name (large, bold) - matches original font size and weight
         Text(
           name,
           maxLines: 1,
@@ -449,15 +489,17 @@ class _ProfileHeaderCard extends StatelessWidget {
           style: GoogleFonts.lexend(
             fontSize: 24,
             fontWeight: FontWeight.w800,
-            color: kText,
+            color: AppColors.kTextPrimary,
             height: 1.05,
           ),
         ),
         const SizedBox(height: 8),
+
+        // ID badge: keep original look but use AppColors
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.kCard,
             borderRadius: BorderRadius.circular(10),
             border: Border.all(color: kTintLine),
           ),
@@ -466,12 +508,15 @@ class _ProfileHeaderCard extends StatelessWidget {
             style: GoogleFonts.lexend(
               fontSize: 12.5,
               fontWeight: FontWeight.w700,
-              color: const Color(0xFFB42318),
+              color: AppColors.primary700,
               letterSpacing: 0.1,
             ),
           ),
         ),
+
         const SizedBox(height: 12),
+
+        // basic meta row (gender / age / dob) - keep as Wrap like original
         Wrap(
           spacing: 18,
           runSpacing: 10,
@@ -482,17 +527,20 @@ class _ProfileHeaderCard extends StatelessWidget {
             _mini(Icons.calendar_month, _ss(appt.dob)),
           ],
         ),
+
         const SizedBox(height: 8),
+
+        // Blood group row same as original
         Row(
           children: [
-            const Icon(Icons.bloodtype, size: 16, color: _ProfileHeaderCard.kMuted),
+            Icon(Icons.bloodtype, size: 16, color: AppColors.kTextSecondary),
             const SizedBox(width: 6),
             Text(
               'Blood Group: ${_bloodGroup()}',
               style: GoogleFonts.inter(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: _ProfileHeaderCard.kMuted,
+                color: AppColors.kTextSecondary,
               ),
             ),
           ],
@@ -504,14 +552,14 @@ class _ProfileHeaderCard extends StatelessWidget {
   Widget _mini(IconData i, String t) => Row(
     mainAxisSize: MainAxisSize.min,
     children: [
-      Icon(i, size: 16, color: kMuted),
+      Icon(i, size: 16, color: AppColors.kTextSecondary),
       const SizedBox(width: 6),
       Text(
         t,
         style: GoogleFonts.inter(
           fontSize: 13,
           fontWeight: FontWeight.w500,
-          color: kMuted,
+          color: AppColors.kTextSecondary,
         ),
       ),
     ],
@@ -550,14 +598,14 @@ class _ProfileHeaderCard extends StatelessWidget {
           alignment: Alignment.center,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(10),
-            gradient: const LinearGradient(
+            gradient: LinearGradient(
+              colors: [AppColors.kCFBlue.withOpacity(0.12), AppColors.kCFBlue.withOpacity(0.06)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [Color(0x26FFFFFF), Color(0x14FFFFFF)],
             ),
             border: Border.all(color: kTintLine),
           ),
-          child: Icon(icon, size: 18, color: const Color(0xFFB42318)),
+          child: Icon(icon, size: 18, color: AppColors.primary700),
         ),
         const SizedBox(width: 10),
         Expanded(
@@ -574,7 +622,7 @@ class _ProfileHeaderCard extends StatelessWidget {
                   style: GoogleFonts.lexend(
                     fontSize: 16,
                     fontWeight: FontWeight.w800,
-                    color: kText,
+                    color: AppColors.kTextPrimary,
                     height: 1.0,
                   ),
                 ),
@@ -585,7 +633,7 @@ class _ProfileHeaderCard extends StatelessWidget {
                 style: GoogleFonts.inter(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: kMuted,
+                  color: AppColors.kTextSecondary,
                   letterSpacing: 0.1,
                 ),
               ),
@@ -601,7 +649,7 @@ class _ProfileHeaderCard extends StatelessWidget {
       color: kTint,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: kTintLine),
+        side: BorderSide(color: kTintLine),
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
@@ -614,6 +662,7 @@ class _ProfileHeaderCard extends StatelessWidget {
     );
   }
 }
+
 
 class _InfoCard extends StatelessWidget {
   final String title;
@@ -743,8 +792,8 @@ class _StatusChip extends StatelessWidget {
       bg = warningColor.withOpacity(.12);
       fg = warningColor;
     } else {
-      bg = primaryColor.withOpacity(.12);
-      fg = primaryColor;
+      bg =  AppColors.primary700.withOpacity(.12);
+      fg =  AppColors.primary700;
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),

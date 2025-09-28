@@ -1,24 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../Models/dashboardmodels.dart';
-
-/// ==================== THEME ====================
-const Color primaryColor = Color(0xFFEF4444);
-const Color backgroundColor = Color(0xFFF6F7FB);
-const Color textPrimaryColor = Color(0xFF1F2937);
-const Color textSecondaryColor = Color(0xFF6B7280);
-const Color borderColor = Color(0xFFE2E8F0);
-
-// Match your appointment table theme
-const Color _tableHeaderColor = Color(0xFF991B1B);
-const Color _rowAlternateColor = Color(0xFFFEF2F2);
-const Color _statusIncompleteColor = Color(0xFFDC2626);
+import '../../../Utils/Colors.dart'; // 👈 import your AppColors
 
 ThemeData _intakeTheme(BuildContext context) {
   return ThemeData(
     useMaterial3: true,
-    colorScheme: ColorScheme.fromSeed(seedColor: primaryColor),
-    scaffoldBackgroundColor: backgroundColor,
+    colorScheme: ColorScheme.fromSeed(seedColor: AppColors.primary),
+    scaffoldBackgroundColor: AppColors.background,
     textTheme: GoogleFonts.interTextTheme(Theme.of(context).textTheme),
   );
 }
@@ -61,7 +50,7 @@ Future<void> showIntakeFormDialog(
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(22),
                       child: Material(
-                        color: Colors.white, // 🔴 changed from backgroundColor
+                        color: AppColors.white,
                         child: Padding(
                           padding: const EdgeInsets.all(12),
                           child: IntakeFormBody(appt: appt),
@@ -82,8 +71,8 @@ Future<void> showIntakeFormDialog(
                         borderRadius: BorderRadius.circular(999),
                         child: Ink(
                           decoration: BoxDecoration(
-                            color: Colors.white,
-                            border: Border.all(color: borderColor),
+                            color: AppColors.white,
+                            border: Border.all(color: AppColors.grey200),
                             borderRadius: BorderRadius.circular(999),
                           ),
                           child: const Padding(
@@ -104,7 +93,6 @@ Future<void> showIntakeFormDialog(
   );
 }
 
-
 /// ============== FULL PAGE ==============
 class IntakeFormPage extends StatelessWidget {
   final DashboardAppointments appt;
@@ -115,7 +103,7 @@ class IntakeFormPage extends StatelessWidget {
     return Theme(
       data: _intakeTheme(context),
       child: Scaffold(
-        backgroundColor: backgroundColor,
+        backgroundColor: AppColors.background,
         body: SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(12),
@@ -137,14 +125,12 @@ class IntakeFormBody extends StatefulWidget {
 }
 
 class _IntakeFormBodyState extends State<IntakeFormBody> {
-  // Notes controllers
   final TextEditingController _currentNotesCtrl = TextEditingController();
   final TextEditingController _heightCtrl = TextEditingController();
   final TextEditingController _weightCtrl = TextEditingController();
   final TextEditingController _bmiCtrl = TextEditingController();
   final TextEditingController _spo2Ctrl = TextEditingController();
 
-  // Pharmacy + Pathology dynamic tables
   final List<Map<String, String>> _pharmacyRows = [];
   final List<Map<String, String>> _pathologyRows = [];
 
@@ -158,10 +144,35 @@ class _IntakeFormBodyState extends State<IntakeFormBody> {
     super.dispose();
   }
 
-  void _saveForm() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Form saved successfully ✅")),
-    );
+  Future<void> _saveForm() async {
+    final appt = widget.appt;
+    final payload = {
+      'patientId': appt.patientId,
+      'patientName': appt.patientName,
+      'vitals': {
+        'height_cm': _heightCtrl.text.trim(),
+        'weight_kg': _weightCtrl.text.trim(),
+        'bmi': _bmiCtrl.text.trim(),
+        'spo2': _spo2Ctrl.text.trim(),
+      },
+      'currentNotes': _currentNotesCtrl.text.trim(),
+      'pharmacy': _pharmacyRows.map((r) => Map.of(r)).toList(),
+      'pathology': _pathologyRows.map((r) => Map.of(r)).toList(),
+      'updatedAt': DateTime.now().toIso8601String(),
+    };
+
+    try {
+      print('Payload: $payload');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Form saved successfully ✅")),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Save failed: $e")),
+      );
+    }
   }
 
   @override
@@ -176,8 +187,6 @@ class _IntakeFormBodyState extends State<IntakeFormBody> {
         Expanded(
           child: ListView(
             children: [
-              /// --- MEDICAL NOTES ---
-              /// --- MEDICAL NOTES ---
               _SectionCard(
                 icon: Icons.note_alt_outlined,
                 title: 'Medical Notes',
@@ -189,7 +198,7 @@ class _IntakeFormBodyState extends State<IntakeFormBody> {
                         style: GoogleFonts.lexend(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
-                            color: textPrimaryColor)),
+                            color: AppColors.kTextPrimary)),
                     const SizedBox(height: 6),
                     Row(
                       children: [
@@ -242,50 +251,11 @@ class _IntakeFormBodyState extends State<IntakeFormBody> {
                         ),
                       ],
                     ),
-
-                    const SizedBox(height: 12),
-                    Text('Previous Notes',
-                        style: GoogleFonts.lexend(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: textPrimaryColor)),
-                    const SizedBox(height: 6),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: borderColor),
-                      ),
-                      child: Text(
-                        widget.appt.previousNotes?.isNotEmpty == true
-                            ? widget.appt.previousNotes!
-                            : "No previous notes available.",
-                        style: const TextStyle(color: textSecondaryColor, fontSize: 14),
-                      ),
-                    ),
-
-                    const SizedBox(height: 12),
-                    Text('Current Notes',
-                        style: GoogleFonts.lexend(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: textPrimaryColor)),
-                    const SizedBox(height: 6),
-                    TextField(
-                      controller: _currentNotesCtrl,
-                      maxLines: 4,
-                      decoration: const InputDecoration(
-                        hintText: 'Enter today\'s medical notes…',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
                   ],
                 ),
               ),
 
-              /// --- PHARMACY ---
+              /// Pharmacy
               _SectionCard(
                 icon: Icons.local_pharmacy_outlined,
                 title: 'Pharmacy',
@@ -297,7 +267,6 @@ class _IntakeFormBodyState extends State<IntakeFormBody> {
                       columns: const ['Medicine', 'Dosage', 'Frequency', 'Notes'],
                       onDelete: (i) => setState(() => _pharmacyRows.removeAt(i)),
                     ),
-                    const SizedBox(height: 8),
                     Align(
                       alignment: Alignment.centerRight,
                       child: ElevatedButton.icon(
@@ -313,13 +282,17 @@ class _IntakeFormBodyState extends State<IntakeFormBody> {
                         },
                         icon: const Icon(Icons.add),
                         label: const Text('Add Medicine'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.buttonBg,
+                          foregroundColor: AppColors.white,
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
 
-              /// --- PATHOLOGY ---
+              /// Pathology
               _SectionCard(
                 icon: Icons.biotech_outlined,
                 title: 'Pathology',
@@ -328,10 +301,9 @@ class _IntakeFormBodyState extends State<IntakeFormBody> {
                   children: [
                     CustomEditableTable(
                       rows: _pathologyRows,
-                      columns: const ['Test Name', 'Category','Priority', 'Notes'],
+                      columns: const ['Test Name', 'Category', 'Priority', 'Notes'],
                       onDelete: (i) => setState(() => _pathologyRows.removeAt(i)),
                     ),
-                    const SizedBox(height: 8),
                     Align(
                       alignment: Alignment.centerRight,
                       child: ElevatedButton.icon(
@@ -339,6 +311,7 @@ class _IntakeFormBodyState extends State<IntakeFormBody> {
                           setState(() {
                             _pathologyRows.add({
                               'Test Name': '',
+                              'Category': '',
                               'Priority': '',
                               'Notes': '',
                             });
@@ -346,24 +319,79 @@ class _IntakeFormBodyState extends State<IntakeFormBody> {
                         },
                         icon: const Icon(Icons.add),
                         label: const Text('Add Test'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.buttonBg,
+                          foregroundColor: AppColors.white,
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
-
               const SizedBox(height: 90),
             ],
           ),
         ),
 
+        /// Save Bar
         /// --- Bottom Save Bar ---
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.white,
+            border: Border(
+              top: BorderSide(color: AppColors.grey200, width: 1),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 6,
+                offset: const Offset(0, -2),
+              ),
+            ],
+          ),
+          child: SafeArea(
+            top: false,
+            child: SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton(
+                onPressed: _saveForm,
+                style: ElevatedButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 0,
+                  backgroundColor: AppColors.transparent, // use gradient below
+                ),
+                child: Ink(
+                  decoration: BoxDecoration(
+                    gradient: AppColors.brandGradient,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Center(
+                    child: Text(
+                      "Save Intake Form",
+                      style: GoogleFonts.lexend(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        )
+
       ],
     );
   }
 }
 
-/// ============== SECTION CARD ==============
+/// ============== SectionCard (unchanged except colors) ==============
 class _SectionCard extends StatefulWidget {
   final IconData icon;
   final String title;
@@ -389,24 +417,24 @@ class _SectionCardState extends State<_SectionCard> {
   Widget build(BuildContext context) {
     return Card(
       margin: const EdgeInsets.only(bottom: 14),
-      color: Colors.white, // 👈 force white background
-      elevation: 2,        // 👌 slight shadow for card feel
+      color: AppColors.white,
+      elevation: 2,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: borderColor.withOpacity(0.3)), // subtle border
+        side: BorderSide(color: AppColors.grey200.withOpacity(0.6)),
       ),
       child: Column(
         children: [
           ListTile(
-            leading: Icon(widget.icon, color: primaryColor),
-            title: Text(widget.title),
-            subtitle: Text(
-              widget.description,
-              style: const TextStyle(color: textSecondaryColor),
+            leading: Icon(widget.icon, color: AppColors.primary),
+            title: Text(widget.title,
+                style: TextStyle(color: AppColors.kTextPrimary)),
+            subtitle: Text(widget.description,
+                style: const TextStyle(color: AppColors.kTextSecondary)),
+            trailing: Icon(
+              open ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+              color: AppColors.primary600,
             ),
-            trailing: Icon(open
-                ? Icons.keyboard_arrow_up
-                : Icons.keyboard_arrow_down),
             onTap: () => setState(() => open = !open),
           ),
           if (open)
@@ -420,8 +448,7 @@ class _SectionCardState extends State<_SectionCard> {
   }
 }
 
-
-/// ============== Custom Editable Table ==============
+/// ============== Editable Table ==============
 class CustomEditableTable extends StatelessWidget {
   final List<Map<String, String>> rows;
   final List<String> columns;
@@ -434,102 +461,179 @@ class CustomEditableTable extends StatelessWidget {
     required this.onDelete,
   });
 
+  Future<void> _confirmDelete(BuildContext context, int index) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Confirm delete'),
+        content: const Text('Are you sure you want to delete this row?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.kDanger,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (ok == true) onDelete(index);
+  }
+
   @override
   Widget build(BuildContext context) {
+    // computed widths
+    final actionColWidth = 84.0;
+
     return Container(
       decoration: BoxDecoration(
-        border: Border.all(color: _tableHeaderColor, width: 1),
-        borderRadius: BorderRadius.circular(10), // rounded corners
-      ),
-      child: Table(
-        border: TableBorder.symmetric(
-          inside: BorderSide(color: _tableHeaderColor.withOpacity(0.4), width: 0.6),
-        ),
-        columnWidths: {
-          for (var i = 0; i < columns.length; i++) i: const FlexColumnWidth(),
-          columns.length: const FixedColumnWidth(80), // 👈 Actions column fixed small width
-        },
-        defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-        children: [
-          // Header Row
-          TableRow(
-            decoration: BoxDecoration(color: _rowAlternateColor.withOpacity(0.5)),
-            children: [
-              for (var col in columns)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
-                  child: Text(
-                    col,
-                    style: GoogleFonts.poppins(
-                      fontWeight: FontWeight.w700,
-                      color: _tableHeaderColor,
-                      fontSize: 13,
-                    ),
-                  ),
-                ),
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 10, horizontal: 6),
-                child: Text(
-                  "Actions",
-                  style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: _tableHeaderColor,
-                      fontSize: 13),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            ],
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.grey200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 6),
           ),
-
-          // Data Rows
-          for (int i = 0; i < rows.length; i++)
-            TableRow(
-              decoration: BoxDecoration(
-                color: i.isEven ? Colors.white : _rowAlternateColor.withOpacity(0.2),
-              ),
+        ],
+      ),
+      clipBehavior: Clip.hardEdge,
+      child: Column(
+        children: [
+          // Header
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            color: AppColors.rowAlternate,
+            child: Row(
               children: [
                 for (var col in columns)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 6),
-                    child: TextFormField(
-                      initialValue: rows[i][col],
-                      onChanged: (v) => rows[i][col] = v,
-                      style: const TextStyle(fontSize: 13),
-                      decoration: const InputDecoration(
-                        border: InputBorder.none,
-                        isDense: true,
-                        contentPadding: EdgeInsets.symmetric(vertical: 6, horizontal: 6),
+                  Expanded(
+                    child: Text(
+                      col.toUpperCase(),
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.tableHeader,
+                        letterSpacing: 0.6,
                       ),
                     ),
                   ),
-
-                // Actions Cell (small + centered)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 2),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.check_circle, color: Colors.green, size: 18),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text("Row saved ✅")),
-                          );
-                        },
+                SizedBox(
+                  width: actionColWidth,
+                  child: Center(
+                    child: Text(
+                      'ACTION',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.tableHeader,
+                        letterSpacing: 0.6,
                       ),
-                      const SizedBox(width: 6),
-                      IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red, size: 18),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                        onPressed: () => onDelete(i),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
               ],
+            ),
+          ),
+
+          // Divider
+          Divider(height: 1, color: AppColors.grey200),
+
+          // Rows
+          if (rows.isEmpty)
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'No items — add one using the Add button.',
+                      style: GoogleFonts.inter(
+                        color: AppColors.kTextSecondary,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            Column(
+              children: List.generate(rows.length, (i) {
+                final even = i.isEven;
+                final row = rows[i];
+                return Container(
+                  color: even ? AppColors.white : AppColors.rowAlternate.withOpacity(0.6),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      for (var col in columns)
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 6),
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(minHeight: 40),
+                              child: TextFormField(
+                                initialValue: row[col] ?? '',
+                                onChanged: (v) => row[col] = v,
+                                style: GoogleFonts.inter(fontSize: 13, color: AppColors.kTextPrimary),
+                                decoration: InputDecoration(
+                                  isDense: true,
+                                  contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
+                                  hintText: col,
+                                  hintStyle: GoogleFonts.inter(fontSize: 13, color: AppColors.kTextSecondary),
+                                  filled: true,
+                                  fillColor: Colors.transparent,
+                                  border: OutlineInputBorder(
+                                    borderSide: BorderSide.none,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+
+                      // Action column
+                      SizedBox(
+                        width: actionColWidth,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            // compact outlined delete "pill"
+                            Tooltip(
+                              message: 'Delete row',
+                              child: SizedBox(
+                                height: 34,
+                                child: OutlinedButton.icon(
+                                  onPressed: () => _confirmDelete(context, i),
+                                  icon: const Icon(Icons.delete_outline, size: 16),
+                                  label: const Text('Delete', style: TextStyle(fontSize: 12)),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: AppColors.kDanger,
+                                    side: BorderSide(color: AppColors.kDanger.withOpacity(0.12)),
+                                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
             ),
         ],
       ),
@@ -538,22 +642,19 @@ class CustomEditableTable extends StatelessWidget {
 }
 
 
+/// ============== Profile Header ==============
+
+
 /// ============== Dummy Profile Header ==============
+
 class _ProfileHeaderCard extends StatelessWidget {
-  static const Color kPrimary = Color(0xFFEF4444);
-  static const Color kBg = Color(0xFFF9FAFB);
-  static const Color kCard = Colors.white;
-  static const Color kText = Color(0xFF111827);
-  static const Color kMuted = Color(0xFF6B7280);
-  static const Color kBorder = Color(0xFFE5E7EB);
+  // keep your original tokens so layout stays identical
   static const double kRadius = 16;
+  static const double kAvatar = 128;
+  static const Color kTint = Color(0xFFF9FAFB); // subtle tint behind card
+  static const Color kTintLine = Color(0xFFF3F4F6);
   final DashboardAppointments appt;
   const _ProfileHeaderCard({required this.appt});
-
-  // ---- Tokens
-  static const Color kTint = Color(0xFFFFF1F2);
-  static const Color kTintLine = Color(0xFFFFE4E6);
-  static const double kAvatar = 128;
 
   String _n(num? v, {String? suffix}) =>
       (v == null || v == 0) ? '—' : '${v}${suffix ?? ''}';
@@ -588,30 +689,34 @@ class _ProfileHeaderCard extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(kRadius),
       child: Container(
-        decoration: BoxDecoration(
-          color: kTint,
-          borderRadius: BorderRadius.circular(kRadius),
-          border: Border.all(color: kTintLine),
-        ),
+        color: kTint,
         child: Stack(
           children: [
-            Positioned(
-              top: 8,
-              right: 8,
-              child: _ghostButton(
-                icon: Icons.edit_outlined,
-                onTap: () {},
+            // Card body with subtle border and shadow - enterprise feel
+            Container(
+              margin: const EdgeInsets.all(0),
+              decoration: BoxDecoration(
+                color: AppColors.kCard,
+                borderRadius: BorderRadius.circular(kRadius),
+                border: Border.all(color: kTintLine),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.04),
+                    blurRadius: 18,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: LayoutBuilder(
-                builder: (context, c) {
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: LayoutBuilder(builder: (context, c) {
                   final isTight = c.maxWidth < 980;
-                  return Row(
+                  return Flex(
+                    direction: Axis.horizontal,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
+                      // Left: big avatar + spacing
+                      Flexible(
                         flex: isTight ? 10 : 6,
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.center,
@@ -622,7 +727,10 @@ class _ProfileHeaderCard extends StatelessWidget {
                           ],
                         ),
                       ),
+
                       const SizedBox(width: 16),
+
+                      // Right: vitals grid - keeps original flex behavior
                       if (!isTight)
                         Expanded(flex: 5, child: _vitalsGrid())
                       else
@@ -635,6 +743,18 @@ class _ProfileHeaderCard extends StatelessWidget {
                         ),
                     ],
                   );
+                }),
+              ),
+            ),
+
+            // Floating edit ghost button at top-right (keeps original placement)
+            Positioned(
+              right: 12,
+              top: 12,
+              child: _ghostButton(
+                icon: Icons.edit_outlined,
+                onTap: () {
+                  // leave hook for edit action
                 },
               ),
             ),
@@ -649,25 +769,52 @@ class _ProfileHeaderCard extends StatelessWidget {
       width: kAvatar,
       height: kAvatar,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.kCard,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: kTintLine),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.025),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12),
         child: Image.asset(
           asset,
           fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => const Icon(Icons.person, size: 72),
+          errorBuilder: (_, __, ___) => Container(
+            color: AppColors.rowAlternate,
+            child: Center(
+              child: Text(
+                _initials(_ss(appt.patientName)),
+                style: GoogleFonts.lexend(
+                  fontSize: 36,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.primary700,
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );
+  }
+
+  String _initials(String name) {
+    if (name.trim().isEmpty || name == '—') return '';
+    final parts = name.split(' ');
+    if (parts.length == 1) return parts[0].substring(0, 1).toUpperCase();
+    return (parts[0][0] + parts[1][0]).toUpperCase();
   }
 
   Widget _identityBlock(String name, bool isFemale) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Name (large, bold) - matches original font size and weight
         Text(
           name,
           maxLines: 1,
@@ -675,15 +822,17 @@ class _ProfileHeaderCard extends StatelessWidget {
           style: GoogleFonts.lexend(
             fontSize: 24,
             fontWeight: FontWeight.w800,
-            color: kText,
+            color: AppColors.kTextPrimary,
             height: 1.05,
           ),
         ),
         const SizedBox(height: 8),
+
+        // ID badge: keep original look but use AppColors
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.kCard,
             borderRadius: BorderRadius.circular(10),
             border: Border.all(color: kTintLine),
           ),
@@ -692,12 +841,15 @@ class _ProfileHeaderCard extends StatelessWidget {
             style: GoogleFonts.lexend(
               fontSize: 12.5,
               fontWeight: FontWeight.w700,
-              color: const Color(0xFFB42318),
+              color: AppColors.primary700,
               letterSpacing: 0.1,
             ),
           ),
         ),
+
         const SizedBox(height: 12),
+
+        // basic meta row (gender / age / dob) - keep as Wrap like original
         Wrap(
           spacing: 18,
           runSpacing: 10,
@@ -708,17 +860,20 @@ class _ProfileHeaderCard extends StatelessWidget {
             _mini(Icons.calendar_month, _ss(appt.dob)),
           ],
         ),
+
         const SizedBox(height: 8),
+
+        // Blood group row same as original
         Row(
           children: [
-            const Icon(Icons.bloodtype, size: 16, color: _ProfileHeaderCard.kMuted),
+            Icon(Icons.bloodtype, size: 16, color: AppColors.kTextSecondary),
             const SizedBox(width: 6),
             Text(
               'Blood Group: ${_bloodGroup()}',
               style: GoogleFonts.inter(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: _ProfileHeaderCard.kMuted,
+                color: AppColors.kTextSecondary,
               ),
             ),
           ],
@@ -730,14 +885,14 @@ class _ProfileHeaderCard extends StatelessWidget {
   Widget _mini(IconData i, String t) => Row(
     mainAxisSize: MainAxisSize.min,
     children: [
-      Icon(i, size: 16, color: kMuted),
+      Icon(i, size: 16, color: AppColors.kTextSecondary),
       const SizedBox(width: 6),
       Text(
         t,
         style: GoogleFonts.inter(
           fontSize: 13,
           fontWeight: FontWeight.w500,
-          color: kMuted,
+          color: AppColors.kTextSecondary,
         ),
       ),
     ],
@@ -776,14 +931,14 @@ class _ProfileHeaderCard extends StatelessWidget {
           alignment: Alignment.center,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(10),
-            gradient: const LinearGradient(
+            gradient: LinearGradient(
+              colors: [AppColors.kCFBlue.withOpacity(0.12), AppColors.kCFBlue.withOpacity(0.06)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [Color(0x26FFFFFF), Color(0x14FFFFFF)],
             ),
             border: Border.all(color: kTintLine),
           ),
-          child: Icon(icon, size: 18, color: const Color(0xFFB42318)),
+          child: Icon(icon, size: 18, color: AppColors.primary700),
         ),
         const SizedBox(width: 10),
         Expanded(
@@ -800,7 +955,7 @@ class _ProfileHeaderCard extends StatelessWidget {
                   style: GoogleFonts.lexend(
                     fontSize: 16,
                     fontWeight: FontWeight.w800,
-                    color: kText,
+                    color: AppColors.kTextPrimary,
                     height: 1.0,
                   ),
                 ),
@@ -811,7 +966,7 @@ class _ProfileHeaderCard extends StatelessWidget {
                 style: GoogleFonts.inter(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: kMuted,
+                  color: AppColors.kTextSecondary,
                   letterSpacing: 0.1,
                 ),
               ),
@@ -827,7 +982,7 @@ class _ProfileHeaderCard extends StatelessWidget {
       color: kTint,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: kTintLine),
+        side: BorderSide(color: kTintLine),
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
@@ -840,3 +995,4 @@ class _ProfileHeaderCard extends StatelessWidget {
     );
   }
 }
+

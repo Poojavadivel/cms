@@ -5,6 +5,8 @@ import '../../../Models/dashboardmodels.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../../Utils/Colors.dart';
+
 class DoctorAppointmentPreview extends StatefulWidget {
   final DashboardAppointments appointment;
   const DoctorAppointmentPreview({super.key, required this.appointment});
@@ -242,24 +244,22 @@ class _DoctorAppointmentPreviewState extends State<DoctorAppointmentPreview> wit
 
 
 class _ProfileHeaderCard extends StatelessWidget {
+  // keep your original tokens so layout stays identical
+  static const double kRadius = 16;
+  static const double kAvatar = 128;
+  static const Color kTint = Color(0xFFF9FAFB); // subtle tint behind card
+  static const Color kTintLine = Color(0xFFF3F4F6);
   final DashboardAppointments appt;
   const _ProfileHeaderCard({required this.appt});
 
-  // ---- Tokens
-  static const Color kTint = Color(0xFFFFF1F2);      // unified bg
-  static const Color kTintLine = Color(0xFFFFE4E6);  // hairlines on tint
-  static const double kRadius = 16;
-  static const double kAvatar = 128;
-
-  // ---- Helpers
   String _n(num? v, {String? suffix}) =>
       (v == null || v == 0) ? '—' : '${v}${suffix ?? ''}';
-  String _s(String? v) => (v == null || v.trim().isEmpty) ? '—' : v;
+  String _ss(String? v) => (v == null || v.trim().isEmpty) ? '—' : v;
 
   String _bloodGroup() {
     try {
       final bg = (appt as dynamic).bloodGroup;
-      return _s(bg?.toString());
+      return _ss(bg?.toString());
     } catch (_) {
       return '—';
     }
@@ -278,42 +278,41 @@ class _ProfileHeaderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final name = _s(appt.patientName);
-    final isFemale = _s(appt.gender).toLowerCase() == 'female';
+    final name = _ss(appt.patientName);
+    final isFemale = _ss(appt.gender).toLowerCase() == 'female';
     final avatar = isFemale ? 'assets/girlicon.png' : 'assets/boyicon.png';
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(kRadius),
       child: Container(
-        decoration: BoxDecoration(
-          color: kTint,                                   // ← unified tint
-          borderRadius: BorderRadius.circular(kRadius),
-          border: Border.all(color: kTintLine),          // hairline border
-        ),
+        color: kTint,
         child: Stack(
           children: [
-            // Edit button (ghost)
-            Positioned(
-              top: 8,
-              right: 8,
-              child: _ghostButton(
-                icon: Icons.edit_outlined,
-                onTap: () {
-                  // TODO: wire edit
-                },
+            // Card body with subtle border and shadow - enterprise feel
+            Container(
+              margin: const EdgeInsets.all(0),
+              decoration: BoxDecoration(
+                color: AppColors.kCard,
+                borderRadius: BorderRadius.circular(kRadius),
+                border: Border.all(color: kTintLine),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.04),
+                    blurRadius: 18,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
               ),
-            ),
-
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: LayoutBuilder(
-                builder: (context, c) {
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: LayoutBuilder(builder: (context, c) {
                   final isTight = c.maxWidth < 980;
-                  return Row(
+                  return Flex(
+                    direction: Axis.horizontal,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // LEFT: Identity + Demographics
-                      Expanded(
+                      // Left: big avatar + spacing
+                      Flexible(
                         flex: isTight ? 10 : 6,
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.center,
@@ -324,9 +323,10 @@ class _ProfileHeaderCard extends StatelessWidget {
                           ],
                         ),
                       ),
+
                       const SizedBox(width: 16),
 
-                      // RIGHT: Vitals (unified background, no inner boxes)
+                      // Right: vitals grid - keeps original flex behavior
                       if (!isTight)
                         Expanded(flex: 5, child: _vitalsGrid())
                       else
@@ -339,6 +339,18 @@ class _ProfileHeaderCard extends StatelessWidget {
                         ),
                     ],
                   );
+                }),
+              ),
+            ),
+
+            // Floating edit ghost button at top-right (keeps original placement)
+            Positioned(
+              right: 12,
+              top: 12,
+              child: _ghostButton(
+                icon: Icons.edit_outlined,
+                onTap: () {
+                  // leave hook for edit action
                 },
               ),
             ),
@@ -348,32 +360,57 @@ class _ProfileHeaderCard extends StatelessWidget {
     );
   }
 
-  // --- UI atoms
-
   Widget _avatar(String asset) {
     return Container(
       width: kAvatar,
       height: kAvatar,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.kCard,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: kTintLine),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.025),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12),
         child: Image.asset(
           asset,
           fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => const Icon(Icons.person, size: 72),
+          errorBuilder: (_, __, ___) => Container(
+            color: AppColors.rowAlternate,
+            child: Center(
+              child: Text(
+                _initials(_ss(appt.patientName)),
+                style: GoogleFonts.lexend(
+                  fontSize: 36,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.primary700,
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );
+  }
+
+  String _initials(String name) {
+    if (name.trim().isEmpty || name == '—') return '';
+    final parts = name.split(' ');
+    if (parts.length == 1) return parts[0].substring(0, 1).toUpperCase();
+    return (parts[0][0] + parts[1][0]).toUpperCase();
   }
 
   Widget _identityBlock(String name, bool isFemale) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Name (large, bold) - matches original font size and weight
         Text(
           name,
           maxLines: 1,
@@ -381,26 +418,26 @@ class _ProfileHeaderCard extends StatelessWidget {
           style: GoogleFonts.lexend(
             fontSize: 24,
             fontWeight: FontWeight.w800,
-            color: _DoctorAppointmentPreviewState.kText,
+            color: AppColors.kTextPrimary,
             height: 1.05,
           ),
         ),
         const SizedBox(height: 8),
 
-        // ID pill
+        // ID badge: keep original look but use AppColors
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.kCard,
             borderRadius: BorderRadius.circular(10),
             border: Border.all(color: kTintLine),
           ),
           child: Text(
-            'ID: ${_s(appt.patientId)}',
+            'ID: ${_ss(appt.patientId)}',
             style: GoogleFonts.lexend(
               fontSize: 12.5,
               fontWeight: FontWeight.w700,
-              color: const Color(0xFFB42318),
+              color: AppColors.primary700,
               letterSpacing: 0.1,
             ),
           ),
@@ -408,30 +445,31 @@ class _ProfileHeaderCard extends StatelessWidget {
 
         const SizedBox(height: 12),
 
-        // Demographics line
+        // basic meta row (gender / age / dob) - keep as Wrap like original
         Wrap(
           spacing: 18,
           runSpacing: 10,
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            _mini(isFemale ? Icons.female : Icons.male, _s(appt.gender)),
+            _mini(isFemale ? Icons.female : Icons.male, _ss(appt.gender)),
             _mini(Icons.person, 'Age ${appt.patientAge ?? '—'}'),
-            _mini(Icons.calendar_month, _s(appt.dob)),
+            _mini(Icons.calendar_month, _ss(appt.dob)),
           ],
         ),
+
         const SizedBox(height: 8),
 
-        // Blood Group on its own line
+        // Blood group row same as original
         Row(
           children: [
-            const Icon(Icons.bloodtype, size: 16, color: _DoctorAppointmentPreviewState.kMuted),
+            Icon(Icons.bloodtype, size: 16, color: AppColors.kTextSecondary),
             const SizedBox(width: 6),
             Text(
               'Blood Group: ${_bloodGroup()}',
               style: GoogleFonts.inter(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: _DoctorAppointmentPreviewState.kMuted,
+                color: AppColors.kTextSecondary,
               ),
             ),
           ],
@@ -443,20 +481,19 @@ class _ProfileHeaderCard extends StatelessWidget {
   Widget _mini(IconData i, String t) => Row(
     mainAxisSize: MainAxisSize.min,
     children: [
-      Icon(i, size: 16, color: _DoctorAppointmentPreviewState.kMuted),
+      Icon(i, size: 16, color: AppColors.kTextSecondary),
       const SizedBox(width: 6),
       Text(
         t,
         style: GoogleFonts.inter(
           fontSize: 13,
           fontWeight: FontWeight.w500,
-          color: _DoctorAppointmentPreviewState.kMuted,
+          color: AppColors.kTextSecondary,
         ),
       ),
     ],
   );
 
-  // --- Vitals: unified bg, 2x2 grid, hairlines (no tiles)
   Widget _vitalsGrid() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -464,11 +501,11 @@ class _ProfileHeaderCard extends StatelessWidget {
         Row(
           children: [
             Expanded(child: _kv(Icons.height, 'Height', _n(appt.height, suffix: ' cm'))),
-            const SizedBox(width: 24), // spacing instead of line
+            const SizedBox(width: 24),
             Expanded(child: _kv(Icons.monitor_weight_outlined, 'Weight', _n(appt.weight, suffix: ' kg'))),
           ],
         ),
-        const SizedBox(height: 20), // vertical gap instead of line
+        const SizedBox(height: 20),
         Row(
           children: [
             Expanded(child: _kv(Icons.scale, 'BMI', _n(appt.bmi))),
@@ -480,44 +517,24 @@ class _ProfileHeaderCard extends StatelessWidget {
     );
   }
 
-
-  Widget _vRow({required Widget left, required Widget right}) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Expanded(child: left),
-        _vLine(),
-        Expanded(child: right),
-      ],
-    );
-  }
-
-  Widget _hLine() => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 12),
-    child: Container(height: 1, color: kTintLine),
-  );
-
-  Widget _vLine() => Container(width: 1, height: 40, color: kTintLine);
-
   Widget _kv(IconData icon, String title, String value) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        // tone-on-tone capsule (keeps enterprise feel w/o boxes)
         Container(
           width: 34,
           height: 34,
           alignment: Alignment.center,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(10),
-            gradient: const LinearGradient(
+            gradient: LinearGradient(
+              colors: [AppColors.kCFBlue.withOpacity(0.12), AppColors.kCFBlue.withOpacity(0.06)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [Color(0x26FFFFFF), Color(0x14FFFFFF)],
             ),
             border: Border.all(color: kTintLine),
           ),
-          child: Icon(icon, size: 18, color: const Color(0xFFB42318)),
+          child: Icon(icon, size: 18, color: AppColors.primary700),
         ),
         const SizedBox(width: 10),
         Expanded(
@@ -534,7 +551,7 @@ class _ProfileHeaderCard extends StatelessWidget {
                   style: GoogleFonts.lexend(
                     fontSize: 16,
                     fontWeight: FontWeight.w800,
-                    color: _DoctorAppointmentPreviewState.kText,
+                    color: AppColors.kTextPrimary,
                     height: 1.0,
                   ),
                 ),
@@ -545,7 +562,7 @@ class _ProfileHeaderCard extends StatelessWidget {
                 style: GoogleFonts.inter(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: _DoctorAppointmentPreviewState.kMuted,
+                  color: AppColors.kTextSecondary,
                   letterSpacing: 0.1,
                 ),
               ),
@@ -561,7 +578,7 @@ class _ProfileHeaderCard extends StatelessWidget {
       color: kTint,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: kTintLine),
+        side: BorderSide(color: kTintLine),
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
@@ -574,6 +591,7 @@ class _ProfileHeaderCard extends StatelessWidget {
     );
   }
 }
+
 
 class _OverviewTab extends StatelessWidget {
   // Incoming (kept for compatibility)
