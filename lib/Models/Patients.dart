@@ -45,6 +45,9 @@ class PatientDetails {
   // Mutable selection used by UI checkbox
   bool isSelected;
 
+  // New: patientCode coming from backend (metadata.patientCode or patientCode)
+  final String? patientCode;
+
   PatientDetails({
     required this.patientId,
     required this.name,
@@ -75,6 +78,7 @@ class PatientDetails {
     this.oxygen = '',
     this.bmi = '',
     this.isSelected = false,
+    this.patientCode,
   });
 
   /// Helper: returns the best available display name for the doctor.
@@ -114,6 +118,9 @@ class PatientDetails {
 
     return 'No doctor';
   }
+
+  /// Prefer showing patientCode (PAT-xxx) if available, otherwise fallback to patientId.
+  String get displayId => (patientCode != null && patientCode!.isNotEmpty) ? patientCode! : patientId;
 
   factory PatientDetails.fromMap(Map<String, dynamic> map) {
     final first = map['firstName']?.toString() ?? '';
@@ -159,6 +166,28 @@ class PatientDetails {
           map['doctorName']?.toString() ?? map['doctor_name']?.toString() ?? '';
     }
 
+    // Extract patientCode from several possible places:
+    // 1) top-level map['patientCode']
+    // 2) map['patient_code']
+    // 3) map['metadata']?.['patientCode'] or ['patient_code']
+    String? extractedPatientCode;
+    try {
+      if (map.containsKey('patientCode') && (map['patientCode'] is String)) {
+        extractedPatientCode = map['patientCode'] as String;
+      } else if (map.containsKey('patient_code') && (map['patient_code'] is String)) {
+        extractedPatientCode = map['patient_code'] as String;
+      } else if (map['metadata'] is Map) {
+        final md = Map<String, dynamic>.from(map['metadata'] as Map);
+        if (md.containsKey('patientCode') && md['patientCode'] is String) {
+          extractedPatientCode = md['patientCode'] as String;
+        } else if (md.containsKey('patient_code') && md['patient_code'] is String) {
+          extractedPatientCode = md['patient_code'] as String;
+        }
+      }
+    } catch (_) {
+      extractedPatientCode = null;
+    }
+
     return PatientDetails(
       patientId: map['_id']?.toString() ??
           map['id']?.toString() ??
@@ -175,8 +204,7 @@ class PatientDetails {
       weight: map['weight']?.toString() ?? '',
       height: map['height']?.toString() ?? '',
       emergencyContactName: map['emergencyContactName']?.toString() ?? '',
-      emergencyContactPhone:
-      map['emergencyContactPhone']?.toString() ?? '',
+      emergencyContactPhone: map['emergencyContactPhone']?.toString() ?? '',
       phone: map['phone']?.toString() ?? '',
       city: map['city']?.toString() ?? '',
       address: map['address']?.toString() ?? '',
@@ -185,22 +213,24 @@ class PatientDetails {
       expiryDate: map['expiryDate']?.toString() ?? '',
       avatarUrl: map['avatarUrl']?.toString() ?? '',
       dateOfBirth: map['dateOfBirth']?.toString() ?? '',
-      lastVisitDate:
-      map['lastVisitDate']?.toString() ?? map['updatedAt']?.toString() ?? '',
+      lastVisitDate: map['lastVisitDate']?.toString() ?? map['updatedAt']?.toString() ?? '',
       doctorId: map['doctorId']?.toString() ?? '',
       doctor: parsedDoctor,
       doctorName: parsedDoctorName,
       medicalHistory:
-      (map['medicalHistory'] as List?)?.map((e) => e.toString()).toList() ??
-          [],
+      (map['medicalHistory'] as List?)?.map((e) => e.toString()).toList() ?? [],
       allergies:
       (map['allergies'] as List?)?.map((e) => e.toString()).toList() ?? [],
       notes: map['notes']?.toString() ?? '',
       oxygen: map['oxygen']?.toString() ?? '',
       bmi: map['bmi']?.toString() ?? '',
       isSelected: map['isSelected'] == true,
+      patientCode: extractedPatientCode,
     );
   }
+
+  /// Prefer showing patientCode (PAT-xxx) if available, otherwise fallback to patientId.
+  String get patientCodeOrId => (patientCode != null && patientCode!.isNotEmpty) ? patientCode! : patientId;
 
   Map<String, dynamic> toJson() {
     final base = <String, dynamic>{
@@ -233,6 +263,10 @@ class PatientDetails {
       'bmi': bmi,
       'isSelected': isSelected,
     };
+
+    if (patientCode != null) {
+      base['patientCode'] = patientCode;
+    }
 
     if (doctor != null) {
       // include nested doctor object only if present
@@ -281,6 +315,7 @@ class PatientDetails {
     String? oxygen,
     String? bmi,
     bool? isSelected,
+    String? patientCode,
   }) {
     return PatientDetails(
       patientId: patientId ?? this.patientId,
@@ -292,10 +327,8 @@ class PatientDetails {
       bloodGroup: bloodGroup ?? this.bloodGroup,
       weight: weight ?? this.weight,
       height: height ?? this.height,
-      emergencyContactName:
-      emergencyContactName ?? this.emergencyContactName,
-      emergencyContactPhone:
-      emergencyContactPhone ?? this.emergencyContactPhone,
+      emergencyContactName: emergencyContactName ?? this.emergencyContactName,
+      emergencyContactPhone: emergencyContactPhone ?? this.emergencyContactPhone,
       phone: phone ?? this.phone,
       city: city ?? this.city,
       address: address ?? this.address,
@@ -314,6 +347,7 @@ class PatientDetails {
       oxygen: oxygen ?? this.oxygen,
       bmi: bmi ?? this.bmi,
       isSelected: isSelected ?? this.isSelected,
+      patientCode: patientCode ?? this.patientCode,
     );
   }
 }

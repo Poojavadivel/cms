@@ -80,7 +80,7 @@ class _PatientFormPageState extends State<PatientFormPage> {
     _bloodGroupCtrl = TextEditingController(text: initial?.bloodGroup ?? '');
     _heightCtrl = TextEditingController(text: initial?.height ?? '');
     _weightCtrl = TextEditingController(text: initial?.weight ?? '');
-    _bmiCtrl = TextEditingController(text: '');
+    _bmiCtrl = TextEditingController(text: initial?.bmi ?? '');
     _oxygenCtrl = TextEditingController(text: initial?.oxygen ?? '');
     _cityCtrl = TextEditingController(text: initial?.city ?? '');
     _addressCtrl = TextEditingController(text: initial?.address ?? '');
@@ -88,16 +88,16 @@ class _PatientFormPageState extends State<PatientFormPage> {
     _insuranceNumberCtrl = TextEditingController(text: initial?.insuranceNumber ?? '');
     _notesCtrl = TextEditingController(text: initial?.notes ?? '');
     _doctorIdCtrl = TextEditingController(text: initial?.doctorId ?? '');
-    _medicalHistoryCtrl = TextEditingController(text: initial?.medicalHistory.join(', ') ?? '');
-    _allergiesCtrl = TextEditingController(text: initial?.allergies.join(', ') ?? '');
+    _medicalHistoryCtrl = TextEditingController(text: (initial?.medicalHistory ?? []).join(', '));
+    _allergiesCtrl = TextEditingController(text: (initial?.allergies ?? []).join(', '));
 
     _gender = (initial?.gender.isNotEmpty == true) ? initial!.gender : "Male";
     _dob = (initial?.dateOfBirth.isNotEmpty == true) ? DateTime.tryParse(initial!.dateOfBirth) : null;
     _insuranceExpiry = (initial?.expiryDate.isNotEmpty == true) ? DateTime.tryParse(initial!.expiryDate) : null;
     _lastVisit = (initial?.lastVisitDate.isNotEmpty == true) ? DateTime.tryParse(initial!.lastVisitDate) : null;
 
-    // set initial selected doctor id from initial if present
-    _selectedDoctorId = (initial?.doctorId?.isNotEmpty == true) ? initial!.doctorId : null;
+    // set initial selected doctor id from initial if present (ensure it's a string id)
+    _selectedDoctorId = (initial?.doctorId?.toString().isNotEmpty == true) ? initial!.doctorId.toString() : null;
 
     // listeners to recalc BMI when height/weight change
     _heightCtrl.addListener(_recalcBmi);
@@ -170,7 +170,7 @@ class _PatientFormPageState extends State<PatientFormPage> {
       if (mounted) {
         setState(() {
           _doctors = docs;
-          // If there's an initial doctorId, keep it; otherwise default to null
+          // If there's an initial doctorId and it's empty locally, keep it from controller
           if (_selectedDoctorId == null && _doctorIdCtrl.text.isNotEmpty) {
             _selectedDoctorId = _doctorIdCtrl.text;
           }
@@ -303,9 +303,6 @@ class _PatientFormPageState extends State<PatientFormPage> {
           ),
           child: Stack(
             children: [
-              // Floating close icon
-
-
               // Form content (space for close icon)
               Padding(
                 padding: const EdgeInsets.only(top: 8.0),
@@ -534,7 +531,9 @@ class _PatientFormPageState extends State<PatientFormPage> {
                               ),
                             ),
 
-                            // Doctor dropdown (replaces doctor id textfield)
+                            // -------------------------
+                            // DOCTOR DROPDOWN (SAFE)
+                            // -------------------------
                             SizedBox(
                               width: colW,
                               child: _loadingDoctors
@@ -558,21 +557,44 @@ class _PatientFormPageState extends State<PatientFormPage> {
                                   ),
                                 )
                               ])
-                                  : DropdownButtonFormField<String>(
-                                decoration: _dec(hintText: 'Assign Doctor', prefixIcon: const Icon(Icons.medical_services)),
-                                value: _selectedDoctorId,
-                                items: [
-                                  const DropdownMenuItem<String>(value: null, child: Text('None')),
-                                  ..._doctors.map((d) => DropdownMenuItem<String>(
-                                    value: d.userProfile.id,
-                                    child: Text(d.userProfile.fullName + (d.specialization.isNotEmpty ? ' — ${d.specialization}' : '')),
-                                  )),
-                                ],
-                                onChanged: (v) => setState(() => _selectedDoctorId = v),
-                              )),
+                                  : Builder(builder: (ctx) {
+                                // Build a deduplicated list of doctors by id
+                                final seen = <String>{};
+                                final unique = <Doctor>[];
+                                for (final d in _doctors) {
+                                  final id = d.userProfile.id ?? '';
+                                  if (id.isEmpty) continue; // skip invalid
+                                  if (!seen.contains(id)) {
+                                    seen.add(id);
+                                    unique.add(d);
+                                  }
+                                }
+
+                                // local selected value for safety (do not mutate state here)
+                                final localSelected = (_selectedDoctorId != null && seen.contains(_selectedDoctorId)) ? _selectedDoctorId : null;
+
+                                final items = <DropdownMenuItem<String?>>[
+                                  const DropdownMenuItem<String?>(value: null, child: Text('None')),
+                                  ...unique.map((d) {
+                                    final id = d.userProfile.id ?? '';
+                                    final label = ((d.userProfile.fullName ?? '') + (d.specialization.isNotEmpty ? ' — ${d.specialization}' : '')).trim();
+                                    return DropdownMenuItem<String?>(
+                                      value: id,
+                                      child: Text(label.isNotEmpty ? label : id),
+                                    );
+                                  }).toList(),
+                                ];
+
+                                return DropdownButtonFormField<String?>(
+                                  decoration: _dec(hintText: 'Assign Doctor', prefixIcon: const Icon(Icons.medical_services)),
+                                  value: localSelected,
+                                  items: items,
+                                  onChanged: (v) => setState(() => _selectedDoctorId = v),
+                                );
+                              })),
                             ),
 
-                            // Notes (full width) - moved above vitals so vitals appear lower
+                            // Notes (full width)
                             SizedBox(
                               width: cons.maxWidth,
                               child: TextFormField(
@@ -582,7 +604,7 @@ class _PatientFormPageState extends State<PatientFormPage> {
                               ),
                             ),
 
-                            // VITALS (spans full width but fields in two columns or wrap)
+                            // VITALS
                             SizedBox(
                               width: cons.maxWidth,
                               child: Column(

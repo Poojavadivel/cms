@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:glowhair/Models/Patients.dart';
 import 'package:glowhair/Modules/Doctor/widgets/table.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import '../../../Models/dashboardmodels.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -8,26 +10,24 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../Utils/Colors.dart';
 
 class DoctorAppointmentPreview extends StatefulWidget {
-  final DashboardAppointments appointment;
-  const DoctorAppointmentPreview({super.key, required this.appointment});
+  final PatientDetails patient;
+  const DoctorAppointmentPreview({super.key, required this.patient});
+
+  static Future<void> show(BuildContext context, PatientDetails patient) {
+    return showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (_) => DoctorAppointmentPreview(patient: patient),
+    );
+  }
 
   @override
   State<DoctorAppointmentPreview> createState() =>
       _DoctorAppointmentPreviewState();
 }
 
-
-class _DoctorAppointmentPreviewState extends State<DoctorAppointmentPreview> with SingleTickerProviderStateMixin {
-  // THEME
-  static const Color kPrimary = Color(0xFFEF4444);
-  static const Color kBg = Color(0xFFF9FAFB);
-  static const Color kCard = Colors.white;
-  static const Color kText = Color(0xFF111827);
-  static const Color kMuted = Color(0xFF6B7280);
-  static const Color kBorder = Color(0xFFE5E7EB);
-  static const double kRadius = 16;
-
-
+class _DoctorAppointmentPreviewState extends State<DoctorAppointmentPreview>
+    with SingleTickerProviderStateMixin {
   late final TabController _tab;
   late final TextStyle baseText;
 
@@ -37,6 +37,14 @@ class _DoctorAppointmentPreviewState extends State<DoctorAppointmentPreview> wit
     _tab = TabController(length: 5, vsync: this);
     baseText = GoogleFonts.inter();
   }
+  static const Color kPrimary = Color(0xFFEF4444);
+  static const Color kBg = Color(0xFFF9FAFB);
+  static const Color kCard = Colors.white;
+  static const Color kText = Color(0xFF111827);
+  static const Color kMuted = Color(0xFF6B7280);
+  static const Color kBorder = Color(0xFFE5E7EB);
+  static const double kRadius = 16;
+
 
   @override
   void dispose() {
@@ -44,11 +52,39 @@ class _DoctorAppointmentPreviewState extends State<DoctorAppointmentPreview> wit
     super.dispose();
   }
 
-  @override
+  String _formatDate(String iso) {
+    try {
+      final dt = DateTime.parse(iso);
+      return DateFormat('dd MMM yyyy').format(dt);
+    } catch (e) {
+      return iso.isNotEmpty ? iso : '—';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final appt = widget.appointment;
+    final patient = widget.patient;
     final size = MediaQuery.of(context).size;
+
+    // map patient fields to the names used in the original UI (fallbacks applied)
+    final pName = (patient.name.isNotEmpty) ? patient.name : '—';
+    final pGender = (patient.gender.isNotEmpty) ? patient.gender : '—';
+    final pLoc = (patient.city.isNotEmpty) ? patient.city : (patient.address.isNotEmpty ? patient.address : '—');
+    // final pJob = (patient.occupation.isNotEmpty) ? patient.occupation : '—';
+    final pDob = (patient.dateOfBirth.isNotEmpty) ? patient.dateOfBirth : '—';
+    final pBMI = (patient.bmi.isNotEmpty) ? patient.bmi : '—';
+    final pWt = (patient.weight.isNotEmpty) ? patient.weight : '—';
+    final pHt = (patient.height.isNotEmpty) ? patient.height : '—';
+    final ownDx = patient.medicalHistory;
+    final barriers = patient.allergies;
+    final timeline = <Map<String,String>>[]; // PatientDetails has no timeline field in your model
+    final medHistory = <String, String>{}; // if you have a map-based history, map it here
+
+    // Appointment-specific placeholders (originally from DashboardAppointments)
+    final date = patient.lastVisitDate.isNotEmpty ? patient.lastVisitDate : '—';
+    final time = '—';
+    final reason = patient.notes.isNotEmpty ? patient.notes : '—';
+    final status = '—';
 
     return Dialog(
       insetPadding: const EdgeInsets.all(24),
@@ -59,9 +95,8 @@ class _DoctorAppointmentPreviewState extends State<DoctorAppointmentPreview> wit
           maxHeight: size.height * 0.95,
         ),
         child: Stack(
-          clipBehavior: Clip.none, // allow floating button outside
+          clipBehavior: Clip.none, // allow floating close button outside
           children: [
-            // ============== ROUNDED DIALOG SURFACE ==============
             ClipRRect(
               borderRadius: BorderRadius.circular(kRadius),
               child: Material(
@@ -73,15 +108,15 @@ class _DoctorAppointmentPreviewState extends State<DoctorAppointmentPreview> wit
                         padding: const EdgeInsets.fromLTRB(12, 16, 12, 12),
                         child: Column(
                           children: [
-                            // ---------- PATIENT HEADER ----------
+                            // PATIENT HEADER
                             Container(
                               padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-                              child: _ProfileHeaderCard(appt: appt),
+                              child: _ProfileHeaderCard(patient: patient),
                             ),
 
                             const SizedBox(height: 12),
 
-                            // ---------- TABS + CONTENT ----------
+                            // TABS + CONTENT
                             Expanded(
                               child: Container(
                                 decoration: BoxDecoration(
@@ -143,51 +178,49 @@ class _DoctorAppointmentPreviewState extends State<DoctorAppointmentPreview> wit
                                           children: [
                                             _OverviewTab(
                                               text: baseText,
-                                              pName: appt.patientName,
-                                              pGender: appt.gender,
-                                              pLoc: appt.location.isEmpty ? '—' : appt.location,
-                                              pJob: appt.occupation.isEmpty ? '—' : appt.occupation,
-                                              pDob: appt.dob.isEmpty ? '—' : appt.dob,
-                                              pBMI: appt.bmi == 0 ? '—' : '${appt.bmi}',
-                                              pWt: appt.weight == 0 ? '—' : '${appt.weight}',
-                                              pHt: appt.height == 0 ? '—' : '${appt.height}',
-                                              pBp: appt.bp.isEmpty ? '—' : appt.bp,
-                                              ownDx: appt.diagnosis,
-                                              barriers: appt.barriers,
-                                              timeline: appt.timeline,
-                                              medHistory: appt.history,
-                                              date: appt.date,
-                                              time: appt.time,
-                                              reason: appt.reason,
-                                              status: appt.status,
+                                              pName: pName,
+                                              pGender: pGender,
+                                              pLoc: pLoc,
+                                              // pJob: pJob,
+                                              pDob: pDob,
+                                              pBMI: pBMI,
+                                              pWt: pWt,
+                                              pHt: pHt,
+                                              pBp: '—',
+                                              ownDx: ownDx,
+                                              barriers: barriers,
+                                              timeline: timeline,
+                                              medHistory: medHistory,
+                                              date: date,
+                                              time: time,
+                                              reason: reason,
+                                              status: status,
                                             ),
                                             _PatientProfileTab(
-                                              patientId: appt.patientId,
-                                              name: appt.patientName,
-                                              gender: appt.gender,
-                                              dob: appt.dob.isEmpty ? '—' : appt.dob,
-                                              age: '${appt.patientAge}',
-                                              phone: '—',
+                                              patientId: patient.patientId,
+                                              name: pName,
+                                              gender: pGender,
+                                              dob: pDob,
+                                              age: patient.age != 0 ? '${patient.age}' : '—',
+                                              phone: patient.phone.isNotEmpty ? patient.phone : '—',
                                               email: '—',
-                                              address: appt.location.isEmpty ? '—' : appt.location,
-                                              doctorName: appt.doctor,
-                                              primaryDiagnosis: appt.diagnosis.isNotEmpty
-                                                  ? appt.diagnosis.first
-                                                  : '—',
-                                              diagnoses: appt.diagnosis,
-                                              allergies: const [],
+                                              address: pLoc,
+                                              doctorName: patient.doctorName.isNotEmpty ? patient.doctorName : '—',
+                                              primaryDiagnosis: ownDx.isNotEmpty ? ownDx.first : '—',
+                                              diagnoses: ownDx,
+                                              allergies: patient.allergies,
                                               chronicConditions: const [],
-                                              height: appt.height == 0 ? '—' : '${appt.height}',
-                                              weight: appt.weight == 0 ? '—' : '${appt.weight}',
-                                              bmi: appt.bmi == 0 ? '—' : '${appt.bmi}',
-                                              bp: appt.bp.isEmpty ? '—' : appt.bp,
+                                              height: pHt,
+                                              weight: pWt,
+                                              bmi: pBMI,
+                                              bp: '—',
                                               heartRate: '—',
-                                              emergencyContactName: '—',
-                                              emergencyContactPhone: '—',
+                                              emergencyContactName: patient.emergencyContactName.isNotEmpty ? patient.emergencyContactName : '—',
+                                              emergencyContactPhone: patient.emergencyContactPhone.isNotEmpty ? patient.emergencyContactPhone : '—',
                                             ),
-                                            const _MedicationsTab(), // Prescription
-                                            const _LabsTab(),        // Lab Result ✅
-                                            const _BillingsTab(),    // Billings ✅
+                                            const _MedicationsTab(),
+                                            const _LabsTab(),
+                                            const _BillingsTab(),
                                           ],
                                         ),
                                       ),
@@ -205,7 +238,7 @@ class _DoctorAppointmentPreviewState extends State<DoctorAppointmentPreview> wit
               ),
             ),
 
-            // ============== CLOSE BUTTON ==============
+            // CLOSE BUTTON
             Positioned(
               top: -10,
               right: -10,
@@ -238,8 +271,6 @@ class _DoctorAppointmentPreviewState extends State<DoctorAppointmentPreview> wit
       ),
     );
   }
-
-
 }
 
 
@@ -249,17 +280,29 @@ class _ProfileHeaderCard extends StatelessWidget {
   static const double kAvatar = 128;
   static const Color kTint = Color(0xFFF9FAFB); // subtle tint behind card
   static const Color kTintLine = Color(0xFFF3F4F6);
-  final DashboardAppointments appt;
-  const _ProfileHeaderCard({required this.appt});
 
+  // <-- updated to use PatientDetails
+  final PatientDetails patient;
+  const _ProfileHeaderCard({required this.patient});
+
+  // numeric helper (keeps original semantics for numbers)
   String _n(num? v, {String? suffix}) =>
       (v == null || v == 0) ? '—' : '${v}${suffix ?? ''}';
-  String _ss(String? v) => (v == null || v.trim().isEmpty) ? '—' : v;
+
+  // string helper for height/weight/bmi that are strings in PatientDetails
+  String _ns(String? v, {String? suffix}) {
+    if (v == null) return '—';
+    final s = v.trim();
+    if (s.isEmpty) return '—';
+    return '${s}${suffix ?? ''}';
+  }
+
+  String _ss(String? v) => (v == null || v.trim().isEmpty) ? '—' : v!;
 
   String _bloodGroup() {
     try {
-      final bg = (appt as dynamic).bloodGroup;
-      return _ss(bg?.toString());
+      final bg = patient.bloodGroup;
+      return _ss(bg);
     } catch (_) {
       return '—';
     }
@@ -267,9 +310,9 @@ class _ProfileHeaderCard extends StatelessWidget {
 
   String _spo2() {
     try {
-      final o2 = (appt as dynamic).spo2 ?? (appt as dynamic).oxygen ?? (appt as dynamic).oxygenLevel;
-      if (o2 == null) return '—';
-      final v = (o2 is num) ? o2 : num.tryParse(o2.toString());
+      final o2raw = patient.oxygen;
+      if (o2raw == null || o2raw.trim().isEmpty) return '—';
+      final v = num.tryParse(o2raw.toString());
       return v == null ? '—' : '${v.toStringAsFixed(0)}%';
     } catch (_) {
       return '—';
@@ -278,8 +321,8 @@ class _ProfileHeaderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final name = _ss(appt.patientName);
-    final isFemale = _ss(appt.gender).toLowerCase() == 'female';
+    final name = _ss(patient.name);
+    final isFemale = _ss(patient.gender).toLowerCase() == 'female';
     final avatar = isFemale ? 'assets/girlicon.png' : 'assets/boyicon.png';
 
     return ClipRRect(
@@ -385,7 +428,7 @@ class _ProfileHeaderCard extends StatelessWidget {
             color: AppColors.rowAlternate,
             child: Center(
               child: Text(
-                _initials(_ss(appt.patientName)),
+                _initials(_ss(patient.name)),
                 style: GoogleFonts.lexend(
                   fontSize: 36,
                   fontWeight: FontWeight.w800,
@@ -433,7 +476,7 @@ class _ProfileHeaderCard extends StatelessWidget {
             border: Border.all(color: kTintLine),
           ),
           child: Text(
-            'ID: ${_ss(appt.patientId)}',
+            'ID: ${patient.patientCodeOrId}',
             style: GoogleFonts.lexend(
               fontSize: 12.5,
               fontWeight: FontWeight.w700,
@@ -451,9 +494,9 @@ class _ProfileHeaderCard extends StatelessWidget {
           runSpacing: 10,
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            _mini(isFemale ? Icons.female : Icons.male, _ss(appt.gender)),
-            _mini(Icons.person, 'Age ${appt.patientAge ?? '—'}'),
-            _mini(Icons.calendar_month, _ss(appt.dob)),
+            _mini(isFemale ? Icons.female : Icons.male, _ss(patient.gender)),
+            _mini(Icons.person, 'Age ${patient.age != 0 ? patient.age : '—'}'),
+            _mini(Icons.calendar_month, _ss(patient.dateOfBirth)),
           ],
         ),
 
@@ -500,15 +543,15 @@ class _ProfileHeaderCard extends StatelessWidget {
       children: [
         Row(
           children: [
-            Expanded(child: _kv(Icons.height, 'Height', _n(appt.height, suffix: ' cm'))),
+            Expanded(child: _kv(Icons.height, 'Height', _ns(patient.height, suffix: ' cm'))),
             const SizedBox(width: 24),
-            Expanded(child: _kv(Icons.monitor_weight_outlined, 'Weight', _n(appt.weight, suffix: ' kg'))),
+            Expanded(child: _kv(Icons.monitor_weight_outlined, 'Weight', _ns(patient.weight, suffix: ' kg'))),
           ],
         ),
         const SizedBox(height: 20),
         Row(
           children: [
-            Expanded(child: _kv(Icons.scale, 'BMI', _n(appt.bmi))),
+            Expanded(child: _kv(Icons.scale, 'BMI', _ns(patient.bmi))),
             const SizedBox(width: 24),
             Expanded(child: _kv(Icons.monitor_heart_outlined, 'Oxygen (SpO₂)', _spo2())),
           ],
@@ -596,7 +639,7 @@ class _ProfileHeaderCard extends StatelessWidget {
 class _OverviewTab extends StatelessWidget {
   // Incoming (kept for compatibility)
   final TextStyle text;
-  final String pName, pGender, pLoc, pJob, pDob, pBMI, pWt, pHt, pBp;
+  final String pName, pGender, pLoc, pDob, pBMI, pWt, pHt, pBp;
   final List<String> ownDx, barriers;
   final List<Map<String, dynamic>> timeline;
   final Map<String, String> medHistory;
@@ -607,7 +650,7 @@ class _OverviewTab extends StatelessWidget {
     required this.pName,
     required this.pGender,
     required this.pLoc,
-    required this.pJob,
+    // required this.pJob,
     required this.pDob,
     required this.pBMI,
     required this.pWt,

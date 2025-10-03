@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../Models/dashboardmodels.dart';
+import '../../../Services/Authservices.dart';
+import '../../../Utils/Api_handler.dart';
 import '../../../Utils/Colors.dart'; // 👈 import your AppColors
 
 ThemeData _intakeTheme(BuildContext context) {
@@ -134,10 +136,67 @@ class _IntakeFormBodyState extends State<IntakeFormBody> {
   final List<Map<String, String>> _pharmacyRows = [];
   final List<Map<String, String>> _pathologyRows = [];
 
+  bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // If appointment already contains vitals, prefill controllers
+    final appt = widget.appt;
+    try {
+      final vitals = (appt as dynamic).vitals;
+      if (vitals != null && vitals is Map) {
+        final height = vitals['height_cm']?.toString() ?? vitals['height']?.toString();
+        final weight = vitals['weight_kg']?.toString() ?? vitals['weight']?.toString();
+        final bmi = vitals['bmi']?.toString();
+
+        if (height != null && height.isNotEmpty) _heightCtrl.text = height;
+        if (weight != null && weight.isNotEmpty) _weightCtrl.text = weight;
+        if (bmi != null && bmi.isNotEmpty) _bmiCtrl.text = bmi;
+      } else {
+        // fallback fields on appt
+        if ((appt as dynamic).height != null) _heightCtrl.text = (appt.height ?? '').toString();
+        if ((appt as dynamic).weight != null) _weightCtrl.text = (appt.weight ?? '').toString();
+        if ((appt as dynamic).bmi != null) _bmiCtrl.text = (appt.bmi ?? '').toString();
+      }
+
+      if ((appt as dynamic).currentNotes != null) {
+        _currentNotesCtrl.text = (appt.currentNotes ?? '').toString();
+      }
+
+     
+    } catch (_) {
+      // ignore if appt structure is different
+    }
+
+    // Auto-calc BMI when height or weight changes
+    _heightCtrl.addListener(_maybeComputeBmi);
+    _weightCtrl.addListener(_maybeComputeBmi);
+  }
+
+  void _maybeComputeBmi() {
+    final hText = _heightCtrl.text.trim();
+    final wText = _weightCtrl.text.trim();
+    if (hText.isEmpty || wText.isEmpty) return;
+
+    final h = double.tryParse(hText);
+    final w = double.tryParse(wText);
+    if (h == null || w == null || h <= 0) return;
+
+    // height is in cm => convert to meters
+    final hMeters = h / 100.0;
+    final bmi = w / (hMeters * hMeters);
+    // keep 1 decimal place
+    _bmiCtrl.text = bmi.isFinite ? bmi.toStringAsFixed(1) : _bmiCtrl.text;
+  }
+
   @override
   void dispose() {
     _currentNotesCtrl.dispose();
+    _heightCtrl.removeListener(_maybeComputeBmi);
     _heightCtrl.dispose();
+    _weightCtrl.removeListener(_maybeComputeBmi);
     _weightCtrl.dispose();
     _bmiCtrl.dispose();
     _spo2Ctrl.dispose();
@@ -145,9 +204,25 @@ class _IntakeFormBodyState extends State<IntakeFormBody> {
   }
 
   Future<void> _saveForm() async {
+    // Prevent double submission
+    if (_isSaving) return;
+
+    setState(() => _isSaving = true);
+
     final appt = widget.appt;
+    final pid = appt.patientId?.toString() ?? '';
+    if (pid.trim().isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Missing patient id — cannot save intake.')),
+        );
+        setState(() => _isSaving = false);
+      }
+      return;
+    }
+
     final payload = {
-      'patientId': appt.patientId,
+      'patientId': pid,
       'patientName': appt.patientName,
       'vitals': {
         'height_cm': _heightCtrl.text.trim(),
@@ -162,16 +237,30 @@ class _IntakeFormBodyState extends State<IntakeFormBody> {
     };
 
     try {
-      print('Payload: $payload');
+      final result = await AuthService.instance.addIntake(payload, patientId: pid);
+
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Form saved successfully ✅")),
+        const SnackBar(content: Text('Intake saved successfully ✅')),
       );
-    } catch (e) {
+
+      // Optionally close the dialog/page and return the saved object:
+      // Navigator.of(context).pop(result);
+
+    } on ApiException catch (apiErr) {
       if (!mounted) return;
+      debugPrint('API error saving intake: ${apiErr.message}');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Save failed: $e")),
+        SnackBar(content: Text('Save failed: ${apiErr.message}')),
       );
+    } catch (e, st) {
+      if (!mounted) return;
+      debugPrint('Unexpected error saving intake: $e\n$st');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Save failed: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
     }
   }
 
@@ -334,7 +423,6 @@ class _IntakeFormBodyState extends State<IntakeFormBody> {
         ),
 
         /// Save Bar
-        /// --- Bottom Save Bar ---
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
@@ -356,14 +444,14 @@ class _IntakeFormBodyState extends State<IntakeFormBody> {
               width: double.infinity,
               height: 52,
               child: ElevatedButton(
-                onPressed: _saveForm,
+                onPressed: _isSaving ? null : _saveForm,
                 style: ElevatedButton.styleFrom(
                   padding: EdgeInsets.zero,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                   elevation: 0,
-                  backgroundColor: AppColors.transparent, // use gradient below
+                  backgroundColor: AppColors.transparent,
                 ),
                 child: Ink(
                   decoration: BoxDecoration(
@@ -371,7 +459,13 @@ class _IntakeFormBodyState extends State<IntakeFormBody> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Center(
-                    child: Text(
+                    child: _isSaving
+                        ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                        : Text(
                       "Save Intake Form",
                       style: GoogleFonts.lexend(
                         fontSize: 16,
@@ -385,7 +479,6 @@ class _IntakeFormBodyState extends State<IntakeFormBody> {
             ),
           ),
         )
-
       ],
     );
   }

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import 'package:glowhair/Modules/Doctor/widgets/Editappoimentspage.dart';
+import '../../Models/Patients.dart';
+import '/Modules/Doctor/widgets/Editappoimentspage.dart';
 import '../../Models/appointment_draft.dart';
 import '../../Models/dashboardmodels.dart';
 import '../../Services/Authservices.dart';
@@ -92,10 +93,45 @@ class _AdminAppointmentsScreenState extends State<AdminAppointmentsScreen> {
     if (_currentPage > 0) setState(() => _currentPage--);
   }
 
+  PatientDetails _mapApptToPatient(DashboardAppointments appt) {
+    return PatientDetails(
+      patientId: appt.patientId,
+      name: appt.patientName,
+      firstName: null,
+      lastName: null,
+      age: appt.patientAge,
+      gender: appt.gender,
+      bloodGroup: '',
+      weight: appt.weight == 0 ? '' : appt.weight.toString(),
+      height: appt.height == 0 ? '' : appt.height.toString(),
+      emergencyContactName: '',
+      emergencyContactPhone: '',
+      phone: '',
+      city: appt.location,
+      address: appt.location,
+      pincode: '',
+      insuranceNumber: '',
+      expiryDate: '',
+      avatarUrl: appt.patientAvatarUrl,
+      dateOfBirth: appt.dob,
+      lastVisitDate: appt.date,
+      doctorId: appt.doctor,
+      doctor: null,
+      doctorName: appt.doctor,
+      medicalHistory: appt.diagnosis,
+      allergies: const [],
+      notes: appt.currentNotes ?? appt.previousNotes ?? '',
+      oxygen: '',
+      bmi: appt.bmi == 0.0 ? '' : appt.bmi.toStringAsFixed(1),
+      isSelected: appt.isSelected,
+      patientCode: appt.id, // use appointment id as fallback code if you want
+    );
+  }
+
   Future<void> _onView(int index, List<DashboardAppointments> list) async {
     final appointment = list[index];
     try {
-      // Fetch full details if backend supports it; fallback to using DashboardAppointments
+      // Try to fetch a richer draft if available (keep existing behavior)
       AppointmentDraft? draft;
       try {
         draft = await AuthService.instance.fetchAppointmentById(appointment.id);
@@ -103,15 +139,27 @@ class _AdminAppointmentsScreenState extends State<AdminAppointmentsScreen> {
         draft = null;
       }
 
+      // Map the appointment into PatientDetails (no backend call required)
+      final patient = _mapApptToPatient(appointment);
+
+      // Show the preview using the PatientDetails-based preview widget
       await showDialog(
         context: context,
-        builder: (_) => DoctorAppointmentPreview(appointment: appointment),
+        builder: (_) => Dialog(
+          insetPadding: const EdgeInsets.all(12),
+          child: DoctorAppointmentPreview(patient: patient),
+        ),
       );
     } catch (e) {
       debugPrint('❌ view error: $e');
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to open preview: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to open preview: $e')),
+        );
+      }
     }
   }
+
 
   Future<void> _onEdit(int index, List<DashboardAppointments> list) async {
     final appointment = list[index];

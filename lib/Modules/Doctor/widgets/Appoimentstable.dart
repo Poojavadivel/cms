@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:glowhair/Models/Patients.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../Models/appointment_draft.dart';
@@ -9,6 +10,43 @@ import 'Editappoimentspage.dart';
 import 'doctor_appointment_preview.dart';
 import 'eyeicon.dart';
 import 'intakeform.dart';
+// <-- added: update path if needed
+
+/// Helper: map DashboardAppointments -> PatientDetails (no network)
+PatientDetails _mapApptToPatient(DashboardAppointments appt) {
+  return PatientDetails(
+    patientId: appt.patientId,
+    name: appt.patientName,
+    firstName: null,
+    lastName: null,
+    age: appt.patientAge,
+    gender: appt.gender,
+    bloodGroup: '',
+    weight: appt.weight == 0 ? '' : appt.weight.toString(),
+    height: appt.height == 0 ? '' : appt.height.toString(),
+    emergencyContactName: '',
+    emergencyContactPhone: '',
+    phone: '',
+    city: appt.location,
+    address: appt.location,
+    pincode: '',
+    insuranceNumber: '',
+    expiryDate: '',
+    avatarUrl: appt.patientAvatarUrl,
+    dateOfBirth: appt.dob,
+    lastVisitDate: appt.date,
+    doctorId: appt.doctor,
+    doctor: null,
+    doctorName: appt.doctor,
+    medicalHistory: appt.diagnosis,
+    allergies: const [],
+    notes: appt.currentNotes ?? appt.previousNotes ?? '',
+    oxygen: '',
+    bmi: appt.bmi == 0.0 ? '' : appt.bmi.toString(),
+    isSelected: appt.isSelected,
+    patientCode: appt.id,
+  );
+}
 
 class AppointmentTable extends StatelessWidget {
   final List<DashboardAppointments> appointments;
@@ -163,8 +201,8 @@ class _AppointmentTableControls extends StatelessWidget {
                   ),
                   prefixIcon: const Icon(Icons.search, size: 20),
                   isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 17),
+                  contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 17),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                     borderSide: const BorderSide(color: AppColors.searchBorder),
@@ -182,31 +220,6 @@ class _AppointmentTableControls extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 16),
-            SizedBox(
-              height: 48,
-              child: ElevatedButton.icon(
-                onPressed: onNewAppointmentPressed,
-                icon: const Icon(Icons.add_rounded,
-                    size: 18, color: Colors.white),
-                label: Text(
-                  'New Appointment',
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                  ),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.appointmentsHeader,
-                  foregroundColor: Colors.white,
-                  padding:
-                  const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-              ),
-            ),
           ],
         ),
       ],
@@ -295,6 +308,9 @@ class _AppointmentDataView extends StatelessWidget {
   }
 
   TableRow _row(BuildContext context, DashboardAppointments appt, int index) {
+    // Map appointment -> patient once here
+    final PatientDetails patient = _mapApptToPatient(appt);
+
     return TableRow(
       key: ValueKey(appt.id),
       decoration: BoxDecoration(
@@ -302,7 +318,7 @@ class _AppointmentDataView extends StatelessWidget {
       ),
       children: [
         InkWell(
-          onTap: () => _openPreviewDialog(context, appt),
+          onTap: () => _openPreviewDialog(context, patient),
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
             child: Row(
@@ -315,8 +331,7 @@ class _AppointmentDataView extends StatelessWidget {
                       ? const AssetImage('assets/girlicon.png')
                       : (appt.patientAvatarUrl.isNotEmpty
                       ? NetworkImage(appt.patientAvatarUrl)
-                      : const AssetImage('assets/boyicon.png'))
-                  as ImageProvider,
+                      : const AssetImage('assets/boyicon.png')) as ImageProvider,
                 ),
                 const SizedBox(width: 6),
                 Flexible(
@@ -359,7 +374,8 @@ class _AppointmentDataView extends StatelessWidget {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding:
+                  const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   minimumSize: const Size(0, 26),
                 ),
                 child: const Text('Intake', style: TextStyle(fontSize: 11)),
@@ -400,21 +416,20 @@ class _AppointmentDataView extends StatelessWidget {
                   icon: const Icon(Icons.remove_red_eye_outlined, size: 16),
                   color: AppColors.accentPink,
                   onPressed: () {
-                    AppointmentDetail.show(context, appt);
+                    final patient = _mapApptToPatient(appt);
+                    DoctorAppointmentPreview.show(context, patient);
                   },
                 ),
               ),
             ],
           ),
         ),
-
       ],
     );
   }
 
   Widget _center(String text,
-      {Color color = AppColors.kTextPrimary,
-        FontWeight weight = FontWeight.w500}) {
+      {Color color = AppColors.kTextPrimary, FontWeight weight = FontWeight.w500}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
       child: Center(
@@ -426,12 +441,8 @@ class _AppointmentDataView extends StatelessWidget {
     );
   }
 
-  void _openPreviewDialog(BuildContext context, DashboardAppointments appt) {
-    showDialog(
-      context: context,
-      barrierDismissible: true,
-      builder: (_) => DoctorAppointmentPreview(appointment: appt),
-    );
+  void _openPreviewDialog(BuildContext context, PatientDetails patient) {
+    DoctorAppointmentPreview.show(context, patient);
   }
 
   void _openEditDialog(BuildContext context, DashboardAppointments appt) {
@@ -501,9 +512,7 @@ class _PaginationControls extends StatelessWidget {
             IconButton(
               onPressed: isFirstPage ? null : onPrevious,
               icon: const Icon(Icons.arrow_back_ios),
-              color: isFirstPage
-                  ? AppColors.kTextSecondary.withOpacity(0.5)
-                  : AppColors.kTextSecondary,
+              color: isFirstPage ? AppColors.kTextSecondary.withOpacity(0.5) : AppColors.kTextSecondary,
             ),
             Text(
               'Page ${currentPage + 1} of $totalPages',
@@ -515,9 +524,7 @@ class _PaginationControls extends StatelessWidget {
             IconButton(
               onPressed: isLastPage ? null : onNext,
               icon: const Icon(Icons.arrow_forward_ios),
-              color: isLastPage
-                  ? AppColors.kTextSecondary.withOpacity(0.5)
-                  : AppColors.kTextSecondary,
+              color: isLastPage ? AppColors.kTextSecondary.withOpacity(0.5) : AppColors.kTextSecondary,
             ),
           ],
         ),

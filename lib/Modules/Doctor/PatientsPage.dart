@@ -3,7 +3,11 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
 import '../../Models/Patients.dart';
-import '../Admin/widget/generic_data_table.dart'; // update path if needed
+import '../../Services/Authservices.dart'; // AuthService with instance (AuthService.instance)
+import '../../Utils/Api_handler.dart';
+import '../Admin/widget/generic_data_table.dart';
+import 'widgets/doctor_appointment_preview.dart';
+import 'widgets/eyeicon.dart'; // update path if needed
 
 // --- Theme Colors (kept from your original file) ---
 const Color primaryColor = Color(0xFFEF4444);
@@ -16,307 +20,23 @@ const Color borderColor = Color(0xFFE5E7EB);
 const Color accentLight = Color(0xFFFEE2E2);
 const Color accentDark = Color(0xFFB91C1C);
 
-// ---------------------------
-// Embedded sample data (11)
-// ---------------------------
-final List<PatientDetails> _samplePatients = [
-  PatientDetails(
-    patientId: '#PTN001',
-    name: 'Arthur Penhaligon',
-    age: 34,
-    gender: 'Male',
-    bloodGroup: 'B+',
-    weight: '75 kgs',
-    height: '175 cms',
-    emergencyContactName: 'Merlin (Friend)',
-    emergencyContactPhone: '9876543210',
-    phone: '+91 6382255960',
-    city: 'London',
-    address: '123 Baker St',
-    pincode: 'SW1A 0AA',
-    insuranceNumber: 'AA234-875490',
-    expiryDate: '2026-09-16',
-    avatarUrl: '',
-    dateOfBirth: '1990-08-15',
-    lastVisitDate: '2022-12-05',
-    doctorId: '',
-  ),
-  PatientDetails(
-    patientId: '#PTN002',
-    name: 'John Doe',
-    age: 28,
-    gender: 'Male',
-    bloodGroup: 'A-',
-    weight: '80 kgs',
-    height: '180 cms',
-    emergencyContactName: 'Jane Doe (Wife)',
-    emergencyContactPhone: '9876543211',
-    phone: '+91 6382255961',
-    city: 'New York',
-    address: '456 Main St',
-    pincode: '10001',
-    insuranceNumber: 'BB567-123456',
-    expiryDate: '2025-11-22',
-    avatarUrl: '',
-    dateOfBirth: '1996-05-22',
-    lastVisitDate: '2022-12-05',
-    doctorId: '',
-  ),
-  PatientDetails(
-    patientId: '#PTN003',
-    name: 'Bhavana Sharma',
-    age: 22,
-    gender: 'Female',
-    bloodGroup: 'O+',
-    weight: '55 kgs',
-    height: '160 cms',
-    emergencyContactName: 'Rajesh Sharma (Father)',
-    emergencyContactPhone: '9876543212',
-    phone: '+91 6382255962',
-    city: 'Mumbai',
-    address: '789 Ocean View',
-    pincode: '400001',
-    insuranceNumber: 'CC890-789012',
-    expiryDate: '2027-05-01',
-    avatarUrl: '',
-    dateOfBirth: '2002-11-30',
-    lastVisitDate: '2025-08-19',
-    doctorId: '',
-  ),
-  PatientDetails(
-    patientId: '#PTN004',
-    name: 'David Lee',
-    age: 40,
-    gender: 'Male',
-    bloodGroup: 'AB-',
-    weight: '70 kgs',
-    height: '178 cms',
-    emergencyContactName: 'Sarah Lee (Sister)',
-    emergencyContactPhone: '9876543213',
-    phone: '+91 6382255963',
-    city: 'London',
-    address: '10 Downing St',
-    pincode: 'SW1A 2AA',
-    insuranceNumber: 'DD123-456789',
-    expiryDate: '2028-03-10',
-    avatarUrl: '',
-    dateOfBirth: '1985-01-01',
-    lastVisitDate: '2022-12-05',
-    doctorId: '',
-  ),
-  PatientDetails(
-    patientId: '#PTN005',
-    name: 'Joseph King',
-    age: 78,
-    gender: 'Male',
-    bloodGroup: 'O-',
-    weight: '65 kgs',
-    height: '170 cms',
-    emergencyContactName: 'Mary King (Daughter)',
-    emergencyContactPhone: '9876543214',
-    phone: '+91 6382255964',
-    city: 'San Francisco',
-    address: 'Golden Gate Ave',
-    pincode: '94101',
-    insuranceNumber: 'EE456-789012',
-    expiryDate: '2025-08-05',
-    avatarUrl: '',
-    dateOfBirth: '1945-06-12',
-    lastVisitDate: '2022-12-05',
-    doctorId: '',
-  ),
-  PatientDetails(
-    patientId: '#PTN006',
-    name: 'Lakesh Patel',
-    age: 48,
-    gender: 'Male',
-    bloodGroup: 'A+',
-    weight: '82 kgs',
-    height: '172 cms',
-    emergencyContactName: 'Priya Patel (Wife)',
-    emergencyContactPhone: '9876543215',
-    phone: '+91 6382255965',
-    city: 'Ahmedabad',
-    address: '101 Gandhi Rd',
-    pincode: '380001',
-    insuranceNumber: 'FF789-012345',
-    expiryDate: '2027-12-18',
-    avatarUrl: '',
-    dateOfBirth: '1977-09-18',
-    lastVisitDate: '2022-12-05',
-    doctorId: '',
-  ),
-  PatientDetails(
-    patientId: '#PTN007',
-    name: 'Maria Garcia',
-    age: 30,
-    gender: 'Female',
-    bloodGroup: 'B-',
-    weight: '60 kgs',
-    height: '165 cms',
-    emergencyContactName: 'Carlos Garcia (Husband)',
-    emergencyContactPhone: '9876543216',
-    phone: '+91 6382255966',
-    city: 'Madrid',
-    address: 'Calle Mayor 1',
-    pincode: '28001',
-    insuranceNumber: 'GG012-345678',
-    expiryDate: '2026-07-20',
-    avatarUrl: '',
-    dateOfBirth: '1994-03-10',
-    lastVisitDate: '2023-11-20',
-    doctorId: '',
-  ),
-  PatientDetails(
-    patientId: '#PTN008',
-    name: 'Chen Wei',
-    age: 55,
-    gender: 'Male',
-    bloodGroup: 'A+',
-    weight: '78 kgs',
-    height: '170 cms',
-    emergencyContactName: 'Li Na (Wife)',
-    emergencyContactPhone: '9876543217',
-    phone: '+91 6382255967',
-    city: 'Beijing',
-    address: 'Wangfujing St',
-    pincode: '100006',
-    insuranceNumber: 'HH345-678901',
-    expiryDate: '2025-09-11',
-    avatarUrl: '',
-    dateOfBirth: '1969-07-01',
-    lastVisitDate: '2024-01-15',
-    doctorId: '',
-  ),
-  PatientDetails(
-    patientId: '#PTN009',
-    name: 'Fatima Ahmed',
-    age: 29,
-    gender: 'Female',
-    bloodGroup: 'O+',
-    weight: '62 kgs',
-    height: '168 cms',
-    emergencyContactName: 'Omar Ahmed (Brother)',
-    emergencyContactPhone: '9876543218',
-    phone: '+91 6382255968',
-    city: 'Dubai',
-    address: 'Sheikh Zayed Rd',
-    pincode: '00000',
-    insuranceNumber: 'II678-901234',
-    expiryDate: '2027-04-03',
-    avatarUrl: '',
-    dateOfBirth: '1995-12-01',
-    lastVisitDate: '2024-02-28',
-    doctorId: '',
-  ),
-  PatientDetails(
-    patientId: '#PTN010',
-    name: 'Hiroshi Tanaka',
-    age: 68,
-    gender: 'Male',
-    bloodGroup: 'AB+',
-    weight: '70 kgs',
-    height: '160 cms',
-    emergencyContactName: 'Akiko Tanaka (Wife)',
-    emergencyContactPhone: '9876543219',
-    phone: '+91 6382255969',
-    city: 'Tokyo',
-    address: 'Shibuya Crossing',
-    pincode: '150-0042',
-    insuranceNumber: 'JJ901-234567',
-    expiryDate: '2026-01-25',
-    avatarUrl: '',
-    dateOfBirth: '1956-02-10',
-    lastVisitDate: '2023-09-01',
-    doctorId: '',
-  ),
-  PatientDetails(
-    patientId: '#PTN011',
-    name: 'Sophie Dupont',
-    age: 42,
-    gender: 'Female',
-    bloodGroup: 'A-',
-    weight: '63 kgs',
-    height: '168 cms',
-    emergencyContactName: 'Pierre Dupont (Husband)',
-    emergencyContactPhone: '9876543220',
-    phone: '+91 6382255970',
-    city: 'Paris',
-    address: 'Champs-Élysées',
-    pincode: '75008',
-    insuranceNumber: 'KK234-567890',
-    expiryDate: '2027-06-14',
-    avatarUrl: '',
-    dateOfBirth: '1982-04-20',
-    lastVisitDate: '2024-03-10',
-    doctorId: '',
-  ),
-];
+/// ScrollBehavior that hides all scrollbars (vertical & horizontal)
+class _NoScrollbarBehavior extends ScrollBehavior {
+  const _NoScrollbarBehavior();
 
-// ---------------------------
-// Mock API (uses embedded list)
-// ---------------------------
-class MockPatientApi {
-  static final List<PatientDetails> _allPatients = _samplePatients;
-
-  /// Simulates a backend endpoint:
-  /// GET /patients?page=0&perPage=10&search=foo&gender=Male
-  /// Returns a map: {'items': List<PatientDetails>, 'total': int}
-  static Future<Map<String, dynamic>> getPatients({
-    int page = 0,
-    int perPage = 10,
-    String search = '',
-    String gender = 'All',
-    Duration delay = const Duration(milliseconds: 700),
-  }) async {
-    // Simulate network latency
-    await Future.delayed(delay);
-
-    // Apply search + filter on the server side (mock)
-    final q = search.trim().toLowerCase();
-    final filtered = _allPatients.where((p) {
-      final matchesSearch = q.isEmpty ||
-          p.name.toLowerCase().contains(q) ||
-          p.patientId.toLowerCase().contains(q) ||
-          p.phone.toLowerCase().contains(q);
-      final matchesGender = gender == 'All' || p.gender == gender;
-      return matchesSearch && matchesGender;
-    }).toList();
-
-    final total = filtered.length;
-
-    // Pagination
-    final start = page * perPage;
-    final end = (start + perPage).clamp(0, total);
-    final pageItems = (start < end) ? filtered.sublist(start, end) : <PatientDetails>[];
-
-    return {
-      'items': pageItems,
-      'total': total,
-    };
+  @override
+  Widget buildScrollbar(BuildContext context, Widget child, ScrollableDetails details) {
+    // Return child directly so no Scrollbar is added.
+    return child;
   }
 
-  // Optional helpers: delete/edit in-memory (useful for local testing)
-  static Future<void> deletePatient(String patientId) async {
-    await Future.delayed(const Duration(milliseconds: 300));
-    _allPatients.removeWhere((p) => p.patientId == patientId);
-  }
-
-  static Future<void> addPatient(PatientDetails p) async {
-    await Future.delayed(const Duration(milliseconds: 300));
-    _allPatients.insert(0, p);
-  }
-
-  static Future<void> updatePatient(String patientId, PatientDetails updated) async {
-    await Future.delayed(const Duration(milliseconds: 300));
-    final idx = _allPatients.indexWhere((p) => p.patientId == patientId);
-    if (idx >= 0) _allPatients[idx] = updated;
+  // For older Flutter versions, also override buildOverscrollIndicator to avoid glow if desired:
+  @override
+  Widget buildOverscrollIndicator(BuildContext context, Widget child, ScrollableDetails details) {
+    return child;
   }
 }
 
-// ---------------------------
-// PatientsScreen (uses GenericDataTable)
-// ---------------------------
 class PatientsScreen extends StatefulWidget {
   const PatientsScreen({super.key});
 
@@ -341,20 +61,31 @@ class _PatientsScreenState extends State<PatientsScreen> {
     _loadPage();
   }
 
+  /// Helper: choose asset based on gender
+  ImageProvider _placeholderForGender(String? gender) {
+    final g = (gender ?? '').toLowerCase();
+    if (g == 'male') return const AssetImage('assets/boyicon.png');
+    if (g == 'female') return const AssetImage('assets/girlicon.png');
+    // fallback
+    return const AssetImage('assets/boyicon.png');
+  }
+
   Future<void> _loadPage() async {
     setState(() => _isLoading = true);
     try {
-      final res = await MockPatientApi.getPatients(
-        page: _currentPage,
-        perPage: _itemsPerPage,
-        search: _searchQuery,
-        gender: _genderFilter,
-      );
-      _currentPageItems = List<PatientDetails>.from(res['items'] as List);
-      _totalItems = res['total'] as int;
+      // If AuthService supports filters/search/pagination, pass them there.
+      final patients = await AuthService.instance.fetchDoctorPatients();
+
+      setState(() {
+        _currentPageItems = patients;
+        _totalItems = patients.length; // if API returns total separately, use that
+      });
     } catch (e) {
-      _currentPageItems = [];
-      _totalItems = 0;
+      debugPrint("❌ Failed to load patients: $e");
+      setState(() {
+        _currentPageItems = [];
+        _totalItems = 0;
+      });
     } finally {
       setState(() => _isLoading = false);
     }
@@ -377,33 +108,6 @@ class _PatientsScreenState extends State<PatientsScreen> {
     _loadPage();
   }
 
-  void _onAddPatient() {
-    // sample add - creates a quick dummy patient (you can replace with a form/navigation)
-    final newPatient = PatientDetails(
-      patientId: '#PTN${DateTime.now().millisecondsSinceEpoch % 100000}',
-      name: 'New Patient',
-      age: 30,
-      gender: 'Other',
-      bloodGroup: 'O+',
-      weight: '70 kgs',
-      height: '170 cms',
-      emergencyContactName: 'Contact',
-      emergencyContactPhone: '0000000000',
-      phone: '+91 7000000000',
-      city: 'Unknown',
-      address: 'Unknown',
-      pincode: '000000',
-      insuranceNumber: 'ZZ000-000000',
-      expiryDate: '2026-01-01',
-      avatarUrl: '',
-      dateOfBirth: '1995-01-01',
-      lastVisitDate: DateTime.now().toIso8601String(),
-      doctorId: '',
-    );
-    MockPatientApi.addPatient(newPatient).then((_) => _loadPage());
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Added sample patient')));
-  }
-
   void _previousPage() {
     if (_currentPage > 0) {
       setState(() => _currentPage -= 1);
@@ -419,68 +123,13 @@ class _PatientsScreenState extends State<PatientsScreen> {
     }
   }
 
-  void _showPatientDetails(PatientDetails p) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('View: ${p.name}')));
-    // TODO: push to details page
+  void _showPatientDetails(BuildContext context, PatientDetails p) {
+    // Call the preview dialog (no backend call)
+    DoctorAppointmentPreview.show(context, p);
   }
 
-  void _editPatient(PatientDetails p) {
-    final updated = PatientDetails(
-      patientId: p.patientId,
-      name: '${p.name} (edited)',
-      age: p.age,
-      gender: p.gender,
-      bloodGroup: p.bloodGroup,
-      weight: p.weight,
-      height: p.height,
-      emergencyContactName: p.emergencyContactName,
-      emergencyContactPhone: p.emergencyContactPhone,
-      phone: p.phone,
-      city: p.city,
-      address: p.address,
-      pincode: p.pincode,
-      insuranceNumber: p.insuranceNumber,
-      expiryDate: p.expiryDate,
-      avatarUrl: p.avatarUrl,
-      dateOfBirth: p.dateOfBirth,
-      lastVisitDate: p.lastVisitDate,
-      doctorId: p.doctorId,
-    );
-    MockPatientApi.updatePatient(p.patientId, updated).then((_) {
-      _loadPage();
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Edited: ${p.name}')));
-    });
-  }
-
-  void _confirmDeletePatient(PatientDetails p) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('Delete ${p.name}?', style: GoogleFonts.inter()),
-        content: Text('Are you sure you want to delete this patient?', style: GoogleFonts.inter()),
-        actions: [
-          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: Text('Cancel', style: GoogleFonts.inter())),
-          TextButton(
-            onPressed: () {
-              Navigator.of(ctx).pop();
-              MockPatientApi.deletePatient(p.patientId).then((_) {
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Deleted: ${p.name}')));
-                // If deleting last item on page, go back a page if possible
-                final remainingOnPage = _totalItems - 1 - (_currentPage * _itemsPerPage);
-                if (remainingOnPage <= 0 && _currentPage > 0) {
-                  setState(() => _currentPage -= 1);
-                }
-                _loadPage();
-              });
-            },
-            child: Text('Delete', style: GoogleFonts.inter(color: primaryColor)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _formatDate(String isoDate) {
+  String _formatDate(String? isoDate) {
+    if (isoDate == null || isoDate.isEmpty) return '';
     try {
       final dt = DateTime.parse(isoDate);
       return DateFormat('dd/MM/yyyy').format(dt);
@@ -491,10 +140,15 @@ class _PatientsScreenState extends State<PatientsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Table headers
-    final headers = ['Patient Name', 'ID', 'Date of Birth', 'Gender', 'Contact No', 'Last Visit'];
+    final headers = [
+      'Patient Name',
+      'ID', // will show patientCode if available
+      'Date of Birth',
+      'Gender',
+      'Contact No',
+      'Last Visit'
+    ];
 
-    // Filters widgets (gender dropdown)
     final filters = <Widget>[
       SizedBox(
         height: 40,
@@ -531,54 +185,43 @@ class _PatientsScreenState extends State<PatientsScreen> {
           child: const Icon(Icons.close, size: 18, color: primaryColor),
         ),
       ),
-
     ];
 
-    // Build rows (each row is List<Widget>) — GenericDataTable will append Actions column automatically
     final rows = _currentPageItems.map<List<Widget>>((p) {
+      final ImageProvider avatarImage =
+      (p.avatarUrl.isNotEmpty) ? NetworkImage(p.avatarUrl) : _placeholderForGender(p.gender);
+
+      // Show patientCode (if provided by backend) else fallback to patientId
+      final displayId = (p.patientCode != null && p.patientCode!.isNotEmpty) ? p.patientCode! : p.patientId;
+
       return [
-        // Patient name + avatar
         Row(
           children: [
             CircleAvatar(
               radius: 18,
-              backgroundImage: p.avatarUrl.isNotEmpty
-                  ? NetworkImage(p.avatarUrl)
-                  : const AssetImage('assets/sampledoctor.png') as ImageProvider,
+              backgroundImage: avatarImage,
               backgroundColor: Colors.transparent,
             ),
             const SizedBox(width: 10),
             Flexible(
               child: Text(
                 p.name,
-                style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: textPrimaryColor),
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: textPrimaryColor,
+                ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
           ],
         ),
-
-        // ID
-        Text(p.patientId, style: GoogleFonts.inter(fontSize: 13, color: textSecondaryColor)),
-
-        // DOB
-        Text(
-          _formatDate(p.dateOfBirth),
-          style: GoogleFonts.inter(fontSize: 13, color: textSecondaryColor),
-        ),
-
-        // Gender
+        Text(displayId, style: GoogleFonts.inter(fontSize: 13, color: textSecondaryColor)),
+        Text(_formatDate(p.dateOfBirth), style: GoogleFonts.inter(fontSize: 13, color: textSecondaryColor)),
         Text(p.gender, style: GoogleFonts.inter(fontSize: 13, color: textSecondaryColor)),
-
-        // Contact
         Text(p.phone, style: GoogleFonts.inter(fontSize: 13, color: textSecondaryColor)),
-
-        // Last Visit
-        Text(
-          _formatDate(p.lastVisitDate),
-          style: GoogleFonts.inter(fontSize: 13, color: textSecondaryColor),
-        ),
+        Text(_formatDate(p.lastVisitDate), style: GoogleFonts.inter(fontSize: 13, color: textSecondaryColor)),
       ];
     }).toList();
 
@@ -586,45 +229,35 @@ class _PatientsScreenState extends State<PatientsScreen> {
       backgroundColor: backgroundColor,
       body: Padding(
         padding: const EdgeInsets.all(24.0),
-        child: Column(
-          children: [
-            // Header row (title + user)
-
-
-            // GenericDataTable usage (fills remaining space)
-            Expanded(
-              child: GenericDataTable(
-                title: 'Patients',
-                headers: headers,
-                rows: rows,
-                searchQuery: _searchQuery,
-                onSearchChanged: _onSearchChanged,
-                currentPage: _currentPage,
-                totalItems: _totalItems,
-                itemsPerPage: _itemsPerPage,
-                onPreviousPage: _previousPage,
-                onNextPage: _nextPage,
-                isLoading: _isLoading,
-                filters: filters,
-                onAddPressed: _onAddPatient,
-                onView: (rowIndex) {
-                  if (rowIndex >= 0 && rowIndex < _currentPageItems.length) {
-                    _showPatientDetails(_currentPageItems[rowIndex]);
-                  }
-                },
-                onEdit: (rowIndex) {
-                  if (rowIndex >= 0 && rowIndex < _currentPageItems.length) {
-                    _editPatient(_currentPageItems[rowIndex]);
-                  }
-                },
-                onDelete: (rowIndex) {
-                  if (rowIndex >= 0 && rowIndex < _currentPageItems.length) {
-                    _confirmDeletePatient(_currentPageItems[rowIndex]);
-                  }
-                },
+        // Wrap the table with a ScrollConfiguration that disables any scrollbar widgets,
+        // this hides both vertical and horizontal scrollbars on this page.
+        child: ScrollConfiguration(
+          behavior: const _NoScrollbarBehavior(),
+          child: Column(
+            children: [
+              Expanded(
+                child: GenericDataTable(
+                  title: 'Patients',
+                  headers: headers,
+                  rows: rows,
+                  searchQuery: _searchQuery,
+                  onSearchChanged: _onSearchChanged,
+                  currentPage: _currentPage,
+                  totalItems: _totalItems,
+                  itemsPerPage: _itemsPerPage,
+                  onPreviousPage: _previousPage,
+                  onNextPage: _nextPage,
+                  isLoading: _isLoading,
+                  filters: filters,
+                  onView: (rowIndex) {
+                    if (rowIndex >= 0 && rowIndex < _currentPageItems.length) {
+                      _showPatientDetails(context, _currentPageItems[rowIndex]);
+                    }
+                  },
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

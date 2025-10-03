@@ -1,4 +1,4 @@
-# glowhair
+# karur-gastro-foundation
 
 A new Flutter project.
 

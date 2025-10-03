@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../Models/Patients.dart';
 import '../../../Models/dashboardmodels.dart';
 import '../../../Utils/Colors.dart';
 
@@ -14,15 +15,15 @@ const Color successColor = Color(0xFF10B981);
 const Color warningColor = Color(0xFFF59E0B);
 
 class AppointmentDetail extends StatelessWidget {
-  final DashboardAppointments appt;
-  const AppointmentDetail({super.key, required this.appt});
+  final PatientDetails patient; // <-- changed type
+  const AppointmentDetail({super.key, required this.patient});
 
-  static Future<void> show(BuildContext context, DashboardAppointments appt) {
+  static Future<void> show(BuildContext context, PatientDetails patient) {
     return showDialog(
       context: context,
       barrierDismissible: true,
       barrierColor: Colors.black.withOpacity(0.35),
-      builder: (_) => AppointmentDetail(appt: appt),
+      builder: (_) => AppointmentDetail(patient: patient),
     );
   }
 
@@ -45,89 +46,54 @@ class AppointmentDetail extends StatelessWidget {
               borderRadius: BorderRadius.circular(16),
               child: Material(
                 color: backgroundColor,
-                child: _ResponsiveScroll(
+                child: SingleChildScrollView(
                   child: Padding(
                     padding: const EdgeInsets.all(20),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        _ProfileHeaderCard(appt: appt),
+                        _ProfileHeaderCard(patient: patient),
                         const SizedBox(height: 16),
 
-                        // ---- Dropdown style sections ----
+                        // ---- Notes Section ----
                         _SectionCard(
                           icon: Icons.note_alt_outlined,
                           title: "Medical Notes",
-                          description: "Previous & current notes",
-                          builder: () => Align(  // 👈 force left
+                          description: "Patient notes",
+                          builder: () => Align(
                             alignment: Alignment.centerLeft,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start, // 👈 stack left
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  "Previous Notes",
-                                  style: GoogleFonts.lexend(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w700,
-                                    color: textPrimaryColor,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  appt.previousNotes?.isNotEmpty == true
-                                      ? appt.previousNotes!
-                                      : "No previous notes available",
-                                  style: const TextStyle(
-                                    color: textSecondaryColor,
-                                    fontSize: 13,
-                                    height: 1.4,
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                                Text(
-                                  "Current Notes",
-                                  style: GoogleFonts.lexend(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w700,
-                                    color: textPrimaryColor,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  appt.currentNotes ?? "No current notes",
-                                  style: const TextStyle(
-                                    color: textPrimaryColor,
-                                    fontSize: 13,
-                                    height: 1.4,
-                                  ),
-                                ),
-                              ],
+                            child: Text(
+                              patient.notes.isNotEmpty
+                                  ? patient.notes
+                                  : "No notes available",
+                              style: const TextStyle(
+                                color: textSecondaryColor,
+                                fontSize: 13,
+                                height: 1.4,
+                              ),
                             ),
                           ),
                         ),
 
+                        // ---- Pharmacy Section ----
                         _SectionCard(
                           icon: Icons.local_pharmacy_outlined,
                           title: "Pharmacy",
                           description: "Prescribed medicines",
-                          builder: () => _ReadOnlyTable(
-                            columns: const [
-                              "Medicine",
-                              "Dosage",
-                              "Frequency",
-                              "Notes"
-                            ],
-                            rows: appt.pharmacy,
+                          builder: () => const Text(
+                            "No pharmacy data in PatientDetails",
+                            style: TextStyle(color: textSecondaryColor),
                           ),
                         ),
+
+                        // ---- Pathology Section ----
                         _SectionCard(
                           icon: Icons.biotech_outlined,
                           title: "Pathology",
                           description: "Lab investigations",
-                          builder: () => _ReadOnlyTable(
-                            columns: const ["Test Name","Category" ,"Priority", "Notes"],
-                            rows: appt.pathology,
+                          builder: () => const Text(
+                            "No pathology data in PatientDetails",
+                            style: TextStyle(color: textSecondaryColor),
                           ),
                         ),
                       ],
@@ -160,13 +126,15 @@ class AppointmentDetail extends StatelessWidget {
                       ],
                     ),
                     padding: const EdgeInsets.all(8),
-                    child: const Icon(Icons.close_rounded,
+                    child: const Icon(
+                      Icons.close_rounded,
                       color: AppColors.primary700,
+                    ),
                   ),
                 ),
               ),
             ),
-            ),],
+          ],
         ),
       ),
     );
@@ -320,17 +288,29 @@ class _ProfileHeaderCard extends StatelessWidget {
   static const double kAvatar = 128;
   static const Color kTint = Color(0xFFF9FAFB); // subtle tint behind card
   static const Color kTintLine = Color(0xFFF3F4F6);
-  final DashboardAppointments appt;
-  const _ProfileHeaderCard({required this.appt});
 
+  // <-- updated to use PatientDetails
+  final PatientDetails patient;
+  const _ProfileHeaderCard({required this.patient});
+
+  // numeric helper (keeps original semantics for numbers)
   String _n(num? v, {String? suffix}) =>
       (v == null || v == 0) ? '—' : '${v}${suffix ?? ''}';
-  String _ss(String? v) => (v == null || v.trim().isEmpty) ? '—' : v;
+
+  // string helper for height/weight/bmi that are strings in PatientDetails
+  String _ns(String? v, {String? suffix}) {
+    if (v == null) return '—';
+    final s = v.trim();
+    if (s.isEmpty) return '—';
+    return '${s}${suffix ?? ''}';
+  }
+
+  String _ss(String? v) => (v == null || v.trim().isEmpty) ? '—' : v!;
 
   String _bloodGroup() {
     try {
-      final bg = (appt as dynamic).bloodGroup;
-      return _ss(bg?.toString());
+      final bg = patient.bloodGroup;
+      return _ss(bg);
     } catch (_) {
       return '—';
     }
@@ -338,9 +318,9 @@ class _ProfileHeaderCard extends StatelessWidget {
 
   String _spo2() {
     try {
-      final o2 = (appt as dynamic).spo2 ?? (appt as dynamic).oxygen ?? (appt as dynamic).oxygenLevel;
-      if (o2 == null) return '—';
-      final v = (o2 is num) ? o2 : num.tryParse(o2.toString());
+      final o2raw = patient.oxygen;
+      if (o2raw == null || o2raw.trim().isEmpty) return '—';
+      final v = num.tryParse(o2raw.toString());
       return v == null ? '—' : '${v.toStringAsFixed(0)}%';
     } catch (_) {
       return '—';
@@ -349,8 +329,8 @@ class _ProfileHeaderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final name = _ss(appt.patientName);
-    final isFemale = _ss(appt.gender).toLowerCase() == 'female';
+    final name = _ss(patient.name);
+    final isFemale = _ss(patient.gender).toLowerCase() == 'female';
     final avatar = isFemale ? 'assets/girlicon.png' : 'assets/boyicon.png';
 
     return ClipRRect(
@@ -456,7 +436,7 @@ class _ProfileHeaderCard extends StatelessWidget {
             color: AppColors.rowAlternate,
             child: Center(
               child: Text(
-                _initials(_ss(appt.patientName)),
+                _initials(_ss(patient.name)),
                 style: GoogleFonts.lexend(
                   fontSize: 36,
                   fontWeight: FontWeight.w800,
@@ -504,7 +484,7 @@ class _ProfileHeaderCard extends StatelessWidget {
             border: Border.all(color: kTintLine),
           ),
           child: Text(
-            'ID: ${_ss(appt.patientId)}',
+            'ID: ${patient.patientCodeOrId}',
             style: GoogleFonts.lexend(
               fontSize: 12.5,
               fontWeight: FontWeight.w700,
@@ -522,9 +502,9 @@ class _ProfileHeaderCard extends StatelessWidget {
           runSpacing: 10,
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            _mini(isFemale ? Icons.female : Icons.male, _ss(appt.gender)),
-            _mini(Icons.person, 'Age ${appt.patientAge ?? '—'}'),
-            _mini(Icons.calendar_month, _ss(appt.dob)),
+            _mini(isFemale ? Icons.female : Icons.male, _ss(patient.gender)),
+            _mini(Icons.person, 'Age ${patient.age != 0 ? patient.age : '—'}'),
+            _mini(Icons.calendar_month, _ss(patient.dateOfBirth)),
           ],
         ),
 
@@ -571,15 +551,15 @@ class _ProfileHeaderCard extends StatelessWidget {
       children: [
         Row(
           children: [
-            Expanded(child: _kv(Icons.height, 'Height', _n(appt.height, suffix: ' cm'))),
+            Expanded(child: _kv(Icons.height, 'Height', _ns(patient.height, suffix: ' cm'))),
             const SizedBox(width: 24),
-            Expanded(child: _kv(Icons.monitor_weight_outlined, 'Weight', _n(appt.weight, suffix: ' kg'))),
+            Expanded(child: _kv(Icons.monitor_weight_outlined, 'Weight', _ns(patient.weight, suffix: ' kg'))),
           ],
         ),
         const SizedBox(height: 20),
         Row(
           children: [
-            Expanded(child: _kv(Icons.scale, 'BMI', _n(appt.bmi))),
+            Expanded(child: _kv(Icons.scale, 'BMI', _ns(patient.bmi))),
             const SizedBox(width: 24),
             Expanded(child: _kv(Icons.monitor_heart_outlined, 'Oxygen (SpO₂)', _spo2())),
           ],

@@ -1,19 +1,13 @@
 const express = require('express');
-const { Appointment } = require('../Models/models'); // use combined models export
-const auth = require('../Middleware/Auth'); // verifies JWT
+const { Appointment } = require('../Models/models'); // Mongoose models
+const auth = require('../Middleware/Auth'); // loads fresh user + role
 const router = express.Router();
 
-/*
-  NOTE: Role detection here follows your instruction:
-  - If req.user.id starts with 'admin' → treat as admin
-  - Otherwise treat as doctor
-*/
-
-// helper to normalize doctor name from populated doctorId
+// -----------------------------
+// Helper: extract doctor name
+// -----------------------------
 function extractDoctorName(docObj) {
   if (!docObj) return '';
-  // prefer a single 'name' field, else use firstName + lastName, else email, else id
-  if (typeof docObj.name === 'string' && docObj.name.trim()) return docObj.name.trim();
   const first = (docObj.firstName || '').toString().trim();
   const last = (docObj.lastName || '').toString().trim();
   if (first || last) return `${first} ${last}`.trim();
@@ -21,416 +15,264 @@ function extractDoctorName(docObj) {
   return docObj._id ? docObj._id.toString() : '';
 }
 
-// normalize appointments array to include `doctor` string
+// Normalize appointments to include doctor string
 function normalizeAppointments(arr) {
-  return arr.map(a => {
-    const doctorObj = a.doctorId || null;
-    const doctorStr = extractDoctorName(doctorObj);
-    return {
-      ...a,
-      doctor: doctorStr,
-    };
-  });
+  return arr.map(a => ({
+    ...a,
+    doctor: extractDoctorName(a.doctorId),
+  }));
 }
 
-// ===============================
+// -----------------------------
 // CREATE Appointment
-// POST /api/appointments
-// ===============================
+// -----------------------------
 router.post('/', auth, async (req, res) => {
-  console.log('📩 [CREATE] Incoming request to /api/appointments');
-
+  console.log("📥 CREATE appointment request body:", req.body, "user:", req.user);
   try {
     const userId = req.user.id;
-    const isAdmin = String(userId).startsWith('admin');
+    const role = req.user.role;
     const data = req.body;
 
-    console.log('👤 User ID from token:', userId, 'isAdmin:', isAdmin);
-    console.log('📦 [CREATE] Raw request body:', JSON.stringify(data, null, 2));
-
-    // validate required fields (common)
-    if (!data.clientName || !data.appointmentType || !data.date || !data.time || !data.location) {
-      console.warn('⚠️ [CREATE] Missing required fields →', {
-        clientName: data.clientName,
-        appointmentType: data.appointmentType,
-        date: data.date,
-        time: data.time,
-        location: data.location,
-      });
+    if (!data.patientId || !data.appointmentType || !data.startAt) {
+      console.warn("❌ Missing fields for appointment creation:", data);
       return res.status(400).json({
         success: false,
-        message: 'Missing required fields',
+        message: 'Missing required fields: patientId, appointmentType, startAt',
         errorCode: 1006,
       });
     }
 
-    // If admin, allow passing doctorId in body; otherwise doctorId is the logged-in user
-    const doctorId = isAdmin ? (data.doctorId || null) : userId;
+    let doctorId = data.doctorId;
+    if (!(role === 'admin' || role === 'superadmin')) {
+      doctorId = userId;
+    }
+    console.log("👨‍⚕️ Assigned doctorId:", doctorId);
 
     const appointmentData = {
+      patientId: data.patientId,
       doctorId,
-      patientId: data.patientId || null,
-      clientName: data.clientName,
       appointmentType: data.appointmentType,
-      date: data.date,
-      time: data.time,
-      location: data.location,
-      notes: data.notes,
-      phoneNumber: data.phoneNumber,
-      mode: data.mode,
-      priority: data.priority,
-      durationMinutes: data.durationMinutes,
-      reminder: data.reminder,
-      chiefComplaint: data.chiefComplaint,
-      vitals: data.vitals,
+      startAt: new Date(data.startAt),
+      endAt: data.endAt ? new Date(data.endAt) : null,
+      location: data.location || '',
       status: data.status || 'Scheduled',
+      vitals: data.vitals || {},
+      notes: data.notes || '',
+      metadata: data.metadata || {},
     };
-
-    console.log("📝 [CREATE] Appointment payload ready:", JSON.stringify(appointmentData, null, 2));
 
     let appointment = await Appointment.create(appointmentData);
+    console.log("✅ Appointment created:", appointment._id);
 
-    console.log('✅ [CREATE] Appointment created with ID:', appointment._id);
-
-    // populate patientId and doctorId for the response
     appointment = await Appointment.findById(appointment._id)
       .populate('patientId', 'firstName lastName phone email')
-      .populate('doctorId', 'firstName lastName name email')
+      .populate('doctorId', 'firstName lastName email')
       .lean();
 
-    const normalized = {
-      ...appointment,
-      doctor: extractDoctorName(appointment.doctorId),
-    };
+    const normalized = { ...appointment, doctor: extractDoctorName(appointment.doctorId) };
 
     res.status(201).json({
       success: true,
-      message: '✅ Appointment created successfully',
+      message: 'Appointment created successfully',
       appointment: normalized,
     });
   } catch (err) {
-    console.error('💥 [CREATE] Unexpected error while creating appointment:', err && err.message ? err.message : err);
-    console.error(err && err.stack ? err.stack : '');
-    res.status(500).json({
-      success: false,
-      message: 'Failed to create appointment',
-      errorCode: 5000,
-    });
+    console.error('💥 CREATE appointment error:', err);
+    res.status(500).json({ success: false, message: 'Failed to create appointment', errorCode: 5000 });
   }
 });
 
-// ===============================
+// -----------------------------
 // GET All Appointments
-// GET /api/appointments
-// - admin: returns all (optionally filtered by doctor query param)
-// - doctor: returns only appointments for that doctor
-// ===============================
+// -----------------------------
 router.get('/', auth, async (req, res) => {
+  console.log("📥 GET all appointments request, user:", req.user, "query:", req.query);
   try {
     const userId = req.user.id;
-    const isAdmin = String(userId).startsWith('admin');
-    console.log('📥 [GET ALL] Fetching appointments. User:', userId, 'isAdmin:', isAdmin);
-
+    const role = req.user.role;
     const { doctorId: doctorQuery } = req.query;
 
     let query = {};
-    if (isAdmin) {
-      // admin can optionally filter by doctor via ?doctorId=
+    if (role === 'admin' || role === 'superadmin') {
       if (doctorQuery) query.doctorId = doctorQuery;
-    } else {
-      // doctor only sees their own
+    } else if (role === 'doctor') {
       query.doctorId = userId;
     }
+    console.log("🔎 Appointment query:", query);
 
     const appointments = await Appointment.find(query)
       .populate('patientId', 'firstName lastName phone email')
-      .populate('doctorId', 'firstName lastName name email') // <-- populate doctor info
+      .populate('doctorId', 'firstName lastName email')
       .lean();
 
-    console.log(`📊 [GET ALL] Found ${appointments.length} appointments`);
+    console.log("✅ Found appointments:", appointments.length);
 
     const normalized = normalizeAppointments(appointments);
 
-    res.status(200).json({
-      success: true,
-      appointments: normalized,
-    });
+    res.status(200).json({ success: true, appointments: normalized });
   } catch (err) {
-    console.error('❌ [GET ALL] Error fetching appointments:', err);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch appointments',
-      errorCode: 5001,
-    });
+    console.error('💥 GET all appointments error:', err);
+    res.status(500).json({ success: false, message: 'Failed to fetch appointments', errorCode: 5001 });
   }
 });
 
-// ===============================
+// -----------------------------
 // GET Appointment by ID
-// GET /api/appointments/:id
-// - admin: can fetch any appointment
-// - doctor: can fetch only if appointment.doctorId === req.user.id
-// ===============================
+// -----------------------------
 router.get('/:id', auth, async (req, res) => {
+  console.log("📥 GET appointment by ID:", req.params.id, "user:", req.user);
   try {
     const userId = req.user.id;
-    const isAdmin = String(userId).startsWith('admin');
-    console.log('🔎 [GET BY ID] Appointment ID:', req.params.id, 'User:', userId, 'isAdmin:', isAdmin);
+    const role = req.user.role;
 
     let appointment = await Appointment.findById(req.params.id)
       .populate('patientId', 'firstName lastName phone email')
-      .populate('doctorId', 'firstName lastName name email') // <-- populate doctor info
+      .populate('doctorId', 'firstName lastName email')
       .lean();
 
     if (!appointment) {
-      console.warn('⚠️ [GET BY ID] Not found:', req.params.id);
-      return res.status(404).json({
-        success: false,
-        message: 'Appointment not found',
-        errorCode: 1007,
-      });
+      console.warn("❌ Appointment not found:", req.params.id);
+      return res.status(404).json({ success: false, message: 'Appointment not found', errorCode: 1007 });
     }
 
-    // if doctor, ensure ownership
-    if (!isAdmin && String(appointment.doctorId?._id ?? appointment.doctorId) !== String(userId)) {
-      console.warn('⛔ [GET BY ID] Forbidden - doctor trying to access others appointment', {
-        requestedBy: userId,
-        appointmentDoctor: appointment.doctorId,
-      });
-      return res.status(403).json({
-        success: false,
-        message: 'Forbidden',
-        errorCode: 1009,
-      });
+    if (role === 'doctor' && String(appointment.doctorId?._id ?? appointment.doctorId) !== String(userId)) {
+      console.warn("🚫 Forbidden access by doctor:", userId);
+      return res.status(403).json({ success: false, message: 'Forbidden', errorCode: 1009 });
     }
 
-    const normalized = {
-      ...appointment,
-      doctor: extractDoctorName(appointment.doctorId),
-    };
+    const normalized = { ...appointment, doctor: extractDoctorName(appointment.doctorId) };
+    console.log("✅ Appointment fetched:", appointment._id);
 
-    console.log('✅ [GET BY ID] Found appointment:', appointment._id);
-    res.status(200).json({
-      success: true,
-      appointment: normalized,
-    });
+    res.status(200).json({ success: true, appointment: normalized });
   } catch (err) {
-    console.error('❌ [GET BY ID] Error:', err);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch appointment',
-      errorCode: 5002,
-    });
+    console.error('💥 GET by ID error:', err);
+    res.status(500).json({ success: false, message: 'Failed to fetch appointment', errorCode: 5002 });
   }
 });
 
-// ===============================
+// -----------------------------
 // UPDATE Appointment Status
-// PATCH /api/appointments/:id/status
-// - admin: can update any
-// - doctor: only theirs
-// ===============================
+// -----------------------------
 router.patch('/:id/status', auth, async (req, res) => {
+  console.log("📥 PATCH status for appointment:", req.params.id, "body:", req.body, "user:", req.user);
   try {
     const userId = req.user.id;
-    const isAdmin = String(userId).startsWith('admin');
+    const role = req.user.role;
     const { status } = req.body;
-    console.log(`✏️ [STATUS UPDATE] ${req.params.id} → ${status} by ${userId}`);
 
     if (!status) {
-      console.warn('⚠️ [STATUS UPDATE] Missing status field');
-      return res.status(400).json({
-        success: false,
-        message: 'Status is required',
-        errorCode: 1008,
-      });
+      console.warn("❌ Missing status field");
+      return res.status(400).json({ success: false, message: 'Status is required', errorCode: 1008 });
     }
 
     const appointment = await Appointment.findById(req.params.id);
     if (!appointment) {
-      console.warn('⚠️ [STATUS UPDATE] Not found:', req.params.id);
-      return res.status(404).json({
-        success: false,
-        message: 'Appointment not found',
-        errorCode: 1007,
-      });
+      console.warn("❌ Appointment not found:", req.params.id);
+      return res.status(404).json({ success: false, message: 'Appointment not found', errorCode: 1007 });
     }
 
-    if (!isAdmin && String(appointment.doctorId) !== String(userId)) {
-      console.warn('⛔ [STATUS UPDATE] Forbidden - doctor trying to update others appointment', { userId, appointmentDoctor: appointment.doctorId });
+    if (role === 'doctor' && String(appointment.doctorId) !== String(userId)) {
+      console.warn("🚫 Doctor forbidden to update:", userId);
       return res.status(403).json({ success: false, message: 'Forbidden', errorCode: 1009 });
     }
 
     appointment.status = status;
-    appointment.updatedAt = Date.now();
     await appointment.save();
+    console.log("✅ Appointment status updated:", appointment._id, "→", status);
 
-    // populate for response
     const populated = await Appointment.findById(appointment._id)
       .populate('patientId', 'firstName lastName phone email')
-      .populate('doctorId', 'firstName lastName name email')
+      .populate('doctorId', 'firstName lastName email')
       .lean();
 
-    const normalized = {
-      ...populated,
-      doctor: extractDoctorName(populated.doctorId),
-    };
+    const normalized = { ...populated, doctor: extractDoctorName(populated.doctorId) };
 
-    console.log('✅ [STATUS UPDATE] Updated:', appointment._id, '→', appointment.status);
-    res.status(200).json({
-      success: true,
-      message: '✅ Appointment status updated',
-      appointment: normalized,
-    });
+    res.status(200).json({ success: true, message: 'Appointment status updated', appointment: normalized });
   } catch (err) {
-    console.error('❌ [STATUS UPDATE] Error:', err);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update appointment status',
-      errorCode: 5003,
-    });
+    console.error('💥 UPDATE status error:', err);
+    res.status(500).json({ success: false, message: 'Failed to update status', errorCode: 5003 });
   }
 });
 
-// ===============================
+// -----------------------------
 // DELETE Appointment
-// DELETE /api/appointments/:id
-// - admin: can delete any
-// - doctor: can delete only their own appointments
-// ===============================
+// -----------------------------
 router.delete('/:id', auth, async (req, res) => {
+  console.log("📥 DELETE appointment:", req.params.id, "user:", req.user);
   try {
     const userId = req.user.id;
-    const isAdmin = String(userId).startsWith('admin');
-    console.log('🗑️ [DELETE] Appointment ID:', req.params.id, 'User:', userId, 'isAdmin:', isAdmin);
+    const role = req.user.role;
 
     const appointment = await Appointment.findById(req.params.id);
     if (!appointment) {
-      console.warn('⚠️ [DELETE] Not found:', req.params.id);
-      return res.status(404).json({
-        success: false,
-        message: 'Appointment not found',
-        errorCode: 1007,
-      });
+      console.warn("❌ Appointment not found for deletion:", req.params.id);
+      return res.status(404).json({ success: false, message: 'Appointment not found', errorCode: 1007 });
     }
 
-    if (!isAdmin && String(appointment.doctorId) !== String(userId)) {
-      console.warn('⛔ [DELETE] Forbidden - doctor trying to delete others appointment', { userId, appointmentDoctor: appointment.doctorId });
+    if (role === 'doctor' && String(appointment.doctorId) !== String(userId)) {
+      console.warn("🚫 Doctor forbidden to delete:", userId);
       return res.status(403).json({ success: false, message: 'Forbidden', errorCode: 1009 });
     }
 
     await Appointment.findByIdAndDelete(req.params.id);
+    console.log("✅ Appointment deleted:", req.params.id);
 
-    console.log('✅ [DELETE] Appointment deleted:', req.params.id);
-    res.status(200).json({
-      success: true,
-      message: '🗑️ Appointment deleted successfully',
-    });
+    res.status(200).json({ success: true, message: 'Appointment deleted successfully' });
   } catch (err) {
-    console.error('❌ [DELETE] Error:', err);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to delete appointment',
-      errorCode: 5004,
-    });
+    console.error('💥 DELETE appointment error:', err);
+    res.status(500).json({ success: false, message: 'Failed to delete appointment', errorCode: 5004 });
   }
 });
 
-// ===============================
-// UPDATE Appointment (full edit)
-// PUT /api/appointments/:id
-// - admin: can edit any (and change doctorId if provided)
-// - doctor: can edit only theirs (cannot reassign doctorId)
-// ===============================
+// -----------------------------
+// FULL UPDATE Appointment
+// -----------------------------
 router.put('/:id', auth, async (req, res) => {
+  console.log("📥 PUT full update appointment:", req.params.id, "body:", req.body, "user:", req.user);
   try {
     const userId = req.user.id;
-    const isAdmin = String(userId).startsWith('admin');
-    console.log('✏️ [FULL UPDATE] Appointment ID:', req.params.id, 'User:', userId, 'isAdmin:', isAdmin);
-
+    const role = req.user.role;
     const data = req.body;
-    console.log('📦 [FULL UPDATE] Incoming data:', JSON.stringify(data, null, 2));
 
     const appointment = await Appointment.findById(req.params.id);
     if (!appointment) {
-      console.warn('⚠️ [FULL UPDATE] Not found:', req.params.id);
-      return res.status(404).json({
-        success: false,
-        message: 'Appointment not found',
-        errorCode: 1007,
-      });
+      console.warn("❌ Appointment not found:", req.params.id);
+      return res.status(404).json({ success: false, message: 'Appointment not found', errorCode: 1007 });
     }
 
-    if (!isAdmin && String(appointment.doctorId) !== String(userId)) {
-      console.warn('⛔ [FULL UPDATE] Forbidden - doctor trying to update others appointment', { userId, appointmentDoctor: appointment.doctorId });
+    if (role === 'doctor' && String(appointment.doctorId) !== String(userId)) {
+      console.warn("🚫 Doctor forbidden to update appointment:", userId);
       return res.status(403).json({ success: false, message: 'Forbidden', errorCode: 1009 });
     }
 
-    // Build update object. Admin may supply doctorId; doctor cannot reassign.
     const updateObj = {
-      clientName: data.clientName,
-      appointmentType: data.appointmentType,
-      date: data.date,
-      time: data.time,
-      location: data.location,
-      notes: data.notes,
-      gender: data.gender,
-      patientId: data.patientId || null,
-      phoneNumber: data.phoneNumber,
-      mode: data.mode,
-      priority: data.priority,
-      durationMinutes: data.durationMinutes,
-      reminder: data.reminder,
-      chiefComplaint: data.chiefComplaint,
-      heightCm: data.heightCm,
-      weightKg: data.weightKg,
-      bp: data.bp,
-      heartRate: data.heartRate,
-      spo2: data.spo2,
-      status: data.status || 'Scheduled',
-      updatedAt: Date.now(),
+      patientId: data.patientId || appointment.patientId,
+      appointmentType: data.appointmentType || appointment.appointmentType,
+      startAt: data.startAt ? new Date(data.startAt) : appointment.startAt,
+      endAt: data.endAt ? new Date(data.endAt) : appointment.endAt,
+      location: data.location ?? appointment.location,
+      status: data.status || appointment.status,
+      vitals: data.vitals ?? appointment.vitals,
+      notes: data.notes ?? appointment.notes,
+      metadata: data.metadata ?? appointment.metadata,
     };
 
-    // if admin and doctorId provided in body, allow reassign
-    if (isAdmin && data.doctorId) {
+    if ((role === 'admin' || role === 'superadmin') && data.doctorId) {
       updateObj.doctorId = data.doctorId;
     }
 
-    const updated = await Appointment.findByIdAndUpdate(req.params.id, updateObj, { new: true, runValidators: true });
-
-    if (!updated) {
-      console.warn('⚠️ [FULL UPDATE] Not found after update:', req.params.id);
-      return res.status(404).json({
-        success: false,
-        message: 'Appointment not found',
-        errorCode: 1007,
-      });
-    }
-
-    // populate for response
-    const populated = await Appointment.findById(updated._id)
+    const updated = await Appointment.findByIdAndUpdate(req.params.id, updateObj, { new: true, runValidators: true })
       .populate('patientId', 'firstName lastName phone email')
-      .populate('doctorId', 'firstName lastName name email')
+      .populate('doctorId', 'firstName lastName email')
       .lean();
 
-    const normalized = {
-      ...populated,
-      doctor: extractDoctorName(populated.doctorId),
-    };
+    const normalized = { ...updated, doctor: extractDoctorName(updated.doctorId) };
+    console.log("✅ Appointment updated successfully:", updated._id);
 
-    console.log('✅ [FULL UPDATE] Updated appointment:', updated._id);
-    res.status(200).json({
-      success: true,
-      message: '✅ Appointment updated successfully',
-      appointment: normalized,
-    });
+    res.status(200).json({ success: true, message: 'Appointment updated successfully', appointment: normalized });
   } catch (err) {
-    console.error('❌ [FULL UPDATE] Error:', err);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update appointment',
-      errorCode: 5005,
-    });
+    console.error('💥 FULL UPDATE error:', err);
+    res.status(500).json({ success: false, message: 'Failed to update appointment', errorCode: 5005 });
   }
 });
 

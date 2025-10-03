@@ -75,14 +75,19 @@ class AuthService {
         },
       );
 
-      final String token = response['token'];
-      final Map<String, dynamic> userData = response['user'];
+      // Backend now returns `accessToken`, `refreshToken`, `sessionId`, and `user`
+      final String accessToken = response['accessToken'] as String;
+      final Map<String, dynamic> userData = Map<String, dynamic>.from(response['user'] as Map);
 
-      await _saveToken(token);
+      // Save access token (and optionally refresh token if you have a helper)
+      await _saveToken(accessToken);
+
+      // If you keep refresh tokens client-side and have a helper, save it:
+      // if (response['refreshToken'] != null) await _saveRefreshToken(response['refreshToken']);
 
       final user = _parseUserRole(userData);
 
-      return AuthResult(user: user, token: token);
+      return AuthResult(user: user, token: accessToken);
     } on ApiException catch (e) {
       print('ApiException caught: ${e.message}');
       rethrow;
@@ -101,12 +106,16 @@ class AuthService {
         return null;
       }
 
+      // validate-token endpoint returns the user object directly (id, email, role, ...)
       final response = await _apiHandler.post(
         ApiEndpoints.validateToken().url,
         token: token,
       );
 
-      final user = _parseUserRole(response);
+      // response is the user object
+      final Map<String, dynamic> userData = Map<String, dynamic>.from(response as Map);
+
+      final user = _parseUserRole(userData);
 
       return AuthResult(user: user, token: token);
     } catch (e) {
@@ -114,10 +123,41 @@ class AuthService {
     }
   }
 
+
   /// Signs the user out by clearing their session token.
   Future<void> signOut() async {
     await _clearToken();
   }
+
+
+  Future<List<PatientDetails>> fetchDoctorPatients() async {
+    try {
+      final token = await _getToken();
+      if (token == null) throw ApiException("Not logged in");
+
+      final response = await _apiHandler.get(
+        ApiEndpoints.getDoctorPatients().url,
+        token: token,
+      );
+
+      List data;
+      if (response is List) {
+        data = response;
+      } else if (response is Map && response.containsKey('patients')) {
+        data = response['patients'] as List;
+      } else {
+        throw ApiException("Unexpected response format: $response");
+      }
+
+      return data.map((json) => PatientDetails.fromMap(json)).toList();
+    } catch (e) {
+      print("❌ Failed to fetch doctor patients: $e");
+      rethrow;
+    }
+  }
+
+
+
 
   // -------------------- Appointments (existing methods) --------------------
 
@@ -137,8 +177,28 @@ class AuthService {
         body: draft.toJson(),
       );
 
-      print("✅ Appointment created successfully: $response");
-      return true;
+      // Backend returns: { success: true, message: '...', appointment: {...} }
+      if (response is Map && response.containsKey('success')) {
+        if (response['success'] == true) {
+          final created = response['appointment'];
+          print("✅ Appointment created successfully: $created");
+          // Optionally return the created appointment object instead of bool
+          return true;
+        } else {
+          print("❌ Failed to create appointment: ${response['message']}");
+          return false;
+        }
+      }
+
+      // If backend returns the raw appointment object
+      if (response is Map && response.containsKey('_id')) {
+        print("✅ Appointment created (raw): $response");
+        return true;
+      }
+
+      // Unexpected format
+      print("⚠️ Unexpected response format when creating appointment: $response");
+      return false;
     } on ApiException catch (e) {
       print("❌ API Exception while creating appointment: ${e.message}");
       return false;
@@ -160,12 +220,15 @@ class AuthService {
         token: token,
       );
 
-      // ✅ handle both `{ appointments: [...] }` and raw `[...]`
+      // handle both `{ appointments: [...] }` and raw `[...]`
       List data;
       if (response is List) {
         data = response;
       } else if (response is Map && response.containsKey('appointments')) {
         data = response['appointments'] as List;
+      } else if (response is Map && response.containsKey('data') && response['data'] is List) {
+        // Some backends wrap payload under `data`
+        data = response['data'] as List;
       } else {
         throw ApiException("Unexpected response format: $response");
       }
@@ -189,13 +252,20 @@ class AuthService {
         token: token,
       );
 
-      if (response['success'] == true) {
-        print("✅ Appointment $appointmentId deleted successfully");
-        return true;
-      } else {
-        print("❌ Failed to delete appointment: ${response['message']}");
-        return false;
+      // Backend returns { success: true, message: '...' }
+      if (response is Map && response.containsKey('success')) {
+        if (response['success'] == true) {
+          print("✅ Appointment $appointmentId deleted successfully");
+          return true;
+        } else {
+          print("❌ Failed to delete appointment: ${response['message']}");
+          return false;
+        }
       }
+
+      // Some backends return status code only or an empty body; treat non-null as success
+      print("⚠️ Unexpected delete response format, treating as success: $response");
+      return true;
     } catch (e) {
       print("💥 Error deleting appointment: $e");
       rethrow;
@@ -215,7 +285,17 @@ class AuthService {
         token: token,
       );
 
-      return response["success"] == true || response["status"] == 200;
+      // backend returns { success: true, appointment: {...} } or { success: true }
+      if (response is Map) {
+        if (response['success'] == true) return true;
+        // some APIs return HTTP-like status property
+        if (response['status'] == 200) return true;
+        print("❌ Failed to edit appointment: ${response['message'] ?? response}");
+        return false;
+      }
+
+      // unexpected but non-null response -> assume success
+      return true;
     } catch (e) {
       print("❌ Failed to edit appointment: $e");
       rethrow;
@@ -236,10 +316,17 @@ class AuthService {
 
       print("📦 API response for appointment $id: $response");
 
-      // unwrap `{ appointment: {...} }`
-      final data = (response is Map && response.containsKey('appointment'))
-          ? response['appointment']
-          : response;
+      // unwrap `{ appointment: {...} }` or `{ success: true, appointment: {...} }`
+      dynamic data;
+      if (response is Map && response.containsKey('appointment')) {
+        data = response['appointment'];
+      } else if (response is Map && response.containsKey('data')) {
+        data = response['data'];
+      } else {
+        data = response;
+      }
+
+      if (data == null) throw ApiException("Appointment not found in response: $response");
 
       return AppointmentDraft.fromJson(data);
     } catch (e) {
@@ -1081,5 +1168,23 @@ class AuthService {
       throw ApiException('Invalid user role received from server.');
     }
   }
+
+
+  /// Add intake for a specific patient. patientId is required.
+  Future<dynamic> addIntake(Map<String, dynamic> payload, {required String patientId}) async {
+    if (patientId.trim().isEmpty) throw ApiException('patientId is required');
+
+    return await _withAuth<dynamic>((token) async {
+      final api = ApiEndpoints.addIntake(patientId);
+      final response = await _apiHandler.post(api.url, token: token, body: payload);
+
+      // Normalize typical response shapes
+      if (response is Map && (response.containsKey('data') || response.containsKey('intake'))) {
+        return response['data'] ?? response['intake'];
+      }
+      return response;
+    });
+  }
+
 
 }

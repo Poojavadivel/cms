@@ -40,11 +40,6 @@ class _AdminRootPageState extends State<AdminRootPage> {
         'screen': const DashboardPage(),
       },
       {
-        'icon': Iconsax.profile_2user,
-        'label': 'Staff',
-        'screen': const StaffScreen(),
-      },
-      {
         'icon': Iconsax.calendar,
         'label': 'Appointments',
         'screen': const AdminAppointmentsScreen(),
@@ -54,6 +49,13 @@ class _AdminRootPageState extends State<AdminRootPage> {
         'label': 'Patients',
         'screen': const PatientsScreen(),
       },
+      {
+        'icon': Iconsax.profile_2user,
+        'label': 'Staff',
+        'screen': const StaffScreen(),
+      },
+
+
       {
         'icon': Icons.receipt_long_rounded,
         'label': 'Payroll',

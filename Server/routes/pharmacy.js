@@ -4,16 +4,16 @@ const router = express.Router();
 const auth = require('../Middleware/Auth');
 const mongoose = require('mongoose');
 
-// single models import - adjust path if your models file is elsewhere
-const models = require('../Models/models');
+// Use the models file you provided earlier (models_core.js)
+const {
+  Medicine,
+  MedicineBatch,
+  PharmacyRecord,
+  Patient,
+  Appointment
+} = require('../Models/models');
 
-// Defensive extraction with helpful console logs
-const Medicine = models && models.Medicine;
-const MedicineBatch = models && models.MedicineBatch;
-const PharmacyRecord = models && models.PharmacyRecord;
-const Patient = models && models.Patient;
-
-function requireAdmin(req, res) {
+function requireAdminOrPharmacist(req, res) {
   const role = req.user && req.user.role;
   if (!role || (role !== 'admin' && role !== 'pharmacist' && role !== 'superadmin')) {
     console.log('⛔ [AUTH] Access denied. Required role admin/pharmacist. User role:', role, 'userId:', req.user?.id);
@@ -39,10 +39,9 @@ const maybeNull = (v) => {
   return v;
 };
 
-// Utility: ensure a model exists and respond with helpful error if not.
 function ensureModel(model, name, res) {
   if (!model) {
-    console.error(`❌ [MODEL MISSING] ${name} is undefined. Check exports in Models/models.js and require path.`);
+    console.error(`❌ [MODEL MISSING] ${name} is undefined. Check exports in Models/models_core and require path.`);
     if (res) {
       res.status(500).json({ success: false, message: `Server misconfiguration: ${name} model not available`, errorCode: 7001 });
     }
@@ -51,25 +50,11 @@ function ensureModel(model, name, res) {
   return true;
 }
 
-// Utility: normalize array of ids into ObjectId list (handles strings and ObjectId)
-function normalizeIdsToObjectIds(arr) {
-  return arr
-    .filter(Boolean)
-    .map((id) => {
-      try {
-        // If it's already an ObjectId instance, return as-is
-        if (id instanceof mongoose.Types.ObjectId) return id;
-        // try converting string/hex to ObjectId
-        return mongoose.Types.ObjectId(id);
-      } catch (_) {
-        // fallback: skip invalid ids
-        return null;
-      }
-    })
-    .filter(Boolean);
-}
-
-// ------------------ ROUTES ------------------
+/**
+ * ------------------
+ * MEDICINES
+ * ------------------
+ */
 
 // CREATE Medicine
 router.post('/medicines', auth, async (req, res) => {
@@ -78,39 +63,47 @@ router.post('/medicines', auth, async (req, res) => {
 
     console.log('📩 [MEDICINE CREATE] Incoming payload:', req.body, 'by user:', req.user?.id);
     const data = req.body || {};
-    if (!data.sku || !data.name) {
-      console.log('⚠️ [MEDICINE CREATE] Missing sku or name in payload.');
+    if (!data.name) {
+      console.log('⚠️ [MEDICINE CREATE] Missing name in payload.');
       return res.status(400).json({
         success: false,
-        message: 'Missing required fields: sku, name',
+        message: 'Missing required field: name',
         errorCode: 6001,
       });
     }
 
-    const exists = await Medicine.findOne({ sku: data.sku }).lean();
-    if (exists) {
-      console.log('⚠️ [MEDICINE CREATE] Duplicate SKU attempt:', data.sku);
-      return res.status(409).json({
-        success: false,
-        message: 'Medicine with this SKU already exists',
-        errorCode: 6003,
-      });
+    // If SKU is provided, try to avoid duplicates. SKU is optional in your schema.
+    if (data.sku) {
+      const exists = await Medicine.findOne({ sku: data.sku }).lean();
+      if (exists) {
+        console.log('⚠️ [MEDICINE CREATE] Duplicate SKU attempt:', data.sku);
+        return res.status(409).json({
+          success: false,
+          message: 'Medicine with this SKU already exists',
+          errorCode: 6003,
+        });
+      }
     }
 
     const med = await Medicine.create({
-      sku: data.sku,
       name: data.name,
-      brand: maybeNull(data.brand),
-      description: maybeNull(data.description),
-      category: maybeNull(data.category),
-      units: maybeNull(data.units) || 'tablet',
-      taxPercent: toNumberOrNull(data.taxPercent) ?? 0,
-      reorderLevel: toNumberOrNull(data.reorderLevel) ?? 0,
+      genericName: maybeNull(data.genericName),
+      sku: maybeNull(data.sku),
+      form: maybeNull(data.form) || 'Tablet',
+      strength: maybeNull(data.strength) || '',
+      unit: maybeNull(data.unit) || 'pcs',
+      manufacturer: maybeNull(data.manufacturer) || '',
+      brand: maybeNull(data.brand) || '',
+      category: maybeNull(data.category) || '',
+      description: maybeNull(data.description) || '',
+      status: data.status || 'In Stock',
+      metadata: data.metadata || {},
+      deleted_at: null,
       createdAt: Date.now(),
       updatedAt: Date.now(),
     });
 
-    console.log('✅ [MEDICINE CREATE] Created medicine:', med._id, med.sku);
+    console.log('✅ [MEDICINE CREATE] Created medicine:', med._id, med.name);
     return res.status(201).json(med);
   } catch (err) {
     console.error('💥 [MEDICINE CREATE] Error:', err);
@@ -149,43 +142,31 @@ router.get('/medicines', auth, async (req, res) => {
     // If MedicineBatch model missing, skip batch/stock enrichment but log it
     if (!MedicineBatch) {
       console.warn('⚠️ [PHARMACY MEDICINES] MedicineBatch model not available - skipping stock calculations.');
-      console.log(`📦 [PHARMACY MEDICINES] returning ${items.length} medicines (page ${page}, limit ${limit})`);
       if (wantMeta) {
         return res.status(200).json({ success: true, medicines: items, total, page, limit });
       }
       return res.status(200).json(items);
     }
 
-    // convert medIds robustly (handles both ObjectId and string)
-    const medIds = items.map((m) => m._id).filter(Boolean);
-    const medObjectIds = normalizeIdsToObjectIds(medIds);
+    // get all medicineIds as strings
+    const medIds = items.map((m) => String(m._id)).filter(Boolean);
 
     if (lowStock) {
       console.log('🔎 [PHARMACY MEDICINES] Low-stock filter active.');
-      if (medObjectIds.length === 0) {
-        // nothing to check
+      if (medIds.length === 0) {
         items = [];
       } else {
-        // prefer aggregate if available
-        let agg = null;
-        if (typeof MedicineBatch.aggregate === 'function') {
-          agg = await MedicineBatch.aggregate([
-            { $match: { medicineId: { $in: medObjectIds } } },
-            { $group: { _id: '$medicineId', qty: { $sum: '$quantity' } } },
-          ]);
-        } else {
-          // fallback to grouping with find()
-          const batches = await MedicineBatch.find({ medicineId: { $in: medObjectIds } }).lean();
-          const map = {};
-          batches.forEach(b => { const mid = (b.medicineId || '').toString(); map[mid] = (map[mid] || 0) + (b.quantity || 0); });
-          agg = Object.keys(map).map(k => ({ _id: mongoose.Types.ObjectId(k), qty: map[k] }));
-        }
+        // aggregate batch quantities grouped by medicineId (medicineId is a string)
+        const agg = await MedicineBatch.aggregate([
+          { $match: { medicineId: { $in: medIds } } },
+          { $group: { _id: '$medicineId', qty: { $sum: '$quantity' } } },
+        ]);
 
         const qtyMap = {};
-        agg.forEach((a) => { qtyMap[a._id.toString()] = a.qty; });
+        agg.forEach((a) => { qtyMap[String(a._id)] = a.qty; });
 
         items = items.filter((m) => {
-          const stock = qtyMap[(m._id || '').toString()] ?? 0;
+          const stock = qtyMap[String(m._id)] ?? 0;
           const reorder = m.reorderLevel ?? 0;
           return stock <= reorder;
         });
@@ -193,31 +174,19 @@ router.get('/medicines', auth, async (req, res) => {
         console.log(`🔔 [PHARMACY MEDICINES] lowStock filtered results: ${items.length}`);
       }
     } else {
-      // normal path: enrich items with availableQty if any batches
-      if (medObjectIds.length > 0) {
-        let agg = null;
-        if (typeof MedicineBatch.aggregate === 'function') {
-          agg = await MedicineBatch.aggregate([
-            { $match: { medicineId: { $in: medObjectIds } } },
-            { $group: { _id: '$medicineId', qty: { $sum: '$quantity' } } },
-          ]);
-        } else {
-          const batches = await MedicineBatch.find({ medicineId: { $in: medObjectIds } }).lean();
-          const map = {};
-          batches.forEach(b => { const mid = (b.medicineId || '').toString(); map[mid] = (map[mid] || 0) + (b.quantity || 0); });
-          agg = Object.keys(map).map(k => ({ _id: mongoose.Types.ObjectId(k), qty: map[k] }));
-        }
-
+      if (medIds.length > 0) {
+        const agg = await MedicineBatch.aggregate([
+          { $match: { medicineId: { $in: medIds } } },
+          { $group: { _id: '$medicineId', qty: { $sum: '$quantity' } } },
+        ]);
         const qtyMap = {};
-        agg.forEach((a) => { qtyMap[a._id.toString()] = a.qty; });
-        items = items.map((m) => ({ ...m, availableQty: qtyMap[(m._id || '').toString()] ?? 0 }));
+        agg.forEach((a) => { qtyMap[String(a._id)] = a.qty; });
+        items = items.map((m) => ({ ...m, availableQty: qtyMap[String(m._id)] ?? 0 }));
       }
-
       console.log(`📦 [PHARMACY MEDICINES] returning ${items.length} medicines (page ${page}, limit ${limit})`);
     }
 
     if (wantMeta) {
-      console.log('📣 [PHARMACY MEDICINES] returning meta wrapper, total:', total);
       return res.status(200).json({
         success: true,
         medicines: items,
@@ -250,12 +219,11 @@ router.get('/medicines/:id', auth, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Medicine not found', errorCode: 6007 });
     }
 
-    // If MedicineBatch model missing, just return medicine without batches
     if (!MedicineBatch) {
       med.batches = [];
       med.availableQty = 0;
     } else {
-      const batches = await MedicineBatch.find({ medicineId: med._id }).lean();
+      const batches = await MedicineBatch.find({ medicineId: String(med._id) }).lean();
       med.batches = batches;
       med.availableQty = batches.reduce((s, b) => s + (b.quantity || 0), 0);
     }
@@ -274,17 +242,18 @@ router.put('/medicines/:id', auth, async (req, res) => {
   try {
     if (!ensureModel(Medicine, 'Medicine', res)) return;
     console.log('✏️ [MEDICINE UPDATE] id:', req.params.id, 'payload:', req.body, 'by user:', req.user?.id);
-    if (!requireAdmin(req, res)) return;
+    if (!requireAdminOrPharmacist(req, res)) return;
 
     const data = req.body || {};
     const update = { updatedAt: Date.now() };
 
     if (Object.prototype.hasOwnProperty.call(data, 'name')) update.name = maybeNull(data.name);
+    if (Object.prototype.hasOwnProperty.call(data, 'genericName')) update.genericName = maybeNull(data.genericName);
     if (Object.prototype.hasOwnProperty.call(data, 'brand')) update.brand = maybeNull(data.brand);
     if (Object.prototype.hasOwnProperty.call(data, 'description')) update.description = maybeNull(data.description);
     if (Object.prototype.hasOwnProperty.call(data, 'category')) update.category = maybeNull(data.category);
-    if (Object.prototype.hasOwnProperty.call(data, 'units')) update.units = maybeNull(data.units);
-    if (Object.prototype.hasOwnProperty.call(data, 'taxPercent')) update.taxPercent = toNumberOrNull(data.taxPercent) ?? 0;
+    if (Object.prototype.hasOwnProperty.call(data, 'unit')) update.unit = maybeNull(data.unit);
+    if (Object.prototype.hasOwnProperty.call(data, 'status')) update.status = maybeNull(data.status);
     if (Object.prototype.hasOwnProperty.call(data, 'reorderLevel')) update.reorderLevel = toNumberOrNull(data.reorderLevel) ?? 0;
 
     const updated = await Medicine.findByIdAndUpdate(req.params.id, update, { new: true, runValidators: true });
@@ -308,10 +277,10 @@ router.delete('/medicines/:id', auth, async (req, res) => {
     if (!ensureModel(MedicineBatch, 'MedicineBatch', res)) return;
     if (!ensureModel(PharmacyRecord, 'PharmacyRecord', res)) return;
     console.log('🗑️ [MEDICINE DELETE] id:', req.params.id, 'requestedBy:', req.user?.id);
-    if (!requireAdmin(req, res)) return;
+    if (!requireAdminOrPharmacist(req, res)) return;
 
-    const batchesCount = await MedicineBatch.countDocuments({ medicineId: req.params.id });
-    const recordsCount = await PharmacyRecord.countDocuments({ 'items.medicineId': req.params.id });
+    const batchesCount = await MedicineBatch.countDocuments({ medicineId: String(req.params.id) });
+    const recordsCount = await PharmacyRecord.countDocuments({ 'items.medicineId': String(req.params.id) });
 
     if (batchesCount > 0 || recordsCount > 0) {
       console.log('⚠️ [MEDICINE DELETE] Prevent delete: batchesCount=', batchesCount, 'recordsCount=', recordsCount);
@@ -328,7 +297,7 @@ router.delete('/medicines/:id', auth, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Medicine not found', errorCode: 6007 });
     }
 
-    console.log('✅ [MEDICINE DELETE] deleted:', deleted._id, deleted.sku);
+    console.log('✅ [MEDICINE DELETE] deleted:', deleted._id, deleted.name);
     return res.status(200).json({ success: true, message: 'Medicine deleted successfully', deletedId: deleted._id });
   } catch (err) {
     console.error('❌ [MEDICINE DELETE] Error:', err);
@@ -336,13 +305,19 @@ router.delete('/medicines/:id', auth, async (req, res) => {
   }
 });
 
+/**
+ * ------------------
+ * BATCHES
+ * ------------------
+ */
+
 // CREATE Batch
 router.post('/batches', auth, async (req, res) => {
   try {
     if (!ensureModel(Medicine, 'Medicine', res)) return;
     if (!ensureModel(MedicineBatch, 'MedicineBatch', res)) return;
     console.log('📩 [BATCH CREATE] payload:', req.body, 'by user:', req.user?.id);
-    if (!requireAdmin(req, res)) return;
+    if (!requireAdminOrPharmacist(req, res)) return;
 
     const data = req.body || {};
     if (!data.medicineId || toNumberOrNull(data.quantity) === null) {
@@ -350,28 +325,29 @@ router.post('/batches', auth, async (req, res) => {
       return res.status(400).json({ success: false, message: 'medicineId and quantity are required', errorCode: 6101 });
     }
 
-    const med = await Medicine.findById(data.medicineId);
+    const med = await Medicine.findById(String(data.medicineId));
     if (!med) {
       console.log('⚠️ [BATCH CREATE] Medicine not found:', data.medicineId);
       return res.status(404).json({ success: false, message: 'Medicine not found', errorCode: 6102 });
     }
 
     const batch = await MedicineBatch.create({
-      medicineId: med._id,
-      batchNumber: maybeNull(data.batchNumber) || undefined,
-      expiryDate: data.expiryDate ? new Date(data.expiryDate) : undefined,
+      medicineId: String(med._id),
+      batchNumber: maybeNull(data.batchNumber) || '',
+      expiryDate: data.expiryDate ? new Date(data.expiryDate) : null,
       quantity: toNumberOrNull(data.quantity) ?? 0,
-      purchasePrice: toNumberOrNull(data.purchasePrice),
-      salePrice: toNumberOrNull(data.salePrice),
-      supplier: maybeNull(data.supplier),
-      location: maybeNull(data.location),
+      purchasePrice: toNumberOrNull(data.purchasePrice) ?? 0,
+      salePrice: toNumberOrNull(data.salePrice) ?? 0,
+      supplier: maybeNull(data.supplier) || '',
+      location: maybeNull(data.location) || '',
+      metadata: data.metadata || {},
       createdAt: Date.now(),
       updatedAt: Date.now(),
     });
 
     console.log('✅ [BATCH CREATE] created batch:', batch._id, 'medicine:', med._id, 'qty:', batch.quantity);
 
-    // create a PharmacyRecord if PharmacyRecord model exists
+    // Optionally create a PharmacyRecord for receiving purchase
     if (PharmacyRecord) {
       const record = await PharmacyRecord.create({
         type: 'PurchaseReceive',
@@ -386,20 +362,21 @@ router.post('/batches', auth, async (req, res) => {
             name: med.name,
             quantity: batch.quantity,
             unitPrice: batch.purchasePrice || 0,
-            taxPercent: med.taxPercent || 0,
+            taxPercent: med.metadata?.taxPercent ?? 0,
             lineTotal: ((batch.purchasePrice || 0) * (batch.quantity || 0)),
+            metadata: {},
           },
         ],
         total: ((batch.purchasePrice || 0) * (batch.quantity || 0)),
         paid: true,
         paymentMethod: data.paymentMethod || null,
         notes: data.notes || null,
+        metadata: data.meta || {},
         createdAt: Date.now(),
       });
       console.log('✅ [BATCH CREATE] recorded purchase as PharmacyRecord:', record._id);
       return res.status(201).json({ success: true, batch, record });
     } else {
-      console.log('⚠️ [BATCH CREATE] PharmacyRecord model missing - batch created without record.');
       return res.status(201).json({ success: true, batch });
     }
   } catch (err) {
@@ -420,13 +397,7 @@ router.get('/batches', auth, async (req, res) => {
     const limit = Math.min(200, Math.max(1, parseInt(req.query.limit || '50', 10)));
 
     const filter = {};
-    if (medicineId) {
-      try {
-        filter.medicineId = mongoose.Types.ObjectId(medicineId);
-      } catch (_) {
-        filter.medicineId = medicineId; // fallback if not convertible
-      }
-    }
+    if (medicineId) filter.medicineId = String(medicineId);
     if (expiryBefore || expiryAfter) {
       filter.expiryDate = {};
       if (expiryBefore) filter.expiryDate.$lte = expiryBefore;
@@ -450,19 +421,19 @@ router.put('/batches/:id', auth, async (req, res) => {
   try {
     if (!ensureModel(MedicineBatch, 'MedicineBatch', res)) return;
     console.log('✏️ [BATCH UPDATE] id:', req.params.id, 'payload:', req.body, 'by user:', req.user?.id);
-    if (!requireAdmin(req, res)) return;
+    if (!requireAdminOrPharmacist(req, res)) return;
 
     const data = req.body || {};
     const update = { updatedAt: Date.now() };
     if (Object.prototype.hasOwnProperty.call(data, 'batchNumber')) update.batchNumber = maybeNull(data.batchNumber);
-    if (Object.prototype.hasOwnProperty.call(data, 'expiryDate')) update.expiryDate = data.expiryDate ? new Date(data.expiryDate) : undefined;
+    if (Object.prototype.hasOwnProperty.call(data, 'expiryDate')) update.expiryDate = data.expiryDate ? new Date(data.expiryDate) : null;
     if (Object.prototype.hasOwnProperty.call(data, 'purchasePrice')) update.purchasePrice = toNumberOrNull(data.purchasePrice);
     if (Object.prototype.hasOwnProperty.call(data, 'salePrice')) update.salePrice = toNumberOrNull(data.salePrice);
     if (Object.prototype.hasOwnProperty.call(data, 'supplier')) update.supplier = maybeNull(data.supplier);
     if (Object.prototype.hasOwnProperty.call(data, 'location')) update.location = maybeNull(data.location);
     if (Object.prototype.hasOwnProperty.call(data, 'quantity')) update.quantity = toNumberOrNull(data.quantity) ?? 0;
 
-    const updated = await MedicineBatch.findByIdAndUpdate(req.params.id, update, { new: true, runValidators: true });
+    const updated = await MedicineBatch.findByIdAndUpdate(String(req.params.id), update, { new: true, runValidators: true });
     if (!updated) {
       console.warn('⚠️ [BATCH UPDATE] Not found:', req.params.id);
       return res.status(404).json({ success: false, message: 'Batch not found', errorCode: 6103 });
@@ -481,9 +452,9 @@ router.delete('/batches/:id', auth, async (req, res) => {
   try {
     if (!ensureModel(MedicineBatch, 'MedicineBatch', res)) return;
     console.log('🗑️ [BATCH DELETE] id:', req.params.id, 'requestedBy:', req.user?.id);
-    if (!requireAdmin(req, res)) return;
+    if (!requireAdminOrPharmacist(req, res)) return;
 
-    const deleted = await MedicineBatch.findByIdAndDelete(req.params.id);
+    const deleted = await MedicineBatch.findByIdAndDelete(String(req.params.id));
     if (!deleted) {
       console.warn('⚠️ [BATCH DELETE] Not found:', req.params.id);
       return res.status(404).json({ success: false, message: 'Batch not found', errorCode: 6103 });
@@ -497,7 +468,11 @@ router.delete('/batches/:id', auth, async (req, res) => {
   }
 });
 
-// DISPENSE (records/transactional)
+/**
+ * ------------------
+ * DISPENSE (transactional)
+ * ------------------
+ */
 router.post('/records/dispense', auth, async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -505,22 +480,19 @@ router.post('/records/dispense', auth, async (req, res) => {
     if (!ensureModel(Medicine, 'Medicine', res)) return;
     if (!ensureModel(MedicineBatch, 'MedicineBatch', res)) return;
     if (!ensureModel(PharmacyRecord, 'PharmacyRecord', res)) return;
-    if (!ensureModel(Patient, 'Patient', res) && req.body.patientId) return;
 
     console.log('📩 [DISPENSE] payload:', req.body, 'by user:', req.user?.id);
     const data = req.body || {};
     const items = Array.isArray(data.items) ? data.items : [];
     if (!items.length) {
-      console.log('⚠️ [DISPENSE] No items provided.');
       await session.abortTransaction();
       session.endSession();
       return res.status(400).json({ success: false, message: 'No items provided', errorCode: 6201 });
     }
 
     if (data.patientId) {
-      const patientExists = await Patient.findById(data.patientId).session(session);
+      const patientExists = await Patient.findById(String(data.patientId)).session(session);
       if (!patientExists) {
-        console.log('⚠️ [DISPENSE] Patient not found:', data.patientId);
         await session.abortTransaction();
         session.endSession();
         return res.status(404).json({ success: false, message: 'Patient not found', errorCode: 6202 });
@@ -531,72 +503,70 @@ router.post('/records/dispense', auth, async (req, res) => {
     let grandTotal = 0;
 
     for (const it of items) {
-      const medId = it.medicineId;
+      const medId = String(it.medicineId || '');
       const reqQty = Math.max(0, Number(it.quantity || 0));
       if (!medId || reqQty <= 0) {
-        console.log('⚠️ [DISPENSE] Invalid item:', it);
         await session.abortTransaction();
         session.endSession();
         return res.status(400).json({ success: false, message: 'Invalid item: medicineId & positive quantity required', errorCode: 6203 });
       }
 
       if (it.batchId) {
-        console.log('🔁 [DISPENSE] Dispensing from specific batch:', it.batchId, 'medicine:', medId, 'qty:', reqQty);
-        const batch = await MedicineBatch.findOne({ _id: it.batchId, medicineId: medId }).session(session);
+        const batch = await MedicineBatch.findOne({ _id: String(it.batchId), medicineId: medId }).session(session);
         if (!batch) {
-          console.log('⚠️ [DISPENSE] Batch not found for item:', it.batchId);
           await session.abortTransaction();
           session.endSession();
           return res.status(404).json({ success: false, message: `Batch not found for item`, errorCode: 6204 });
         }
-        if (batch.quantity < reqQty) {
-          console.log('⚠️ [DISPENSE] Insufficient quantity in batch. available:', batch.quantity, 'requested:', reqQty);
+        if ((batch.quantity || 0) < reqQty) {
           await session.abortTransaction();
           session.endSession();
           return res.status(400).json({ success: false, message: `Insufficient quantity in batch ${batch._id}`, errorCode: 6205 });
         }
 
-        batch.quantity = batch.quantity - reqQty;
+        batch.quantity = (batch.quantity || 0) - reqQty;
         batch.updatedAt = Date.now();
         await batch.save({ session });
 
-        const med = await Medicine.findById(medId).session(session);
+        const med = await Medicine.findById(String(medId)).session(session);
         const unitPrice = toNumberOrNull(it.unitPrice) ?? (batch.salePrice ?? 0);
-        const taxPercent = med?.taxPercent ?? 0;
-        const lineTotal = (unitPrice * reqQty);
+        const taxPercent = med?.metadata?.taxPercent ?? 0;
+        const lineTotal = unitPrice * reqQty;
 
         recordItems.push({
           medicineId: medId,
-          batchId: batch._id,
+          batchId: String(batch._id),
           sku: med?.sku ?? null,
           name: med?.name ?? null,
           quantity: reqQty,
           unitPrice,
           taxPercent,
           lineTotal,
+          metadata: it.metadata || {},
         });
         grandTotal += lineTotal;
       } else {
-        console.log('🔎 [DISPENSE] Auto-picking batches for medicine:', medId, 'qty:', reqQty);
+        // auto-pick batches (FEFO)
         let remaining = reqQty;
         const candidateBatches = await MedicineBatch.find({ medicineId: medId, quantity: { $gt: 0 } })
-          .sort({ expiryDate: 1, createdAt: 1 }).session(session);
+          .sort({ expiryDate: 1, createdAt: 1 })
+          .session(session);
 
         if (!candidateBatches || candidateBatches.length === 0) {
-          console.log('⚠️ [DISPENSE] No available batches for medicine:', medId);
           await session.abortTransaction();
           session.endSession();
           return res.status(400).json({ success: false, message: `No available batches for medicine ${medId}`, errorCode: 6206 });
         }
 
-        const med = await Medicine.findById(medId).session(session);
+        const med = await Medicine.findById(String(medId)).session(session);
         const unitPriceFallback = candidateBatches[0].salePrice ?? 0;
-        const taxPercent = med?.taxPercent ?? 0;
+        const taxPercent = med?.metadata?.taxPercent ?? 0;
 
         for (const batch of candidateBatches) {
           if (remaining <= 0) break;
-          const useQty = Math.min(remaining, batch.quantity);
-          batch.quantity = batch.quantity - useQty;
+          const useQty = Math.min(remaining, batch.quantity || 0);
+          if (useQty <= 0) continue;
+          batch.quantity = (batch.quantity || 0) - useQty;
           batch.updatedAt = Date.now();
           await batch.save({ session });
 
@@ -604,55 +574,60 @@ router.post('/records/dispense', auth, async (req, res) => {
           const lineTotal = unitPrice * useQty;
           recordItems.push({
             medicineId: medId,
-            batchId: batch._id,
+            batchId: String(batch._id),
             sku: med?.sku ?? null,
             name: med?.name ?? null,
             quantity: useQty,
             unitPrice,
             taxPercent,
             lineTotal,
+            metadata: it.metadata || {},
           });
           grandTotal += lineTotal;
           remaining -= useQty;
         }
 
         if (remaining > 0) {
-          console.log('⚠️ [DISPENSE] Could not fulfill quantity for medicine:', medId, 'remaining:', remaining);
           await session.abortTransaction();
           session.endSession();
-          return res.status(400).json({ success: false, message: `Insufficient stock to fulfill requested quantity for medicine ${medId}`, errorCode: 6207 });
+          return res.status(400).json({ success: false, message: `Insufficient stock to fulfill medicine ${medId}`, errorCode: 6207 });
         }
       }
-    }
+    } // end for items
 
-    console.log('🧾 [DISPENSE] Creating PharmacyRecord with items count:', recordItems.length, 'grandTotal:', grandTotal);
-    const recordArr = await PharmacyRecord.create([{
+    // create pharmacy record
+    const createdRecords = await PharmacyRecord.create([{
       type: 'Dispense',
-      patientId: maybeNull(data.patientId),
-      appointmentId: maybeNull(data.appointmentId),
+      patientId: maybeNull(data.patientId) || null,
+      appointmentId: maybeNull(data.appointmentId) || null,
       createdBy: req.user?.id || '',
       items: recordItems,
       total: grandTotal,
       paid: data.paid === true,
-      paymentMethod: maybeNull(data.paymentMethod),
-      notes: maybeNull(data.notes),
+      paymentMethod: maybeNull(data.paymentMethod) || null,
+      notes: maybeNull(data.notes) || null,
+      metadata: data.metadata || {},
       createdAt: Date.now(),
+      updatedAt: Date.now(),
     }], { session });
 
     await session.commitTransaction();
     session.endSession();
 
-    console.log('✅ [DISPENSE] Dispense completed, record id:', recordArr[0]._id);
-    return res.status(201).json({ success: true, record: recordArr[0] });
+    console.log('✅ [DISPENSE] Dispense completed, record id:', createdRecords[0]._id);
+    return res.status(201).json({ success: true, record: createdRecords[0] });
   } catch (err) {
-    try {
-      await session.abortTransaction();
-      session.endSession();
-    } catch (e) { /* ignore */ }
+    try { await session.abortTransaction(); session.endSession(); } catch (e) { /* ignore */ }
     console.error('💥 [DISPENSE] Error:', err);
     return res.status(500).json({ success: false, message: 'Failed to dispense items', errorCode: 6509 });
   }
 });
+
+/**
+ * ------------------
+ * PHARMACY RECORDS
+ * ------------------
+ */
 
 // LIST Pharmacy Records
 router.get('/records', auth, async (req, res) => {
@@ -672,7 +647,7 @@ router.get('/records', auth, async (req, res) => {
       const re = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
       filter.$or = [{ 'items.name': re }, { notes: re }];
     }
-    if (patientId) filter.patientId = patientId;
+    if (patientId) filter.patientId = String(patientId);
     if (type) filter.type = type;
     if (from || to) {
       filter.createdAt = {};
@@ -697,7 +672,7 @@ router.get('/records/:id', auth, async (req, res) => {
   try {
     if (!ensureModel(PharmacyRecord, 'PharmacyRecord', res)) return;
     console.log('🔎 [RECORD GET] id:', req.params.id, 'requestedBy:', req.user?.id);
-    const rec = await PharmacyRecord.findById(req.params.id).lean();
+    const rec = await PharmacyRecord.findById(String(req.params.id)).lean();
     if (!rec) {
       console.warn('⚠️ [RECORD GET] Not found:', req.params.id);
       return res.status(404).json({ success: false, message: 'Record not found', errorCode: 6208 });

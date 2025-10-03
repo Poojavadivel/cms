@@ -4,6 +4,7 @@ import 'package:glowhair/Modules/Doctor/widgets/Addnewappoiments.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 // Import your models + services
+import '../../Models/Patients.dart';
 import '../../Models/dashboardmodels.dart';
 import '../../Services/Authservices.dart';
 import '../../Utils/Colors.dart';
@@ -51,15 +52,44 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
     }
   }
 
+  PatientDetails _mapApptToPatient(DashboardAppointments appt) {
+    return PatientDetails(
+      patientId: appt.patientId,
+      name: appt.patientName,
+      gender: appt.gender,
+      age: appt.patientAge,
+      dateOfBirth: appt.dob,
+      phone: '', // not present in DashboardAppointments
+      address: appt.location,
+      city: appt.location,
+      bloodGroup: '', // not available in appt
+      bmi: appt.bmi.toString(),
+      height: appt.height.toString(),
+      weight: appt.weight.toString(),
+      doctorName: appt.doctor,
+      notes: appt.currentNotes ?? '',
+      lastVisitDate: appt.date,
+      avatarUrl: appt.patientAvatarUrl,
+      patientCode: appt.id,
+      allergies: const [],
+      medicalHistory: appt.diagnosis,
+      emergencyContactName: '',
+      emergencyContactPhone: '', doctorId: '', pincode: '', insuranceNumber: '', expiryDate: '',
+    );
+  }
+
   void _showAppointmentDetails(DashboardAppointments appointment) {
+    final patient = _mapApptToPatient(appointment);
+
     showDialog(
       context: context,
       builder: (_) => Dialog(
         insetPadding: const EdgeInsets.all(12),
-        child: DoctorAppointmentPreview(appointment: appointment),
+        child: DoctorAppointmentPreview(patient: patient),
       ),
     );
   }
+
 
   Future<void> _onNewAppointmentPressed() async {
     final result = await showDialog<bool>(

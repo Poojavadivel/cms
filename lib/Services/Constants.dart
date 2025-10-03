@@ -16,8 +16,8 @@ class ApiConstants {
   // --- Base URL ---
   /// The base URL for the backend API.
   /// Change this to your actual server address during development/production.
-  // static const String baseUrl = "http://10.57.158.132:3000";
-   static const String baseUrl = "https://karur-gastro-foundation.onrender.com";// <-- IMPORTANT: Replace with your actual backend URL
+  static const String baseUrl = "http://10.233.70.132:3000";
+  // static const String baseUrl = "https://karur-gastro-foundation.onrender.com";// <-- IMPORTANT: Replace with your actual backend URL
 
   // --- HTTP Methods ---
   static const String post = 'POST';
@@ -33,6 +33,10 @@ class ApiEndpoints {
 
   /// Endpoint to validate an existing authentication token.
   static RestApi validateToken() => RestApi(url: '/api/auth/validate-token', method: ApiConstants.post);
+
+  static RestApi getDoctorPatients() =>
+      RestApi(url: "/api/doctors/patients/my", method: ApiConstants.get);
+
 
 
   static RestApi createAppointment() =>
@@ -118,6 +122,13 @@ class ApiEndpoints {
 // FIX: Changed '/conversations' to '/chats' to match backend's DELETE /api/bot/chats/:id
   static RestApi deleteConversation(String convoId) =>
       RestApi(url: '/api/bot/chats/$convoId', method: ApiConstants.delete);
+
+
+  static RestApi addIntake(String patientId) =>  RestApi(
+      url: '/api/intake/$patientId/intake',
+      method: ApiConstants.post,
+    );
+
 
 }
 

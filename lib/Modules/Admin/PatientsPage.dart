@@ -1,10 +1,12 @@
 // lib/screens/patients/patients_screen.dart
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 
 import '../../Models/Patients.dart' show PatientDetails; // backend model (adjust path if needed)
 import '../../Models/Staff.dart';
 import '../../Utils/Colors.dart';
+import '../Doctor/widgets/doctor_appointment_preview.dart';
 import 'widget/generic_data_table.dart';
 
 // New imports (adjust paths if needed)
@@ -116,65 +118,49 @@ class Patient {
 }
 
 /// Safely derive a doctor display name from PatientDetails.
-///
-/// Priority:
-/// 1) If d.doctor is a typed Doctor object, use its userProfile name (if present)
-/// 2) Else if d.doctorName (string) exists, use that
-/// 3) Else if d.doctorId exists, use that
-/// 4) Else return an empty string
+/// Priority: typed doctor -> doctorName -> doctorId -> ''
 String patientDisplayDoctorFromDetails(PatientDetails d) {
   try {
-    // try typed doctor object first (some builds may attach a doctor object)
     final dynamic docRaw = (d as dynamic).doctor;
     if (docRaw != null) {
-      // If it's a Map (from server), read 'name' or 'fullName'
       if (docRaw is Map) {
         final n = (docRaw['name'] ?? docRaw['fullName'] ?? '').toString();
         if (n.trim().isNotEmpty) return n.trim();
       } else {
-        // If it's a typed Doctor instance (with userProfile), attempt to pull readable name
         try {
           final userProfile = docRaw.userProfile;
           if (userProfile != null) {
-            // try multiple possible fields
-            final mp = <String>[];
+            final parts = <String>[];
             try {
               final fn = userProfile.firstName ?? '';
               final ln = userProfile.lastName ?? '';
-              if (fn.toString().trim().isNotEmpty) mp.add(fn.toString().trim());
-              if (ln.toString().trim().isNotEmpty) mp.add(ln.toString().trim());
+              if (fn.toString().trim().isNotEmpty) parts.add(fn.toString().trim());
+              if (ln.toString().trim().isNotEmpty) parts.add(ln.toString().trim());
             } catch (_) {}
-            // User may have a combined 'name' field
             try {
               final combined = userProfile.toMap()['name']?.toString() ?? '';
               if (combined.trim().isNotEmpty) return combined.trim();
             } catch (_) {}
-            if (mp.isNotEmpty) return mp.join(' ');
+            if (parts.isNotEmpty) return parts.join(' ');
           }
         } catch (_) {
-          // fallback to docRaw.toString()
           final s = docRaw.toString();
           if (s.trim().isNotEmpty) return s.trim();
         }
       }
     }
-  } catch (_) {
-    // ignore and fall through to other options
-  }
+  } catch (_) {}
 
-  // next fallback: doctorName field on the details model (if server provided)
   try {
     final name = (d as dynamic).doctorName;
     if (name != null && name.toString().trim().isNotEmpty) return name.toString().trim();
   } catch (_) {}
 
-  // fallback to doctorId
   try {
     final id = d.doctorId;
     if (id.isNotEmpty) return id;
   } catch (_) {}
 
-  // nothing found
   return '';
 }
 
@@ -189,6 +175,8 @@ class PatientsScreen extends StatefulWidget {
 
 class _PatientsScreenState extends State<PatientsScreen> {
   List<Patient> _allPatients = [];
+  // Keep the raw PatientDetails objects keyed by patientId for preview/edit usage:
+  final Map<String, PatientDetails> _detailsById = {};
   bool _isLoading = true;
   String _searchQuery = '';
   int _currentPage = 0;
@@ -208,12 +196,23 @@ class _PatientsScreenState extends State<PatientsScreen> {
     try {
       // fetch via AuthService (expects List<PatientDetails>)
       final details = await AuthService.instance.fetchPatients(forceRefresh: true);
-      // map to view model
-      final mapped = details.map((d) => Patient.fromDetails(d)).toList();
 
-      setState(() {
-        _allPatients = mapped;
-      });
+      // fill map and view list
+      final mapped = <Patient>[];
+      final tempMap = <String, PatientDetails>{};
+      for (final d in details) {
+        tempMap[d.patientId] = d;
+        mapped.add(Patient.fromDetails(d));
+      }
+
+      if (mounted) {
+        setState(() {
+          _allPatients = mapped;
+          _detailsById
+            ..clear()
+            ..addAll(tempMap);
+        });
+      }
     } catch (e, st) {
       debugPrint('Failed to fetch patients: $e\n$st');
       if (mounted) {
@@ -268,18 +267,43 @@ class _PatientsScreenState extends State<PatientsScreen> {
 
   void _onView(int index, List<Patient> list) {
     final patient = list[index];
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Viewing details for ${patient.name}")),
-    );
-    // optionally navigate to patient detail page
+    final details = _detailsById[patient.id];
+    if (details != null) {
+      DoctorAppointmentPreview.show(context, details);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Patient details not available')),
+      );
+    }
   }
 
-  void _onEdit(int index, List<Patient> list) {
+  Future<void> _onEdit(int index, List<Patient> list) async {
     final patient = list[index];
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Editing ${patient.name}")),
+    final details = _detailsById[patient.id];
+    if (details == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Patient details not available for editing')));
+      return;
+    }
+
+    // open the same PatientFormPage in edit mode
+    final result = await showDialog<dynamic>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+        backgroundColor: Colors.transparent,
+        child: PatientFormPage(initial: details),
+      ),
     );
-    // optionally navigate to edit page
+
+    // If result is returned (updated PatientDetails), refresh list and notify user
+    if (result != null) {
+      await _fetchPatients();
+      if (mounted) {
+        final updatedName = (result is PatientDetails) ? result.name : patient.name;
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Updated $updatedName')));
+      }
+    }
   }
 
   Future<void> _onDelete(int index, List<Patient> list) async {
@@ -373,6 +397,25 @@ class _PatientsScreenState extends State<PatientsScreen> {
     );
   }
 
+  /// Format an ISO-like lastVisit string to a readable date/time.
+  /// If parsing fails, returns the original string (safe fallback).
+  String formatLastVisit(String raw) {
+    if (raw.trim().isEmpty) return '';
+    try {
+      final dt = DateTime.parse(raw).toLocal();
+      // Desired format: 03/10/2025
+      return DateFormat('dd/MM/yyyy').format(dt);
+    } catch (e) {
+      // If it's not strictly ISO parseable, try a looser parse or return raw
+      try {
+        final dt = DateTime.tryParse(raw) ?? DateTime.parse(raw);
+        return DateFormat('dd/MM/yyyy').format(dt.toLocal());
+      } catch (_) {
+        return raw;
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final filtered = _getFilteredPatients();
@@ -398,7 +441,8 @@ class _PatientsScreenState extends State<PatientsScreen> {
         Text(p.age.toString(),
             style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.kTextPrimary)),
         Text(p.gender, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.kTextPrimary)),
-        Text(p.lastVisit, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.kTextPrimary)),
+        Text(formatLastVisit(p.lastVisit),
+            style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.kTextPrimary)),
         Text(p.doctor, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.kTextPrimary)),
         Text(p.condition, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.kTextPrimary)),
       ];
