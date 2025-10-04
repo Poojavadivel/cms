@@ -1,8 +1,7 @@
 // routes/staff.js
 const express = require('express');
-const { User } = require('../Models/models'); // use User model
+const { Staff } = require('../Models/models'); // Staff model (separate collection)
 const auth = require('../Middleware/Auth');
-const bcrypt = require('bcryptjs');
 const router = express.Router();
 
 // ------------------------------
@@ -10,7 +9,10 @@ const router = express.Router();
 // ------------------------------
 function requireAdmin(req, res) {
   const role = req.user && req.user.role;
+  console.log('requireAdmin: checking role for user:', req.user ? { id: req.user._id, role } : 'anonymous');
+
   if (!role || (role !== 'admin' && role !== 'superadmin')) {
+    console.log('requireAdmin: forbidden - role missing or insufficient:', role);
     res.status(403).json({
       success: false,
       message: 'Forbidden: admin role required',
@@ -18,73 +20,109 @@ function requireAdmin(req, res) {
     });
     return false;
   }
+  console.log('requireAdmin: allowed');
   return true;
 }
 
 // ------------------------------
+// Build payload and push extra fields to metadata
+// ------------------------------
+function buildStaffPayload(body = {}) {
+  const allowed = new Set([
+    'name', 'designation', 'department', 'patientFacingId', 'contact', 'email',
+    'avatarUrl', 'gender', 'status', 'shift', 'roles', 'qualifications',
+    'experienceYears', 'joinedAt', 'lastActiveAt', 'location', 'dob',
+    'notes', 'appointmentsCount', 'tags'
+  ]);
+
+  const payload = {};
+  const metadata = {};
+
+  Object.keys(body || {}).forEach(k => {
+    if (allowed.has(k)) {
+      payload[k] = body[k];
+    } else {
+      metadata[k] = body[k]; // anything else goes in metadata
+    }
+  });
+
+  if (payload.roles && !Array.isArray(payload.roles)) {
+    payload.roles = ('' + payload.roles).split(',').map(s => s.trim());
+  }
+  if (payload.qualifications && !Array.isArray(payload.qualifications)) {
+    payload.qualifications = ('' + payload.qualifications).split(',').map(s => s.trim());
+  }
+  if (payload.tags && !Array.isArray(payload.tags)) {
+    payload.tags = ('' + payload.tags).split(',').map(s => s.trim());
+  }
+
+  if (payload.joinedAt && typeof payload.joinedAt === 'string') payload.joinedAt = new Date(payload.joinedAt);
+  if (payload.lastActiveAt && typeof payload.lastActiveAt === 'string') payload.lastActiveAt = new Date(payload.lastActiveAt);
+  if (payload.dob && typeof payload.dob === 'string') payload.dob = new Date(payload.dob);
+  if (payload.experienceYears) payload.experienceYears = Number(payload.experienceYears) || 0;
+  if (payload.appointmentsCount) payload.appointmentsCount = Number(payload.appointmentsCount) || 0;
+
+  if (body.metadata && typeof body.metadata === 'object') {
+    Object.assign(metadata, body.metadata);
+  }
+
+  const finalPayload = Object.assign({}, payload, { metadata });
+  return finalPayload;
+}
+
+// ------------------------------
+// Generate next staff code (STF-###)
+// ------------------------------
+async function generateStaffCode() {
+  const lastStaff = await Staff.findOne({ 'metadata.staffCode': { $exists: true } })
+    .sort({ 'metadata.staffCode': -1 })
+    .lean();
+
+  let nextNumber = 1;
+  if (lastStaff && lastStaff.metadata && lastStaff.metadata.staffCode) {
+    const match = lastStaff.metadata.staffCode.match(/STF-(\d+)/);
+    if (match) {
+      nextNumber = parseInt(match[1], 10) + 1;
+    }
+  }
+  return `STF-${String(nextNumber).padStart(3, '0')}`;
+}
+
+// ------------------------------
 // CREATE Staff
-// POST /api/staff
 // ------------------------------
 router.post('/', auth, async (req, res) => {
   try {
+    console.log('STAFF CREATE: by user:', req.user ? (req.user._id ?? req.user.id) : 'unknown');
     if (!requireAdmin(req, res)) return;
 
-    const data = req.body;
+    const body = req.body || {};
+    console.log('STAFF CREATE: raw body:', body);
 
-    if (!data.firstName || !data.email || !data.password) {
-      return res.status(400).json({
-        success: false,
-        message: 'Missing required fields: firstName, email, password',
-        errorCode: 2006,
-      });
+    if (!body.name) {
+      return res.status(400).json({ success: false, message: 'Missing required field: name', errorCode: 2006 });
     }
 
-    const existing = await User.findOne({ email: data.email });
-    if (existing) {
-      return res.status(409).json({ success: false, message: 'Email already in use' });
-    }
+    // Generate staff code
+    const staffCode = await generateStaffCode();
+    console.log('STAFF CREATE: generated staffCode =', staffCode);
 
-    const hashedPassword = await bcrypt.hash(data.password, 12);
+    const payload = buildStaffPayload(body);
+    payload.metadata = payload.metadata || {};
+    payload.metadata.staffCode = staffCode;
 
-    const staffPayload = {
-      role: 'staff',
-      firstName: data.firstName,
-      lastName: data.lastName || '',
-      email: data.email.toLowerCase(),
-      phone: data.phone || '',
-      password: hashedPassword,
-      is_active: data.is_active ?? true,
-      metadata: {
-        designation: data.designation || '',
-        department: data.department || '',
-        patientFacingId: data.patientFacingId || '',
-        avatarUrl: data.avatarUrl || '',
-        gender: data.gender || '',
-        shift: data.shift || '',
-        roles: data.roles || [],
-        qualifications: data.qualifications || [],
-        experienceYears: data.experienceYears || 0,
-        joinedAt: data.joinedAt || Date.now(),
-        lastActiveAt: data.lastActiveAt || Date.now(),
-        location: data.location || '',
-        dob: data.dob || '',
-        notes: data.notes || '',
-        appointmentsCount: data.appointmentsCount || 0,
-        tags: data.tags || [],
-      },
-    };
+    const created = await Staff.create(payload);
+    console.log('STAFF CREATE: created staff id:', created._id);
 
-    const created = await User.create(staffPayload);
-    res.status(201).json({ success: true, staff: created });
+    return res.status(201).json({ success: true, staff: created });
   } catch (err) {
     console.error('STAFF CREATE error:', err);
-    res.status(500).json({ success: false, message: 'Failed to create staff', errorCode: 5000 });
+    return res.status(500).json({ success: false, message: 'Failed to create staff', errorCode: 5000 });
   }
 });
 
 // ------------------------------
 // LIST Staff
-// GET /api/staff
 // ------------------------------
 router.get('/', auth, async (req, res) => {
   try {
@@ -93,34 +131,35 @@ router.get('/', auth, async (req, res) => {
     const page = Math.max(0, parseInt(req.query.page || '0', 10));
     const limit = Math.min(100, parseInt(req.query.limit || '50', 10));
 
-    const filter = { role: 'staff' };
+    const filter = {};
 
     if (department) {
-      filter['metadata.department'] = department;
+      filter.$or = [{ department }, { 'metadata.department': department }];
     }
 
     if (q) {
       const regex = new RegExp(q, 'i');
-      filter.$or = [
-        { firstName: regex },
-        { lastName: regex },
+      filter.$or = (filter.$or || []).concat([
+        { name: regex },
+        { designation: regex },
+        { department: regex },
+        { contact: regex },
         { email: regex },
-        { phone: regex },
-        { 'metadata.designation': regex },
-        { 'metadata.department': regex },
-      ];
+        { 'metadata.staffCode': regex },
+      ]);
     }
 
     const skip = page * limit;
+
     const [items, total] = await Promise.all([
-      User.find(filter).skip(skip).limit(limit).sort({ firstName: 1 }).lean(),
-      User.countDocuments(filter),
+      Staff.find(filter).skip(skip).limit(limit).sort({ name: 1 }).lean(),
+      Staff.countDocuments(filter),
     ]);
 
-    res.status(200).json({ success: true, staff: items, total, page, limit });
+    return res.status(200).json({ success: true, staff: items, total, page, limit });
   } catch (err) {
     console.error('STAFF LIST error:', err);
-    res.status(500).json({ success: false, message: 'Failed to fetch staff list', errorCode: 5001 });
+    return res.status(500).json({ success: false, message: 'Failed to fetch staff list', errorCode: 5001 });
   }
 });
 
@@ -129,14 +168,12 @@ router.get('/', auth, async (req, res) => {
 // ------------------------------
 router.get('/:id', auth, async (req, res) => {
   try {
-    const staff = await User.findOne({ _id: req.params.id, role: 'staff' }).lean();
-    if (!staff) {
-      return res.status(404).json({ success: false, message: 'Staff not found', errorCode: 2007 });
-    }
-    res.status(200).json({ success: true, staff });
+    const staff = await Staff.findById(req.params.id).lean();
+    if (!staff) return res.status(404).json({ success: false, message: 'Staff not found', errorCode: 2007 });
+    return res.status(200).json({ success: true, staff });
   } catch (err) {
     console.error('STAFF GET error:', err);
-    res.status(500).json({ success: false, message: 'Failed to fetch staff', errorCode: 5002 });
+    return res.status(500).json({ success: false, message: 'Failed to fetch staff', errorCode: 5002 });
   }
 });
 
@@ -146,49 +183,20 @@ router.get('/:id', auth, async (req, res) => {
 router.put('/:id', auth, async (req, res) => {
   try {
     if (!requireAdmin(req, res)) return;
-
-    const data = req.body;
-    const update = {
-      firstName: data.firstName,
-      lastName: data.lastName,
-      email: data.email,
-      phone: data.phone,
-      is_active: data.is_active,
-      metadata: {
-        designation: data.designation,
-        department: data.department,
-        patientFacingId: data.patientFacingId,
-        avatarUrl: data.avatarUrl,
-        gender: data.gender,
-        shift: data.shift,
-        roles: data.roles,
-        qualifications: data.qualifications,
-        experienceYears: data.experienceYears,
-        joinedAt: data.joinedAt,
-        lastActiveAt: data.lastActiveAt,
-        location: data.location,
-        dob: data.dob,
-        notes: data.notes,
-        appointmentsCount: data.appointmentsCount,
-        tags: data.tags,
-      },
-      updatedAt: Date.now(),
-    };
-
-    const staff = await User.findOneAndUpdate(
-      { _id: req.params.id, role: 'staff' },
-      update,
-      { new: true, runValidators: true }
-    );
-
-    if (!staff) {
-      return res.status(404).json({ success: false, message: 'Staff not found', errorCode: 2007 });
+    const body = req.body || {};
+    const updatePayload = buildStaffPayload(body);
+    if (updatePayload.metadata && Object.keys(updatePayload.metadata).length === 0) {
+      delete updatePayload.metadata;
     }
+    updatePayload.updatedAt = Date.now();
 
-    res.status(200).json({ success: true, staff });
+    const updated = await Staff.findByIdAndUpdate(req.params.id, updatePayload, { new: true, runValidators: true }).lean();
+    if (!updated) return res.status(404).json({ success: false, message: 'Staff not found', errorCode: 2007 });
+
+    return res.status(200).json({ success: true, staff: updated });
   } catch (err) {
     console.error('STAFF UPDATE error:', err);
-    res.status(500).json({ success: false, message: 'Failed to update staff', errorCode: 5003 });
+    return res.status(500).json({ success: false, message: 'Failed to update staff', errorCode: 5003 });
   }
 });
 
@@ -198,22 +206,19 @@ router.put('/:id', auth, async (req, res) => {
 router.patch('/:id/status', auth, async (req, res) => {
   try {
     if (!requireAdmin(req, res)) return;
+    const { is_active, status } = req.body;
+    const update = {};
+    if (typeof is_active !== 'undefined') update.is_active = !!is_active;
+    if (typeof status !== 'undefined') update.status = status;
+    if (req.body.lastActiveAt) update.lastActiveAt = new Date(req.body.lastActiveAt);
 
-    const { is_active } = req.body;
-    const staff = await User.findOneAndUpdate(
-      { _id: req.params.id, role: 'staff' },
-      { is_active, 'metadata.lastActiveAt': Date.now() },
-      { new: true }
-    );
+    const staff = await Staff.findByIdAndUpdate(req.params.id, update, { new: true }).lean();
+    if (!staff) return res.status(404).json({ success: false, message: 'Staff not found', errorCode: 2007 });
 
-    if (!staff) {
-      return res.status(404).json({ success: false, message: 'Staff not found', errorCode: 2007 });
-    }
-
-    res.status(200).json({ success: true, staff });
+    return res.status(200).json({ success: true, staff });
   } catch (err) {
     console.error('STAFF STATUS error:', err);
-    res.status(500).json({ success: false, message: 'Failed to update staff status', errorCode: 5004 });
+    return res.status(500).json({ success: false, message: 'Failed to update staff status', errorCode: 5004 });
   }
 });
 
@@ -223,16 +228,12 @@ router.patch('/:id/status', auth, async (req, res) => {
 router.delete('/:id', auth, async (req, res) => {
   try {
     if (!requireAdmin(req, res)) return;
-
-    const staff = await User.findOneAndDelete({ _id: req.params.id, role: 'staff' });
-    if (!staff) {
-      return res.status(404).json({ success: false, message: 'Staff not found', errorCode: 2007 });
-    }
-
-    res.status(200).json({ success: true, deletedId: staff._id });
+    const removed = await Staff.findByIdAndDelete(req.params.id).lean();
+    if (!removed) return res.status(404).json({ success: false, message: 'Staff not found', errorCode: 2007 });
+    return res.status(200).json({ success: true, deletedId: removed._id });
   } catch (err) {
     console.error('STAFF DELETE error:', err);
-    res.status(500).json({ success: false, message: 'Failed to delete staff', errorCode: 5005 });
+    return res.status(500).json({ success: false, message: 'Failed to delete staff', errorCode: 5005 });
   }
 });
 

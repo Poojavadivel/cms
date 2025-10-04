@@ -6,7 +6,7 @@
 // - AuthSession.expiresAt has a TTL index (expireAfterSeconds: 0).
 // - Basic validators for email and phone.
 // - Useful indexes and virtuals included.
-// - If migrating from ObjectId to UUID strings, run a migration script (this file assumes UUID string IDs).
+// - Staff is now a separate collection; any extra fields are stored in metadata.
 
 const mongoose = require('mongoose');
 const { v4: uuidv4 } = require('uuid');
@@ -25,7 +25,7 @@ const commonOptions = {
 
 // Simple validators
 const emailValidator = {
-  validator: function(v) {
+  validator: function (v) {
     if (v === null || v === undefined || v === '') return true; // allow null/empty for optional emails
     // basic email regex - good enough for early validation
     return /^\S+@\S+\.\S+$/.test(v);
@@ -34,7 +34,7 @@ const emailValidator = {
 };
 
 const phoneValidator = {
-  validator: function(v) {
+  validator: function (v) {
     if (v === null || v === undefined || v === '') return true; // allow null/empty for optional phones
     // allow optional leading + and 7-15 digits
     return /^\+?[0-9]{7,15}$/.test(v);
@@ -43,11 +43,11 @@ const phoneValidator = {
 };
 
 // ---------------------------
-// Users
+// Users (admins, doctors, pharmacists, reception, superadmin)
 // ---------------------------
 const UserSchema = new Schema({
   _id: { type: String, default: () => uuidv4() },
-  role: { type: String, enum: ['superadmin','admin','doctor','pharmacist','reception','staff'], required: true, index: true },
+  role: { type: String, enum: ['superadmin', 'admin', 'doctor', 'pharmacist', 'reception'], required: true, index: true },
   firstName: { type: String, required: true, index: true },
   lastName: { type: String, default: '' },
   email: { type: String, required: true, unique: true, lowercase: true, index: true, validate: emailValidator },
@@ -59,12 +59,12 @@ const UserSchema = new Schema({
 UserSchema.index({ role: 1 });
 
 // virtual fullName
-UserSchema.virtual('fullName').get(function() {
+UserSchema.virtual('fullName').get(function () {
   return `${this.firstName || ''}${this.lastName ? ' ' + this.lastName : ''}`.trim();
 });
 
 // Hash password before save (only if modified)
-UserSchema.pre('save', async function(next) {
+UserSchema.pre('save', async function (next) {
   try {
     if (!this.isModified('password')) return next();
     const salt = await bcrypt.genSalt(SALT_ROUNDS);
@@ -76,7 +76,7 @@ UserSchema.pre('save', async function(next) {
 });
 
 // Hash password if using findOneAndUpdate with password in update
-UserSchema.pre('findOneAndUpdate', async function(next) {
+UserSchema.pre('findOneAndUpdate', async function (next) {
   try {
     const update = this.getUpdate();
     if (!update) return next();
@@ -94,9 +94,50 @@ UserSchema.pre('findOneAndUpdate', async function(next) {
 });
 
 // comparePassword method (call after selecting +password)
-UserSchema.methods.comparePassword = function(candidate) {
+UserSchema.methods.comparePassword = function (candidate) {
   return bcrypt.compare(candidate, this.password);
 };
+
+// ---------------------------
+// Staff (separate collection)
+// ---------------------------
+const StaffSchema = new Schema({
+  _id: { type: String, default: () => uuidv4() },
+
+  // Core identity
+  name: { type: String, required: true, index: true },
+  designation: { type: String, default: '' }, // e.g. "Cardiologist"
+  department: { type: String, default: '' }, // e.g. "Cardiology"
+  patientFacingId: { type: String, default: '' }, // e.g. DOC102
+
+  // Contact
+  contact: { type: String, default: '', validate: phoneValidator },
+  email: { type: String, default: '', lowercase: true, validate: emailValidator },
+  avatarUrl: { type: String, default: '' },
+  gender: { type: String, enum: ['Male', 'Female', 'Other', ''], default: '' },
+
+  // Employment / meta
+  status: { type: String, enum: ['Available', 'Off Duty', 'On Leave', 'On Call'], default: 'Available' },
+  shift: { type: String, default: '' },
+  roles: [{ type: String }],
+  qualifications: [{ type: String }],
+  experienceYears: { type: Number, default: 0 },
+  joinedAt: { type: Date, default: null },
+  lastActiveAt: { type: Date, default: null },
+
+  // Optional profile details
+  location: { type: String, default: '' },
+  dob: { type: Date, default: null },
+  notes: { type: Schema.Types.Mixed, default: {} }, // flexible notes
+  appointmentsCount: { type: Number, default: 0 },
+  tags: [{ type: String }],
+
+  // Any extra fields from clients should be stored here
+  metadata: { type: Schema.Types.Mixed, default: {} }
+}, Object.assign({}, commonOptions));
+
+StaffSchema.index({ patientFacingId: 1 });
+StaffSchema.index({ name: 'text', designation: 'text', department: 'text' });
 
 // ---------------------------
 // Auth sessions (refresh tokens / devices)
@@ -123,7 +164,7 @@ const PatientSchema = new Schema({
   firstName: { type: String, required: true, index: true },
   lastName: { type: String, default: '' },
   dateOfBirth: { type: Date },
-  gender: { type: String, enum: ['Male','Female','Other'], default: null },
+  gender: { type: String, enum: ['Male', 'Female', 'Other'], default: null },
   phone: { type: String, index: true, validate: phoneValidator },
   email: { type: String, default: null, index: true, validate: emailValidator },
   address: {
@@ -159,7 +200,7 @@ const IntakeSchema = new Schema({
     firstName: { type: String, required: true, index: true },
     lastName: { type: String, default: '' },
     dateOfBirth: { type: Date },
-    gender: { type: String, enum: ['Male','Female','Other'], default: null },
+    gender: { type: String, enum: ['Male', 'Female', 'Other'], default: null },
     phone: { type: String, default: null, index: true, validate: phoneValidator },
     email: { type: String, default: null, validate: emailValidator }
   },
@@ -175,13 +216,13 @@ const IntakeSchema = new Schema({
       weightKg: { type: Number, default: null },
       heightCm: { type: Number, default: null }
     },
-    priority: { type: String, enum: ['Normal','Urgent','Emergency'], default: 'Normal' },
-    triageCategory: { type: String, enum: ['Green','Yellow','Red'], default: 'Green' }
+    priority: { type: String, enum: ['Normal', 'Urgent', 'Emergency'], default: 'Normal' },
+    triageCategory: { type: String, enum: ['Green', 'Yellow', 'Red'], default: 'Green' }
   },
   consent: {
     consentGiven: { type: Boolean, default: false },
     consentAt: { type: Date },
-    consentBy: { type: String, enum: ['digital','paper','verbal'], default: 'digital' },
+    consentBy: { type: String, enum: ['digital', 'paper', 'verbal'], default: 'digital' },
     consentFileId: { type: String, ref: 'File', default: null }
   },
   insurance: {
@@ -193,13 +234,12 @@ const IntakeSchema = new Schema({
   attachments: [{ type: String, ref: 'File' }],
   notes: { type: String, default: '' },
   meta: { type: Schema.Types.Mixed, default: {} },
-  status: { type: String, enum: ['New','Reviewed','Converted','Rejected'], default: 'New', index: true },
+  status: { type: String, enum: ['New', 'Reviewed', 'Converted', 'Rejected'], default: 'New', index: true },
   createdBy: { type: String, ref: 'User', required: true, index: true },
   convertedAt: { type: Date, default: null },
   convertedBy: { type: String, ref: 'User', default: null }
 }, Object.assign({}, commonOptions));
 IntakeSchema.index({ 'patientSnapshot.phone': 1 });
-// Example sparse index field placeholder (sourceRef might be in meta)
 IntakeSchema.index({ sourceRef: 1 }, { sparse: true });
 
 // ---------------------------
@@ -213,7 +253,7 @@ const AppointmentSchema = new Schema({
   startAt: { type: Date, required: true, index: true },
   endAt: { type: Date },
   location: { type: String, default: '' },
-  status: { type: String, enum: ['Scheduled','Completed','Cancelled','No-Show','Rescheduled'], default: 'Scheduled', index: true },
+  status: { type: String, enum: ['Scheduled', 'Completed', 'Cancelled', 'No-Show', 'Rescheduled'], default: 'Scheduled', index: true },
   vitals: { type: Schema.Types.Mixed, default: {} },
   notes: { type: String, default: '' },
   metadata: { type: Schema.Types.Mixed, default: {} }
@@ -235,7 +275,7 @@ const MedicineSchema = new Schema({
   brand: { type: String, default: '' },
   category: { type: String, default: '' },
   description: { type: String, default: '' },
-  status: { type: String, enum: ['In Stock','Out of Stock','Discontinued'], default: 'In Stock' },
+  status: { type: String, enum: ['In Stock', 'Out of Stock', 'Discontinued'], default: 'In Stock' },
   metadata: { type: Schema.Types.Mixed, default: {} },
   deleted_at: { type: Date, default: null }
 }, Object.assign({}, commonOptions));
@@ -279,7 +319,7 @@ const PharmacyItemSchema = new Schema({
 
 const PharmacyRecordSchema = new Schema({
   _id: { type: String, default: () => uuidv4() },
-  type: { type: String, enum: ['PurchaseReceive','Dispense','Return','Adjustment'], required: true, index: true },
+  type: { type: String, enum: ['PurchaseReceive', 'Dispense', 'Return', 'Adjustment'], required: true, index: true },
   patientId: { type: String, ref: 'Patient', default: null, index: true },
   appointmentId: { type: String, default: null },
   createdBy: { type: String, ref: 'User' },
@@ -314,7 +354,7 @@ LabReportSchema.index({ patientId: 1, testType: 1 });
 const FileSchema = new Schema({
   _id: { type: String, default: () => uuidv4() },
   filename: { type: String, required: true, index: true },
-  ownerId: { type: String, default: null, index: true }, // patientId/userId etc. (string UUID)
+  ownerId: { type: String, default: null, index: true }, // patientId/userId/staffId etc. (string UUID)
   mimeType: { type: String },
   size: { type: Number, default: 0 },
   storage: { type: String, default: 's3' },
@@ -330,9 +370,9 @@ FileSchema.index({ ownerId: 1, filename: 1 });
 const AuditLogSchema = new Schema({
   _id: { type: String, default: () => uuidv4() },
   userId: { type: String, ref: 'User', index: true },
-  entity: { type: String, required: true, index: true }, // e.g., Patient
+  entity: { type: String, required: true, index: true }, // e.g., Patient, Staff
   entityId: { type: String, required: true, index: true },
-  action: { type: String, enum: ['CREATE','UPDATE','DELETE','EXPORT','IMPORT','LOGIN'], required: true },
+  action: { type: String, enum: ['CREATE', 'UPDATE', 'DELETE', 'EXPORT', 'IMPORT', 'LOGIN'], required: true },
   before: { type: Schema.Types.Mixed },
   after: { type: Schema.Types.Mixed },
   ip: { type: String },
@@ -357,9 +397,8 @@ const BotSchema = new Schema({
   sessions: {
     type: [BotSessionSchema],
     default: [],
-    // basic safeguard to prevent truly unbounded arrays; adjust limit per your needs
     validate: {
-      validator: function(arr) {
+      validator: function (arr) {
         return !arr || arr.length <= 1000;
       },
       message: 'Bot sessions array exceeds allowed length (1000)'
@@ -369,13 +408,13 @@ const BotSchema = new Schema({
   metadata: { type: Schema.Types.Mixed, default: {} }
 }, Object.assign({}, commonOptions));
 BotSchema.index({ userId: 1, archived: 1, updatedAt: -1 });
-// index nested sessionId for quick lookups (multikey)
 BotSchema.index({ 'sessions.sessionId': 1 });
 
 // ---------------------------
 // Model exports & helper
 // ---------------------------
 const User = mongoose.model('User', UserSchema);
+const Staff = mongoose.model('Staff', StaffSchema);
 const AuthSession = mongoose.model('AuthSession', AuthSessionSchema);
 const Patient = mongoose.model('Patient', PatientSchema);
 const Intake = mongoose.model('Intake', IntakeSchema);
@@ -388,8 +427,9 @@ const File = mongoose.model('File', FileSchema);
 const AuditLog = mongoose.model('AuditLog', AuditLogSchema);
 const Bot = mongoose.model('Bot', BotSchema);
 
+
 module.exports = {
-  User, AuthSession, Patient, Intake, Appointment, Medicine, MedicineBatch,
+  User, Staff, AuthSession, Patient, Intake, Appointment, Medicine, MedicineBatch,
   PharmacyRecord, LabReport, File, AuditLog, Bot,
   startSession: () => mongoose.startSession()
 };

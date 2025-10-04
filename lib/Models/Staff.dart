@@ -66,6 +66,7 @@ class Staff {
   factory Staff.fromMap(Map<String, dynamic> map) {
     DateTime? parseDate(dynamic v) {
       if (v == null) return null;
+      if (v is DateTime) return v;
       try {
         return DateTime.tryParse(v.toString());
       } catch (_) {
@@ -81,6 +82,10 @@ class Staff {
         } catch (_) {
           return <String, String>{};
         }
+      }
+      // if notes is a string, store it under "notes"
+      if (n is String) {
+        return {'notes': n};
       }
       return <String, String>{};
     }
@@ -103,7 +108,7 @@ class Staff {
       return '';
     }
 
-    // Guarantee readable defaults for designation/contact so UI won't be empty.
+    // Determine designation with fallback keys; ensure not empty
     final designationValue = _stringFallback(['designation', 'role', 'title']).isNotEmpty
         ? _stringFallback(['designation', 'role', 'title'])
         : '-';
@@ -112,28 +117,87 @@ class Staff {
         ? _stringFallback(['contact', 'phone', 'phoneNumber', 'contactNumber'])
         : '-';
 
+    // parse notes (could be Map or String)
+    final parsedNotes = parseNotes(map['notes']);
+
+    // helper to safely extract nested metadata values
+    String _metaLookup(Map<String, dynamic>? meta, List<String> keys) {
+      if (meta == null) return '';
+      for (final k in keys) {
+        final v = meta[k];
+        if (v != null) {
+          final s = v.toString().trim();
+          if (s.isNotEmpty) return s;
+        }
+      }
+      return '';
+    }
+
+    // Try to find patientFacingId / staff code from multiple places in priority order:
+    // 1. top-level patientFacingId or code
+    // 2. top-level code or patientFacingId
+    // 3. metadata.staffCode / metadata.staff_code / metadata.code / metadata.patientFacingId
+    // 4. notes['staffCode'] or notes['code']
+    String patientFacingId = '';
+    // direct keys
+    final directPf = (map['patientFacingId'] ?? map['patientFacing'] ?? map['code'])?.toString().trim() ?? '';
+    if (directPf.isNotEmpty) {
+      patientFacingId = directPf;
+    } else {
+      // metadata object may contain staffCode
+      final metaRaw = map['metadata'];
+      if (metaRaw is Map) {
+        patientFacingId = _metaLookup(metaRaw.cast<String, dynamic>(), ['staffCode', 'staff_code', 'code', 'patientFacingId']);
+      } else if (map['meta'] is Map) {
+        patientFacingId = _metaLookup((map['meta'] as Map).cast<String, dynamic>(), ['staffCode', 'staff_code', 'code', 'patientFacingId']);
+      }
+
+      // fallback to notes keys
+      if (patientFacingId.isEmpty) {
+        final noteCode = (parsedNotes['staffCode'] ?? parsedNotes['staff_code'] ?? parsedNotes['code'])?.toString().trim() ?? '';
+        if (noteCode.isNotEmpty) patientFacingId = noteCode;
+      }
+    }
+
+    // If metadata provided but not mapped to model, fold stringified metadata into notes
+    Map<String, String> mergedNotes = Map<String, String>.from(parsedNotes);
+    final metaRaw2 = map['metadata'];
+    if (metaRaw2 is Map) {
+      metaRaw2.forEach((k, v) {
+        try {
+          final key = 'meta_${k.toString()}';
+          if (!mergedNotes.containsKey(key)) {
+            mergedNotes[key] = v?.toString() ?? '';
+          }
+        } catch (_) {}
+      });
+    }
+
+    // also preserve any top-level unknown fields that are small strings? (avoid huge blobs)
+    // (optional) - skip for now to avoid noisy notes.
+
     return Staff(
       id: map['_id']?.toString() ?? map['id']?.toString() ?? '',
-      name: (map['name']?.toString() ?? map['fullName']?.toString() ?? '').toString(),
+      name: (map['name']?.toString() ?? map['fullName']?.toString() ?? map['firstName']?.toString() ?? '').toString(),
       designation: designationValue,
       department: map['department']?.toString() ?? map['dept']?.toString() ?? '',
-      patientFacingId: map['code']?.toString() ?? map['patientFacingId']?.toString() ?? '',
+      patientFacingId: patientFacingId,
       contact: contactValue,
       email: map['email']?.toString() ?? '',
       avatarUrl: map['avatarUrl']?.toString() ?? map['photo']?.toString() ?? '',
       gender: map['gender']?.toString() ?? '',
       status: map['status']?.toString() ?? 'Off Duty',
       shift: map['shift']?.toString() ?? '',
-      roles: parseStringList(map['roles']),
-      qualifications: parseStringList(map['qualifications']),
-      experienceYears: int.tryParse((map['experienceYears'] ?? map['experience'] ?? 0).toString()) ?? 0,
-      joinedAt: parseDate(map['joinedAt'] ?? map['createdAt']),
-      lastActiveAt: parseDate(map['lastActiveAt'] ?? map['updatedAt']),
-      location: map['location']?.toString() ?? '',
-      dob: map['dob']?.toString() ?? '',
-      notes: parseNotes(map['notes']),
-      appointmentsCount: int.tryParse((map['appointmentsCount'] ?? map['apptCount'] ?? 0).toString()) ?? 0,
-      tags: parseStringList(map['tags']),
+      roles: parseStringList(map['roles'] ?? (map['metadata'] is Map ? (map['metadata']['roles'] ?? []) : [])),
+      qualifications: parseStringList(map['qualifications'] ?? (map['metadata'] is Map ? (map['metadata']['qualifications'] ?? []) : [])),
+      experienceYears: int.tryParse((map['experienceYears'] ?? map['metadata']?['experienceYears'] ?? map['experience'] ?? 0).toString()) ?? 0,
+      joinedAt: parseDate(map['joinedAt'] ?? map['metadata']?['joinedAt'] ?? map['createdAt']),
+      lastActiveAt: parseDate(map['lastActiveAt'] ?? map['metadata']?['lastActiveAt'] ?? map['updatedAt']),
+      location: map['location']?.toString() ?? (map['metadata'] is Map ? (map['metadata']['location']?.toString() ?? '') : ''),
+      dob: map['dob']?.toString() ?? (map['metadata'] is Map ? (map['metadata']['dob']?.toString() ?? '') : ''),
+      notes: mergedNotes,
+      appointmentsCount: int.tryParse((map['appointmentsCount'] ?? map['metadata']?['appointmentsCount'] ?? map['apptCount'] ?? 0).toString()) ?? 0,
+      tags: parseStringList(map['tags'] ?? (map['metadata'] is Map ? (map['metadata']['tags'] ?? []) : [])),
       isSelected: map['isSelected'] == true,
     );
   }
@@ -144,6 +208,20 @@ class Staff {
 
   /// Convert to JSON for API or local storage
   Map<String, dynamic> toJson() {
+    // Put the short code in top-level 'code' and also in 'metadata.staffCode'
+    final meta = <String, dynamic>{};
+    if (patientFacingId.isNotEmpty) meta['staffCode'] = patientFacingId;
+
+    // If notes contains meta_ keys, move them back to metadata (reverse of fromMap)
+    final notesToEmit = <String, String>{};
+    notes.forEach((k, v) {
+      if (k.startsWith('meta_')) {
+        meta[k.substring(5)] = v;
+      } else {
+        notesToEmit[k] = v;
+      }
+    });
+
     return {
       if (id.isNotEmpty) '_id': id,
       'name': name,
@@ -163,10 +241,11 @@ class Staff {
       'lastActiveAt': lastActiveAt?.toIso8601String(),
       'location': location,
       'dob': dob,
-      'notes': notes,
+      'notes': notesToEmit,
       'appointmentsCount': appointmentsCount,
       'tags': tags,
       'isSelected': isSelected,
+      'metadata': meta,
     };
   }
 
