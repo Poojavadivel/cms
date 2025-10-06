@@ -1,5 +1,5 @@
 const express = require('express');
-const { Appointment } = require('../Models/models'); // Mongoose models
+const { Appointment,Patient } = require('../Models/models'); // Mongoose models
 const auth = require('../Middleware/Auth'); // loads fresh user + role
 const router = express.Router();
 
@@ -33,7 +33,13 @@ router.post('/', auth, async (req, res) => {
     const role = req.user.role;
     const data = req.body;
 
-    if (!data.patientId || !data.appointmentType || !data.startAt) {
+    // --- Compute startAt if not passed ---
+    let startAt = data.startAt;
+    if (!startAt && data.date && data.time) {
+      startAt = new Date(`${data.date}T${data.time}`);
+    }
+
+    if (!data.patientId || !data.appointmentType || !startAt) {
       console.warn("❌ Missing fields for appointment creation:", data);
       return res.status(400).json({
         success: false,
@@ -42,23 +48,52 @@ router.post('/', auth, async (req, res) => {
       });
     }
 
-    let doctorId = data.doctorId;
-    if (!(role === 'admin' || role === 'superadmin')) {
+    // --- Fetch patient to get their assigned doctorId ---
+    const patient = await Patient.findById(data.patientId)
+      .populate('doctorId', 'firstName lastName email')
+      .lean();
+
+    if (!patient) {
+      console.warn(`❌ Patient not found for ID: ${data.patientId}`);
+      return res.status(404).json({
+        success: false,
+        message: 'Patient not found',
+        errorCode: 1007,
+      });
+    }
+
+    // --- Determine doctorId ---
+    let doctorId = null;
+    if (role === 'doctor') {
+      doctorId = userId;
+    } else if (role === 'admin' || role === 'superadmin') {
+      doctorId = patient.doctorId?._id || userId;
+    } else {
       doctorId = userId;
     }
+
     console.log("👨‍⚕️ Assigned doctorId:", doctorId);
+
+    // --- Calculate endAt based on duration ---
+    const duration = data.durationMinutes || 20;
+    const endAt = new Date(new Date(startAt).getTime() + duration * 60000);
 
     const appointmentData = {
       patientId: data.patientId,
       doctorId,
       appointmentType: data.appointmentType,
-      startAt: new Date(data.startAt),
-      endAt: data.endAt ? new Date(data.endAt) : null,
+      startAt: new Date(startAt),
+      endAt,
       location: data.location || '',
       status: data.status || 'Scheduled',
       vitals: data.vitals || {},
       notes: data.notes || '',
-      metadata: data.metadata || {},
+      metadata: {
+        mode: data.mode,
+        priority: data.priority,
+        reminder: data.reminder,
+        chiefComplaint: data.chiefComplaint,
+      },
     };
 
     let appointment = await Appointment.create(appointmentData);
@@ -69,7 +104,10 @@ router.post('/', auth, async (req, res) => {
       .populate('doctorId', 'firstName lastName email')
       .lean();
 
-    const normalized = { ...appointment, doctor: extractDoctorName(appointment.doctorId) };
+    const normalized = {
+      ...appointment,
+      doctor: extractDoctorName(appointment.doctorId),
+    };
 
     res.status(201).json({
       success: true,
@@ -78,7 +116,11 @@ router.post('/', auth, async (req, res) => {
     });
   } catch (err) {
     console.error('💥 CREATE appointment error:', err);
-    res.status(500).json({ success: false, message: 'Failed to create appointment', errorCode: 5000 });
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create appointment',
+      errorCode: 5000,
+    });
   }
 });
 

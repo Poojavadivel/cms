@@ -1,27 +1,24 @@
 class DashboardAppointments {
-  final String id; // 👈 Appointment ID from MongoDB (_id)
+  final String id;
   final String patientName;
   final int patientAge;
   final String date;
   final String time;
   final String reason;
-  final String doctor;
+  final String doctor; // now normalized string name
   final String status;
-  final String gender; // Used to select the correct local asset icon (Male/Female)
+  final String gender;
   final String patientId;
   final String service;
-  final String patientAvatarUrl; // Optional: for network images if needed
+  final String patientAvatarUrl;
   bool isSelected;
 
-  // ✅ Notes
   final String? previousNotes;
   final String? currentNotes;
 
-  // ✅ Pharmacy & Pathology
   final List<Map<String, String>> pharmacy;
   final List<Map<String, String>> pathology;
 
-  // Extended fields for detailed preview
   final String diabetesType;
   final String location;
   final String occupation;
@@ -36,7 +33,7 @@ class DashboardAppointments {
   final Map<String, String> history;
 
   DashboardAppointments({
-    required this.id, // 👈 Required
+    required this.id,
     required this.patientName,
     required this.patientAge,
     required this.date,
@@ -49,16 +46,10 @@ class DashboardAppointments {
     required this.service,
     this.patientAvatarUrl = '',
     this.isSelected = false,
-
-    // ✅ Notes
     this.previousNotes,
     this.currentNotes,
-
-    // ✅ Tables
     this.pharmacy = const [],
     this.pathology = const [],
-
-    // Extended fields
     this.diabetesType = 'Type 2',
     this.location = '',
     this.occupation = '',
@@ -73,29 +64,70 @@ class DashboardAppointments {
     this.history = const {},
   });
 
-  /// ✅ Create object from API JSON
+  /// ✅ Create from JSON safely
   factory DashboardAppointments.fromJson(Map<String, dynamic> json) {
+    // Extract doctor field safely (may be String, Map, or null)
+    String doctorName = '';
+    if (json['doctorId'] is Map) {
+      final d = json['doctorId'] as Map;
+      doctorName = '${d['firstName'] ?? ''} ${d['lastName'] ?? ''}'.trim();
+    } else if (json['doctorId'] is String) {
+      doctorName = json['doctorId'];
+    }
+
+    // Extract patient field safely
+    String patientId = '';
+    String patientFullName = '';
+    String gender = '';
+    if (json['patientId'] is Map) {
+      final p = json['patientId'] as Map;
+      patientId = p['_id'] ?? '';
+      patientFullName = '${p['firstName'] ?? ''} ${p['lastName'] ?? ''}'.trim();
+      gender = p['gender'] ?? '';
+    } else if (json['patientId'] is String) {
+      patientId = json['patientId'];
+      patientFullName = json['clientName'] ?? '';
+    }
+
+    // Parse date/time
+    String date = json['date'] ??
+        (json['startAt'] != null
+            ? DateTime.tryParse(json['startAt'])
+            ?.toIso8601String()
+            .split('T')
+            .first ??
+            ''
+            : '');
+    String time = json['time'] ??
+        (json['startAt'] != null
+            ? _formatTime(DateTime.tryParse(json['startAt']))
+            : '');
+
+    // ✅ Fix: read reason (chiefComplaint) from both top-level and metadata
+    String reason = '';
+    if (json['chiefComplaint'] != null && json['chiefComplaint'].toString().isNotEmpty) {
+      reason = json['chiefComplaint'];
+    } else if (json['metadata'] is Map && json['metadata']?['chiefComplaint'] != null) {
+      reason = json['metadata']['chiefComplaint'];
+    }
+
     return DashboardAppointments(
-      id: json['_id'] ?? '', // 👈 Map MongoDB _id
-      patientName: json['clientName'] ?? '',
-      patientAge: int.tryParse(json['patientAge']?.toString() ?? '0') ?? 0,
-      date: json['date'] ?? '',
-      time: json['time'] ?? '',
-      reason: json['chiefComplaint'] ?? '',
-      doctor: json['doctorId'] ?? '',
+      id: json['_id'] ?? '',
+      patientName: patientFullName.isNotEmpty ? patientFullName : (json['clientName'] ?? ''),
+      patientAge: json['patientAge'] is int
+          ? json['patientAge']
+          : int.tryParse(json['patientAge']?.toString() ?? '0') ?? 0,
+      date: date,
+      time: time,
+      reason: reason, // ✅ fixed here
+      doctor: doctorName,
       status: json['status'] ?? 'Scheduled',
-      gender: json['gender'] ?? '',
-      patientId: json['patientId'] is Map
-          ? json['patientId']['_id'] ?? ''
-          : (json['patientId']?.toString() ?? ''),
+      gender: gender,
+      patientId: patientId,
       service: json['appointmentType'] ?? '',
       patientAvatarUrl: json['patientAvatarUrl'] ?? '',
-
-      // ✅ Notes
       previousNotes: json['history']?['previousNotes'],
       currentNotes: json['history']?['currentNotes'],
-
-      // ✅ Tables
       pharmacy: (json['pharmacy'] as List?)
           ?.map((e) => Map<String, String>.from(e))
           .toList() ??
@@ -104,8 +136,6 @@ class DashboardAppointments {
           ?.map((e) => Map<String, String>.from(e))
           .toList() ??
           [],
-
-      // Extended fields
       diabetesType: json['history']?['diabetesType'] ?? 'Type 2',
       location: json['location'] ?? '',
       occupation: json['history']?['occupation'] ?? '',
@@ -132,10 +162,19 @@ class DashboardAppointments {
     );
   }
 
-  /// ✅ Convert object to JSON for API
+
+  /// Helper: Format DateTime -> HH:mm
+  static String _formatTime(DateTime? dt) {
+    if (dt == null) return '';
+    final h = dt.hour.toString().padLeft(2, '0');
+    final m = dt.minute.toString().padLeft(2, '0');
+    return '$h:$m';
+  }
+
+  /// ✅ Convert to JSON
   Map<String, dynamic> toJson() {
     return {
-      '_id': id, // 👈 Include id
+      '_id': id,
       'clientName': patientName,
       'patientAge': patientAge,
       'date': date,
@@ -147,105 +186,23 @@ class DashboardAppointments {
       'patientId': patientId,
       'appointmentType': service,
       'patientAvatarUrl': patientAvatarUrl,
-      'history': {
-        'previousNotes': previousNotes,
-        'currentNotes': currentNotes,
-        'diabetesType': diabetesType,
-        'occupation': occupation,
-      },
+      'history': history,
+      'vitals': {'bp': bp},
       'pharmacy': pharmacy,
       'pathology': pathology,
-      'dob': dob,
-      'bmi': bmi,
-      'weight': weight,
-      'height': height,
-      'vitals': {
-        'bp': bp,
-      },
-      'diagnosis': diagnosis,
-      'barriers': barriers,
-      'timeline': timeline,
+      'location': location,
     };
-  }
-
-  DashboardAppointments copyWith({
-    String? id,
-    String? patientName,
-    int? patientAge,
-    String? date,
-    String? time,
-    String? reason,
-    String? doctor,
-    String? status,
-    String? gender,
-    String? patientId,
-    String? service,
-    String? patientAvatarUrl,
-    bool? isSelected,
-
-    // ✅ Notes
-    String? previousNotes,
-    String? currentNotes,
-
-    // ✅ Tables
-    List<Map<String, String>>? pharmacy,
-    List<Map<String, String>>? pathology,
-
-    // Extended fields
-    String? diabetesType,
-    String? location,
-    String? occupation,
-    String? dob,
-    double? bmi,
-    int? weight,
-    int? height,
-    String? bp,
-    List<String>? diagnosis,
-    List<String>? barriers,
-    List<Map<String, String>>? timeline,
-    Map<String, String>? history,
-  }) {
-    return DashboardAppointments(
-      id: id ?? this.id,
-      patientName: patientName ?? this.patientName,
-      patientAge: patientAge ?? this.patientAge,
-      date: date ?? this.date,
-      time: time ?? this.time,
-      reason: reason ?? this.reason,
-      doctor: doctor ?? this.doctor,
-      status: status ?? this.status,
-      gender: gender ?? this.gender,
-      patientId: patientId ?? this.patientId,
-      service: service ?? this.service,
-      patientAvatarUrl: patientAvatarUrl ?? this.patientAvatarUrl,
-      isSelected: isSelected ?? this.isSelected,
-
-      // ✅ Notes
-      previousNotes: previousNotes ?? this.previousNotes,
-      currentNotes: currentNotes ?? this.currentNotes,
-
-      // ✅ Tables
-      pharmacy: pharmacy ?? this.pharmacy,
-      pathology: pathology ?? this.pathology,
-
-      // Extended fields
-      diabetesType: diabetesType ?? this.diabetesType,
-      location: location ?? this.location,
-      occupation: occupation ?? this.occupation,
-      dob: dob ?? this.dob,
-      bmi: bmi ?? this.bmi,
-      weight: weight ?? this.weight,
-      height: height ?? this.height,
-      bp: bp ?? this.bp,
-      diagnosis: diagnosis ?? this.diagnosis,
-      barriers: barriers ?? this.barriers,
-      timeline: timeline ?? this.timeline,
-      history: history ?? this.history,
-    );
   }
 }
 
 class DoctorDashboardData {
   final List<DashboardAppointments> appointments;
   DoctorDashboardData({required this.appointments});
+
+  factory DoctorDashboardData.fromJson(List<dynamic> list) {
+    return DoctorDashboardData(
+      appointments:
+      list.map((e) => DashboardAppointments.fromJson(e)).toList(),
+    );
+  }
 }

@@ -34,30 +34,53 @@ async function resolvePatientByParam(param) {
   const s = String(param).trim();
   if (!s) return { patient: null, by: null };
 
+  console.log(`resolvePatientByParam: attempting to resolve "${s}"`);
+
   // 1) try _id (string match)
   try {
     const byId = await Patient.findById(s).lean();
-    if (byId) return { patient: byId, by: '_id' };
-  } catch (e) { /* ignore */ }
+    if (byId) {
+      console.log(`resolvePatientByParam: resolved by _id -> ${byId._id}`);
+      return { patient: byId, by: '_id' };
+    }
+  } catch (e) {
+    console.warn('resolvePatientByParam: findById error (ignored)', e && e.message ? e.message : e);
+  }
 
   // 2) try phone
   try {
     const byPhone = await Patient.findOne({ phone: s }).lean();
-    if (byPhone) return { patient: byPhone, by: 'phone' };
-  } catch (e) { /* ignore */ }
+    if (byPhone) {
+      console.log(`resolvePatientByParam: resolved by phone -> ${byPhone._id}`);
+      return { patient: byPhone, by: 'phone' };
+    }
+  } catch (e) {
+    console.warn('resolvePatientByParam: findOne(phone) error (ignored)', e && e.message ? e.message : e);
+  }
 
   // 3) try email
   try {
     const byEmail = await Patient.findOne({ email: s.toLowerCase() }).lean();
-    if (byEmail) return { patient: byEmail, by: 'email' };
-  } catch (e) { /* ignore */ }
+    if (byEmail) {
+      console.log(`resolvePatientByParam: resolved by email -> ${byEmail._id}`);
+      return { patient: byEmail, by: 'email' };
+    }
+  } catch (e) {
+    console.warn('resolvePatientByParam: findOne(email) error (ignored)', e && e.message ? e.message : e);
+  }
 
   // 4) try metadata fields (legacy)
   try {
     const byLegacy = await Patient.findOne({ 'metadata.legacyId': s }).lean();
-    if (byLegacy) return { patient: byLegacy, by: 'legacyId' };
-  } catch (e) { /* ignore */ }
+    if (byLegacy) {
+      console.log(`resolvePatientByParam: resolved by legacyId -> ${byLegacy._id}`);
+      return { patient: byLegacy, by: 'legacyId' };
+    }
+  } catch (e) {
+    console.warn('resolvePatientByParam: findOne(metadata.legacyId) error (ignored)', e && e.message ? e.message : e);
+  }
 
+  console.log(`resolvePatientByParam: no patient found for "${s}"`);
   return { patient: null, by: null };
 }
 
@@ -66,6 +89,7 @@ async function resolvePatientByParam(param) {
  * Creates intake snapshot (Intake collection in models_core) and optionally pharmacy / lab records.
  */
 router.post('/:id/intake', auth, async (req, res) => {
+  console.log('INTAKE POST: entry', { params: req.params, user: req.user ? { id: req.user.id, role: req.user.role } : null });
   try {
     const user = req.user;
     const role = user?.role;
@@ -74,13 +98,16 @@ router.post('/:id/intake', auth, async (req, res) => {
 
     const idParam = req.params.id;
     if (!idParam || !String(idParam).trim()) {
+      console.log('INTAKE POST: missing id param');
       return res.status(400).json({ success: false, message: 'id (param) is required', errorCode: 10010 });
     }
 
     const data = req.body || {};
+    console.log('INTAKE POST: body received (keys):', Object.keys(data));
 
     // body must include some patient reference or appointment fallback; we'll allow data.patientId but we also try to resolve idParam
     if (!data.patientId && !data.patientSnapshot && !idParam) {
+      console.log('INTAKE POST: missing patient reference in body and params');
       return res.status(400).json({ success: false, message: 'patientId or patientSnapshot required', errorCode: 10011 });
     }
 
@@ -91,35 +118,54 @@ router.post('/:id/intake', auth, async (req, res) => {
 
     // If no patient found by param, try appointment lookup (appointment id could be passed as param)
     if (!patient) {
+      console.log(`INTAKE POST: no patient resolved for "${idParam}", attempting appointment lookup`);
       // Appointment ids are strings in models_core; try by _id or appointmentId fields
-      appointmentForFallback = await Appointment.findById(String(idParam)).lean().catch(() => null);
+      appointmentForFallback = await Appointment.findById(String(idParam)).lean().catch((e) => {
+        console.warn('INTAKE POST: Appointment.findById error (ignored)', e && e.message ? e.message : e);
+        return null;
+      });
       if (!appointmentForFallback) {
         // try appointmentId field or fallback _id again
-        appointmentForFallback = await Appointment.findOne({ appointmentId: String(idParam) }).lean().catch(() => null);
+        appointmentForFallback = await Appointment.findOne({ appointmentId: String(idParam) }).lean().catch((e) => {
+          console.warn('INTAKE POST: Appointment.findOne(appointmentId) error (ignored)', e && e.message ? e.message : e);
+          return null;
+        });
       }
 
       if (appointmentForFallback) {
+        console.log(`INTAKE POST: appointment fallback found -> ${appointmentForFallback._id}`);
         // if appointment has patientId, try to resolve that patient too
         if (appointmentForFallback.patientId) {
           const resolved = await resolvePatientByParam(String(appointmentForFallback.patientId));
           if (resolved.patient) {
             patient = resolved.patient;
             by = `appointment.patientId:${resolved.by}`;
+            console.log(`INTAKE POST: resolved patient via appointment.patientId -> ${patient._id}`);
           } else {
             usingAppointmentFallback = true;
+            console.log('INTAKE POST: using appointment fallback (no patient doc resolved)');
           }
         } else {
           usingAppointmentFallback = true;
+          console.log('INTAKE POST: appointment has no patientId, using appointment fallback');
         }
+      } else {
+        console.log('INTAKE POST: no appointment fallback found');
       }
+    } else {
+      console.log(`INTAKE POST: patient resolved from param by="${by}" id=${patient._id}`);
     }
 
     // If still no patient and no appointment fallback but request provided data.patientId, try that
     if (!patient && data.patientId) {
+      console.log(`INTAKE POST: attempting to resolve patient from body.patientId = ${data.patientId}`);
       const resolved = await resolvePatientByParam(String(data.patientId));
       if (resolved.patient) {
         patient = resolved.patient;
         by = `body.patientId:${resolved.by}`;
+        console.log(`INTAKE POST: resolved patient from body.patientId -> ${patient._id}`);
+      } else {
+        console.log('INTAKE POST: could not resolve patient from body.patientId');
       }
     }
 
@@ -140,6 +186,7 @@ router.post('/:id/intake', auth, async (req, res) => {
       patientSnapshot.gender = patient.gender || null;
       patientSnapshot.phone = patient.phone || null;
       patientSnapshot.email = patient.email || null;
+      console.log('INTAKE POST: using patient doc to build patientSnapshot');
     } else if (data.patientSnapshot) {
       // accept provided snapshot (ensure firstName exists)
       patientSnapshot.firstName = data.patientSnapshot.firstName || data.patientSnapshot.first_name || '';
@@ -148,24 +195,30 @@ router.post('/:id/intake', auth, async (req, res) => {
       patientSnapshot.gender = data.patientSnapshot.gender || null;
       patientSnapshot.phone = data.patientSnapshot.phone || null;
       patientSnapshot.email = data.patientSnapshot.email || null;
+      console.log('INTAKE POST: using provided patientSnapshot from body');
     } else if (usingAppointmentFallback && appointmentForFallback) {
       patientSnapshot.firstName = appointmentForFallback.clientName || appointmentForFallback.name || '';
       patientSnapshot.phone = appointmentForFallback.phoneNumber || '';
+      console.log('INTAKE POST: using appointment fallback to build minimal patientSnapshot');
     } else {
       // As IntakeSchema requires patientSnapshot.firstName to be present, ensure it's set
       patientSnapshot.firstName = (data.patientName || data.patientSnapshot?.firstName || '').toString().trim();
+      console.log('INTAKE POST: building minimal patientSnapshot from body fields');
     }
 
     if (!patientSnapshot.firstName || patientSnapshot.firstName.trim() === '') {
+      console.log('INTAKE POST: patientSnapshot.firstName missing after resolution');
       return res.status(400).json({ success: false, message: 'patientSnapshot.firstName is required (patient resolution failed)', errorCode: 10012 });
     }
 
     // Determine resolvedPatientId (string) if available
     const resolvedPatientId = patient ? String(patient._id) : (data.patientId ? String(data.patientId) : (appointmentForFallback && appointmentForFallback.patientId ? String(appointmentForFallback.patientId) : null));
+    console.log('INTAKE POST: resolvedPatientId =', resolvedPatientId);
 
     // Determine doctorId: admin may pass doctorId, otherwise logged-in user
     const doctorIdFromBody = data.doctorId;
     const doctorId = (isAdmin && doctorIdFromBody && String(doctorIdFromBody).trim()) ? String(doctorIdFromBody) : String(userId);
+    console.log('INTAKE POST: doctorId resolved to', doctorId, 'isAdmin:', isAdmin);
 
     // Build intake document matching models_core Intake schema
     const intakePayload = {
@@ -214,9 +267,12 @@ router.post('/:id/intake', auth, async (req, res) => {
       convertedBy: null,
     };
 
+    console.log('INTAKE POST: intakePayload prepared (patientSnapshot.firstName):', intakePayload.patientSnapshot.firstName);
+
     // Create pharmacy record if medicines provided
     let pharmacyRecord = null;
     if (Array.isArray(data.pharmacy) && data.pharmacy.length > 0) {
+      console.log('INTAKE POST: pharmacy data present, creating PharmacyRecord with', data.pharmacy.length, 'items');
       // Map incoming pharmacy rows to PharmacyRecord.items
       const items = data.pharmacy.map(r => {
         return {
@@ -246,6 +302,8 @@ router.post('/:id/intake', auth, async (req, res) => {
       };
 
       pharmacyRecord = await PharmacyRecord.create(prPayload);
+      console.log('INTAKE POST: PharmacyRecord created ->', pharmacyRecord._id);
+
       intakePayload.attachments = intakePayload.attachments || [];
       // To keep compatible with your previous shape, store pharmacy id in meta or attachments? We'll set meta.pharmacyId.
       intakePayload.meta = intakePayload.meta || {};
@@ -255,6 +313,7 @@ router.post('/:id/intake', auth, async (req, res) => {
     // Create lab reports (Pathology) if provided
     const createdLabReportIds = [];
     if (Array.isArray(data.pathology) && data.pathology.length > 0) {
+      console.log('INTAKE POST: pathology data present, creating LabReport(s):', data.pathology.length);
       for (const row of data.pathology) {
         try {
           const lrPayload = {
@@ -268,6 +327,7 @@ router.post('/:id/intake', auth, async (req, res) => {
           };
           const lr = await LabReport.create(lrPayload);
           createdLabReportIds.push(String(lr._id));
+          console.log('INTAKE POST: LabReport created ->', lr._id);
         } catch (err) {
           console.error('INTAKE: LabReport create error (continuing):', err && err.message ? err.message : err);
         }
@@ -275,15 +335,18 @@ router.post('/:id/intake', auth, async (req, res) => {
       if (createdLabReportIds.length) {
         intakePayload.meta = intakePayload.meta || {};
         intakePayload.meta.labReportIds = createdLabReportIds;
+        console.log('INTAKE POST: labReportIds added to intakePayload.meta', createdLabReportIds);
       }
     }
 
     // Save Intake (models_core.Intake)
     const savedIntake = await Intake.create(intakePayload);
+    console.log('INTAKE POST: Intake saved ->', savedIntake._id);
 
     // Push prescription snapshot into patient.prescriptions if pharmacy record exists and patient exists
     if (pharmacyRecord && intakePayload.patientId) {
       try {
+        console.log('INTAKE POST: snapshotting prescription to patient:', intakePayload.patientId);
         const prescriptionSnapshot = {
           prescriptionId: undefined, // will be generated by patient schema when pushed (it's nested)
           appointmentId: intakePayload.appointmentId || null,
@@ -307,6 +370,7 @@ router.post('/:id/intake', auth, async (req, res) => {
         }).catch(err => {
           console.warn('INTAKE: pushing prescription to patient failed:', err && err.message ? err.message : err);
         });
+        console.log('INTAKE POST: prescription snapshot pushed to patient');
       } catch (err) {
         console.warn('INTAKE: error while snapshotting prescription to patient:', err && err.message ? err.message : err);
       }
@@ -315,11 +379,13 @@ router.post('/:id/intake', auth, async (req, res) => {
     // Append notes into patient.notes and update updatedAt
     if (intakePayload.notes && intakePayload.notes.trim() && intakePayload.patientId) {
       try {
+        console.log('INTAKE POST: appending notes to patient:', intakePayload.patientId);
         const patientDoc = await Patient.findById(String(intakePayload.patientId));
         if (patientDoc) {
           const timePrefix = `[${new Date().toISOString()}]`;
           const appended = `${timePrefix} ${intakePayload.notes}\n\n${patientDoc.notes || ''}`;
           await Patient.findByIdAndUpdate(String(intakePayload.patientId), { $set: { notes: appended, updatedAt: new Date() } });
+          console.log('INTAKE POST: patient notes appended');
         }
       } catch (err) {
         console.warn('INTAKE: appending notes to patient failed:', err && err.message ? err.message : err);
@@ -330,6 +396,7 @@ router.post('/:id/intake', auth, async (req, res) => {
     let updatedAppointment = null;
     if (intakePayload.appointmentId) {
       try {
+        console.log('INTAKE POST: attempting to update appointment vitals for', intakePayload.appointmentId);
         const appt = await Appointment.findById(String(intakePayload.appointmentId));
         if (appt) {
           // Only allow doctor or admin to update appointment
@@ -344,7 +411,10 @@ router.post('/:id/intake', auth, async (req, res) => {
               .populate('patientId', 'firstName lastName phone email')
               .populate('doctorId', 'firstName lastName email')
               .lean();
+            console.log('INTAKE POST: appointment updated ->', appt._id);
           }
+        } else {
+          console.log('INTAKE POST: appointment not found for update:', intakePayload.appointmentId);
         }
       } catch (err) {
         console.warn('INTAKE: updating appointment vitals failed:', err && err.message ? err.message : err);
@@ -353,12 +423,14 @@ router.post('/:id/intake', auth, async (req, res) => {
 
     // Prepare response: include intake, patient (fresh), pharmacy (if created), appointment (if updated)
     const freshPatient = intakePayload.patientId ? await Patient.findById(String(intakePayload.patientId)).lean().catch(() => null) : null;
+    console.log('INTAKE POST: fetched freshPatient ->', freshPatient ? freshPatient._id : null);
 
     // attach doctor display string to appointment if present
     if (updatedAppointment && updatedAppointment.doctorId) {
       updatedAppointment.doctor = _normalizeDoctorName(updatedAppointment.doctorId);
     }
 
+    console.log('INTAKE POST: returning success response');
     return res.status(201).json({
       success: true,
       message: 'Intake recorded successfully',
@@ -379,6 +451,7 @@ router.post('/:id/intake', auth, async (req, res) => {
  * List intakes for a patient (supports pagination and optional date range)
  */
 router.get('/:id/intake', auth, async (req, res) => {
+  console.log('INTAKE LIST: entry', { params: req.params, query: req.query, user: req.user ? { id: req.user.id, role: req.user.role } : null });
   try {
     const user = req.user;
     const role = user?.role;
@@ -387,6 +460,7 @@ router.get('/:id/intake', auth, async (req, res) => {
 
     const patientParam = req.params.id;
     if (!patientParam || !String(patientParam).trim()) {
+      console.log('INTAKE LIST: missing patientParam');
       return res.status(400).json({ success: false, message: 'patientId (param) is required', errorCode: 10020 });
     }
 
@@ -395,12 +469,13 @@ router.get('/:id/intake', auth, async (req, res) => {
     const start = req.query.start ? new Date(req.query.start) : null;
     const end = req.query.end ? new Date(req.query.end) : null;
 
-    // try to resolve param to patient id string; if not found, accept raw param (some intakes may store appointment fallback)
+    console.log('INTAKE LIST: resolved query params', { limit, skip, start, end });
+
     const resolved = await resolvePatientByParam(patientParam);
     const patientId = resolved.patient ? String(resolved.patient._id) : String(patientParam);
+    console.log('INTAKE LIST: patient resolved to', patientId, 'by:', resolved.by);
 
-    const q = { 'patientSnapshot.phone': { $exists: true } }; // base filter to keep shape consistent
-    // We'll allow matches by intake.patientId equal to resolved patient id OR patientSnapshot phone matching param
+    const q = { 'patientSnapshot.phone': { $exists: true } };
     q.$or = [{ patientId: patientId }, { 'patientSnapshot.phone': patientParam }, { 'patientSnapshot.firstName': new RegExp(patientParam, 'i') }];
 
     if (start || end) {
@@ -409,22 +484,116 @@ router.get('/:id/intake', auth, async (req, res) => {
       if (end) q.createdAt.$lte = end;
     }
 
-    // If doctor, restrict to intakes for which doctorId === userId OR createdBy === userId
     if (!isAdmin) {
       q.$and = q.$and || [];
       q.$and.push({ $or: [{ doctorId: userId }, { createdBy: userId }] });
+      console.log('INTAKE LIST: applying doctor restriction for user', userId);
     }
 
+    const qForLog = JSON.parse(JSON.stringify(q, (k, v) => (v instanceof RegExp ? v.toString() : v)));
+    console.log('INTAKE LIST: final query', qForLog);
+
+    // fetch intakes
     const [rows, total] = await Promise.all([
       Intake.find(q).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
       Intake.countDocuments(q),
     ]);
 
+    // Collect all pharmacyIds and labReportIds across rows for bulk fetch
+    const pharmacyIdSet = new Set();
+    const labReportIdSet = new Set();
+
+    for (const r of rows) {
+      try {
+        const pid = r?.meta?.pharmacyId;
+        if (pid) pharmacyIdSet.add(String(pid));
+      } catch (e) { /* ignore */ }
+
+      try {
+        const lrIds = r?.meta?.labReportIds;
+        if (Array.isArray(lrIds)) {
+          for (const id of lrIds) {
+            if (id) labReportIdSet.add(String(id));
+          }
+        }
+      } catch (e) { /* ignore */ }
+    }
+
+    // Bulk fetch PharmacyRecords and LabReports
+    let pharmacyMap = {};
+    let labReportMap = {};
+
+    try {
+      if (pharmacyIdSet.size > 0) {
+        const pharmacyIds = Array.from(pharmacyIdSet);
+        const prs = await PharmacyRecord.find({ _id: { $in: pharmacyIds } }).lean().catch(() => []);
+        pharmacyMap = prs.reduce((acc, p) => {
+          acc[String(p._id)] = p;
+          return acc;
+        }, {});
+        console.log('INTAKE LIST: fetched PharmacyRecord count =', prs.length);
+      } else {
+        console.log('INTAKE LIST: no pharmacyIds to fetch');
+      }
+    } catch (e) {
+      console.warn('INTAKE LIST: error fetching PharmacyRecords (continuing):', e && e.message ? e.message : e);
+      pharmacyMap = {};
+    }
+
+    try {
+      if (labReportIdSet.size > 0) {
+        const labIds = Array.from(labReportIdSet);
+        const lrs = await LabReport.find({ _id: { $in: labIds } }).lean().catch(() => []);
+        labReportMap = lrs.reduce((acc, l) => {
+          acc[String(l._id)] = l;
+          return acc;
+        }, {});
+        console.log('INTAKE LIST: fetched LabReport count =', Object.keys(labReportMap).length);
+      } else {
+        console.log('INTAKE LIST: no labReportIds to fetch');
+      }
+    } catch (e) {
+      console.warn('INTAKE LIST: error fetching LabReports (continuing):', e && e.message ? e.message : e);
+      labReportMap = {};
+    }
+
+    // Attach resolved pharmacy & labReports to each intake object
+    const enriched = rows.map(r => {
+      const copy = Object.assign({}, r);
+      try {
+        const pid = copy?.meta?.pharmacyId ? String(copy.meta.pharmacyId) : null;
+        copy.pharmacy = pid ? (pharmacyMap[pid] || null) : null;
+      } catch (e) {
+        copy.pharmacy = null;
+      }
+
+      try {
+        const lrIds = Array.isArray(copy?.meta?.labReportIds) ? copy.meta.labReportIds.map(id => labReportMap[String(id)]).filter(x => x) : [];
+        copy.labReports = lrIds;
+      } catch (e) {
+        copy.labReports = [];
+      }
+
+      return copy;
+    });
+
+    // Log sample (selected fields)
+    console.log('INTAKE LIST: rows sample (enriched):', enriched.slice(0, Math.min(enriched.length, 5)).map(r => ({
+      _id: r._id,
+      patientId: r.patientId,
+      pharmacyId: r?.meta?.pharmacyId,
+      pharmacyPresent: !!r.pharmacy,
+      labReportIds: r?.meta?.labReportIds,
+      labReportsCount: Array.isArray(r.labReports) ? r.labReports.length : 0,
+      createdAt: r.createdAt
+    })));
+
+    console.log(`INTAKE LIST: returning ${enriched.length} rows (total: ${total})`);
     return res.status(200).json({
       success: true,
       total,
-      count: rows.length,
-      intakes: rows,
+      count: enriched.length,
+      intakes: enriched,
     });
   } catch (err) {
     console.error('INTAKE LIST error:', err && err.message ? err.message : err);
@@ -432,11 +601,13 @@ router.get('/:id/intake', auth, async (req, res) => {
   }
 });
 
+
 /**
  * GET /api/patients/:id/intake/:intakeId
  * Return a single intake with related resources
  */
 router.get('/:id/intake/:intakeId', auth, async (req, res) => {
+  console.log('INTAKE GET single: entry', { params: req.params, user: req.user ? { id: req.user.id, role: req.user.role } : null });
   try {
     const user = req.user;
     const role = user?.role;
@@ -446,11 +617,14 @@ router.get('/:id/intake/:intakeId', auth, async (req, res) => {
     const patientParam = req.params.id;
     const intakeId = req.params.intakeId;
     if (!patientParam || !String(patientParam).trim() || !intakeId || !String(intakeId).trim()) {
+      console.log('INTAKE GET single: missing params');
       return res.status(400).json({ success: false, message: 'patientId and intakeId are required', errorCode: 10030 });
     }
 
+    console.log('INTAKE GET single: fetching intake', intakeId);
     const intake = await Intake.findById(String(intakeId)).lean();
     if (!intake) {
+      console.log('INTAKE GET single: intake not found', intakeId);
       return res.status(404).json({ success: false, message: 'Intake not found', errorCode: 10031 });
     }
 
@@ -460,19 +634,33 @@ router.get('/:id/intake/:intakeId', auth, async (req, res) => {
       (intake.patientSnapshot && (String(intake.patientSnapshot.phone || '') === String(patientParam) || String(intake.patientSnapshot.firstName || '').toLowerCase() === String(patientParam).toLowerCase()));
 
     if (!belongs) {
+      console.log('INTAKE GET single: intake does not belong to patientParam', { intakeId, patientParam });
       return res.status(404).json({ success: false, message: 'Intake not found for this patient', errorCode: 10031 });
     }
 
     // Authorization: doctors may view only their intakes (or createdBy)
     if (!isAdmin && String(intake.doctorId) !== String(userId) && String(intake.createdBy) !== String(userId)) {
+      console.log('INTAKE GET single: forbidden for user', userId, 'intake doctorId:', intake.doctorId, 'createdBy:', intake.createdBy);
       return res.status(403).json({ success: false, message: 'Forbidden', errorCode: 10032 });
     }
 
+    console.log('INTAKE GET single: fetching related resources for intake', intakeId);
     // fetch related resources
-    const patient = intake.patientId ? await Patient.findById(String(intake.patientId)).lean().catch(() => null) : null;
-    const pharmacyObj = intake.meta && intake.meta.pharmacyId ? await PharmacyRecord.findById(String(intake.meta.pharmacyId)).lean().catch(() => null) : null;
+    const patient = intake.patientId ? await Patient.findById(String(intake.patientId)).lean().catch((e) => {
+      console.warn('INTAKE GET single: Patient.findById error (ignored)', e && e.message ? e.message : e);
+      return null;
+    }) : null;
+
+    const pharmacyObj = intake.meta && intake.meta.pharmacyId ? await PharmacyRecord.findById(String(intake.meta.pharmacyId)).lean().catch((e) => {
+      console.warn('INTAKE GET single: PharmacyRecord.findById error (ignored)', e && e.message ? e.message : e);
+      return null;
+    }) : null;
+
     const labReports = intake.meta && intake.meta.labReportIds && Array.isArray(intake.meta.labReportIds)
-      ? await LabReport.find({ _id: { $in: intake.meta.labReportIds } }).lean().catch(() => [])
+      ? await LabReport.find({ _id: { $in: intake.meta.labReportIds } }).lean().catch((e) => {
+        console.warn('INTAKE GET single: LabReport.find error (ignored)', e && e.message ? e.message : e);
+        return [];
+      })
       : [];
 
     let appointmentObj = null;
@@ -481,12 +669,16 @@ router.get('/:id/intake/:intakeId', auth, async (req, res) => {
         .populate('patientId', 'firstName lastName phone email')
         .populate('doctorId', 'firstName lastName email')
         .lean()
-        .catch(() => null);
+        .catch((e) => {
+          console.warn('INTAKE GET single: Appointment.findById/populate error (ignored)', e && e.message ? e.message : e);
+          return null;
+        });
       if (appointmentObj && appointmentObj.doctorId) {
         appointmentObj.doctor = _normalizeDoctorName(appointmentObj.doctorId);
       }
     }
 
+    console.log('INTAKE GET single: returning intake + related resources', { intakeId, patient: patient ? patient._id : null, pharmacy: pharmacyObj ? pharmacyObj._id : null, labReportsCount: labReports.length });
     return res.status(200).json({
       success: true,
       intake,

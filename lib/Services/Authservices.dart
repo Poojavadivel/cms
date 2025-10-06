@@ -166,47 +166,60 @@ class AuthService {
     try {
       final token = await _getToken();
 
-      if (token == null) {
-        print("⚠️ No auth token found. User may not be logged in.");
+      if (token == null || token.isEmpty) {
+        debugPrint("⚠️ [CREATE APPOINTMENT] No auth token found — user not logged in.");
         return false;
       }
+
+      final body = draft.toJson();
+      debugPrint("📤 [CREATE APPOINTMENT] Request Body: ${body.toString()}");
 
       final response = await _apiHandler.post(
         ApiEndpoints.createAppointment().url,
         token: token,
-        body: draft.toJson(),
+        body: body,
       );
 
-      // Backend returns: { success: true, message: '...', appointment: {...} }
-      if (response is Map && response.containsKey('success')) {
+      // Handle backend-standard responses
+      if (response is Map<String, dynamic>) {
         if (response['success'] == true) {
-          final created = response['appointment'];
-          print("✅ Appointment created successfully: $created");
-          // Optionally return the created appointment object instead of bool
+          final appointment = response['appointment'];
+          debugPrint("✅ [CREATE APPOINTMENT] Success — Appointment Created:\n$appointment");
           return true;
-        } else {
-          print("❌ Failed to create appointment: ${response['message']}");
+        }
+
+        if (response.containsKey('message')) {
+          debugPrint("❌ [CREATE APPOINTMENT] Backend Error: ${response['message']}");
           return false;
         }
+
+        if (response.containsKey('error')) {
+          debugPrint("❌ [CREATE APPOINTMENT] Error: ${response['error']}");
+          return false;
+        }
+
+        // Sometimes backend may directly return appointment object
+        if (response.containsKey('_id')) {
+          debugPrint("✅ [CREATE APPOINTMENT] Raw appointment object returned:\n$response");
+          return true;
+        }
+
+        debugPrint("⚠️ [CREATE APPOINTMENT] Unknown response format:\n$response");
+        return false;
       }
 
-      // If backend returns the raw appointment object
-      if (response is Map && response.containsKey('_id')) {
-        print("✅ Appointment created (raw): $response");
-        return true;
-      }
-
-      // Unexpected format
-      print("⚠️ Unexpected response format when creating appointment: $response");
+      // Non-map responses (bad JSON or unexpected backend output)
+      debugPrint("⚠️ [CREATE APPOINTMENT] Unexpected response type: ${response.runtimeType}");
       return false;
     } on ApiException catch (e) {
-      print("❌ API Exception while creating appointment: ${e.message}");
+      debugPrint("❌ [CREATE APPOINTMENT] API Exception: ${e.message}");
       return false;
-    } catch (e) {
-      print("💥 Unexpected error creating appointment: $e");
+    } catch (e, st) {
+      debugPrint("💥 [CREATE APPOINTMENT] Unexpected Error: $e\n$st");
       return false;
     }
   }
+
 
   /// Fetch all appointments
   Future<List<DashboardAppointments>> fetchAppointments() async {
@@ -1186,5 +1199,40 @@ class AuthService {
     });
   }
 
+  Future<dynamic> getIntakes({required String patientId, int limit = 20, int skip = 0}) async {
+    if (patientId.trim().isEmpty) throw ApiException('patientId is required');
+
+    return await _withAuth<dynamic>((token) async {
+      final api = ApiEndpoints.getIntakes(patientId); // -> /api/patients/$patientId/intake
+      final url = '${api.url}?limit=$limit&skip=$skip';
+
+      // debug logs
+      print('GET INTAKES: patientId="$patientId"');
+      print('GET INTAKES: url="$url"');
+      print('GET INTAKES: tokenPresent=${token != null && token.toString().isNotEmpty}');
+
+      try {
+        final response = await _apiHandler.get(url, token: token);
+        print('GET INTAKES: raw response -> $response');
+
+        if (response is Map && response.containsKey('intakes')) {
+          print('GET INTAKES: returning response["intakes"] (count=${(response["intakes"] as List).length})');
+          return response['intakes']; // Return only the intake list
+        }
+
+        // If backend returned a list directly or another shape, return it (and log)
+        if (response is List) {
+          print('GET INTAKES: response is List (count=${response.length})');
+        } else {
+          print('GET INTAKES: response shape -> ${response.runtimeType}');
+        }
+
+        return response; // Fallback if backend returns full object
+      } catch (e, st) {
+        print('GET INTAKES: exception -> $e\n$st');
+        rethrow;
+      }
+    });
+  }
 
 }

@@ -10,6 +10,7 @@ import '../../Services/Authservices.dart';
 import '../../Utils/Colors.dart';
 import 'widgets/Appoimentstable.dart';
 import 'widgets/doctor_appointment_preview.dart';
+import 'widgets/eyeicon.dart';
 
 class DoctorDashboardScreen extends StatefulWidget {
   const DoctorDashboardScreen({super.key});
@@ -85,7 +86,7 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
       context: context,
       builder: (_) => Dialog(
         insetPadding: const EdgeInsets.all(12),
-        child: DoctorAppointmentPreview(patient: patient),
+        child: AppointmentDetail(patient: patient),
       ),
     );
   }

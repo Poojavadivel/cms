@@ -16,7 +16,7 @@ class ApiConstants {
   // --- Base URL ---
   /// The base URL for the backend API.
   /// Change this to your actual server address during development/production.
-  static const String baseUrl = "http://10.233.70.132:3000";
+  static const String baseUrl = "http://10.35.25.132:3000";
   // static const String baseUrl = "https://karur-gastro-foundation.onrender.com";// <-- IMPORTANT: Replace with your actual backend URL
 
   // --- HTTP Methods ---
@@ -128,6 +128,11 @@ class ApiEndpoints {
       url: '/api/intake/$patientId/intake',
       method: ApiConstants.post,
     );
+  static RestApi getIntakes(String patientId) => RestApi(
+    url: '/api/intake/$patientId/intake',
+    method: ApiConstants.get,
+  );
+
 
 
 }

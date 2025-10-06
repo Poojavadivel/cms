@@ -417,7 +417,7 @@ class _AppointmentDataView extends StatelessWidget {
                   color: AppColors.accentPink,
                   onPressed: () {
                     final patient = _mapApptToPatient(appt);
-                    DoctorAppointmentPreview.show(context, patient);
+                    AppointmentDetail.show(context, patient);
                   },
                 ),
               ),

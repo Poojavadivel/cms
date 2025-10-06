@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
+
 import '../../../Models/Patients.dart';
 import '../../../Models/dashboardmodels.dart';
+import '../../../Services/Authservices.dart';
 import '../../../Utils/Colors.dart';
 
 // ---- Theme ----
@@ -14,8 +17,8 @@ const Color borderColor = Color(0xFFE5E7EB);
 const Color successColor = Color(0xFF10B981);
 const Color warningColor = Color(0xFFF59E0B);
 
-class AppointmentDetail extends StatelessWidget {
-  final PatientDetails patient; // <-- changed type
+class AppointmentDetail extends StatefulWidget {
+  final PatientDetails patient;
   const AppointmentDetail({super.key, required this.patient});
 
   static Future<void> show(BuildContext context, PatientDetails patient) {
@@ -28,6 +31,187 @@ class AppointmentDetail extends StatelessWidget {
   }
 
   @override
+  State<AppointmentDetail> createState() => _AppointmentDetailState();
+}
+
+class _AppointmentDetailState extends State<AppointmentDetail> {
+  bool _loading = false;
+  String? _error;
+  List<Map<String, dynamic>> _intakes = [];
+  Map<String, dynamic>? _latestIntake;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadIntakes();
+  }
+
+  String? _resolvePatientId() {
+    final id = widget.patient.patientId;
+    return (id.trim().isEmpty) ? null : id.trim();
+  }
+
+  Future<void> _loadIntakes() async {
+    final pid = _resolvePatientId();
+    print('INTAKE DEBUG: resolved patientId -> $pid');
+    if (pid == null) {
+      setState(() => _error = 'Unable to resolve patient id');
+      print('INTAKE DEBUG: patient id unresolved; check PatientDetails fields.');
+      return;
+    }
+
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    try {
+      print('INTAKE DEBUG: calling AuthService.getIntakes for patientId=$pid');
+      final resp = await AuthService.instance.getIntakes(patientId: pid, limit: 20, skip: 0);
+      print('INTAKE DEBUG: raw response -> $resp');
+
+      List<Map<String, dynamic>> intakes = [];
+
+      // defensive shape handling
+      if (resp == null) {
+        print('INTAKE DEBUG: response is null');
+      } else if (resp is List) {
+        try {
+          intakes = List<Map<String, dynamic>>.from(resp.map((e) => Map<String, dynamic>.from(e)));
+        } catch (e) {
+          print('INTAKE DEBUG: failed to coerce List items -> $e');
+        }
+      } else if (resp is Map && resp.containsKey('intakes')) {
+        try {
+          final list = resp['intakes'] as List;
+          intakes = List<Map<String, dynamic>>.from(list.map((e) => Map<String, dynamic>.from(e)));
+        } catch (e) {
+          print('INTAKE DEBUG: failed to coerce resp["intakes"] -> $e');
+        }
+      } else if (resp is Map) {
+        try {
+          intakes = [Map<String, dynamic>.from(resp)];
+        } catch (e) {
+          print('INTAKE DEBUG: failed to coerce single resp map -> $e');
+        }
+      } else {
+        print('INTAKE DEBUG: unknown response shape: ${resp.runtimeType}');
+      }
+
+      print('INTAKE DEBUG: parsed intakes count = ${intakes.length}');
+      setState(() {
+        _intakes = intakes;
+        _latestIntake = intakes.isNotEmpty ? intakes.first : null;
+        _loading = false;
+      });
+    } catch (err, st) {
+      print('INTAKE DEBUG: exception while loading intakes -> $err\n$st');
+      setState(() {
+        _loading = false;
+        _error = (err is Exception) ? err.toString() : 'Failed to load intakes';
+      });
+    }
+  }
+
+  // -------- Pharmacy UI (better fallbacks & formatting) ----------
+  Widget _buildPharmacySection() {
+    if (_loading) return const SizedBox();
+    if (_error != null) return Text(_error!, style: const TextStyle(color: Colors.red));
+    if (_latestIntake == null) return const Text('No intake records found', style: TextStyle(color: textSecondaryColor));
+
+    final meta = _latestIntake!['meta'] ?? {};
+    dynamic pharmacy = _latestIntake!['pharmacy'] ?? _latestIntake!['pharmacyRecord'] ?? meta['pharmacy'];
+
+    if (pharmacy == null && _intakes.isNotEmpty && _intakes.first.containsKey('pharmacy')) {
+      pharmacy = _intakes.first['pharmacy'];
+    }
+
+    List items = [];
+    try {
+      if (pharmacy is Map && pharmacy['items'] is List) items = pharmacy['items'];
+      else if (pharmacy is List) items = pharmacy;
+    } catch (e) {
+      print('PHARMACY DEBUG: error extracting items -> $e');
+    }
+
+    print('INTAKE DEBUG: pharmacy items count = ${items.length}');
+    if (items.isEmpty) return const Text('No pharmacy data available', style: TextStyle(color: textSecondaryColor));
+
+    final rows = items.map<Map<String, String>>((it) {
+      final name = (it['name'] ?? it['Medicine'] ?? it['medicine'] ?? '').toString().trim();
+
+      // numeric fallback: show '—' for 0 / null to avoid misleading zeros
+      final qtyNum = (it['quantity'] ?? it['Qty'] ?? it['qty']);
+      final qtyStr = (qtyNum == null)
+          ? '—'
+          : ((num.tryParse(qtyNum.toString()) ?? 0) == 0 ? '—' : qtyNum.toString());
+
+      final priceNum = (it['unitPrice'] ?? it['price']);
+      final priceStr = (priceNum == null)
+          ? '—'
+          : ((num.tryParse(priceNum.toString()) ?? 0) == 0 ? '—' : priceNum.toString());
+
+      return {
+        'Medicine': name.isEmpty ? '—' : name,
+        'Qty': qtyStr,
+        'Price': priceStr,
+      };
+    }).toList();
+
+    return _ReadOnlyTable(columns: const ['Medicine', 'Qty', 'Price'], rows: rows);
+  }
+
+  // -------- Pathology UI (render object results nicely) ----------
+  Widget _buildPathologySection() {
+    if (_loading) return const SizedBox();
+    if (_error != null) return Text(_error!, style: const TextStyle(color: Colors.red));
+    if (_latestIntake == null) return const Text('No pathology data', style: TextStyle(color: textSecondaryColor));
+
+    final pathologyRaw = _latestIntake!['pathology'] ?? _latestIntake!['labReports'] ?? _latestIntake!['meta']?['labReportIds'];
+    print('INTAKE DEBUG: pathologyRaw -> $pathologyRaw');
+
+    if (pathologyRaw == null) return const Text('No pathology data available', style: TextStyle(color: textSecondaryColor));
+
+    if (pathologyRaw is List && pathologyRaw.isNotEmpty && pathologyRaw.first is String) {
+      final rows = pathologyRaw.map<Map<String, String>>((id) => {'Test': id.toString(), 'Result': '—'}).toList();
+      return _ReadOnlyTable(columns: const ['Test', 'Result'], rows: rows);
+    } else if (pathologyRaw is List) {
+      final rows = pathologyRaw.map<Map<String, String>>((p) {
+        final name = (p['testType'] ?? p['testName'] ?? p['name'] ?? '').toString().trim();
+        final results = p['results'];
+        final metadata = p['metadata'] ?? p['meta'] ?? {};
+
+        String resultStr;
+        if (results == null) {
+          resultStr = (metadata is Map && (metadata['notes'] ?? '').toString().trim().isNotEmpty)
+              ? metadata['notes'].toString()
+              : '—';
+        } else if (results is Map) {
+          if (results.isEmpty) {
+            resultStr = (metadata is Map && (metadata['notes'] ?? '').toString().trim().isNotEmpty)
+                ? metadata['notes'].toString()
+                : 'Pending';
+          } else {
+            // render map as "key: value; key2: value2"
+            try {
+              resultStr = results.entries.map((e) => '${e.key}: ${e.value}').join('; ');
+            } catch (_) {
+              resultStr = results.toString();
+            }
+          }
+        } else {
+          resultStr = results.toString();
+        }
+
+        return {'Test': name.isEmpty ? '—' : name, 'Result': resultStr};
+      }).toList();
+      return _ReadOnlyTable(columns: const ['Test', 'Result'], rows: rows);
+    }
+
+    return const Text('No pathology records found', style: TextStyle(color: textSecondaryColor));
+  }
+
+  @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
 
@@ -37,7 +221,7 @@ class AppointmentDetail extends StatelessWidget {
       child: ConstrainedBox(
         constraints: BoxConstraints(
           maxWidth: size.width * 0.95,
-          maxHeight: size.height * 0.95,
+          maxHeight: size.height * 0.9,
         ),
         child: Stack(
           clipBehavior: Clip.none,
@@ -46,56 +230,57 @@ class AppointmentDetail extends StatelessWidget {
               borderRadius: BorderRadius.circular(16),
               child: Material(
                 color: backgroundColor,
-                child: SingleChildScrollView(
-                  child: Padding(
+                child: SizedBox(
+                  height: size.height * 0.9,
+                  child: SingleChildScrollView(
                     padding: const EdgeInsets.all(20),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        _ProfileHeaderCard(patient: patient),
+                        _ProfileHeaderCard(patient: widget.patient),
                         const SizedBox(height: 16),
 
-                        // ---- Notes Section ----
                         _SectionCard(
                           icon: Icons.note_alt_outlined,
                           title: "Medical Notes",
                           description: "Patient notes",
-                          builder: () => Align(
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              patient.notes.isNotEmpty
-                                  ? patient.notes
-                                  : "No notes available",
-                              style: const TextStyle(
-                                color: textSecondaryColor,
-                                fontSize: 13,
-                                height: 1.4,
+                          builder: () {
+                            if (_loading) return const Center(child: CircularProgressIndicator());
+                            if (_error != null) return Text(_error!, style: const TextStyle(color: Colors.red));
+                            final notes = widget.patient.notes?.toString() ?? '';
+                            return Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                notes.isNotEmpty ? notes : "No notes available",
+                                style: const TextStyle(
+                                  color: textSecondaryColor,
+                                  fontSize: 13,
+                                  height: 1.4,
+                                ),
                               ),
-                            ),
-                          ),
+                            );
+                          },
                         ),
 
-                        // ---- Pharmacy Section ----
+                        const SizedBox(height: 16),
+
                         _SectionCard(
                           icon: Icons.local_pharmacy_outlined,
                           title: "Pharmacy",
                           description: "Prescribed medicines",
-                          builder: () => const Text(
-                            "No pharmacy data in PatientDetails",
-                            style: TextStyle(color: textSecondaryColor),
-                          ),
+                          builder: () => _buildPharmacySection(),
                         ),
 
-                        // ---- Pathology Section ----
+                        const SizedBox(height: 16),
+
                         _SectionCard(
                           icon: Icons.biotech_outlined,
                           title: "Pathology",
                           description: "Lab investigations",
-                          builder: () => const Text(
-                            "No pathology data in PatientDetails",
-                            style: TextStyle(color: textSecondaryColor),
-                          ),
+                          builder: () => _buildPathologySection(),
                         ),
+
+                        const SizedBox(height: 24),
                       ],
                     ),
                   ),
@@ -103,7 +288,6 @@ class AppointmentDetail extends StatelessWidget {
               ),
             ),
 
-            // ---- Floating close button ----
             Positioned(
               top: -10,
               right: -10,
@@ -140,6 +324,8 @@ class AppointmentDetail extends StatelessWidget {
     );
   }
 }
+
+
 class _SectionCard extends StatefulWidget {
   final IconData icon;
   final String title;
@@ -173,13 +359,10 @@ class _SectionCardState extends State<_SectionCard> {
       child: Column(
         children: [
           ListTile(
-            leading: Icon(widget.icon,  color: AppColors.primary700,),
+            leading: Icon(widget.icon, color: AppColors.primary700),
             title: Text(widget.title),
-            subtitle: Text(widget.description,
-                style: const TextStyle(color: textSecondaryColor)),
-            trailing: Icon(open
-                ? Icons.keyboard_arrow_up
-                : Icons.keyboard_arrow_down),
+            subtitle: Text(widget.description, style: const TextStyle(color: textSecondaryColor)),
+            trailing: Icon(open ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down),
             onTap: () => setState(() => open = !open),
           ),
           if (open)
@@ -193,11 +376,9 @@ class _SectionCardState extends State<_SectionCard> {
   }
 }
 
-
 // ---------------- Helpers ----------------
 String _s(String? v) => (v == null) ? '' : v.trim();
-String _n(num? v, {String? suffix}) =>
-    (v == null || v == 0) ? '—' : '${v}${suffix ?? ''}';
+String _n(num? v, {String? suffix}) => (v == null || v == 0) ? '—' : '${v}${suffix ?? ''}';
 
 // ---------------- Read-only Table ----------------
 class _ReadOnlyTable extends StatelessWidget {
@@ -238,17 +419,14 @@ class _ReadOnlyTable extends StatelessWidget {
           for (int i = 0; i < rows.length; i++)
             TableRow(
               decoration: BoxDecoration(
-                color: i.isEven
-                    ? Colors.white
-                    : const Color(0xFFFEF2F2).withOpacity(0.3),
+                color: i.isEven ? Colors.white : const Color(0xFFFEF2F2).withOpacity(0.3),
               ),
               children: columns.map((c) {
                 return Padding(
                   padding: const EdgeInsets.all(8),
                   child: Text(
                     rows[i][c] ?? "—",
-                    style: const TextStyle(
-                        fontSize: 13, color: textPrimaryColor),
+                    style: const TextStyle(fontSize: 13, color: textPrimaryColor),
                   ),
                 );
               }).toList(),
@@ -275,29 +453,19 @@ class _ReadOnlyTable extends StatelessWidget {
 // Keep your _ProfileHeaderCard, _InfoCard, _CardShell, _ResponsiveScroll
 // (from your pasted code above) without change
 
-// ---------------- Helpers ----------------
-// String _s(String? v) => (v == null) ? '' : v.trim();
-// String _n(num? v, {String? suffix}) =>
-//     (v == null || v == 0) ? '—' : '${v}${suffix ?? ''}';
-
 // ---------------- Widgets ----------------
 
 class _ProfileHeaderCard extends StatelessWidget {
-  // keep your original tokens so layout stays identical
   static const double kRadius = 16;
   static const double kAvatar = 128;
   static const Color kTint = Color(0xFFF9FAFB); // subtle tint behind card
   static const Color kTintLine = Color(0xFFF3F4F6);
 
-  // <-- updated to use PatientDetails
   final PatientDetails patient;
   const _ProfileHeaderCard({required this.patient});
 
-  // numeric helper (keeps original semantics for numbers)
-  String _n(num? v, {String? suffix}) =>
-      (v == null || v == 0) ? '—' : '${v}${suffix ?? ''}';
+  String _n(num? v, {String? suffix}) => (v == null || v == 0) ? '—' : '${v}${suffix ?? ''}';
 
-  // string helper for height/weight/bmi that are strings in PatientDetails
   String _ns(String? v, {String? suffix}) {
     if (v == null) return '—';
     final s = v.trim();
@@ -339,7 +507,6 @@ class _ProfileHeaderCard extends StatelessWidget {
         color: kTint,
         child: Stack(
           children: [
-            // Card body with subtle border and shadow - enterprise feel
             Container(
               margin: const EdgeInsets.all(0),
               decoration: BoxDecoration(
@@ -362,7 +529,6 @@ class _ProfileHeaderCard extends StatelessWidget {
                     direction: Axis.horizontal,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Left: big avatar + spacing
                       Flexible(
                         flex: isTight ? 10 : 6,
                         child: Row(
@@ -377,7 +543,6 @@ class _ProfileHeaderCard extends StatelessWidget {
 
                       const SizedBox(width: 16),
 
-                      // Right: vitals grid - keeps original flex behavior
                       if (!isTight)
                         Expanded(flex: 5, child: _vitalsGrid())
                       else
@@ -394,7 +559,6 @@ class _ProfileHeaderCard extends StatelessWidget {
               ),
             ),
 
-            // Floating edit ghost button at top-right (keeps original placement)
             Positioned(
               right: 12,
               top: 12,
@@ -461,7 +625,6 @@ class _ProfileHeaderCard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Name (large, bold) - matches original font size and weight
         Text(
           name,
           maxLines: 1,
@@ -475,7 +638,6 @@ class _ProfileHeaderCard extends StatelessWidget {
         ),
         const SizedBox(height: 8),
 
-        // ID badge: keep original look but use AppColors
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
@@ -496,7 +658,6 @@ class _ProfileHeaderCard extends StatelessWidget {
 
         const SizedBox(height: 12),
 
-        // basic meta row (gender / age / dob) - keep as Wrap like original
         Wrap(
           spacing: 18,
           runSpacing: 10,
@@ -510,7 +671,6 @@ class _ProfileHeaderCard extends StatelessWidget {
 
         const SizedBox(height: 8),
 
-        // Blood group row same as original
         Row(
           children: [
             Icon(Icons.bloodtype, size: 16, color: AppColors.kTextSecondary),
@@ -641,8 +801,10 @@ class _ProfileHeaderCard extends StatelessWidget {
       ),
     );
   }
-}
 
+
+
+}
 
 class _InfoCard extends StatelessWidget {
   final String title;
@@ -772,8 +934,8 @@ class _StatusChip extends StatelessWidget {
       bg = warningColor.withOpacity(.12);
       fg = warningColor;
     } else {
-      bg =  AppColors.primary700.withOpacity(.12);
-      fg =  AppColors.primary700;
+      bg = AppColors.primary700.withOpacity(.12);
+      fg = AppColors.primary700;
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),

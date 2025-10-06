@@ -9,6 +9,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../Utils/Colors.dart';
 
+
 class DoctorAppointmentPreview extends StatefulWidget {
   final PatientDetails patient;
   const DoctorAppointmentPreview({super.key, required this.patient});
@@ -1235,8 +1236,8 @@ class _PatientProfileTabState extends State<_PatientProfileTab> {
 }
 
 
-
 // ---- SAME COLORS AS APPOINTMENTS ----
+
 const Color primaryColor = Color(0xFFEF4444);
 const Color cardBackgroundColor = Color(0xFFFFFFFF);
 const Color textPrimaryColor = Color(0xFF1F2937);
@@ -1248,6 +1249,7 @@ const Color _buttonBgColor = Color(0xFFDC2626);
 const Color _statusIncompleteColor = Color(0xFFDC2626);
 const Color _rowAlternateColor = Color(0xFFFEF2F2);
 const Color _intakeButtonColor = Color(0xFFF87171);
+
 
 class _MedicationsTab extends StatefulWidget {
   const _MedicationsTab();
@@ -1484,9 +1486,6 @@ class _MedicationsTabState extends State<_MedicationsTab> {
     );
   }
 }
-
-
-
 
 class _LabsTab extends StatefulWidget {
   const _LabsTab({super.key});
