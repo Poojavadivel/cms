@@ -54,11 +54,22 @@ router.post('/', auth, async (req, res) => {
 // -------------------------
 router.get('/', auth, async (req, res) => {
   try {
+    // 🔍 Log raw query parameters
+    console.log('\n==============================');
+    console.log('📥 [PATIENT LIST] Incoming Request');
+    console.log('Query Params:', req.query);
+    console.log('Auth User:', req.user ? { id: req.user._id, email: req.user.email } : '❌ No user object');
+    console.log('==============================\n');
+
+    // Parse query params
     const q = (req.query.q || '').trim();
     const page = Math.max(0, parseInt(req.query.page || '0', 10));
     const limit = Math.min(100, parseInt(req.query.limit || '20', 10));
     const wantMeta = String(req.query.meta || '') === '1';
 
+    console.log(`📄 Query String: "${q}" | Page: ${page} | Limit: ${limit} | Meta: ${wantMeta}`);
+
+    // Build filter
     const filter = { deleted_at: null };
     if (q) {
       const regex = new RegExp(q, 'i');
@@ -73,8 +84,14 @@ router.get('/', auth, async (req, res) => {
       ];
     }
 
+    console.log('🧩 MongoDB Filter:', JSON.stringify(filter, null, 2));
+
     const skip = page * limit;
 
+    console.log('⚙️ Pagination -> skip:', skip, '| limit:', limit);
+
+    // Query database
+    console.time('⏱️ [DB Query Time]');
     const [items, total] = await Promise.all([
       Patient.find(filter)
         .skip(skip)
@@ -84,22 +101,52 @@ router.get('/', auth, async (req, res) => {
         .lean(),
       Patient.countDocuments(filter),
     ]);
+    console.timeEnd('⏱️ [DB Query Time]');
 
+    console.log(`📊 Query Result: Found ${items.length} patients (of ${total} total)`);
+
+    // Enrich results
     const enriched = items.map(p => ({
       ...p,
       doctorName: p.doctorId ? `${p.doctorId.firstName} ${p.doctorId.lastName}`.trim() : '',
     }));
 
+    // Optional metadata logging
     if (wantMeta) {
-      return res.status(200).json({ success: true, patients: enriched, total, page, limit });
+      console.log('🧾 Returning meta-enabled response');
+      console.log({
+        total,
+        page,
+        limit,
+        count: enriched.length,
+        firstItem: enriched[0]?.firstName || '(none)',
+      });
+
+      return res.status(200).json({
+        success: true,
+        patients: enriched,
+        total,
+        page,
+        limit,
+      });
     }
+
+    // Standard response
+    console.log('✅ Returning patient list (no meta)');
+    console.log(`📤 Response count: ${enriched.length}`);
 
     return res.status(200).json(enriched);
   } catch (err) {
-    console.error('❌ [PATIENT LIST] Error:', err);
-    return res.status(500).json({ success: false, message: 'Failed to fetch patients', errorCode: 5001 });
+    console.error('❌ [PATIENT LIST] Error:', err.message);
+    console.error('🔴 Stack Trace:', err.stack);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to fetch patients',
+      errorCode: 5001,
+    });
   }
 });
+
 
 // -------------------------
 // GET Patient by ID

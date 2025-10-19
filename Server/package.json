@@ -1,6 +1,7 @@
 {
   "dependencies": {
     "@google-cloud/vision": "^5.3.3",
+    "@google/generative-ai": "^0.24.1",
     "axios": "^1.12.2",
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",

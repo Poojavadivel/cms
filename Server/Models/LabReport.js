@@ -25,6 +25,7 @@ const LabReportSchema = new Schema({
 
   // OCR text snapshot for search/audit/debug
   rawText: { type: String, default: '' },
+  enhancedText: { type: String, default: '' },
 
   // OCR + metadata (engine, confidence, etc.)
   metadata: { type: Schema.Types.Mixed, default: {} }
