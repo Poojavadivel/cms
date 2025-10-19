@@ -336,17 +336,36 @@ PharmacyRecordSchema.index({ patientId: 1, createdAt: -1 });
 // ---------------------------
 // Lab Reports
 // ---------------------------
+// ---------------------------
+// Lab Reports (linked to OCR uploads)
+// ---------------------------
 const LabReportSchema = new Schema({
   _id: { type: String, default: () => uuidv4() },
+
+  // Relations
   patientId: { type: String, ref: 'Patient', required: true, index: true },
   appointmentId: { type: String, default: null },
-  testType: { type: String, default: '' },
+
+  // Type + Results
+  testType: { type: String, default: 'Auto-OCR' },
   results: { type: Schema.Types.Mixed, default: {} },
-  fileRef: { type: String, ref: 'File', default: null },
-  uploadedBy: { type: String, ref: 'User' },
+
+  // IMPORTANT: now references PatientPDF instead of File
+  fileRef: { type: String, ref: 'PatientPDF', default: null },
+
+  uploadedBy: { type: String, ref: 'User', default: null },
+
+  // OCR text snapshot for search/audit/debug
+  rawText: { type: String, default: '' },
+
+  // OCR + metadata (engine, confidence, etc.)
   metadata: { type: Schema.Types.Mixed, default: {} }
 }, Object.assign({}, commonOptions));
+
+// Useful indexes
 LabReportSchema.index({ patientId: 1, testType: 1 });
+LabReportSchema.index({ createdAt: -1 });
+
 
 // ---------------------------
 // Files (S3 / GridFS pointers)
@@ -410,6 +429,24 @@ const BotSchema = new Schema({
 BotSchema.index({ userId: 1, archived: 1, updatedAt: -1 });
 BotSchema.index({ 'sessions.sessionId': 1 });
 
+// --- PatientPDF (stores PDF/image binary in Mongo) ---
+const PatientPDFSchema = new Schema({
+  _id: { type: String, default: () => uuidv4() },
+  patientId: { type: String, ref: 'Patient', required: true, index: true },
+  title: { type: String, default: '' },
+  fileName: { type: String, required: true, index: true },
+  mimeType: { type: String, default: 'application/pdf' },
+  data: { type: Buffer, required: true }, // the file bytes
+  size: { type: Number, default: 0 },
+  uploadedAt: { type: Date, default: Date.now },
+  
+}, Object.assign({}, commonOptions));
+
+PatientPDFSchema.index({ patientId: 1, uploadedAt: -1 });
+
+
+
+
 // ---------------------------
 // Model exports & helper
 // ---------------------------
@@ -426,10 +463,11 @@ const LabReport = mongoose.model('LabReport', LabReportSchema);
 const File = mongoose.model('File', FileSchema);
 const AuditLog = mongoose.model('AuditLog', AuditLogSchema);
 const Bot = mongoose.model('Bot', BotSchema);
+const PatientPDF = mongoose.model('PatientPDF', PatientPDFSchema);
 
 
 module.exports = {
   User, Staff, AuthSession, Patient, Intake, Appointment, Medicine, MedicineBatch,
-  PharmacyRecord, LabReport, File, AuditLog, Bot,
+  PharmacyRecord, LabReport, File, AuditLog, Bot,PatientPDF,
   startSession: () => mongoose.startSession()
 };

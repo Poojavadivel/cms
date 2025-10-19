@@ -1,7 +1,7 @@
 // routes/doctors.js
 const express = require('express');
 const mongoose = require('mongoose');
-const { User, Patient, Appointment } = require('../Models/models'); // expects Mongoose models
+const { User, Patient, Appointment } = require('../Models'); // expects Mongoose models
 const auth = require('../Middleware/Auth');
 const router = express.Router();
 

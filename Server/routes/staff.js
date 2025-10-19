@@ -1,6 +1,6 @@
 // routes/staff.js
 const express = require('express');
-const { Staff } = require('../Models/models'); // Staff model (separate collection)
+const { Staff } = require('../Models'); // Staff model (separate collection)
 const auth = require('../Middleware/Auth');
 const router = express.Router();
 

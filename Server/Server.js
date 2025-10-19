@@ -8,7 +8,7 @@ require('dotenv').config();
 
 // --- Local Imports ---
 const { connectMongo } = require('./Config/Dbconfig');           // your new Mongo-only DB config
-const { User } = require('./Models/models');          // updated models (UUID-based)
+const { User } = require('./Models');          // updated models (UUID-based)
 const authRoutes = require('./routes/auth');
 const appointmentRoutes = require('./routes/appointment');
 const path = require('path');
@@ -37,7 +37,7 @@ app.use('/api/doctors', require('./routes/doctors'));
 app.use('/api/pharmacy', require('./routes/pharmacy'));
 app.use('/api/bot', require('./routes/bot'));
 app.use('/api/intake', require('./routes/intake'));
-
+app.use('/api/scanner', require('./routes/scanner'));
 // --- Health / Root Endpoint ---
 
 

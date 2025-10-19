@@ -5,6 +5,7 @@
 const mongoose = require('mongoose');
 require('dotenv').config();
 
+
 const mongoUrl = process.env.MONGODB_URL || process.env.MANGODB_URL || null;
 
 if (!mongoUrl) {

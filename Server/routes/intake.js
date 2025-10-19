@@ -1,6 +1,6 @@
 // routes/intake.js
 const express = require('express');
-const { Patient, Appointment, Intake, PharmacyRecord, LabReport, User } = require('../Models/models');
+const { Patient, Appointment, Intake, PharmacyRecord, LabReport, User } = require('../Models');
 const auth = require('../Middleware/Auth'); // full middleware preferred
 const router = express.Router();
 

@@ -4,7 +4,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 
-const { User, AuthSession } = require('../Models/models'); // Mongoose models (UUID _id)
+const { User, AuthSession } = require('../Models'); // Mongoose models (UUID _id)
 const auth = require('../Middleware/Auth'); // full middleware that loads userDoc
 
 const router = express.Router();

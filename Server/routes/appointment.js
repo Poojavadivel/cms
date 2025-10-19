@@ -1,5 +1,5 @@
 const express = require('express');
-const { Appointment,Patient } = require('../Models/models'); // Mongoose models
+const { Appointment,Patient } = require('../Models'); // Mongoose models
 const auth = require('../Middleware/Auth'); // loads fresh user + role
 const router = express.Router();
 

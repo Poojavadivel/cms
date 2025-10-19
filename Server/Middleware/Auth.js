@@ -1,6 +1,6 @@
 // Middleware/Auth.full.js
 const jwt = require('jsonwebtoken');
-const { User } = require('../Models/models'); // Mongoose User model
+const { User } = require('../Models'); // Mongoose User model
 
 const ACCESS_TOKEN_SECRET = process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET || 'please-set-a-secret';
 

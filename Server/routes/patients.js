@@ -1,6 +1,6 @@
 // routes/patients.js
 const express = require('express');
-const { Patient } = require('../Models/models');
+const { Patient } = require('../Models');
 const auth = require('../Middleware/Auth');
 const router = express.Router();
 

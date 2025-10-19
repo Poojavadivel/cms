@@ -1,7 +1,20 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:http/http.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
+import 'dart:io' show File;
+import 'dart:typed_data';
+import 'package:file_picker/file_picker.dart';
+import 'package:http/http.dart' show MultipartFile;
+import 'package:http_parser/http_parser.dart';
+import 'package:path/path.dart' as p;
+import 'dart:io';
+import 'package:http/http.dart'; // for MultipartFile
+import 'package:http_parser/http_parser.dart'; // for MediaType
+import 'package:path/path.dart' as p; // for basename()
+import 'dart:developer'; // optional for logging
 import '../Models/Admin.dart';
 import '../Models/Doctor.dart';
 import '../Models/Patients.dart';
@@ -1234,5 +1247,209 @@ class AuthService {
       }
     });
   }
+
+
+
+
+  /// Unified upload that works on web (bytes) and native (paths).
+  Future<Map<String, dynamic>?> uploadScansUnified({
+    required List<PlatformFile> platformFiles,
+  }) async {
+    try {
+      final token = await _getToken();
+      if (token == null || token.isEmpty) {
+        debugPrint("⚠️ [SCANNER UPLOAD] No auth token — user not logged in.");
+        return null;
+      }
+
+      if (platformFiles.isEmpty) {
+        debugPrint("⚠️ [SCANNER UPLOAD] No files selected.");
+        return null;
+      }
+
+      if (platformFiles.length > 10) {
+        debugPrint("⚠️ [SCANNER UPLOAD] Max 10 files allowed. Got: ${platformFiles.length}");
+        return null;
+      }
+
+      debugPrint("📤 [SCANNER UPLOAD] Preparing ${platformFiles.length} files…");
+
+      final List<MultipartFile> parts = [];
+
+      for (final pf in platformFiles) {
+        final name = pf.name ?? 'file';
+        final filename = p.basename(name);
+
+        Uint8List? bytes;
+        if (pf.bytes != null && pf.bytes!.isNotEmpty) {
+          bytes = pf.bytes;
+        } else if (pf.path != null) {
+          // native fallback: read from filesystem
+          final file = File(pf.path!);
+          if (await file.exists()) {
+            bytes = await file.readAsBytes();
+          } else {
+            debugPrint("⚠️ [SCANNER UPLOAD] File path not found for ${pf.path}");
+          }
+        }
+
+        if (bytes == null) {
+          debugPrint("⚠️ [SCANNER UPLOAD] Skipping $filename (no bytes/path)");
+          continue;
+        }
+
+        final mime = _guessMimeFromName(filename) ?? 'application/octet-stream';
+        final partsMime = mime.split('/');
+        final mType = MediaType(partsMime[0], partsMime.length > 1 ? partsMime[1] : 'octet-stream');
+
+        final part = MultipartFile.fromBytes(
+          'files',
+          bytes,
+          filename: filename,
+          contentType: mType,
+        );
+        parts.add(part);
+        debugPrint("  • queued file=$filename bytes=${bytes.length} mime=$mime");
+      }
+
+      if (parts.isEmpty) {
+        debugPrint("⚠️ [SCANNER UPLOAD] No valid file parts to upload.");
+        return null;
+      }
+
+      final response = await _apiHandler.postMultipart(
+        ApiEndpoints.scannerUpload().url,
+        token: token,
+        filesField: 'files',
+        files: parts,
+      );
+
+      if (response is Map<String, dynamic>) {
+        debugPrint("✅ [SCANNER UPLOAD] ok=${response['ok']} batch=${response['batchId']}");
+        return response;
+      }
+
+      debugPrint("⚠️ [SCANNER UPLOAD] Unexpected response: ${response.runtimeType}");
+      return null;
+    } catch (e, st) {
+      debugPrint("💥 [SCANNER UPLOAD] $e\n$st");
+      return null;
+    }
+  }
+
+
+
+  Future<Map<String, dynamic>?> uploadScans(List<File> files) async {
+    try {
+      final token = await _getToken();
+      if (token == null || token.isEmpty) {
+        debugPrint("⚠️ [SCANNER UPLOAD] No auth token — user not logged in.");
+        return null;
+      }
+
+      if (files.isEmpty) {
+        debugPrint("⚠️ [SCANNER UPLOAD] No files selected.");
+        return null;
+      }
+
+      if (files.length > 10) {
+        debugPrint("⚠️ [SCANNER UPLOAD] Max 10 files allowed. Got: ${files.length}");
+        return null;
+      }
+
+      debugPrint("📤 [SCANNER UPLOAD] Uploading ${files.length} files…");
+
+      final List<MultipartFile> parts = [];
+      for (final f in files) {
+        final bytes = await f.readAsBytes();
+        final filename = p.basename(f.path);
+        final mime = _guessMimeFromName(filename);
+        final part = MultipartFile.fromBytes(
+          'files', // ✅ first argument = field name in your backend (upload.array('files', 10))
+          bytes,   // ✅ second argument = actual byte data
+          filename: filename,
+          contentType: mime != null ? MediaType.parse(mime) : null,
+        );
+        parts.add(part);
+
+        debugPrint("  • added file=$filename bytes=${bytes.length} mime=$mime");
+      }
+
+      final response = await _apiHandler.postMultipart(
+        ApiEndpoints.scannerUpload().url,
+        token: token,
+        filesField: 'files',
+        files: parts,
+      );
+
+      if (response is Map<String, dynamic>) {
+        debugPrint("✅ [SCANNER UPLOAD] ok=${response['ok']} batch=${response['batchId']}");
+        return response;
+      }
+
+      debugPrint("⚠️ [SCANNER UPLOAD] Unexpected response: ${response.runtimeType}");
+      return null;
+    } catch (e, st) {
+      debugPrint("💥 [SCANNER UPLOAD] $e\n$st");
+      return null;
+    }
+  }
+  Future<List<Map<String, dynamic>>> getScannerReports(String patientId) async {
+    try {
+      final token = await _getToken();
+      if (token == null) throw ApiException("Not logged in");
+
+      debugPrint("📥 [SCANNER REPORTS] Fetching reports for patient=$patientId");
+
+      final response = await _apiHandler.get(
+        ApiEndpoints.scannerGetReports(patientId).url,
+        token: token,
+      );
+
+      if (response is Map && response['ok'] == true && response['items'] is List) {
+        final items = List<Map<String, dynamic>>.from(response['items']);
+        debugPrint("✅ [SCANNER REPORTS] Loaded ${items.length} reports");
+        return items;
+      }
+
+      debugPrint("⚠️ [SCANNER REPORTS] Unexpected response: $response");
+      return [];
+    } catch (e, st) {
+      debugPrint("💥 [SCANNER REPORTS] Error: $e\n$st");
+      return [];
+    }
+  }
+  Future<Uint8List?> getScannerPdf(String pdfId) async {
+    try {
+      final token = await _getToken();
+      if (token == null) throw ApiException("Not logged in");
+
+      debugPrint("📥 [SCANNER PDF] Fetching pdfId=$pdfId");
+
+      final response = await _apiHandler.getBytes(
+        ApiEndpoints.scannerGetPdf(pdfId).url,
+        token: token,
+      );
+
+      if (response != null && response.isNotEmpty) {
+        debugPrint("✅ [SCANNER PDF] Downloaded ${response.length} bytes");
+        return response;
+      }
+
+      debugPrint("⚠️ [SCANNER PDF] Empty response for $pdfId");
+      return null;
+    } catch (e, st) {
+      debugPrint("💥 [SCANNER PDF] Error: $e\n$st");
+      return null;
+    }
+  }
+  String? _guessMimeFromName(String name) {
+    final lower = name.toLowerCase();
+    if (lower.endsWith('.pdf')) return 'application/pdf';
+    if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
+    if (lower.endsWith('.png')) return 'image/png';
+    return null;
+  }
+
 
 }

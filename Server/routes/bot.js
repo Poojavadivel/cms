@@ -4,7 +4,7 @@ const express = require("express");
 const axios = require("axios");
 const { v4: uuidv4 } = require('uuid');
 const auth = require("../Middleware/Auth");
-const { Bot, Patient, User } = require("../Models/models");
+const { Bot, Patient, User } = require("../Models");
 const mongoose = require("mongoose");
 
 const router = express.Router();
@@ -15,9 +15,9 @@ const _AZURE_OPENAI_ENDPOINT = (process.env.AZURE_OPENAI_ENDPOINT || "").replace
 const _AZURE_OPENAI_DEPLOYMENT = process.env.AZURE_OPENAI_DEPLOYMENT || "o4-mini";
 const _AZURE_OPENAI_API_VERSION = process.env.AZURE_OPENAI_API_VERSION || "2024-12-01-preview";
 
-const DEFAULT_MAX_COMPLETION_TOKENS = Number(process.env.MAX_COMPLETION_TOKENS ?? 700);
-const MAX_COMPLETION_TOKENS_MAX = Number(process.env.MAX_COMPLETION_TOKENS_MAX ?? 1500);
-const MAX_RETRIES = Number(process.env.MAX_RETRIES ?? 3);
+
+const MAX_RETRIES = Number(process.env.MAX_RETRIES ?? 3);const DEFAULT_MAX_COMPLETION_TOKENS = Number(process.env.MAX_COMPLETION_TOKENS ?? 700);
+const MAX_COMPLETION_TOKENS_MAX = Number(process.env.MAX_COMPLETION_TOKENS_MAX ?? 7500);
 const RETRY_BACKOFF_BASE_MS = Number(process.env.RETRY_BACKOFF_BASE_MS ?? 500);
 const AZURE_OPENAI_TIMEOUT_MS = Number(process.env.AZURE_OPENAI_TIMEOUT_MS ?? 20000);
 
@@ -656,3 +656,5 @@ router.delete("/chats/:id", auth, async (req, res) => {
 });
 
 module.exports = router;
+
+

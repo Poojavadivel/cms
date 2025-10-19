@@ -11,7 +11,7 @@ const {
   PharmacyRecord,
   Patient,
   Appointment
-} = require('../Models/models');
+} = require('../Models');
 
 function requireAdminOrPharmacist(req, res) {
   const role = req.user && req.user.role;

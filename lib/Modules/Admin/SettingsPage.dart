@@ -1,11 +1,17 @@
+import 'dart:io';
+import 'dart:typed_data';
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
-
-import '../../Providers/app_providers.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
+import 'package:open_filex/open_filex.dart';
 import '../../Services/Authservices.dart';
+import '../../Providers/app_providers.dart';
 import '../Common/LoginPage.dart';
-
+import 'package:provider/provider.dart';
+import 'dart:math' as math;
 // --- App Theme Colors ---
 const Color primaryColor = Color(0xFFEF4444);
 const Color primaryColorLight = Color(0xFFFEE2E2);
@@ -14,7 +20,6 @@ const Color cardBackgroundColor = Color(0xFFFFFFFF);
 const Color textPrimaryColor = Color(0xFF1F2937);
 const Color textSecondaryColor = Color(0xFF6B7280);
 
-// --- Main Settings Screen Widget ---
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
@@ -23,62 +28,111 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  String? _patientFileStatus;
-  String? _staffFileStatus;
-  String? _invoiceFileStatus;
-
   final AuthService _authService = AuthService.instance;
 
+  bool _busy = false;
+  String _log = '';
+  List<_UploadResult> _results = [];
 
-  void _handleLogout() async {
-    // Clear the token from storage
+  void _appendLog(String msg) {
+    setState(() => _log = '$_log$msg\n');
+  }
+
+  Future<void> _handleLogout() async {
     await _authService.signOut();
-
     if (!mounted) return;
-
-    // Clear the user state in the provider
     Provider.of<AppProvider>(context, listen: false).signOut();
-
-    // Navigate to the LoginPage, removing all previous routes
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (context) => const LoginPage()),
           (Route<dynamic> route) => false,
     );
   }
 
-  // Simulates picking a file and updating the UI
-  void _uploadFile(String category) {
-    setState(() {
-      // In a real app, you would use a file picker package.
-      // For this demo, we'll just update the status text.
-      final fileName = '${category.toLowerCase().replaceAll(' ', '_')}_data.csv';
-      switch (category) {
-        case 'Patient Data':
-          _patientFileStatus = 'Uploading $fileName...';
-          Future.delayed(const Duration(seconds: 2), () {
-            setState(() {
-              _patientFileStatus = 'Successfully uploaded $fileName';
-            });
-          });
-          break;
-        case 'Staff Data':
-          _staffFileStatus = 'Uploading $fileName...';
-          Future.delayed(const Duration(seconds: 2), () {
-            setState(() {
-              _staffFileStatus = 'Successfully uploaded $fileName';
-            });
-          });
-          break;
-        case 'Invoice Records':
-          _invoiceFileStatus = 'Uploading $fileName...';
-          Future.delayed(const Duration(seconds: 2), () {
-            setState(() {
-              _invoiceFileStatus = 'Successfully uploaded $fileName';
-            });
-          });
-          break;
+  Future<void> _pickAndUpload() async {
+    try {
+      // Pick up to 10 PDF/JPG/PNG files
+      final res = await FilePicker.platform.pickFiles(
+        allowMultiple: true,
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
+        withReadStream: false,
+      );
+      if (res == null || res.files.isEmpty) return;
+
+      final files = res.files.take(10).toList();
+      setState(() {
+        _busy = true;
+        _results = [];
+        _log = '';
+      });
+
+      _appendLog('📤 Uploading ${files.length} file(s)…');
+
+      // Send to AuthService (single source of truth for upload logic)
+      final payload = await _authService.uploadScansUnified(platformFiles: files);
+
+      if (payload == null) {
+        _appendLog('❌ Upload failed (null response).');
+        setState(() => _busy = false);
+        return;
       }
-    });
+
+      final List results = (payload['results'] as List?) ?? [];
+      final List failed = (payload['failed'] as List?) ?? [];
+
+      _appendLog('✅ ok=${payload['ok']} batch=${payload['batchId']} '
+          'processed=${results.length} failed=${failed.length}');
+
+      final parsed = <_UploadResult>[];
+      for (final r in results) {
+        parsed.add(_UploadResult(
+          file: r['file']?.toString() ?? '',
+          patientId: r['patient']?['id']?.toString() ?? '',
+          pdfId: r['pdf']?['id']?.toString() ?? '',
+          labReportId: r['labReport']?['id']?.toString() ?? '',
+          action: r['action']?.toString() ?? '',
+          engine: r['ocr']?['engine']?.toString() ?? '',
+          confidence: (r['ocr']?['confidence'] as num?)?.toDouble(),
+          resultsCount: (r['labReport']?['resultsCount'] as num?)?.toInt() ?? 0,
+          size: (r['pdf']?['size'] as num?)?.toInt() ?? 0,
+          mime: r['pdf']?['mimeType']?.toString() ?? '',
+        ));
+      }
+
+      setState(() {
+        _results = parsed;
+      });
+
+      if (failed.isNotEmpty) {
+        for (final f in failed) {
+          _appendLog('   ✗ ${f['file']}: ${f['reason']}');
+        }
+      }
+    } catch (e) {
+      _appendLog('💥 Error: $e');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _openPdf(String pdfId, {String? suggestedName}) async {
+    try {
+      final Uint8List? bytes = await _authService.getScannerPdf(pdfId);
+      if (bytes == null || bytes.isEmpty) {
+        _appendLog('❌ Empty PDF for $pdfId');
+        return;
+      }
+
+      final tmp = await getTemporaryDirectory();
+      final fname = suggestedName ?? 'report_${pdfId.substring(0, 6)}.pdf';
+      final path = p.join(tmp.path, fname);
+      final file = File(path);
+      await file.writeAsBytes(bytes, flush: true);
+      await OpenFilex.open(path);
+      _appendLog('📂 Opened $fname');
+    } catch (e) {
+      _appendLog('💥 Open PDF error: $e');
+    }
   }
 
   @override
@@ -92,21 +146,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
           children: [
             _buildHeader(),
             const SizedBox(height: 32),
-            _buildDataManagementSection(),
+            _buildScannerUploadCard(),
+            const SizedBox(height: 24),
+            _buildResultsTable(),
+            const SizedBox(height: 24),
+            _buildLogConsole(),
           ],
         ),
       ),
     );
   }
 
-  // --- WIDGET BUILDER METHODS ---
-
   Widget _buildHeader() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
-          'Settings',
+          'Scan Upload',
           style: GoogleFonts.poppins(
             fontSize: 32,
             fontWeight: FontWeight.bold,
@@ -114,24 +170,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ),
         TextButton.icon(
-          onPressed: _handleLogout,
+          onPressed: _busy ? null : _handleLogout,
           icon: const Icon(Icons.logout_rounded, color: primaryColor),
-          label: Text('Logout', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: primaryColor)),
-          style: TextButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-              side: const BorderSide(color: primaryColorLight),
-            ),
-          ),
+          label: Text('Logout',
+              style: GoogleFonts.poppins(
+                  fontWeight: FontWeight.w600, color: primaryColor)),
         ),
       ],
     );
   }
 
-  Widget _buildDataManagementSection() {
+  Widget _buildScannerUploadCard() {
     return Container(
-      padding: const EdgeInsets.all(32),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: cardBackgroundColor,
         borderRadius: BorderRadius.circular(20),
@@ -146,106 +197,174 @@ class _SettingsScreenState extends State<SettingsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Data Management',
-            style: GoogleFonts.poppins(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: textPrimaryColor,
-            ),
-          ),
+          Text('Upload Reports (PDF/JPG/PNG)',
+              style: GoogleFonts.poppins(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: textPrimaryColor)),
           const SizedBox(height: 8),
           Text(
-            'Upload bulk data files for different categories. Please use the specified CSV format.',
+            'Select up to 10 files. OCR + auto-link to patients.',
             style: GoogleFonts.poppins(color: textSecondaryColor),
           ),
-          const SizedBox(height: 24),
-          const Divider(),
-          _buildUploadCategory(
-            icon: Icons.personal_injury_rounded,
-            title: 'Patient Data',
-            description: 'Upload a CSV file containing a list of all patients.',
-            status: _patientFileStatus,
-            onUpload: () => _uploadFile('Patient Data'),
-          ),
-          const Divider(),
-          _buildUploadCategory(
-            icon: Icons.groups_rounded,
-            title: 'Staff Data',
-            description: 'Upload a CSV file containing a list of all staff members.',
-            status: _staffFileStatus,
-            onUpload: () => _uploadFile('Staff Data'),
-          ),
-          const Divider(),
-          _buildUploadCategory(
-            icon: Icons.receipt_long_rounded,
-            title: 'Invoice Records',
-            description: 'Upload a CSV file containing a history of all invoices.',
-            status: _invoiceFileStatus,
-            onUpload: () => _uploadFile('Invoice Records'),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              ElevatedButton.icon(
+                onPressed: _busy ? null : _pickAndUpload,
+                icon: const Icon(Icons.upload_file_rounded),
+                label: Text(_busy ? 'Processing…' : 'Select & Upload'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: primaryColor,
+                  foregroundColor: Colors.white,
+                  padding:
+                  const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+              const SizedBox(width: 12),
+              if (_busy)
+                const SizedBox(
+                  height: 22,
+                  width: 22,
+                  child: CircularProgressIndicator(strokeWidth: 3),
+                ),
+            ],
           ),
         ],
       ),
     );
   }
 
-  Widget _buildUploadCategory({
-    required IconData icon,
-    required String title,
-    required String description,
-    String? status,
-    required VoidCallback onUpload,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16.0),
-      child: Row(
-        children: [
-          Icon(icon, color: primaryColor, size: 32),
-          const SizedBox(width: 24),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: GoogleFonts.poppins(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: textPrimaryColor,
+  Widget _buildResultsTable() {
+    if (_results.isEmpty) {
+      return _emptyTablePlaceholder();
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: _cardBoxDecoration(),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: DataTable(
+          headingTextStyle: GoogleFonts.poppins(
+              fontWeight: FontWeight.w700, color: textPrimaryColor),
+          dataTextStyle:
+          GoogleFonts.poppins(color: textPrimaryColor, fontSize: 13),
+          columns: const [
+            DataColumn(label: Text('File')),
+            DataColumn(label: Text('Patient ID')),
+            DataColumn(label: Text('Lab Report')),
+            DataColumn(label: Text('OCR Engine')),
+            DataColumn(label: Text('Confidence')),
+            DataColumn(label: Text('Results')),
+            DataColumn(label: Text('Size')),
+            DataColumn(label: Text('PDF')),
+          ],
+          rows: _results.map((r) {
+            return DataRow(cells: [
+              DataCell(Text(r.file)),
+              DataCell(Text(r.patientId.isEmpty ? '-' : r.patientId)),
+              DataCell(Text(r.labReportId.isEmpty ? '-' : r.labReportId)),
+              DataCell(Text(r.engine)),
+              DataCell(Text(r.confidence?.toStringAsFixed(2) ?? '-')),
+              DataCell(Text('${r.resultsCount}')),
+              DataCell(Text(_fmtSize(r.size))),
+              DataCell(
+                r.pdfId.isEmpty
+                    ? const Text('-')
+                    : TextButton(
+                  onPressed: () => _openPdf(
+                    r.pdfId,
+                    suggestedName: p.setExtension(r.file, '.pdf'),
                   ),
+                  child: const Text('Open'),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  description,
-                  style: GoogleFonts.poppins(color: textSecondaryColor),
-                ),
-                if (status != null) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    status,
-                    style: GoogleFonts.poppins(
-                      color: status.startsWith('Success') ? Colors.green : textSecondaryColor,
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-                ]
-              ],
-            ),
-          ),
-          const SizedBox(width: 24),
-          ElevatedButton(
-            onPressed: onUpload,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: primaryColorLight,
-              foregroundColor: primaryColor,
-              elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            ),
-            child: Text('Upload File', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
-          ),
-        ],
+              ),
+            ]);
+          }).toList(),
+        ),
       ),
     );
   }
+
+  Widget _emptyTablePlaceholder() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: _cardBoxDecoration(),
+      child: Text(
+        'No results yet. Upload to see processed files.',
+        style: GoogleFonts.poppins(color: textSecondaryColor),
+      ),
+    );
+  }
+
+  BoxDecoration _cardBoxDecoration() => BoxDecoration(
+    color: cardBackgroundColor,
+    borderRadius: BorderRadius.circular(12),
+    boxShadow: [
+      BoxShadow(
+        color: Colors.black.withOpacity(0.04),
+        blurRadius: 8,
+        offset: const Offset(0, 3),
+      )
+    ],
+  );
+
+  Widget _buildLogConsole() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.black,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      constraints: const BoxConstraints(minHeight: 120),
+      child: SingleChildScrollView(
+        child: Text(
+          _log.isEmpty ? 'logs will appear here…' : _log,
+          style: const TextStyle(
+            fontFamily: 'monospace',
+            fontSize: 12,
+            color: Color(0xFF9AE6B4),
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _fmtSize(int bytes) {
+    if (bytes <= 0) return '0 B';
+    const units = ['B', 'KB', 'MB', 'GB'];
+    final i = (math.log(bytes) / math.log(1024)).floor();
+    final v = (bytes / math.pow(1024, i)).toStringAsFixed(1);
+    return '$v ${units[i]}';
+  }
+}
+
+// --- Result Model ---
+class _UploadResult {
+  final String file;
+  final String patientId;
+  final String pdfId;
+  final String labReportId;
+  final String action;
+  final String engine;
+  final double? confidence;
+  final int resultsCount;
+  final int size;
+  final String mime;
+
+  _UploadResult({
+    required this.file,
+    required this.patientId,
+    required this.pdfId,
+    required this.labReportId,
+    required this.action,
+    required this.engine,
+    required this.confidence,
+    required this.resultsCount,
+    required this.size,
+    required this.mime,
+  });
 }
