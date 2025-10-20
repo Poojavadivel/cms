@@ -653,6 +653,37 @@ class AuthService {
     }
   }
 
+  /// Fetch optimized profile card data for a patient
+  /// This is specifically designed for the PatientProfileHeaderCard widget
+  Future<PatientDetails> fetchProfileCardData(String patientId) async {
+    try {
+      return await _withAuth<PatientDetails>((token) async {
+        print('🎴 [PROFILE CARD] Fetching card data for patient: $patientId');
+        
+        final response = await _apiHandler.get(
+          ApiEndpoints.getProfileCardData(patientId).url, 
+          token: token
+        );
+
+        print('🎴 [PROFILE CARD] Response received: ${response.runtimeType}');
+        
+        final data = (response is Map && response.containsKey('data'))
+            ? response['data']
+            : response;
+
+        print('🎴 [PROFILE CARD] Parsing data...');
+        final patientDetails = PatientDetails.fromMap(Map<String, dynamic>.from(data));
+        
+        print('🎴 [PROFILE CARD] Success - Height: ${patientDetails.height}, Weight: ${patientDetails.weight}');
+        
+        return patientDetails;
+      });
+    } catch (e) {
+      print('❌ [PROFILE CARD] Error fetching card data: $e');
+      rethrow;
+    }
+  }
+
   /// Create patient
   Future<PatientDetails?> createPatient(PatientDetails payload) async {
     try {

@@ -161,6 +161,15 @@ router.get('/:id', auth, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Patient not found', errorCode: 3007 });
     }
 
+    // DEBUG: Log what we're sending to frontend
+    console.log('📤 [PATIENT GET] Sending patient data:');
+    console.log('   Patient ID:', patient._id);
+    console.log('   Has vitals:', !!patient.vitals);
+    if (patient.vitals) {
+      console.log('   Vitals:', patient.vitals);
+    }
+    console.log('   Legacy fields - height:', patient.height, 'weight:', patient.weight, 'bmi:', patient.bmi);
+
     return res.status(200).json(patient);
   } catch (err) {
     console.error('❌ [PATIENT GET] Error:', err);

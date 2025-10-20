@@ -123,6 +123,14 @@ class PatientDetails {
   String get displayId => (patientCode != null && patientCode!.isNotEmpty) ? patientCode! : patientId;
 
   factory PatientDetails.fromMap(Map<String, dynamic> map) {
+    // DEBUG: Log incoming data to see what backend is sending
+    print('🔍 PatientDetails.fromMap - Checking for vitals...');
+    print('   Has vitals key: ${map.containsKey('vitals')}');
+    if (map.containsKey('vitals')) {
+      print('   Vitals data: ${map['vitals']}');
+    }
+    print('   Legacy fields - height: ${map['height']}, weight: ${map['weight']}, bmi: ${map['bmi']}');
+    
     final first = map['firstName']?.toString() ?? '';
     final last = map['lastName']?.toString() ?? '';
     final fullName = (map['name']?.toString().isNotEmpty ?? false)
@@ -200,9 +208,12 @@ class PatientDetails {
           ? map['age'] as int
           : int.tryParse(map['age']?.toString() ?? '') ?? 0,
       gender: map['gender']?.toString() ?? '',
-      bloodGroup: map['bloodGroup']?.toString() ?? '',
-      weight: map['weight']?.toString() ?? '',
-      height: map['height']?.toString() ?? '',
+      bloodGroup: map['bloodGroup']?.toString() ?? 'O+',
+      // Extract from vitals object first, then fallback to legacy fields
+      weight: _extractVital(map, 'weightKg', 'weight'),
+      height: _extractVital(map, 'heightCm', 'height'),
+      bmi: _extractVital(map, 'bmi', 'bmi'),
+      oxygen: _extractVital(map, 'spo2', 'oxygen'),
       emergencyContactName: map['emergencyContactName']?.toString() ?? '',
       emergencyContactPhone: map['emergencyContactPhone']?.toString() ?? '',
       phone: map['phone']?.toString() ?? '',
@@ -222,11 +233,30 @@ class PatientDetails {
       allergies:
       (map['allergies'] as List?)?.map((e) => e.toString()).toList() ?? [],
       notes: map['notes']?.toString() ?? '',
-      oxygen: map['oxygen']?.toString() ?? '',
-      bmi: map['bmi']?.toString() ?? '',
       isSelected: map['isSelected'] == true,
       patientCode: extractedPatientCode,
     );
+  }
+
+  /// Helper to extract vital signs from vitals object or fallback to legacy field
+  static String _extractVital(Map<String, dynamic> map, String vitalKey, String legacyKey) {
+    // Check vitals object first
+    if (map['vitals'] is Map) {
+      final vitals = map['vitals'] as Map<String, dynamic>;
+      final value = vitals[vitalKey];
+      if (value != null) {
+        print('   ✅ Extracted $vitalKey from vitals: $value');
+        return value.toString();
+      }
+    }
+    // Fallback to legacy field
+    final legacyValue = map[legacyKey]?.toString() ?? '';
+    if (legacyValue.isNotEmpty) {
+      print('   ⚠️ Using legacy field $legacyKey: $legacyValue');
+    } else {
+      print('   ❌ No value for $vitalKey/$legacyKey');
+    }
+    return legacyValue;
   }
 
   /// Prefer showing patientCode (PAT-xxx) if available, otherwise fallback to patientId.

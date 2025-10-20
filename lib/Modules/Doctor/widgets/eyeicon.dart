@@ -6,6 +6,7 @@ import '../../../Models/Patients.dart';
 import '../../../Models/dashboardmodels.dart';
 import '../../../Services/Authservices.dart';
 import '../../../Utils/Colors.dart';
+import '../../../Widgets/patient_profile_header_card.dart';
 
 // ---- Theme ----
 
@@ -113,7 +114,7 @@ class _AppointmentDetailState extends State<AppointmentDetail> {
     }
   }
 
-  // -------- Pharmacy UI (better fallbacks & formatting) ----------
+  // -------- Pharmacy UI (matches write screen columns) ----------
   Widget _buildPharmacySection() {
     if (_loading) return const SizedBox();
     if (_error != null) return Text(_error!, style: const TextStyle(color: Colors.red));
@@ -134,31 +135,27 @@ class _AppointmentDetailState extends State<AppointmentDetail> {
       print('PHARMACY DEBUG: error extracting items -> $e');
     }
 
+    print('INTAKE DEBUG: pharmacy data -> $pharmacy');
     print('INTAKE DEBUG: pharmacy items count = ${items.length}');
     if (items.isEmpty) return const Text('No pharmacy data available', style: TextStyle(color: textSecondaryColor));
 
+    // Match write screen columns: Medicine, Dosage, Frequency, Notes
     final rows = items.map<Map<String, String>>((it) {
-      final name = (it['name'] ?? it['Medicine'] ?? it['medicine'] ?? '').toString().trim();
-
-      // numeric fallback: show '—' for 0 / null to avoid misleading zeros
-      final qtyNum = (it['quantity'] ?? it['Qty'] ?? it['qty']);
-      final qtyStr = (qtyNum == null)
-          ? '—'
-          : ((num.tryParse(qtyNum.toString()) ?? 0) == 0 ? '—' : qtyNum.toString());
-
-      final priceNum = (it['unitPrice'] ?? it['price']);
-      final priceStr = (priceNum == null)
-          ? '—'
-          : ((num.tryParse(priceNum.toString()) ?? 0) == 0 ? '—' : priceNum.toString());
+      print('INTAKE DEBUG: pharmacy item -> $it');
+      final medicine = (it['name'] ?? it['Medicine'] ?? it['medicine'] ?? '').toString().trim();
+      final dosage = (it['dosage'] ?? it['Dosage'] ?? '').toString().trim();
+      final frequency = (it['frequency'] ?? it['Frequency'] ?? '').toString().trim();
+      final notes = (it['notes'] ?? it['Notes'] ?? '').toString().trim();
 
       return {
-        'Medicine': name.isEmpty ? '—' : name,
-        'Qty': qtyStr,
-        'Price': priceStr,
+        'Medicine': medicine.isEmpty ? '—' : medicine,
+        'Dosage': dosage.isEmpty ? '—' : dosage,
+        'Frequency': frequency.isEmpty ? '—' : frequency,
+        'Notes': notes.isEmpty ? '—' : notes,
       };
     }).toList();
 
-    return _ReadOnlyTable(columns: const ['Medicine', 'Qty', 'Price'], rows: rows);
+    return _ReadOnlyTable(columns: const ['Medicine', 'Dosage', 'Frequency', 'Notes'], rows: rows);
   }
 
   // -------- Pathology UI (render object results nicely) ----------
@@ -237,7 +234,7 @@ class _AppointmentDetailState extends State<AppointmentDetail> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        _ProfileHeaderCard(patient: widget.patient),
+                        PatientProfileHeaderCard(patient: widget.patient, latestIntake: _latestIntake),
                         const SizedBox(height: 16),
 
                         _SectionCard(
@@ -380,7 +377,7 @@ class _SectionCardState extends State<_SectionCard> {
 String _s(String? v) => (v == null) ? '' : v.trim();
 String _n(num? v, {String? suffix}) => (v == null || v == 0) ? '—' : '${v}${suffix ?? ''}';
 
-// ---------------- Read-only Table ----------------
+// ---------------- Read-only Table (matches write screen styling) ----------------
 class _ReadOnlyTable extends StatelessWidget {
   final List<String> columns;
   final List<Map<String, String>> rows;
@@ -389,62 +386,87 @@ class _ReadOnlyTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Table(
-      border: const TableBorder(
-        horizontalInside: BorderSide(width: 0.5, color: Color(0xFFE5E7EB)),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.grey200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
-      columnWidths: {
-        for (var i = 0; i < columns.length; i++) i: const FlexColumnWidth(),
-      },
-      children: [
-        // Header
-        TableRow(
-          decoration: const BoxDecoration(color: Color(0xFFFEF2F2)),
-          children: columns
-              .map((c) => Padding(
-            padding: const EdgeInsets.all(8),
-            child: Text(
-              c,
-              style: GoogleFonts.poppins(
-                fontWeight: FontWeight.w700,
-                color: AppColors.primary700,
-                fontSize: 13,
-              ),
+      clipBehavior: Clip.hardEdge,
+      child: Column(
+        children: [
+          // Header - Blue background to match write screen
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            color: AppColors.rowAlternate,
+            child: Row(
+              children: columns
+                  .map((c) => Expanded(
+                        child: Text(
+                          c.toUpperCase(),
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.tableHeader,
+                            letterSpacing: 0.6,
+                          ),
+                        ),
+                      ))
+                  .toList(),
             ),
-          ))
-              .toList(),
-        ),
-        // Rows
-        if (rows.isNotEmpty)
-          for (int i = 0; i < rows.length; i++)
-            TableRow(
-              decoration: BoxDecoration(
-                color: i.isEven ? Colors.white : const Color(0xFFFEF2F2).withOpacity(0.3),
-              ),
-              children: columns.map((c) {
-                return Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: Text(
-                    rows[i][c] ?? "—",
-                    style: const TextStyle(fontSize: 13, color: textPrimaryColor),
-                  ),
-                );
-              }).toList(),
-            )
-        else
-          TableRow(
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(12),
-                child: Text(
-                  "No records found",
-                  style: const TextStyle(color: textSecondaryColor),
+          ),
+          
+          // Divider
+          Divider(height: 1, color: AppColors.grey200),
+          
+          // Rows
+          if (rows.isEmpty)
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Text(
+                'No data available',
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  color: textSecondaryColor,
+                  fontStyle: FontStyle.italic,
                 ),
               ),
-              for (int i = 1; i < columns.length; i++) const SizedBox(),
-            ],
-          ),
-      ],
+            )
+          else
+            ...rows.asMap().entries.map((entry) {
+              final index = entry.key;
+              final row = entry.value;
+              return Container(
+                decoration: BoxDecoration(
+                  color: index.isEven ? Colors.white : AppColors.rowAlternate.withOpacity(0.6),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: columns
+                      .map((col) => Expanded(
+                            child: Text(
+                              row[col] ?? '—',
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                                color: textPrimaryColor,
+                              ),
+                            ),
+                          ))
+                      .toList(),
+                ),
+              );
+            }).toList(),
+        ],
+      ),
     );
   }
 }
@@ -454,357 +476,6 @@ class _ReadOnlyTable extends StatelessWidget {
 // (from your pasted code above) without change
 
 // ---------------- Widgets ----------------
-
-class _ProfileHeaderCard extends StatelessWidget {
-  static const double kRadius = 16;
-  static const double kAvatar = 128;
-  static const Color kTint = Color(0xFFF9FAFB); // subtle tint behind card
-  static const Color kTintLine = Color(0xFFF3F4F6);
-
-  final PatientDetails patient;
-  const _ProfileHeaderCard({required this.patient});
-
-  String _n(num? v, {String? suffix}) => (v == null || v == 0) ? '—' : '${v}${suffix ?? ''}';
-
-  String _ns(String? v, {String? suffix}) {
-    if (v == null) return '—';
-    final s = v.trim();
-    if (s.isEmpty) return '—';
-    return '${s}${suffix ?? ''}';
-  }
-
-  String _ss(String? v) => (v == null || v.trim().isEmpty) ? '—' : v!;
-
-  String _bloodGroup() {
-    try {
-      final bg = patient.bloodGroup;
-      return _ss(bg);
-    } catch (_) {
-      return '—';
-    }
-  }
-
-  String _spo2() {
-    try {
-      final o2raw = patient.oxygen;
-      if (o2raw == null || o2raw.trim().isEmpty) return '—';
-      final v = num.tryParse(o2raw.toString());
-      return v == null ? '—' : '${v.toStringAsFixed(0)}%';
-    } catch (_) {
-      return '—';
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final name = _ss(patient.name);
-    final isFemale = _ss(patient.gender).toLowerCase() == 'female';
-    final avatar = isFemale ? 'assets/girlicon.png' : 'assets/boyicon.png';
-
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(kRadius),
-      child: Container(
-        color: kTint,
-        child: Stack(
-          children: [
-            Container(
-              margin: const EdgeInsets.all(0),
-              decoration: BoxDecoration(
-                color: AppColors.kCard,
-                borderRadius: BorderRadius.circular(kRadius),
-                border: Border.all(color: kTintLine),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
-                    blurRadius: 18,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: LayoutBuilder(builder: (context, c) {
-                  final isTight = c.maxWidth < 980;
-                  return Flex(
-                    direction: Axis.horizontal,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Flexible(
-                        flex: isTight ? 10 : 6,
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            _avatar(avatar),
-                            const SizedBox(width: 16),
-                            Expanded(child: _identityBlock(name, isFemale)),
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(width: 16),
-
-                      if (!isTight)
-                        Expanded(flex: 5, child: _vitalsGrid())
-                      else
-                        Expanded(
-                          flex: 10,
-                          child: Padding(
-                            padding: const EdgeInsets.only(top: 16),
-                            child: _vitalsGrid(),
-                          ),
-                        ),
-                    ],
-                  );
-                }),
-              ),
-            ),
-
-            Positioned(
-              right: 12,
-              top: 12,
-              child: _ghostButton(
-                icon: Icons.edit_outlined,
-                onTap: () {
-                  // leave hook for edit action
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _avatar(String asset) {
-    return Container(
-      width: kAvatar,
-      height: kAvatar,
-      decoration: BoxDecoration(
-        color: AppColors.kCard,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: kTintLine),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.025),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: Image.asset(
-          asset,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => Container(
-            color: AppColors.rowAlternate,
-            child: Center(
-              child: Text(
-                _initials(_ss(patient.name)),
-                style: GoogleFonts.lexend(
-                  fontSize: 36,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.primary700,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  String _initials(String name) {
-    if (name.trim().isEmpty || name == '—') return '';
-    final parts = name.split(' ');
-    if (parts.length == 1) return parts[0].substring(0, 1).toUpperCase();
-    return (parts[0][0] + parts[1][0]).toUpperCase();
-  }
-
-  Widget _identityBlock(String name, bool isFemale) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          name,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: GoogleFonts.lexend(
-            fontSize: 24,
-            fontWeight: FontWeight.w800,
-            color: AppColors.kTextPrimary,
-            height: 1.05,
-          ),
-        ),
-        const SizedBox(height: 8),
-
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: AppColors.kCard,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: kTintLine),
-          ),
-          child: Text(
-            'ID: ${patient.patientCodeOrId}',
-            style: GoogleFonts.lexend(
-              fontSize: 12.5,
-              fontWeight: FontWeight.w700,
-              color: AppColors.primary700,
-              letterSpacing: 0.1,
-            ),
-          ),
-        ),
-
-        const SizedBox(height: 12),
-
-        Wrap(
-          spacing: 18,
-          runSpacing: 10,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            _mini(isFemale ? Icons.female : Icons.male, _ss(patient.gender)),
-            _mini(Icons.person, 'Age ${patient.age != 0 ? patient.age : '—'}'),
-            _mini(Icons.calendar_month, _ss(patient.dateOfBirth)),
-          ],
-        ),
-
-        const SizedBox(height: 8),
-
-        Row(
-          children: [
-            Icon(Icons.bloodtype, size: 16, color: AppColors.kTextSecondary),
-            const SizedBox(width: 6),
-            Text(
-              'Blood Group: ${_bloodGroup()}',
-              style: GoogleFonts.inter(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: AppColors.kTextSecondary,
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _mini(IconData i, String t) => Row(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      Icon(i, size: 16, color: AppColors.kTextSecondary),
-      const SizedBox(width: 6),
-      Text(
-        t,
-        style: GoogleFonts.inter(
-          fontSize: 13,
-          fontWeight: FontWeight.w500,
-          color: AppColors.kTextSecondary,
-        ),
-      ),
-    ],
-  );
-
-  Widget _vitalsGrid() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Expanded(child: _kv(Icons.height, 'Height', _ns(patient.height, suffix: ' cm'))),
-            const SizedBox(width: 24),
-            Expanded(child: _kv(Icons.monitor_weight_outlined, 'Weight', _ns(patient.weight, suffix: ' kg'))),
-          ],
-        ),
-        const SizedBox(height: 20),
-        Row(
-          children: [
-            Expanded(child: _kv(Icons.scale, 'BMI', _ns(patient.bmi))),
-            const SizedBox(width: 24),
-            Expanded(child: _kv(Icons.monitor_heart_outlined, 'Oxygen (SpO₂)', _spo2())),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _kv(IconData icon, String title, String value) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Container(
-          width: 34,
-          height: 34,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(10),
-            gradient: LinearGradient(
-              colors: [AppColors.kCFBlue.withOpacity(0.12), AppColors.kCFBlue.withOpacity(0.06)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            border: Border.all(color: kTintLine),
-          ),
-          child: Icon(icon, size: 18, color: AppColors.primary700),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Baseline(
-                baseline: 18,
-                baselineType: TextBaseline.alphabetic,
-                child: Text(
-                  value,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.lexend(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.kTextPrimary,
-                    height: 1.0,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                title,
-                style: GoogleFonts.inter(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.kTextSecondary,
-                  letterSpacing: 0.1,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _ghostButton({required IconData icon, required VoidCallback onTap}) {
-    return Material(
-      color: kTint,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: kTintLine),
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: onTap,
-        child: const Padding(
-          padding: EdgeInsets.all(8.0),
-          child: Icon(Icons.edit_outlined, size: 18, color: Color(0xFF6B7280)),
-        ),
-      ),
-    );
-  }
-
-
-
-}
 
 class _InfoCard extends StatelessWidget {
   final String title;

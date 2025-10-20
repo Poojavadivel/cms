@@ -165,6 +165,7 @@ const PatientSchema = new Schema({
   lastName: { type: String, default: '' },
   dateOfBirth: { type: Date },
   gender: { type: String, enum: ['Male', 'Female', 'Other'], default: null },
+  bloodGroup: { type: String, enum: ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'], default: 'O+' },
   phone: { type: String, index: true, validate: phoneValidator },
   email: { type: String, default: null, index: true, validate: emailValidator },
   address: {
@@ -214,7 +215,8 @@ const IntakeSchema = new Schema({
       pulse: { type: Number, default: null },
       spo2: { type: Number, default: null },
       weightKg: { type: Number, default: null },
-      heightCm: { type: Number, default: null }
+      heightCm: { type: Number, default: null },
+      bmi: { type: Number, default: null }
     },
     priority: { type: String, enum: ['Normal', 'Urgent', 'Emergency'], default: 'Normal' },
     triageCategory: { type: String, enum: ['Green', 'Yellow', 'Red'], default: 'Green' }

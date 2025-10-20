@@ -239,9 +239,10 @@ router.post('/:id/intake', auth, async (req, res) => {
           bp: data.vitals?.bp || data.vitals?.BP || '',
           temp: data.vitals?.temp || data.vitals?.temperature || null,
           pulse: data.vitals?.pulse || data.vitals?.heartRate || null,
-          spo2: data.vitals?.spo2 || data.vitals?.oxygen || null,
+          spo2: data.vitals?.spo2 || null,
           weightKg: data.vitals?.weightKg || data.vitals?.weight_kg || null,
           heightCm: data.vitals?.heightCm || data.vitals?.height_cm || null,
+          bmi: data.vitals?.bmi || null,
         },
         priority: data.priority || 'Normal',
         triageCategory: data.triageCategory || 'Green',
@@ -268,6 +269,7 @@ router.post('/:id/intake', auth, async (req, res) => {
     };
 
     console.log('INTAKE POST: intakePayload prepared (patientSnapshot.firstName):', intakePayload.patientSnapshot.firstName);
+    console.log('INTAKE POST: 📊 Vitals extracted:', JSON.stringify(intakePayload.triage.vitals));
 
     // Create pharmacy record if medicines provided
     let pharmacyRecord = null;
@@ -280,6 +282,9 @@ router.post('/:id/intake', auth, async (req, res) => {
           batchId: r.batchId || null,
           sku: r.sku || r.SKU || null,
           name: r.name || r.Medicine || '',
+          dosage: r.Dosage || r.dosage || '',
+          frequency: r.Frequency || r.frequency || '',
+          notes: r.Notes || r.notes || '',
           quantity: Number(r.quantity ?? r.Qty ?? 0),
           unitPrice: Number(r.unitPrice ?? r.price ?? 0),
           taxPercent: Number(r.taxPercent ?? 0),
@@ -319,11 +324,16 @@ router.post('/:id/intake', auth, async (req, res) => {
           const lrPayload = {
             patientId: intakePayload.patientId || null,
             appointmentId: intakePayload.appointmentId || null,
-            testType: row.testType || row.testName || row.name || '',
+            testType: row['Test Name'] || row.testType || row.testName || row.name || '',
             results: row.results || {},
             fileRef: row.fileRef || null,
             uploadedBy: userId,
-            metadata: row.meta || { priority: row.priority || 'Normal', notes: row.notes || '' },
+            metadata: {
+              category: row.Category || row.category || '',
+              priority: row.Priority || row.priority || 'Normal',
+              notes: row.Notes || row.notes || '',
+              ...(row.meta || {})
+            },
           };
           const lr = await LabReport.create(lrPayload);
           createdLabReportIds.push(String(lr._id));
@@ -376,19 +386,65 @@ router.post('/:id/intake', auth, async (req, res) => {
       }
     }
 
-    // Append notes into patient.notes and update updatedAt
-    if (intakePayload.notes && intakePayload.notes.trim() && intakePayload.patientId) {
+    // Update patient vitals and notes
+    if (intakePayload.patientId) {
       try {
-        console.log('INTAKE POST: appending notes to patient:', intakePayload.patientId);
+        console.log('INTAKE POST: updating patient vitals and notes:', intakePayload.patientId);
         const patientDoc = await Patient.findById(String(intakePayload.patientId));
         if (patientDoc) {
-          const timePrefix = `[${new Date().toISOString()}]`;
-          const appended = `${timePrefix} ${intakePayload.notes}\n\n${patientDoc.notes || ''}`;
-          await Patient.findByIdAndUpdate(String(intakePayload.patientId), { $set: { notes: appended, updatedAt: new Date() } });
-          console.log('INTAKE POST: patient notes appended');
+          // Update vitals from intake
+          if (intakePayload.triage && intakePayload.triage.vitals) {
+            const vitals = intakePayload.triage.vitals;
+            patientDoc.vitals = patientDoc.vitals || {};
+            
+            // Log what we're receiving
+            console.log('INTAKE POST: Received vitals:', JSON.stringify(vitals));
+            
+            // Update each vital if provided (check for falsy but allow 0)
+            if (vitals.heightCm !== null && vitals.heightCm !== undefined && vitals.heightCm !== '') {
+              patientDoc.vitals.heightCm = Number(vitals.heightCm) || null;
+            }
+            if (vitals.weightKg !== null && vitals.weightKg !== undefined && vitals.weightKg !== '') {
+              patientDoc.vitals.weightKg = Number(vitals.weightKg) || null;
+            }
+            if (vitals.bmi !== null && vitals.bmi !== undefined && vitals.bmi !== '') {
+              patientDoc.vitals.bmi = Number(vitals.bmi) || null;
+            }
+            if (vitals.bp) {
+              patientDoc.vitals.bp = vitals.bp;
+            }
+            if (vitals.temp !== null && vitals.temp !== undefined && vitals.temp !== '') {
+              patientDoc.vitals.temp = Number(vitals.temp) || null;
+            }
+            if (vitals.pulse !== null && vitals.pulse !== undefined && vitals.pulse !== '') {
+              patientDoc.vitals.pulse = Number(vitals.pulse) || null;
+            }
+            if (vitals.spo2 !== null && vitals.spo2 !== undefined && vitals.spo2 !== '') {
+              patientDoc.vitals.spo2 = Number(vitals.spo2) || null;
+            }
+            
+            console.log('INTAKE POST: Updated patient vitals:', JSON.stringify(patientDoc.vitals));
+          } else {
+            console.warn('INTAKE POST: No vitals found in intakePayload.triage');
+          }
+
+          // Append notes
+          if (intakePayload.notes && intakePayload.notes.trim()) {
+            const timePrefix = `[${new Date().toISOString()}]`;
+            const appended = `${timePrefix} ${intakePayload.notes}\n\n${patientDoc.notes || ''}`;
+            patientDoc.notes = appended;
+            console.log('INTAKE POST: patient notes appended');
+          }
+
+          patientDoc.updatedAt = new Date();
+          await patientDoc.save();
+          console.log('INTAKE POST: ✅ Patient document saved with vitals');
+        } else {
+          console.warn('INTAKE POST: Patient not found:', intakePayload.patientId);
         }
       } catch (err) {
-        console.warn('INTAKE: appending notes to patient failed:', err && err.message ? err.message : err);
+        console.error('INTAKE: ❌ Error updating patient vitals/notes:', err && err.message ? err.message : err);
+        console.error('Stack:', err.stack);
       }
     }
 

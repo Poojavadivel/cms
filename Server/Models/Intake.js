@@ -28,7 +28,8 @@ const IntakeSchema = new Schema({
       pulse: { type: Number, default: null },
       spo2: { type: Number, default: null },
       weightKg: { type: Number, default: null },
-      heightCm: { type: Number, default: null }
+      heightCm: { type: Number, default: null },
+      bmi: { type: Number, default: null }
     },
     priority: { type: String, enum: ['Normal', 'Urgent', 'Emergency'], default: 'Normal' },
     triageCategory: { type: String, enum: ['Green', 'Yellow', 'Red'], default: 'Green' }

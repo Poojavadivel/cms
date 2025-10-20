@@ -15,12 +15,40 @@ function extractDoctorName(docObj) {
   return docObj._id ? docObj._id.toString() : '';
 }
 
-// Normalize appointments to include doctor string
+// -----------------------------
+// Helper: calculate age from dateOfBirth
+// -----------------------------
+function calculateAge(dateOfBirth) {
+  if (!dateOfBirth) return 0;
+  const today = new Date();
+  const birthDate = new Date(dateOfBirth);
+  if (isNaN(birthDate.getTime())) return 0;
+  
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  
+  return age > 0 ? age : 0;
+}
+
+// Normalize appointments to include doctor string and patient age
 function normalizeAppointments(arr) {
-  return arr.map(a => ({
-    ...a,
-    doctor: extractDoctorName(a.doctorId),
-  }));
+  return arr.map(a => {
+    const normalized = {
+      ...a,
+      doctor: extractDoctorName(a.doctorId),
+    };
+    
+    // Calculate age from patient dateOfBirth if available
+    if (a.patientId && typeof a.patientId === 'object' && a.patientId.dateOfBirth) {
+      normalized.patientAge = calculateAge(a.patientId.dateOfBirth);
+    }
+    
+    return normalized;
+  });
 }
 
 // -----------------------------
@@ -143,7 +171,7 @@ router.get('/', auth, async (req, res) => {
     console.log("🔎 Appointment query:", query);
 
     const appointments = await Appointment.find(query)
-      .populate('patientId', 'firstName lastName phone email')
+      .populate('patientId', 'firstName lastName phone email bloodGroup metadata dateOfBirth')
       .populate('doctorId', 'firstName lastName email')
       .lean();
 

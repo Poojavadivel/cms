@@ -13,6 +13,7 @@ const PatientSchema = new Schema({
   lastName: { type: String, default: '' },
   dateOfBirth: { type: Date },
   gender: { type: String, enum: ['Male', 'Female', 'Other'], default: null },
+  bloodGroup: { type: String, enum: ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'], default: 'O+' },
   phone: { type: String, index: true, validate: phoneValidator },
   email: { type: String, default: null, index: true, validate: emailValidator },
   address: {
@@ -21,6 +22,15 @@ const PatientSchema = new Schema({
     state: String,
     pincode: String,
     country: String
+  },
+  vitals: {
+    heightCm: { type: Number, default: null },
+    weightKg: { type: Number, default: null },
+    bmi: { type: Number, default: null },
+    bp: { type: String, default: null },
+    temp: { type: Number, default: null },
+    pulse: { type: Number, default: null },
+    spo2: { type: Number, default: null }
   },
   doctorId: { type: String, ref: 'User', default: null, index: true },
   allergies: [{ type: String }],

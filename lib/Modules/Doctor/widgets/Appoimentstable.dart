@@ -21,7 +21,7 @@ PatientDetails _mapApptToPatient(DashboardAppointments appt) {
     lastName: null,
     age: appt.patientAge,
     gender: appt.gender,
-    bloodGroup: '',
+    bloodGroup: appt.bloodGroup ?? '',
     weight: appt.weight == 0 ? '' : appt.weight.toString(),
     height: appt.height == 0 ? '' : appt.height.toString(),
     emergencyContactName: '',
@@ -44,7 +44,7 @@ PatientDetails _mapApptToPatient(DashboardAppointments appt) {
     oxygen: '',
     bmi: appt.bmi == 0.0 ? '' : appt.bmi.toString(),
     isSelected: appt.isSelected,
-    patientCode: appt.id,
+    patientCode: appt.patientCode,
   );
 }
 

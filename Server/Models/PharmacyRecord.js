@@ -12,6 +12,10 @@ const PharmacyItemSchema = new Schema({
   batchId: { type: String, ref: 'MedicineBatch' },
   sku: { type: String, default: null },
   name: { type: String, default: null },
+  dosage: { type: String, default: null },        // ✅ ADDED
+  frequency: { type: String, default: null },     // ✅ ADDED
+  duration: { type: String, default: null },      // ✅ ADDED
+  notes: { type: String, default: null },         // ✅ ADDED
   quantity: { type: Number, default: 0 },
   unitPrice: { type: Number, default: 0 },
   taxPercent: { type: Number, default: 0 },

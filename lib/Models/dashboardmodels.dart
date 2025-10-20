@@ -31,6 +31,10 @@ class DashboardAppointments {
   final List<String> barriers;
   final List<Map<String, String>> timeline;
   final Map<String, String> history;
+  
+  // New fields for patient code and blood group
+  final String? bloodGroup;
+  final String? patientCode;
 
   DashboardAppointments({
     required this.id,
@@ -62,6 +66,8 @@ class DashboardAppointments {
     this.barriers = const [],
     this.timeline = const [],
     this.history = const {},
+    this.bloodGroup,
+    this.patientCode,
   });
 
   /// ✅ Create from JSON safely
@@ -79,11 +85,38 @@ class DashboardAppointments {
     String patientId = '';
     String patientFullName = '';
     String gender = '';
+    String? bloodGroup;
+    String? patientCode;
+    int patientAge = 0;
+    
     if (json['patientId'] is Map) {
       final p = json['patientId'] as Map;
       patientId = p['_id'] ?? '';
       patientFullName = '${p['firstName'] ?? ''} ${p['lastName'] ?? ''}'.trim();
       gender = p['gender'] ?? '';
+      bloodGroup = p['bloodGroup']?.toString();
+      
+      // Extract patient code from metadata
+      if (p['metadata'] is Map) {
+        patientCode = p['metadata']['patientCode']?.toString();
+      }
+      
+      // Calculate age from dateOfBirth if available
+      if (p['dateOfBirth'] != null) {
+        try {
+          final dob = DateTime.tryParse(p['dateOfBirth'].toString());
+          if (dob != null) {
+            final today = DateTime.now();
+            patientAge = today.year - dob.year;
+            if (today.month < dob.month || (today.month == dob.month && today.day < dob.day)) {
+              patientAge--;
+            }
+            if (patientAge < 0) patientAge = 0;
+          }
+        } catch (e) {
+          // If calculation fails, keep age as 0
+        }
+      }
     } else if (json['patientId'] is String) {
       patientId = json['patientId'];
       patientFullName = json['clientName'] ?? '';
@@ -116,7 +149,7 @@ class DashboardAppointments {
       patientName: patientFullName.isNotEmpty ? patientFullName : (json['clientName'] ?? ''),
       patientAge: json['patientAge'] is int
           ? json['patientAge']
-          : int.tryParse(json['patientAge']?.toString() ?? '0') ?? 0,
+          : (patientAge > 0 ? patientAge : int.tryParse(json['patientAge']?.toString() ?? '0') ?? 0),
       date: date,
       time: time,
       reason: reason, // ✅ fixed here
@@ -159,6 +192,8 @@ class DashboardAppointments {
       history: json['history'] != null
           ? Map<String, String>.from(json['history'])
           : {},
+      bloodGroup: bloodGroup,
+      patientCode: patientCode,
     );
   }
 

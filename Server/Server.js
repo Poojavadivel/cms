@@ -38,6 +38,7 @@ app.use('/api/pharmacy', require('./routes/pharmacy'));
 app.use('/api/bot', require('./routes/bot'));
 app.use('/api/intake', require('./routes/intake'));
 app.use('/api/scanner', require('./routes/scanner'));
+app.use('/api/card', require('./routes/card')); // New: Profile card data endpoint
 // --- Health / Root Endpoint ---
 
 
