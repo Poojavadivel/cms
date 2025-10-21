@@ -1,22 +1,17 @@
-import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:io' show File;
-import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart' show MultipartFile;
 import 'package:http_parser/http_parser.dart';
 import 'package:path/path.dart' as p;
-import 'dart:io';
-import 'package:http/http.dart'; // for MultipartFile
-import 'package:http_parser/http_parser.dart'; // for MediaType
-import 'package:path/path.dart' as p; // for basename()
-import 'dart:developer'; // optional for logging
 import '../Models/Admin.dart';
 import '../Models/Doctor.dart';
+import '../Models/Pharmacist.dart';
+import '../Models/Pathologist.dart';
 import '../Models/Patients.dart';
 import '../Models/User.dart';
 import '../Models/appointment_draft.dart';
@@ -64,6 +59,35 @@ class AuthService {
     final token = await _getToken();
     if (token == null) throw ApiException('Not logged in');
     return await fn(token);
+  }
+
+  // -------------------- Public API Helper Methods --------------------
+  /// Public GET method for making authenticated GET requests
+  Future<dynamic> get(String path) async {
+    return await _withAuth<dynamic>((token) async {
+      return await _apiHandler.get(path, token: token);
+    });
+  }
+
+  /// Public POST method for making authenticated POST requests
+  Future<dynamic> post(String path, Map<String, dynamic> body) async {
+    return await _withAuth<dynamic>((token) async {
+      return await _apiHandler.post(path, token: token, body: body);
+    });
+  }
+
+  /// Public PUT method for making authenticated PUT requests
+  Future<dynamic> put(String path, Map<String, dynamic> body) async {
+    return await _withAuth<dynamic>((token) async {
+      return await _apiHandler.put(path, token: token, body: body);
+    });
+  }
+
+  /// Public DELETE method for making authenticated DELETE requests
+  Future<dynamic> delete(String path) async {
+    return await _withAuth<dynamic>((token) async {
+      return await _apiHandler.delete(path, token: token);
+    });
   }
 
   // -------------------- Staff cache (kept in AuthService) --------------------
@@ -1221,8 +1245,13 @@ class AuthService {
       return Admin(userProfile: baseUser);
     } else if (baseUser.role == UserRole.doctor) {
       return Doctor.fromMap(userData);
+    } else if (baseUser.role == UserRole.pharmacist) {
+      return Pharmacist.fromMap(userData);
+    } else if (baseUser.role == UserRole.pathologist) {
+      return Pathologist.fromMap(userData);
     } else {
-      throw ApiException('Invalid user role received from server.');
+      // For other roles (reception, superadmin, etc.), return base User
+      return baseUser;
     }
   }
 

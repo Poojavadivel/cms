@@ -6,7 +6,9 @@ import '../../Services/Authservices.dart';
 import '../../Utils/Colors.dart';
 import '../Admin/RootPage.dart';
 import '../Doctor/RootPage.dart';
-import 'LoginPage.dart'; // Assuming this is your doctor root page file
+import '../Pharmacist/root_page.dart';
+import '../Pathologist/root_page.dart';
+import 'LoginPage.dart';
 
 // --- App Theme Colors ---
 
@@ -63,6 +65,16 @@ class _SplashPageState extends State<SplashPage> {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const DoctorRootPage()),
+        );
+      } else if (appProvider.isPharmacist) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const PharmacistRootPage()),
+        );
+      } else if (appProvider.isPathologist) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const PathologistRootPage()),
         );
       } else {
         // Fallback for an unknown role, navigate to login.

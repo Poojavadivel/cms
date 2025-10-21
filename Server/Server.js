@@ -35,6 +35,7 @@ app.use('/api/staff', require('./routes/staff'));
 app.use('/api/patients', require('./routes/patients'));
 app.use('/api/doctors', require('./routes/doctors'));
 app.use('/api/pharmacy', require('./routes/pharmacy'));
+app.use('/api/pathology', require('./routes/pathology')); // New: Pathology routes
 app.use('/api/bot', require('./routes/bot'));
 app.use('/api/intake', require('./routes/intake'));
 app.use('/api/scanner', require('./routes/scanner'));
@@ -123,6 +124,78 @@ const createInitialDoctor = async () => {
   }
 };
 
+/**
+ * Creates the initial pharmacist user from .env variables if it doesn't already exist.
+ */
+const createInitialPharmacist = async () => {
+  try {
+    const pharmacistEmail = process.env.PHARMACIST_EMAIL;
+    const pharmacistPassword = process.env.PHARMACIST_PASSWORD;
+    const pharmacistRole = process.env.PHARMACIST_ROLE || 'pharmacist';
+
+    if (!pharmacistEmail || !pharmacistPassword) {
+      console.log('Initial pharmacist user variables not found in .env, skipping creation.');
+      return;
+    }
+
+    const existingPharmacist = await User.findOne({ email: pharmacistEmail }).lean();
+
+    if (existingPharmacist) {
+      console.log('Pharmacist user already exists.');
+    } else {
+      const newPharmacist = new User({
+        email: pharmacistEmail,
+        password: pharmacistPassword,
+        role: pharmacistRole,
+        firstName: 'Pharmacist',
+        lastName: 'User',
+        is_active: true
+      });
+
+      await newPharmacist.save();
+      console.log('Initial pharmacist user created successfully with email:', pharmacistEmail);
+    }
+  } catch (error) {
+    console.error('Error creating initial pharmacist user:', error);
+  }
+};
+
+/**
+ * Creates the initial pathologist user from .env variables if it doesn't already exist.
+ */
+const createInitialPathologist = async () => {
+  try {
+    const pathologistEmail = process.env.PATHOLOGIST_EMAIL;
+    const pathologistPassword = process.env.PATHOLOGIST_PASSWORD;
+    const pathologistRole = process.env.PATHOLOGIST_ROLE || 'pathologist';
+
+    if (!pathologistEmail || !pathologistPassword) {
+      console.log('Initial pathologist user variables not found in .env, skipping creation.');
+      return;
+    }
+
+    const existingPathologist = await User.findOne({ email: pathologistEmail }).lean();
+
+    if (existingPathologist) {
+      console.log('Pathologist user already exists.');
+    } else {
+      const newPathologist = new User({
+        email: pathologistEmail,
+        password: pathologistPassword,
+        role: pathologistRole,
+        firstName: 'Pathologist',
+        lastName: 'User',
+        is_active: true
+      });
+
+      await newPathologist.save();
+      console.log('Initial pathologist user created successfully with email:', pathologistEmail);
+    }
+  } catch (error) {
+    console.error('Error creating initial pathologist user:', error);
+  }
+};
+
 
 /**
  * Main startup function.
@@ -136,6 +209,8 @@ const startServer = async () => {
     // 2. Create initial admin user (if configured)
     await createInitialAdmin();
     await createInitialDoctor();
+    await createInitialPharmacist();
+    await createInitialPathologist();
     console.log('👑 Initial admin user check completed.');
 
     // 3. Start the Express server

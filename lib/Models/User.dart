@@ -3,8 +3,12 @@ import 'dart:convert';
 // For a robust system, we define roles as an enum, not a raw String.
 // This prevents typos and makes the code self-documenting.
 enum UserRole {
+  superadmin,
   admin,
   doctor,
+  pharmacist,
+  pathologist,
+  reception,
   unknown, // A fallback for safety
 }
 

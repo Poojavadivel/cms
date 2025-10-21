@@ -1,5 +1,5 @@
 // Server/Models/User.js
-// User model (admins, doctors, pharmacists, reception, superadmin)
+// User model (admins, doctors, pharmacists, pathologists, reception, superadmin)
 
 const mongoose = require('mongoose');
 const { v4: uuidv4 } = require('uuid');
@@ -10,7 +10,7 @@ const Schema = mongoose.Schema;
 
 const UserSchema = new Schema({
   _id: { type: String, default: () => uuidv4() },
-  role: { type: String, enum: ['superadmin', 'admin', 'doctor', 'pharmacist', 'reception'], required: true, index: true },
+  role: { type: String, enum: ['superadmin', 'admin', 'doctor', 'pharmacist', 'pathologist', 'reception'], required: true, index: true },
   firstName: { type: String, required: true, index: true },
   lastName: { type: String, default: '' },
   email: { type: String, required: true, unique: true, lowercase: true, index: true, validate: emailValidator },

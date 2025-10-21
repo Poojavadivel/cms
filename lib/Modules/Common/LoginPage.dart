@@ -12,6 +12,8 @@ import '../../Utils/Api_handler.dart';
 import '../../Utils/Colors.dart';
 import '../Admin/RootPage.dart';
 import '../Doctor/RootPage.dart';
+import '../Pharmacist/root_page.dart';
+import '../Pathologist/root_page.dart';
 
 const String _prefsRememberMeKey = 'remember_me';
 const String _prefsEmailKey = 'saved_email';
@@ -119,7 +121,12 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const AdminRootPage()));
       } else if (appProvider.isDoctor) {
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const DoctorRootPage()));
+      } else if (appProvider.isPharmacist) {
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const PharmacistRootPage()));
+      } else if (appProvider.isPathologist) {
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const PathologistRootPage()));
       } else {
+        // Fallback to doctor page for unknown roles
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const DoctorRootPage()));
       }
     } on ApiException catch (e) {

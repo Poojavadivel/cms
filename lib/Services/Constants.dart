@@ -146,7 +146,27 @@ class ApiEndpoints {
   static RestApi scannerGetPdf(String pdfId) =>
       RestApi(url: '/api/scanner/pdf/$pdfId', method: ApiConstants.get);
 
-
+  // --- Pathology endpoints ---
+  static RestApi getPathologyReports() =>
+      RestApi(url: '/api/pathology/reports', method: ApiConstants.get);
+  
+  static RestApi createPathologyReport() =>
+      RestApi(url: '/api/pathology/reports', method: ApiConstants.post);
+  
+  static RestApi getPathologyReportById(String id) =>
+      RestApi(url: '/api/pathology/reports/$id', method: ApiConstants.get);
+  
+  static RestApi updatePathologyReport(String id) =>
+      RestApi(url: '/api/pathology/reports/$id', method: ApiConstants.put);
+  
+  static RestApi deletePathologyReport(String id) =>
+      RestApi(url: '/api/pathology/reports/$id', method: ApiConstants.delete);
+  
+  static RestApi downloadPathologyReport(String id) =>
+      RestApi(url: '/api/pathology/reports/$id/download', method: ApiConstants.get);
+  
+  static RestApi getPendingLabTests() =>
+      RestApi(url: '/api/pathology/pending-tests', method: ApiConstants.get);
 
 }
 

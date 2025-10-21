@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../Models/Admin.dart';
 import '../Models/Doctor.dart';
+import '../Models/Pharmacist.dart';
+import '../Models/Pathologist.dart';
 
 
 /// AppProvider: The central state management class for the application.
@@ -9,7 +11,7 @@ import '../Models/Doctor.dart';
 /// widget that is listening. It holds the authentication state and the profile
 /// of the currently logged-in user.
 class AppProvider extends ChangeNotifier {
-  // The user object can be an Admin, a Doctor, or null if logged out.
+  // The user object can be an Admin, a Doctor, Pharmacist, Pathologist, or null if logged out.
   // Using 'dynamic' allows for this flexibility.
   dynamic _user;
 
@@ -19,7 +21,7 @@ class AppProvider extends ChangeNotifier {
   // --- Getters ---
   // These provide a safe, read-only way for the UI to access the current state.
 
-  /// Returns the current user object (Admin or Doctor).
+  /// Returns the current user object (Admin, Doctor, Pharmacist, or Pathologist).
   /// Returns null if no user is logged in.
   dynamic get user => _user;
 
@@ -34,6 +36,12 @@ class AppProvider extends ChangeNotifier {
 
   /// A type-safe check to determine if the current user is a Doctor.
   bool get isDoctor => _user is Doctor;
+
+  /// A type-safe check to determine if the current user is a Pharmacist.
+  bool get isPharmacist => _user is Pharmacist;
+
+  /// A type-safe check to determine if the current user is a Pathologist.
+  bool get isPathologist => _user is Pathologist;
 
   // --- Methods ---
   // These methods are used to modify the state.

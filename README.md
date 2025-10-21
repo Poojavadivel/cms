@@ -839,7 +839,192 @@ For technical support or queries:
 
 ---
 
+## 🧪 Pathology & Pharmacy Modules
+
+### Pharmacy Module
+
+**Features:**
+- 📦 **Medicine Inventory** - Track stock levels and manage medicines
+- 💊 **Prescription Management** - View and fulfill doctor prescriptions
+- 📊 **Dashboard** - Real-time pharmacy metrics
+- 🔍 **Search & Filter** - Quick medicine lookup
+- 📈 **Reports** - Dispensing history and analytics
+
+### Pathology Module
+
+**Features:**
+- 🧪 **Lab Test Management** - Handle all pathology requests from doctors
+- 📄 **Test Reports** - Upload and manage test results (PDF, images, documents)
+- 📊 **Dashboard** - Lab metrics and pending tests overview
+- 👥 **Patient-Centric** - All tests linked to patient codes (PAT-XXX)
+- 🔍 **Search & Filter** - Quick report lookup with status filtering
+- 📋 **Test Details** - Complete test information with patient details
+
+#### Test Reports Page
+
+**Enterprise-Level Features:**
+✅ **Auto-fetched Patient Data** - Patient code (PAT-XXX) and name from database  
+✅ **Uploader Tracking** - Shows who uploaded each report (name, not ID)  
+✅ **Centered Columns** - "Uploaded By" and "Status" properly aligned  
+✅ **Smart Status Display** - Compact pill badges (Pending/Completed)  
+✅ **Date-only Format** - Clean date display without time  
+✅ **Filter Dropdown** - Quick sort by status  
+✅ **Pagination** - Enterprise-grade pagination (10 items per page)  
+✅ **Overflow Fixed** - No render overflow errors  
+✅ **Professional Table** - Proper padding and spacing  
+✅ **White Add Button** - Clean, professional "Add Test Report" button  
+
+**Table Columns:**
+```
+| PATIENT CODE | PATIENT NAME | TEST TYPE | DATE | UPLOADED BY | STATUS | ACTIONS |
+|    PAT-001   | John Doe     | Blood Test| 1/20 |   Admin     | 🟡 Pending | 👁️ |
+```
+
+**Key Fixes Applied:**
+1. ✅ Patient Code from Database (not PAT-00 default)
+2. ✅ Patient Name displayed (not raw ID)
+3. ✅ Uploader Name shown (from user ID lookup)
+4. ✅ Status centered with proper alignment
+5. ✅ Date format clean (M/D only)
+6. ✅ Filter dropdown for status
+7. ✅ Pagination footer optimized
+8. ✅ No overflow errors
+9. ✅ Enterprise-level padding
+10. ✅ Professional icon and button design
+
+**Backend Integration:**
+```javascript
+// GET /api/pathology/reports
+{
+  "success": true,
+  "reports": [
+    {
+      "_id": "report-id",
+      "patientId": {
+        "_id": "patient-id",
+        "firstName": "John",
+        "lastName": "Doe",
+        "metadata": {
+          "patientCode": "PAT-001"
+        }
+      },
+      "patientCode": "PAT-001",        // Auto-extracted
+      "patientName": "John Doe",        // Auto-extracted
+      "uploadedBy": {
+        "_id": "user-id",
+        "firstName": "Dr.",
+        "lastName": "Smith"
+      },
+      "uploaderName": "Dr. Smith",      // Auto-extracted
+      "testType": "Blood Test",
+      "status": "pending",
+      "fileRef": "path/to/file.pdf",
+      "createdAt": "2025-01-20T10:30:00.000Z"
+    }
+  ]
+}
+```
+
+**API Endpoints:**
+- `GET /api/pathology/reports` - List all test reports with patient/uploader details
+- `POST /api/pathology/reports` - Create new test report entry
+- `PUT /api/pathology/reports/:id` - Update test report (upload file)
+- `DELETE /api/pathology/reports/:id` - Delete test report
+
+---
+
+## 🎨 Design System
+
+### Color Palette
+```dart
+// Primary Colors
+AppColors.primary         // #4F46E5 (Indigo)
+AppColors.kTextPrimary   // #0F172A (Slate-900)
+AppColors.kTextSecondary // #64748B (Slate-500)
+AppColors.kBg            // #F8FAFC (Slate-50)
+AppColors.kMuted         // #E8EBF0 (Slate-200)
+
+// Semantic Colors
+AppColors.kDanger        // #EF4444 (Red)
+Colors.green             // #10B981 (Success)
+Colors.orange            // #F59E0B (Warning)
+```
+
+### Typography
+```dart
+// Primary Font: Google Fonts (Inter, Lexend)
+GoogleFonts.lexend(      // Headings, titles
+  fontSize: 24,
+  fontWeight: FontWeight.bold,
+)
+
+GoogleFonts.inter(       // Body text, tables
+  fontSize: 14,
+  fontWeight: FontWeight.w600,
+)
+```
+
+### Component Standards
+
+**Stat Cards:**
+- Padding: 20px
+- Border Radius: 12px
+- Shadow: 0.05 alpha, 10px blur
+- Icon size: 24px with 10px padding
+- Icon background: Color with 0.1 alpha
+
+**Tables:**
+- Row padding: 16px horizontal, 12px vertical
+- Header background: AppColors.kBg
+- Border: AppColors.kMuted with 0.3 alpha
+- Font: Inter 13-14px
+- Alignment: Left (text), Center (status/actions)
+
+**Buttons:**
+- Primary: White background, muted border
+- Padding: 16px horizontal, 10px vertical
+- Border Radius: 8px
+- Icon + Text with 8px gap
+
+---
+
+## 🔄 Recent Pathology Updates
+
+### Completed Improvements
+
+1. ✅ **Patient Code Integration** - All reports show PAT-XXX codes from database
+2. ✅ **Name Display Fix** - Shows patient and uploader names (not IDs)
+3. ✅ **Column Centering** - "Uploaded By" and "Status" properly centered
+4. ✅ **Status UI Enhancement** - Compact pill badges without overflow
+5. ✅ **Date Format Cleanup** - Date only (no time) for cleaner display
+6. ✅ **Filter Implementation** - Dropdown filter for quick status sorting
+7. ✅ **Pagination Optimization** - Enterprise-grade footer with 10 items/page
+8. ✅ **Overflow Resolution** - Fixed all render overflow errors
+9. ✅ **Table Padding** - Professional enterprise-level spacing
+10. ✅ **Button Design** - White "Add Report" button with proper icon
+
+### Backend Enhancements
+
+**Population Logic:**
+```javascript
+// Populate patient and uploader details
+.populate({
+  path: 'patientId',
+  select: 'firstName lastName metadata.patientCode'
+})
+.populate({
+  path: 'uploadedBy',
+  select: 'firstName lastName'
+})
+
+// Extract for frontend convenience
+report.patientCode = report.patientId?.metadata?.patientCode || 'PAT-00';
+report.patientName = `${report.patientId?.firstName || ''} ${report.patientId?.lastName || ''}`.trim() || 'Unknown';
+report.uploaderName = `${report.uploadedBy?.firstName || ''} ${report.uploadedBy?.lastName || ''}`.trim() || 'Admin';
+```
+
+---
+
 🏥 **Built with ❤️ for Karur Gastro Foundation**
 
 *Last Updated: January 2025*
-

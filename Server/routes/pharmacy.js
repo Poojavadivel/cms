@@ -685,4 +685,144 @@ router.get('/records/:id', auth, async (req, res) => {
   }
 });
 
+/**
+ * ------------------
+ * PENDING PRESCRIPTIONS (from intakes)
+ * ------------------
+ */
+
+// GET pending prescriptions from intakes
+router.get('/pending-prescriptions', auth, async (req, res) => {
+  try {
+    console.log('📥 [PENDING PRESCRIPTIONS] requestedBy:', req.user?.id);
+    
+    const { Intake } = require('../Models');
+    if (!Intake) {
+      return res.status(500).json({ success: false, message: 'Intake model not available', errorCode: 7002 });
+    }
+
+    const page = Math.max(0, parseInt(req.query.page || '0', 10));
+    const limit = Math.min(200, Math.max(1, parseInt(req.query.limit || '50', 10)));
+    const skip = page * limit;
+
+    // Find intakes that have pharmacy items and haven't been dispensed yet
+    const intakes = await Intake.find({
+      'meta.pharmacyId': { $exists: false } // No pharmacy record created yet
+    })
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit)
+    .lean();
+
+    // Filter intakes that actually have pharmacy data in meta or notes
+    const pendingPrescriptions = [];
+    for (const intake of intakes) {
+      // Check if there's pharmacy data in attachments or meta
+      const hasPharmacyData = intake.meta?.pharmacy || 
+                              (Array.isArray(intake.attachments) && 
+                               intake.attachments.some(a => a.type === 'pharmacy'));
+      
+      if (hasPharmacyData || intake.meta?.pharmacyItems) {
+        pendingPrescriptions.push({
+          _id: intake._id,
+          patientName: `${intake.patientSnapshot?.firstName || ''} ${intake.patientSnapshot?.lastName || ''}`.trim(),
+          patientId: intake.patientId,
+          patientPhone: intake.patientSnapshot?.phone,
+          doctorId: intake.doctorId,
+          appointmentId: intake.appointmentId,
+          pharmacyItems: intake.meta?.pharmacyItems || intake.meta?.pharmacy || [],
+          createdAt: intake.createdAt,
+          notes: intake.notes
+        });
+      }
+    }
+
+    const total = pendingPrescriptions.length;
+
+    console.log(`📦 [PENDING PRESCRIPTIONS] returning ${pendingPrescriptions.length} prescriptions`);
+    return res.status(200).json({ 
+      success: true, 
+      prescriptions: pendingPrescriptions, 
+      total, 
+      page, 
+      limit 
+    });
+  } catch (err) {
+    console.error('❌ [PENDING PRESCRIPTIONS] Error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to fetch pending prescriptions', errorCode: 6512 });
+  }
+});
+
+// POST mark prescription as dispensed
+router.post('/prescriptions/:intakeId/dispense', auth, async (req, res) => {
+  try {
+    if (!requireAdminOrPharmacist(req, res)) return;
+    
+    console.log('💊 [DISPENSE PRESCRIPTION] intakeId:', req.params.intakeId, 'by user:', req.user?.id);
+    
+    const { Intake } = require('../Models');
+    if (!Intake) {
+      return res.status(500).json({ success: false, message: 'Intake model not available', errorCode: 7002 });
+    }
+
+    const intake = await Intake.findById(req.params.intakeId);
+    if (!intake) {
+      return res.status(404).json({ success: false, message: 'Intake not found', errorCode: 6209 });
+    }
+
+    // Create pharmacy record if items provided
+    const data = req.body || {};
+    const items = Array.isArray(data.items) ? data.items : [];
+    
+    if (items.length === 0) {
+      return res.status(400).json({ success: false, message: 'No items provided', errorCode: 6210 });
+    }
+
+    const recordItems = items.map(item => ({
+      medicineId: item.medicineId || null,
+      batchId: item.batchId || null,
+      sku: item.sku || null,
+      name: item.name || item.Medicine || '',
+      dosage: item.dosage || item.Dosage || '',
+      frequency: item.frequency || item.Frequency || '',
+      notes: item.notes || item.Notes || '',
+      quantity: Number(item.quantity || 0),
+      unitPrice: Number(item.unitPrice || 0),
+      taxPercent: Number(item.taxPercent || 0),
+      lineTotal: Number(item.lineTotal || 0),
+      metadata: item.metadata || {}
+    }));
+
+    const total = recordItems.reduce((sum, item) => sum + (item.lineTotal || 0), 0);
+
+    const pharmacyRecord = await PharmacyRecord.create({
+      type: 'Dispense',
+      patientId: intake.patientId || null,
+      appointmentId: intake.appointmentId || null,
+      createdBy: req.user?.id || '',
+      items: recordItems,
+      total,
+      paid: data.paid === true,
+      paymentMethod: data.paymentMethod || null,
+      notes: data.notes || intake.notes || null,
+      metadata: { intakeId: intake._id, ...(data.metadata || {}) },
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    });
+
+    // Update intake to mark pharmacy as completed
+    intake.meta = intake.meta || {};
+    intake.meta.pharmacyId = String(pharmacyRecord._id);
+    intake.meta.pharmacyDispensedAt = new Date();
+    intake.meta.pharmacyDispensedBy = req.user?.id;
+    await intake.save();
+
+    console.log('✅ [DISPENSE PRESCRIPTION] Created pharmacy record:', pharmacyRecord._id);
+    return res.status(201).json({ success: true, record: pharmacyRecord });
+  } catch (err) {
+    console.error('💥 [DISPENSE PRESCRIPTION] Error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to dispense prescription', errorCode: 6513 });
+  }
+});
+
 module.exports = router;
