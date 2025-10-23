@@ -1307,9 +1307,29 @@ class _AppointmentDataView extends StatelessWidget {
                 ),
               ),
             
-            // Age
+            // Age - Centered
             if (columnVisibility['age'] ?? true)
-              _buildCell(appt.patientAge.toString(), flex: 1),
+              Expanded(
+                flex: 1,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+                  child: Center(
+                    child: Text(
+                      appt.patientAge.toString(),
+                      style: GoogleFonts.roboto(
+                        fontSize: 13,
+                        color: AppColors.kTextPrimary,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.25,
+                        height: 1.5,
+                      ),
+                      textAlign: TextAlign.center,
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                  ),
+                ),
+              ),
             
             // Date
             if (columnVisibility['date'] ?? true)
