@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 
 import '../../../Models/appointment_draft.dart';
 import '../../../Models/dashboardmodels.dart';
+import '../../../Services/Authservices.dart';
 import '../../../Utils/Colors.dart';
 import 'Addnewappoiments.dart';
 import 'Editappoimentspage.dart';
@@ -89,6 +90,11 @@ class _AppointmentTableState extends State<AppointmentTable> {
   int _itemsPerPage = 10;
   final List<int> _pageSizeOptions = [10, 25, 50, 100];
   
+  // Local state - independent from dashboard
+  List<DashboardAppointments> _localAppointments = [];
+  bool _isLoadingLocal = false;
+  String _searchQueryLocal = '';
+  
   // Column visibility
   Map<String, bool> _columnVisibility = {
     'patient': true,
@@ -103,15 +109,36 @@ class _AppointmentTableState extends State<AppointmentTable> {
   @override
   void initState() {
     super.initState();
+    _loadAppointmentsLocally();
+  }
+  
+  Future<void> _loadAppointmentsLocally() async {
+    setState(() => _isLoadingLocal = true);
+    try {
+      final data = await AuthService.instance.fetchAppointments();
+      setState(() {
+        _localAppointments = data;
+      });
+      debugPrint('✅ Appointments loaded: ${_localAppointments.length}');
+    } catch (e) {
+      debugPrint('❌ Error loading appointments: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    } finally {
+      setState(() => _isLoadingLocal = false);
+    }
   }
 
   List<DashboardAppointments> get _filteredAppointments {
-    if (widget.searchQuery.isEmpty) return widget.appointments;
-    return widget.appointments
+    if (_searchQueryLocal.isEmpty) return _localAppointments;
+    return _localAppointments
         .where((appt) =>
-            appt.patientName.toLowerCase().contains(widget.searchQuery.toLowerCase()) ||
-            appt.reason.toLowerCase().contains(widget.searchQuery.toLowerCase()) ||
-            appt.patientId.toLowerCase().contains(widget.searchQuery.toLowerCase()))
+            appt.patientName.toLowerCase().contains(_searchQueryLocal.toLowerCase()) ||
+            appt.reason.toLowerCase().contains(_searchQueryLocal.toLowerCase()) ||
+            appt.patientId.toLowerCase().contains(_searchQueryLocal.toLowerCase()))
         .toList();
   }
 
@@ -182,95 +209,261 @@ class _AppointmentTableState extends State<AppointmentTable> {
     );
   }
 
-  void _exportData() {
-    // Export to CSV/Excel
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Export Data'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.table_chart),
-              title: const Text('Export as CSV'),
-              onTap: () {
-                Navigator.pop(context);
-                _exportToCSV();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.picture_as_pdf),
-              title: const Text('Export as PDF'),
-              onTap: () {
-                Navigator.pop(context);
-                _exportToPDF();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.file_download),
-              title: const Text('Export as Excel'),
-              onTap: () {
-                Navigator.pop(context);
-                _exportToExcel();
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
-  void _exportToCSV() {
-    // Implement CSV export
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Exporting to CSV...')),
-    );
-  }
 
-  void _exportToPDF() {
-    // Implement PDF export
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Exporting to PDF...')),
-    );
-  }
 
-  void _exportToExcel() {
-    // Implement Excel export
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Exporting to Excel...')),
-    );
-  }
 
   void _showColumnSettings() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Column Visibility'),
-        content: SingleChildScrollView(
+      barrierDismissible: true,
+      barrierColor: Colors.black.withOpacity(0.6),
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(16),
+        child: Container(
+          width: MediaQuery.of(context).size.width * 0.35,
+          constraints: const BoxConstraints(maxHeight: 600),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primary.withOpacity(0.2),
+                blurRadius: 40,
+                offset: const Offset(0, 15),
+                spreadRadius: 0,
+              ),
+            ],
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            children: _columnVisibility.keys.map((key) {
-              return CheckboxListTile(
-                title: Text(key.toUpperCase()),
-                value: _columnVisibility[key],
-                onChanged: (value) {
-                  setState(() {
-                    _columnVisibility[key] = value ?? true;
-                  });
-                  Navigator.pop(context);
-                  _showColumnSettings();
-                },
-              );
-            }).toList(),
+            children: [
+              // Premium Header
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.primary,
+                      AppColors.primary.withOpacity(0.85),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    topRight: Radius.circular(20),
+                  ),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        Iconsax.setting_2,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Display Settings',
+                            style: GoogleFonts.poppins(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Customize visible columns',
+                            style: GoogleFonts.roboto(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w400,
+                              color: Colors.white.withOpacity(0.85),
+                              letterSpacing: 0.2,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              
+              // Content - Scrollable
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: _columnVisibility.keys.toList().asMap().entries.map((entry) {
+                        int idx = entry.key;
+                        String key = entry.value;
+                        bool isVisible = _columnVisibility[key]!;
+                        
+                        return Padding(
+                          padding: EdgeInsets.only(bottom: idx == _columnVisibility.length - 1 ? 0 : 12),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                color: isVisible
+                                    ? AppColors.primary.withOpacity(0.4)
+                                    : AppColors.grey200,
+                                width: 2,
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                              color: isVisible
+                                  ? AppColors.primary.withOpacity(0.08)
+                                  : AppColors.grey100.withOpacity(0.5),
+                            ),
+                            child: Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: () {
+                                  setState(() {
+                                    _columnVisibility[key] = !isVisible;
+                                  });
+                                },
+                                borderRadius: BorderRadius.circular(10),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        width: 24,
+                                        height: 24,
+                                        decoration: BoxDecoration(
+                                          border: Border.all(
+                                            color: isVisible
+                                                ? AppColors.primary
+                                                : AppColors.grey300,
+                                            width: 2,
+                                          ),
+                                          borderRadius: BorderRadius.circular(6),
+                                          color: isVisible
+                                              ? AppColors.primary
+                                              : Colors.transparent,
+                                        ),
+                                        child: isVisible
+                                            ? Icon(
+                                                Iconsax.tick_circle,
+                                                size: 14,
+                                                color: Colors.white,
+                                              )
+                                            : null,
+                                      ),
+                                      const SizedBox(width: 14),
+                                      Expanded(
+                                        child: Text(
+                                          key.toUpperCase(),
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w600,
+                                            color: AppColors.kTextPrimary,
+                                            letterSpacing: 0.3,
+                                          ),
+                                        ),
+                                      ),
+                                      if (isVisible)
+                                        Icon(
+                                          Iconsax.eye,
+                                          size: 18,
+                                          color: AppColors.primary,
+                                        )
+                                      else
+                                        Icon(
+                                          Iconsax.eye_slash,
+                                          size: 18,
+                                          color: AppColors.grey400,
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ),
+              ),
+              
+              // Professional Footer
+              Container(
+                decoration: BoxDecoration(
+                  border: Border(
+                    top: BorderSide(
+                      color: AppColors.grey200,
+                      width: 1,
+                    ),
+                  ),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    TextButton(
+                      onPressed: () {
+                        setState(() {
+                          _columnVisibility.updateAll((key, value) => true);
+                        });
+                      },
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      ),
+                      child: Text(
+                        'Reset All',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.primary,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                    ),
+                    ElevatedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 28,
+                          vertical: 12,
+                        ),
+                        elevation: 2,
+                        shadowColor: AppColors.primary.withOpacity(0.3),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: Text(
+                        'Done',
+                        style: GoogleFonts.poppins(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-        ],
       ),
     );
   }
@@ -296,14 +489,16 @@ class _AppointmentTableState extends State<AppointmentTable> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _AppointmentTableControls(
-                searchQuery: widget.searchQuery,
-                onSearchChanged: widget.onSearchChanged,
+                searchQuery: _searchQueryLocal,
+                onSearchChanged: (query) {
+                  setState(() => _searchQueryLocal = query);
+                },
                 onNewAppointmentPressed: widget.onNewAppointmentPressed,
                 selectedCount: 0,
-                onBulkDelete: _bulkDelete,
-                onExport: () {}, // Removed export
+                onBulkDelete: () {},
+                onExport: () {},
                 onColumnSettings: _showColumnSettings,
-                onRefresh: widget.onRefreshRequested,
+                onRefresh: _loadAppointmentsLocally,
               ),
               const SizedBox(height: 16),
               
@@ -314,17 +509,17 @@ class _AppointmentTableState extends State<AppointmentTable> {
               
               Expanded(
                 child: _AppointmentDataView(
-                  appointments: _paginatedAppointments,
+                  appointments: _isLoadingLocal ? [] : _paginatedAppointments,
                   onShowAppointmentDetails: widget.onShowAppointmentDetails,
                   onDeleteAppointment: (appt) {
                     if (widget.onDeleteAppointment != null) {
                       widget.onDeleteAppointment!(appt);
-                      widget.onRefreshRequested();
+                      _loadAppointmentsLocally();
                     }
                   },
-                  selectedRows: const {}, // Empty set - checkboxes removed
-                  onToggleSelection: (_) {}, // No-op
-                  onSelectAll: () {}, // No-op
+                  selectedRows: const {},
+                  onToggleSelection: (_) {},
+                  onSelectAll: () {},
                   sortColumn: _sortColumn,
                   sortAscending: _sortAscending,
                   onSort: _toggleSort,
@@ -344,32 +539,186 @@ class _AppointmentTableState extends State<AppointmentTable> {
                 onPageSizeChanged: (size) {
                   setState(() => _itemsPerPage = size);
                 },
-                onJumpToPage: (page) {
-                  // Implement jump to page
-                },
+                onJumpToPage: (page) {},
               ),
             ],
           ),
         ),
-        if (widget.isLoading)
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Center(
-              child: CircularProgressIndicator(),
+        // Skeleton Loading Overlay - Premium Enterprise Design
+        if (_isLoadingLocal)
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.98),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                children: [
+                  // Skeleton rows
+                  Expanded(
+                    child: ListView.builder(
+                      padding: const EdgeInsets.only(left: 24, right: 24, top: 24, bottom: 12),
+                      itemCount: 7,
+                      itemBuilder: (context, index) => _buildSkeletonRow(),
+                    ),
+                  ),
+                  
+                  // Loading state indicator at bottom
+                  Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          height: 48,
+                          width: 48,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 3,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              AppColors.primary,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Fetching Appointments',
+                          style: GoogleFonts.poppins(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.kTextPrimary,
+                            letterSpacing: 0.3,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Please wait while we load your data...',
+                          style: GoogleFonts.roboto(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w400,
+                            color: AppColors.kTextSecondary,
+                            letterSpacing: 0.2,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
       ],
     );
   }
 
+  Widget _buildSkeletonRow() {
+    return Container(
+      height: 72,
+      margin: const EdgeInsets.symmetric(vertical: 6),
+      decoration: BoxDecoration(
+        color: AppColors.grey200,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: AppColors.grey200.withOpacity(0.6),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          // Avatar skeleton
+          Padding(
+            padding: const EdgeInsets.all(14),
+            child: Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: AppColors.grey300,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 8,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 4),
+          
+          // Text skeleton columns
+          Expanded(
+            flex: 2,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Main text line
+                Container(
+                  height: 14,
+                  width: 140,
+                  decoration: BoxDecoration(
+                    color: AppColors.grey300,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                // Subtitle line
+                Container(
+                  height: 11,
+                  width: 100,
+                  decoration: BoxDecoration(
+                    color: AppColors.grey300,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          
+          // Other column skeletons (responsive)
+          ...List.generate(4, (i) {
+            return Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Container(
+                  height: 14,
+                  decoration: BoxDecoration(
+                    color: AppColors.grey300,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+            );
+          }),
+          
+          // Action skeleton
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: AppColors.grey300,
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildStatsBar() {
-    final total = widget.appointments.length;
-    final scheduled = widget.appointments.where((a) => a.status.toLowerCase() == 'scheduled').length;
-    final completed = widget.appointments.where((a) => a.status.toLowerCase() == 'completed').length;
-    final cancelled = widget.appointments.where((a) => a.status.toLowerCase() == 'cancelled').length;
+    final total = _localAppointments.length;
+    final scheduled = _localAppointments.where((a) => a.status.toLowerCase() == 'scheduled').length;
+    final completed = _localAppointments.where((a) => a.status.toLowerCase() == 'completed').length;
+    final cancelled = _localAppointments.where((a) => a.status.toLowerCase() == 'cancelled').length;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -550,169 +899,125 @@ class _AppointmentTableControls extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
+        // Single Row: Title + Search (with buttons inside) + Buttons
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Row(
-              children: [
-                Text(
-                  'APPOINTMENTS',
-                  style: GoogleFonts.poppins(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.appointmentsHeader,
-                    letterSpacing: 1.2,
-                    height: 1.2,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                if (selectedCount > 0)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          AppColors.primary.withOpacity(0.15),
-                          AppColors.primary.withOpacity(0.10),
-                        ],
-                      ),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: AppColors.primary.withOpacity(0.3),
-                        width: 1.5,
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Iconsax.tick_circle,
-                          size: 16,
-                          color: AppColors.primary,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          '$selectedCount selected',
-                          style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.3,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-              ],
+            // Title
+            Text(
+              'APPOINTMENTS',
+              style: GoogleFonts.poppins(
+                fontSize: 22,
+                fontWeight: FontWeight.w700,
+                color: AppColors.appointmentsHeader,
+                letterSpacing: 1.2,
+              ),
             ),
-            Row(
-              children: [
-                // Refresh Button
-                IconButton(
-                  onPressed: onRefresh,
-                  icon: const Icon(Iconsax.refresh),
-                  tooltip: 'Refresh',
-                  color: AppColors.kTextSecondary,
+            const SizedBox(width: 24),
+            
+            // Search field with buttons inside
+            Expanded(
+              child: Container(
+                height: 50,
+                decoration: BoxDecoration(
+                  border: Border.all(
+                    color: AppColors.primary.withOpacity(0.3),
+                    width: 1.5,
+                  ),
+                  borderRadius: BorderRadius.circular(10),
+                  color: Colors.white,
                 ),
-                
-                // Column Settings
-                IconButton(
-                  onPressed: onColumnSettings,
-                  icon: const Icon(Iconsax.setting_4),
-                  tooltip: 'Column Settings',
-                  color: AppColors.kTextSecondary,
-                ),
-                
-                // Export Button
-                IconButton(
-                  onPressed: onExport,
-                  icon: const Icon(Iconsax.document_download),
-                  tooltip: 'Export Data',
-                  color: AppColors.kTextSecondary,
-                ),
-                
-                const SizedBox(width: 8),
-                
-                // Search Field
-                SizedBox(
-                  width: 320,
-                  height: 44,
-                  child: TextField(
-                    onChanged: onSearchChanged,
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      letterSpacing: 0.2,
-                    ),
-                    decoration: InputDecoration(
-                      hintText: 'Search patient, reason, ID...',
-                      hintStyle: GoogleFonts.inter(
-                        fontSize: 13,
-                        color: AppColors.muted,
-                        letterSpacing: 0.2,
-                      ),
-                      prefixIcon: Icon(
+                child: Row(
+                  children: [
+                    // Search Icon
+                    Padding(
+                      padding: const EdgeInsets.only(left: 12),
+                      child: Icon(
                         Iconsax.search_normal_1,
+                        color: AppColors.primary,
                         size: 20,
-                        color: AppColors.primary.withOpacity(0.6),
                       ),
-                      suffixIcon: searchQuery.isNotEmpty
-                          ? IconButton(
-                              icon: Icon(
-                                Icons.clear,
-                                size: 20,
-                                color: AppColors.kTextSecondary,
-                              ),
-                              onPressed: () => onSearchChanged(''),
-                            )
-                          : null,
-                      filled: true,
-                      fillColor: Colors.white,
-                      isDense: true,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide(
-                          color: AppColors.searchBorder.withOpacity(0.5),
-                          width: 1.5,
+                    ),
+                    const SizedBox(width: 8),
+                    
+                    // Search TextField
+                    Expanded(
+                      child: TextField(
+                        onChanged: onSearchChanged,
+                        cursorColor: AppColors.primary,
+                        style: GoogleFonts.roboto(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.kTextPrimary,
                         ),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide(
-                          color: AppColors.searchBorder.withOpacity(0.5),
-                          width: 1.5,
-                        ),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(
-                          color: AppColors.primary,
-                          width: 2,
+                        decoration: InputDecoration(
+                          hintText: 'Search appointments...',
+                          hintStyle: GoogleFonts.roboto(
+                            fontSize: 13,
+                            color: AppColors.kTextSecondary,
+                            fontWeight: FontWeight.w400,
+                          ),
+                          border: InputBorder.none,
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
                         ),
                       ),
                     ),
-                  ),
+                    
+                    // Clear Button (if search has text)
+                    if (searchQuery.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 4),
+                        child: IconButton(
+                          icon: Icon(
+                            Icons.close,
+                            color: AppColors.primary,
+                            size: 18,
+                          ),
+                          onPressed: () => onSearchChanged(''),
+                          constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                          tooltip: 'Clear',
+                        ),
+                      ),
+                    
+                    // Divider
+                    Container(
+                      width: 1,
+                      height: 24,
+                      color: AppColors.primary.withOpacity(0.2),
+                      margin: const EdgeInsets.symmetric(horizontal: 8),
+                    ),
+                    
+                    // Refresh Button
+                    IconButton(
+                      onPressed: onRefresh,
+                      icon: Icon(
+                        Iconsax.refresh,
+                        color: AppColors.primary,
+                        size: 20,
+                      ),
+                      constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                      tooltip: 'Refresh',
+                    ),
+                    
+                    // Settings Button
+                    IconButton(
+                      onPressed: onColumnSettings,
+                      icon: Icon(
+                        Iconsax.setting_4,
+                        color: AppColors.primary,
+                        size: 20,
+                      ),
+                      constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                      tooltip: 'Settings',
+                      padding: const EdgeInsets.only(right: 8),
+                    ),
+                  ],
                 ),
-                
-                const SizedBox(width: 12),
-                
-                // Bulk Delete (if items selected)
-                if (selectedCount > 0)
-                  ElevatedButton.icon(
-                    onPressed: onBulkDelete,
-                    icon: const Icon(Iconsax.trash, size: 16),
-                    label: const Text('Delete'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.kDanger,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    ),
-                  ),
-              ],
+              ),
             ),
           ],
         ),
+        const SizedBox(height: 16),
       ],
     );
   }
@@ -777,15 +1082,6 @@ class _AppointmentDataView extends StatelessWidget {
             ),
             child: Row(
               children: [
-                // Checkbox column
-                // SizedBox(
-                //   width: 60,
-                //   child: Checkbox(
-                //     value: selectedRows.length == appointments.length && appointments.isNotEmpty,
-                //     tristate: true,
-                //     onChanged: (_) => onSelectAll(),
-                //   ),
-                // ),
                 if (columnVisibility['patient'] ?? true)
                   _buildSortableHeader('Patient Name', 'patient', flex: 2),
                 if (columnVisibility['age'] ?? true)
@@ -818,15 +1114,21 @@ class _AppointmentDataView extends StatelessWidget {
             ),
           ),
           
-          // Body
+          // Body - Enterprise Grade with Scrolling
           Expanded(
             child: appointments.isEmpty
                 ? _buildEmptyState()
-                : ListView.builder(
-                    itemCount: appointments.length,
-                    itemBuilder: (context, index) {
-                      return _buildRow(context, appointments[index], index);
-                    },
+                : RawScrollbar(
+                    thumbColor: AppColors.primary.withOpacity(0.3),
+                    radius: const Radius.circular(6),
+                    thickness: 8,
+                    child: ListView.builder(
+                      itemCount: appointments.length,
+                      padding: const EdgeInsets.only(right: 4),
+                      itemBuilder: (context, index) {
+                        return _buildRow(context, appointments[index], index);
+                      },
+                    ),
                   ),
           ),
         ],
@@ -849,11 +1151,12 @@ class _AppointmentDataView extends StatelessWidget {
               Flexible(
                 child: Text(
                   title,
-                  style: GoogleFonts.poppins(
+                  style: GoogleFonts.roboto(
                     fontWeight: FontWeight.w700,
                     color: AppColors.tableHeader,
-                    fontSize: 13,
-                    letterSpacing: 0.5,
+                    fontSize: 12.5,
+                    letterSpacing: 0.6,
+                    height: 1.4,
                   ),
                   overflow: TextOverflow.ellipsis,
                   maxLines: 1,
@@ -970,25 +1273,27 @@ class _AppointmentDataView extends StatelessWidget {
                             children: [
                               Text(
                                 appt.patientName,
-                                style: GoogleFonts.poppins(
-                                  fontSize: 14,
+                                style: GoogleFonts.roboto(
+                                  fontSize: 13.5,
                                   fontWeight: FontWeight.w600,
                                   color: AppColors.kTextPrimary,
-                                  letterSpacing: 0.2,
+                                  letterSpacing: 0.25,
+                                  height: 1.4,
                                 ),
                                 overflow: TextOverflow.ellipsis,
                                 maxLines: 1,
                               ),
-                              const SizedBox(height: 2),
+                              const SizedBox(height: 3),
                               Text(
                                 (appt.patientCode != null && appt.patientCode!.isNotEmpty) 
                                     ? appt.patientCode! 
                                     : 'ID: ${appt.patientId}',
-                                style: GoogleFonts.inter(
+                                style: GoogleFonts.roboto(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w500,
                                   color: AppColors.kTextSecondary,
-                                  letterSpacing: 0.3,
+                                  letterSpacing: 0.25,
+                                  height: 1.3,
                                 ),
                                 overflow: TextOverflow.ellipsis,
                                 maxLines: 1,
@@ -1037,10 +1342,10 @@ class _AppointmentDataView extends StatelessWidget {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      _buildActionButton(
+                      _buildIconButton(
                         icon: Iconsax.document_text,
-                        label: 'Intake',
                         color: AppColors.kInfo,
+                        tooltip: 'Intake',
                         onPressed: () => showIntakeFormDialog(context, appt),
                       ),
                       const SizedBox(width: 6),
@@ -1125,12 +1430,12 @@ class _AppointmentDataView extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
         child: Text(
           text,
-          style: GoogleFonts.inter(
+          style: GoogleFonts.roboto(
             fontSize: 13,
             color: AppColors.kTextPrimary,
             fontWeight: FontWeight.w500,
-            letterSpacing: 0.2,
-            height: 1.4,
+            letterSpacing: 0.25,
+            height: 1.5,
           ),
           textAlign: TextAlign.center,
           overflow: TextOverflow.ellipsis,
@@ -1190,11 +1495,12 @@ class _AppointmentDataView extends StatelessWidget {
           Flexible(
             child: Text(
               status,
-              style: GoogleFonts.poppins(
+              style: GoogleFonts.roboto(
                 fontSize: 12,
                 color: textColor,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 0.3,
+                height: 1.3,
               ),
               overflow: TextOverflow.ellipsis,
               maxLines: 1,
@@ -1244,16 +1550,44 @@ class _AppointmentDataView extends StatelessWidget {
   }) {
     return Tooltip(
       message: tooltip,
+      textStyle: GoogleFonts.roboto(
+        fontSize: 12,
+        color: Colors.white,
+        fontWeight: FontWeight.w500,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.grey[800],
+        borderRadius: BorderRadius.circular(6),
+      ),
       child: InkWell(
         onTap: onPressed,
         borderRadius: BorderRadius.circular(6),
+        hoverColor: color.withOpacity(0.12),
         child: Container(
-          padding: const EdgeInsets.all(6),
+          width: 36,
+          height: 36,
+          padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
+            color: color.withOpacity(0.09),
             borderRadius: BorderRadius.circular(6),
+            border: Border.all(
+              color: color.withOpacity(0.25),
+              width: 1.1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: color.withOpacity(0.08),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
-          child: Icon(icon, size: 16, color: color),
+          child: Icon(
+            icon,
+            size: 16,
+            color: color,
+            semanticLabel: tooltip,
+          ),
         ),
       ),
     );
@@ -1384,11 +1718,12 @@ class _EnhancedPaginationControls extends StatelessWidget {
             children: [
               Text(
                 'Rows per page:',
-                style: GoogleFonts.poppins(
-                  fontSize: 13,
+                style: GoogleFonts.roboto(
+                  fontSize: 12.5,
                   color: AppColors.kTextSecondary,
                   fontWeight: FontWeight.w600,
                   letterSpacing: 0.3,
+                  height: 1.4,
                 ),
               ),
               const SizedBox(width: 10),
@@ -1418,7 +1753,10 @@ class _EnhancedPaginationControls extends StatelessWidget {
                         value: size,
                         child: Text(
                           size.toString(),
-                          style: GoogleFonts.inter(fontSize: 13),
+                          style: GoogleFonts.roboto(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       );
                     }).toList(),
@@ -1431,11 +1769,12 @@ class _EnhancedPaginationControls extends StatelessWidget {
               const SizedBox(width: 24),
               Text(
                 'Showing $startItem-$endItem of $totalItems',
-                style: GoogleFonts.poppins(
-                  fontSize: 13,
+                style: GoogleFonts.roboto(
+                  fontSize: 12.5,
                   color: AppColors.kTextSecondary,
                   fontWeight: FontWeight.w600,
                   letterSpacing: 0.3,
+                  height: 1.4,
                 ),
               ),
             ],
@@ -1481,11 +1820,12 @@ class _EnhancedPaginationControls extends StatelessWidget {
                 ),
                 child: Text(
                   'Page ${currentPage + 1} of $totalPages',
-                  style: GoogleFonts.poppins(
-                    fontSize: 13,
+                  style: GoogleFonts.roboto(
+                    fontSize: 12.5,
                     color: AppColors.primary,
                     fontWeight: FontWeight.w700,
-                    letterSpacing: 0.5,
+                    letterSpacing: 0.4,
+                    height: 1.4,
                   ),
                 ),
               ),

@@ -27,6 +27,7 @@ class AppointmentsPageNew extends StatefulWidget {
 
 class _AppointmentsPageNewState extends State<AppointmentsPageNew> {
   bool _isLoading = false;
+  bool _isRefreshing = false;
   List<DashboardAppointments> _appointments = [];
   List<DashboardAppointments> _filteredAppointments = [];
   
@@ -36,6 +37,17 @@ class _AppointmentsPageNewState extends State<AppointmentsPageNew> {
   
   String _sortColumn = 'date';
   bool _sortAscending = false;
+  
+  // Column visibility settings
+  Map<String, bool> _columnVisibility = {
+    'patient': true,
+    'age': true,
+    'date': true,
+    'time': true,
+    'reason': true,
+    'status': true,
+    'actions': true,
+  };
 
   @override
   void initState() {
@@ -43,18 +55,19 @@ class _AppointmentsPageNewState extends State<AppointmentsPageNew> {
     _loadAppointments();
   }
 
-  /// Load appointments directly from backend
-  Future<void> _loadAppointments() async {
-    setState(() => _isLoading = true);
+  /// Load appointments directly from AuthService
+  Future<void> _loadAppointments({bool showLoading = true}) async {
+    if (showLoading) {
+      setState(() => _isLoading = true);
+    }
     
     try {
-      final appointments = await AuthService.instance.fetchAppointments();
-      final list = appointments ?? <DashboardAppointments>[];
+      final appointments = await AuthService.instance.fetchAppointments() ?? [];
       
       if (mounted) {
         setState(() {
-          _appointments = list;
-          _filteredAppointments = list;
+          _appointments = appointments;
+          _applyFiltersAndSort();
         });
       }
     } catch (e) {
@@ -63,30 +76,47 @@ class _AppointmentsPageNewState extends State<AppointmentsPageNew> {
           SnackBar(
             content: Text('Failed to load appointments: $e'),
             backgroundColor: AppColors.kDanger,
+            duration: const Duration(seconds: 3),
           ),
         );
       }
     } finally {
       if (mounted) {
-        setState(() => _isLoading = false);
+        setState(() {
+          _isLoading = false;
+          _isRefreshing = false;
+        });
       }
     }
+  }
+
+  /// Refresh appointments with visual feedback
+  Future<void> _refreshAppointments() async {
+    setState(() => _isRefreshing = true);
+    await _loadAppointments(showLoading: false);
+  }
+
+  /// Apply filters and sorting
+  void _applyFiltersAndSort() {
+    if (_searchQuery.isEmpty) {
+      _filteredAppointments = List.from(_appointments);
+    } else {
+      _filteredAppointments = _appointments
+          .where((appt) =>
+              appt.patientName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+              (appt.patientCode?.toLowerCase().contains(_searchQuery.toLowerCase()) ?? false) ||
+              appt.reason.toLowerCase().contains(_searchQuery.toLowerCase()))
+          .toList();
+    }
+    
+    _sortAppointments(_sortColumn);
+    _currentPage = 0;
   }
 
   void _filterAppointments(String query) {
     setState(() {
       _searchQuery = query;
-      if (query.isEmpty) {
-        _filteredAppointments = _appointments;
-      } else {
-        _filteredAppointments = _appointments
-            .where((appt) =>
-                appt.patientName.toLowerCase().contains(query.toLowerCase()) ||
-                (appt.patientCode?.toLowerCase().contains(query.toLowerCase()) ?? false) ||
-                appt.reason.toLowerCase().contains(query.toLowerCase()))
-            .toList();
-      }
-      _currentPage = 0;
+      _applyFiltersAndSort();
     });
   }
 
@@ -304,6 +334,28 @@ class _AppointmentsPageNewState extends State<AppointmentsPageNew> {
                   ],
                 ),
               ),
+              // Refresh Button
+              IconButton(
+                onPressed: _isRefreshing ? null : _refreshAppointments,
+                tooltip: 'Refresh appointments',
+                icon: Icon(
+                  Iconsax.refresh,
+                  color: _isRefreshing ? AppColors.textLight : AppColors.primary,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Column Settings Button
+              IconButton(
+                onPressed: _showColumnSettings,
+                tooltip: 'Column settings',
+                icon: Icon(
+                  Iconsax.setting_4,
+                  color: AppColors.primary,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 8),
               // New Appointment Button
               ElevatedButton.icon(
                 onPressed: _onNewAppointmentPressed,
@@ -1069,6 +1121,208 @@ class _AppointmentsPageNewState extends State<AppointmentsPageNew> {
 
   void _showIntakeForm(DashboardAppointments appointment) {
     showIntakeFormDialog(context, appointment);
+  }
+
+  /// Enterprise-grade column settings popup
+  void _showColumnSettings() {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 500),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.primary.withOpacity(0.1),
+                      AppColors.accentPink.withOpacity(0.1),
+                    ],
+                  ),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(16),
+                    topRight: Radius.circular(16),
+                  ),
+                  border: Border(
+                    bottom: BorderSide(
+                      color: AppColors.grey200,
+                      width: 1,
+                    ),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(
+                            Iconsax.setting_4,
+                            size: 20,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Column Settings',
+                              style: GoogleFonts.poppins(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.textDark,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Customize table columns visibility',
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                color: AppColors.textLight,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Iconsax.close_circle),
+                      color: AppColors.textLight,
+                    ),
+                  ],
+                ),
+              ),
+              
+              // Column toggles
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  children: _columnVisibility.entries.map((entry) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: AppColors.grey200,
+                            width: 1,
+                          ),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: CheckboxListTile(
+                          title: Text(
+                            entry.key.replaceFirst(
+                              entry.key[0],
+                              entry.key[0].toUpperCase(),
+                            ),
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textDark,
+                            ),
+                          ),
+                          value: entry.value,
+                          onChanged: (value) {
+                            setState(() {
+                              _columnVisibility[entry.key] = value ?? true;
+                            });
+                          },
+                          activeColor: AppColors.primary,
+                          checkColor: Colors.white,
+                          controlAffinity: ListTileControlAffinity.leading,
+                          dense: true,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 4,
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+              
+              // Action buttons
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: AppColors.bgGray,
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(16),
+                    bottomRight: Radius.circular(16),
+                  ),
+                  border: Border(
+                    top: BorderSide(
+                      color: AppColors.grey200,
+                      width: 1,
+                    ),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text(
+                        'Close',
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textLight,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'Column settings updated',
+                              style: GoogleFonts.inter(fontSize: 14),
+                            ),
+                            backgroundColor: AppColors.kSuccess,
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: Text(
+                        'Apply',
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildEmptyState() {
