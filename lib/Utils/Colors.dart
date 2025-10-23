@@ -32,12 +32,16 @@ class AppColors {
   static const Color kTextPrimary = Color(0xFF1E293B);   // slate-800
   static const Color kTextSecondary = Color(0xFF64748B); // slate-500
   static const Color muted = Color(0xFF6B7280);          // gray-500
+  static const Color textDark = Color(0xFF1F2937);       // gray-900
+  static const Color textLight = Color(0xFF6B7280);      // gray-500
+  static const Color bgGray = Color(0xFFF9FAFB);         // gray-50
 
   // ---------------------------------------------------------------------------
   // Semantic
   // ---------------------------------------------------------------------------
   static const Color kSuccess = Color(0xFF22C55E);   // green-500
   static const Color kDanger = Color(0xFFDC2626);    // red-600
+  static const Color kWarning = Color(0xFFF59E0B);   // amber-500
   static const Color kInfo = primary600;             // enterprise blue
   static const Color kMuted = Color(0xFFE2E8F0);     // gray-200
 
