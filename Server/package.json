@@ -11,6 +11,7 @@
     "mongodb": "^6.19.0",
     "mongoose": "^8.18.0",
     "multer": "^2.0.2",
+    "node-telegram-bot-api": "^0.66.0",
     "pdf-parse": "^2.2.13",
     "pg": "^8.16.3",
     "sequelize": "^1.2.1",

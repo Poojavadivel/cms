@@ -53,6 +53,9 @@ const PatientSchema = new Schema({
   ],
   notes: { type: String, default: '' },
   metadata: { type: Schema.Types.Mixed, default: {} },
+  // Telegram-specific fields
+  telegramUserId: { type: String, index: true },
+  telegramUsername: { type: String },
   deleted_at: { type: Date, default: null }
 }, Object.assign({}, commonOptions));
 
