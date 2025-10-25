@@ -341,28 +341,28 @@ class _DoctorAppointmentsPageNewState extends State<DoctorAppointmentsPageNew> w
   Widget _buildPatientCell(DashboardAppointments appt) {
     final isMale = appt.gender.toLowerCase() == 'male';
     final isFemale = appt.gender.toLowerCase() == 'female';
-    
+
     return Expanded(
       flex: 3,
       child: Row(
         children: [
           CircleAvatar(
             radius: 20,
-            backgroundColor: isMale 
-                ? Colors.blue.shade50 
-                : isFemale 
-                    ? Colors.pink.shade50 
+            backgroundColor: isMale
+                ? Colors.blue.shade50
+                : isFemale
+                    ? Colors.pink.shade50
                     : AppColors.primary.withOpacity(0.1),
             child: Icon(
-              isMale 
-                  ? Iconsax.man 
-                  : isFemale 
-                      ? Iconsax.woman 
+              isMale
+                  ? Iconsax.man
+                  : isFemale
+                      ? Iconsax.woman
                       : Iconsax.user,
-              color: isMale 
-                  ? Colors.blue.shade700 
-                  : isFemale 
-                      ? Colors.pink.shade700 
+              color: isMale
+                  ? Colors.blue.shade700
+                  : isFemale
+                      ? Colors.pink.shade700
                       : AppColors.primary,
               size: 20,
             ),
@@ -439,7 +439,7 @@ class _DoctorAppointmentsPageNewState extends State<DoctorAppointmentsPageNew> w
   Widget _buildStatusCell(DashboardAppointments appt) {
     final status = appt.status.toLowerCase();
     Color bgColor, textColor;
-    
+
     switch (status) {
       case 'scheduled':
         bgColor = Colors.blue.shade50;
@@ -989,7 +989,7 @@ class _DoctorAppointmentsPageNewState extends State<DoctorAppointmentsPageNew> w
   Future<void> _editAppointment(DashboardAppointments appt) async {
     // Import at top: import 'widgets/Editappoimentspage.dart';
     // Import at top: import '../../Models/appointment_draft.dart';
-    
+
     showDialog(
       context: context,
       barrierDismissible: false,

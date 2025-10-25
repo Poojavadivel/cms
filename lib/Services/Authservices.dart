@@ -329,26 +329,90 @@ class AuthService {
 
       if (token == null) throw ApiException("Not logged in");
 
+      print("🔄 Editing appointment: ${draft.id}");
+      print("📦 Appointment data being sent:");
+      final jsonData = draft.toJson();
+      print(jsonData);
+
       final response = await _apiHandler.put(
         ApiEndpoints.updateAppointment(draft.id!).url,
-        body: draft.toJson(),
+        body: jsonData,
         token: token,
       );
 
+      print("📥 Backend response for edit appointment:");
+      print(response);
+
       // backend returns { success: true, appointment: {...} } or { success: true }
       if (response is Map) {
-        if (response['success'] == true) return true;
+        if (response['success'] == true) {
+          print("✅ Appointment updated successfully in backend");
+          return true;
+        }
         // some APIs return HTTP-like status property
-        if (response['status'] == 200) return true;
+        if (response['status'] == 200) {
+          print("✅ Appointment updated successfully (status 200)");
+          return true;
+        }
         print("❌ Failed to edit appointment: ${response['message'] ?? response}");
         return false;
       }
 
       // unexpected but non-null response -> assume success
+      print("⚠️ Unexpected response format, assuming success");
       return true;
     } catch (e) {
       print("❌ Failed to edit appointment: $e");
+      print("Stack trace: ${StackTrace.current}");
       rethrow;
+    }
+  }
+
+  /// Update patient details (name, phone, gender)
+  Future<bool> updatePatientDetails({
+    required String patientId,
+    required String name,
+    String? phone,
+    String? gender,
+  }) async {
+    try {
+      final token = await _getToken();
+
+      if (token == null) throw ApiException("Not logged in");
+
+      // Split name into firstName and lastName
+      final nameParts = name.trim().split(' ');
+      final firstName = nameParts.isNotEmpty ? nameParts.first : '';
+      final lastName = nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
+
+      final body = {
+        'firstName': firstName,
+        'lastName': lastName,
+        if (phone != null && phone.isNotEmpty) 'phone': phone,
+        if (gender != null && gender.isNotEmpty) 'gender': gender,
+      };
+
+      print("🔄 Updating patient $patientId with: $body");
+
+      final response = await _apiHandler.patch(
+        '/patients/$patientId',
+        body: body,
+        token: token,
+      );
+
+      print("✅ Patient update response: $response");
+
+      if (response is Map) {
+        if (response['success'] == true) return true;
+        if (response['status'] == 200) return true;
+        print("❌ Failed to update patient: ${response['message'] ?? response}");
+        return false;
+      }
+
+      return true;
+    } catch (e) {
+      print("❌ Failed to update patient: $e");
+      return false;
     }
   }
 
@@ -364,21 +428,38 @@ class AuthService {
         token: token,
       );
 
-      print("📦 API response for appointment $id: $response");
+      print("🔍 RAW API response for appointment $id:");
+      print(response);
 
       // unwrap `{ appointment: {...} }` or `{ success: true, appointment: {...} }`
       dynamic data;
       if (response is Map && response.containsKey('appointment')) {
         data = response['appointment'];
+        print("📦 Extracted from 'appointment' key");
       } else if (response is Map && response.containsKey('data')) {
         data = response['data'];
+        print("📦 Extracted from 'data' key");
       } else {
         data = response;
+        print("📦 Using raw response");
       }
 
-      if (data == null) throw ApiException("Appointment not found in response: $response");
+      if (data == null) {
+        print("❌ Appointment data is null!");
+        throw ApiException("Appointment not found in response: $response");
+      }
 
-      return AppointmentDraft.fromJson(data);
+      print("📋 Appointment data being parsed:");
+      print(data);
+
+      final draft = AppointmentDraft.fromJson(data);
+      
+      print("✅ Successfully parsed AppointmentDraft:");
+      print("   Client: ${draft.clientName}");
+      print("   Date: ${draft.date}");
+      print("   Time: ${draft.time}");
+      
+      return draft;
     } catch (e) {
       print("❌ Failed to fetch appointment by ID: $e");
       rethrow;

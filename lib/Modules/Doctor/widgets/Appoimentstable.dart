@@ -524,6 +524,7 @@ class _AppointmentTableState extends State<AppointmentTable> {
                   sortAscending: _sortAscending,
                   onSort: _toggleSort,
                   columnVisibility: _columnVisibility,
+                  onRefresh: _loadAppointmentsLocally,
                 ),
               ),
               const SizedBox(height: 16),
@@ -1035,6 +1036,7 @@ class _AppointmentDataView extends StatelessWidget {
   final bool sortAscending;
   final Function(String) onSort;
   final Map<String, bool> columnVisibility;
+  final VoidCallback onRefresh;
 
   const _AppointmentDataView({
     required this.appointments,
@@ -1047,6 +1049,7 @@ class _AppointmentDataView extends StatelessWidget {
     required this.sortAscending,
     required this.onSort,
     required this.columnVisibility,
+    required this.onRefresh,
   });
 
   @override
@@ -1659,35 +1662,21 @@ class _AppointmentDataView extends StatelessWidget {
   }
 
   void _openEditDialog(BuildContext context, DashboardAppointments appt) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) {
-        return Dialog(
-          backgroundColor: Colors.transparent,
-          insetPadding: const EdgeInsets.all(16),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 1500),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Material(
-                color: Colors.white,
-                child: EditAppointmentForm(
-                  appointmentId: appt.id,
-                  onSave: (updated) {
-                    Navigator.pop(context);
-                    debugPrint('Updated: ${updated.toJson()}');
-                  },
-                  onCancel: () => Navigator.pop(context),
-                  onDelete: () {
-                    Navigator.pop(context);
-                    debugPrint('Deleted appointment for ${appt.patientName}');
-                  },
-                ),
-              ),
-            ),
-          ),
-        );
+    EditAppointmentForm.show(
+      context,
+      appointmentId: appt.id,
+      onSave: (updated) {
+        Navigator.pop(context);
+        onRefresh();
+        debugPrint('✅ Updated: ${updated.toJson()}');
+      },
+      onDelete: () {
+        Navigator.pop(context);
+        if (onDeleteAppointment != null) {
+          onDeleteAppointment!(appt);
+        }
+        onRefresh();
+        debugPrint('🗑️ Deleted appointment for ${appt.patientName}');
       },
     );
   }

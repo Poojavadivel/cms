@@ -30,14 +30,14 @@ class _AppointmentsPageNewState extends State<AppointmentsPageNew> {
   bool _isRefreshing = false;
   List<DashboardAppointments> _appointments = [];
   List<DashboardAppointments> _filteredAppointments = [];
-  
+
   String _searchQuery = '';
   int _currentPage = 0;
   final int _itemsPerPage = 10;
-  
+
   String _sortColumn = 'date';
   bool _sortAscending = false;
-  
+
   // Column visibility settings
   Map<String, bool> _columnVisibility = {
     'patient': true,
@@ -60,10 +60,10 @@ class _AppointmentsPageNewState extends State<AppointmentsPageNew> {
     if (showLoading) {
       setState(() => _isLoading = true);
     }
-    
+
     try {
       final appointments = await AuthService.instance.fetchAppointments() ?? [];
-      
+
       if (mounted) {
         setState(() {
           _appointments = appointments;
@@ -108,7 +108,7 @@ class _AppointmentsPageNewState extends State<AppointmentsPageNew> {
               appt.reason.toLowerCase().contains(_searchQuery.toLowerCase()))
           .toList();
     }
-    
+
     _sortAppointments(_sortColumn);
     _currentPage = 0;
   }
@@ -242,14 +242,14 @@ class _AppointmentsPageNewState extends State<AppointmentsPageNew> {
           children: [
             // Enterprise Header
             _buildEnterpriseHeader(),
-            
+
             const SizedBox(height: 24),
-            
+
             // Stats Bar
             _buildStatsBar(),
-            
+
             const SizedBox(height: 24),
-            
+
             // Table Content
             Expanded(
               child: _isLoading
@@ -383,9 +383,9 @@ class _AppointmentsPageNewState extends State<AppointmentsPageNew> {
               ),
             ],
           ),
-          
+
           const SizedBox(height: 20),
-          
+
           // Enterprise Search Bar
           Container(
             height: 52,
@@ -627,7 +627,7 @@ class _AppointmentsPageNewState extends State<AppointmentsPageNew> {
                 ),
               ),
             ),
-            
+
             // Rows skeleton
             Expanded(
               child: ListView.builder(
@@ -692,7 +692,7 @@ class _AppointmentsPageNewState extends State<AppointmentsPageNew> {
           children: [
             // Table Header
             _buildTableHeader(),
-            
+
             // Table Body
             Expanded(
               child: _paginatedAppointments.isEmpty
@@ -705,7 +705,7 @@ class _AppointmentsPageNewState extends State<AppointmentsPageNew> {
                       },
                     ),
             ),
-            
+
             // Pagination
             _buildPagination(),
           ],
@@ -752,7 +752,7 @@ class _AppointmentsPageNewState extends State<AppointmentsPageNew> {
 
   Widget _buildHeaderCell(String label, String column, {int flex = 1, bool sortable = true}) {
     final isSorted = _sortColumn == column;
-    
+
     return Expanded(
       flex: flex,
       child: sortable
@@ -798,7 +798,7 @@ class _AppointmentsPageNewState extends State<AppointmentsPageNew> {
   /// Table row
   Widget _buildTableRow(DashboardAppointments appointment, int index) {
     final isEven = index % 2 == 0;
-    
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
       decoration: BoxDecoration(
@@ -890,7 +890,7 @@ class _AppointmentsPageNewState extends State<AppointmentsPageNew> {
               ],
             ),
           ),
-          
+
           // Age
           Expanded(
             flex: 1,
@@ -904,7 +904,7 @@ class _AppointmentsPageNewState extends State<AppointmentsPageNew> {
               ),
             ),
           ),
-          
+
           // Gender with icon
           Expanded(
             flex: 1,
@@ -933,7 +933,7 @@ class _AppointmentsPageNewState extends State<AppointmentsPageNew> {
               ],
             ),
           ),
-          
+
           // Date & Time
           Expanded(
             flex: 2,
@@ -987,7 +987,7 @@ class _AppointmentsPageNewState extends State<AppointmentsPageNew> {
               ],
             ),
           ),
-          
+
           // Reason
           Expanded(
             flex: 2,
@@ -1003,13 +1003,13 @@ class _AppointmentsPageNewState extends State<AppointmentsPageNew> {
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          
+
           // Status
           Expanded(
             flex: 1,
             child: _buildStatusBadge(appointment.status),
           ),
-          
+
           // Actions
           Expanded(
             flex: 1,
@@ -1040,7 +1040,7 @@ class _AppointmentsPageNewState extends State<AppointmentsPageNew> {
   Widget _buildStatusBadge(String status) {
     Color color;
     IconData icon;
-    
+
     switch (status.toLowerCase()) {
       case 'completed':
         color = AppColors.kSuccess;
@@ -1062,7 +1062,7 @@ class _AppointmentsPageNewState extends State<AppointmentsPageNew> {
         color = AppColors.textLight;
         icon = Iconsax.info_circle;
     }
-    
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
@@ -1206,7 +1206,7 @@ class _AppointmentsPageNewState extends State<AppointmentsPageNew> {
                   ],
                 ),
               ),
-              
+
               // Column toggles
               Padding(
                 padding: const EdgeInsets.all(20),
@@ -1254,7 +1254,7 @@ class _AppointmentsPageNewState extends State<AppointmentsPageNew> {
                   }).toList(),
                 ),
               ),
-              
+
               // Action buttons
               Container(
                 padding: const EdgeInsets.all(20),

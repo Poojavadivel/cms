@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:iconsax/iconsax.dart';
 
+import '../../Services/Authservices.dart';
 import '../../Utils/Colors.dart';
 import '../Common/ChatbotWidget.dart'; // Import the common chatbot widget
+import '../Common/LoginPage.dart';
 import 'AppoimentsScreen.dart';
 import 'DashboardPage.dart';
 import 'HelpPage.dart';
@@ -76,11 +78,7 @@ class _AdminRootPageState extends State<AdminRootPage> {
         'label': 'Settings',
         'screen': const SettingsScreen(),
       },
-      {
-        'icon': Icons.help_outline_rounded,
-        'label': 'Help & feedback',
-        'screen': const HelpScreen(),
-      },
+     
     ];
   }
 
@@ -205,7 +203,7 @@ class _AdminSidebarNavigationState extends State<AdminSidebarNavigation> with Si
   late final AnimationController _animationController;
   late final Animation<double> _widthAnimation;
 
-  final double expandedWidth = 256;
+  final double expandedWidth = 280;
   final double collapsedWidth = 72;
 
   @override
@@ -240,92 +238,112 @@ class _AdminSidebarNavigationState extends State<AdminSidebarNavigation> with Si
 
   @override
   Widget build(BuildContext context) {
-    final mainNavItems = widget.navItems.take(7).toList();
-    final bottomNavItems = widget.navItems.skip(7).toList();
-
     return AnimatedBuilder(
       animation: _widthAnimation,
       builder: (context, child) {
         return Container(
           width: _widthAnimation.value,
-          color: AppColors.cardBackground,
+          decoration: BoxDecoration(
+            color: AppColors.cardBackground,
+            border: Border(right: BorderSide(color: AppColors.kMuted, width: 1)),
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // hamburger + title
+              // Hamburger & Logo
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 28),
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerLeft,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      InkWell(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Tooltip(
+                      message: _isCollapsed ? 'Expand sidebar' : 'Collapse sidebar',
+                      child: InkWell(
                         onTap: _toggleSidebar,
+                        borderRadius: BorderRadius.circular(8),
                         child: Container(
-                          width: 30,
+                          width: 40,
+                          height: 40,
                           alignment: Alignment.center,
                           child: Icon(
                             _isCollapsed ? Icons.menu_open : Icons.menu,
-                            size: 30,
+                            size: 24,
                             color: AppColors.primary,
                           ),
                         ),
                       ),
-                      if (!_isCollapsed) ...[
-                        const SizedBox(width: 12),
-                        ConstrainedBox(
-                          constraints: BoxConstraints(maxWidth: expandedWidth - 60),
-                          child: Text(
-                            'Karur Gastro Foundation',
-                            overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.lexend(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 16,
-                              color: AppColors.primary,
+                    ),
+                    if (!_isCollapsed) ...[
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Karur Gastro Foundation',
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.lexend(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              Expanded(
+                child: ListView.builder(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  itemCount: widget.navItems.length,
+                  itemBuilder: (context, index) {
+                    final item = widget.navItems[index];
+                    final isSelected = widget.selectedIndex == index;
+                    return Tooltip(
+                      message: item['label'],
+                      waitDuration: const Duration(milliseconds: 500),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        child: Material(
+                          color: isSelected ? AppColors.primary.withValues(alpha: 0.1) : Colors.transparent,
+                          borderRadius: BorderRadius.circular(12),
+                          child: InkWell(
+                            onTap: () => widget.onItemTapped(index),
+                            borderRadius: BorderRadius.circular(12),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    item['icon'],
+                                    color: isSelected ? AppColors.primary : AppColors.kTextSecondary,
+                                    size: 22,
+                                  ),
+                                  if (!_isCollapsed) ...[
+                                    const SizedBox(width: 14),
+                                    Expanded(
+                                      child: Text(
+                                        item['label'],
+                                        overflow: TextOverflow.ellipsis,
+                                        style: GoogleFonts.inter(
+                                          fontSize: 15,
+                                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                                          color: isSelected ? AppColors.primary : AppColors.kTextPrimary,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
                             ),
                           ),
                         ),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-
-              Divider(height: 1, color: AppColors.grey200),
-
-              // main nav list
-              Expanded(
-                child: ListView.builder(
-                  itemCount: mainNavItems.length,
-                  itemBuilder: (context, index) {
-                    final item = mainNavItems[index];
-                    return _buildNavItem(
-                      icon: item['icon'] as IconData,
-                      label: item['label'] as String,
-                      isSelected: widget.selectedIndex == index,
-                      onTap: () => widget.onItemTapped(index),
+                      ),
                     );
                   },
                 ),
               ),
-
-              Divider(height: 1, color: AppColors.grey200),
-
-              // bottom nav items
-              ...List.generate(bottomNavItems.length, (index) {
-                final item = bottomNavItems[index];
-                final actualIndex = index + mainNavItems.length;
-                return _buildNavItem(
-                  icon: item['icon'] as IconData,
-                  label: item['label'] as String,
-                  isSelected: widget.selectedIndex == actualIndex,
-                  onTap: () => widget.onItemTapped(actualIndex),
-                );
-              }),
-
-              const SizedBox(height: 20),
+              _buildUserProfile(),
             ],
           ),
         );
@@ -333,51 +351,109 @@ class _AdminSidebarNavigationState extends State<AdminSidebarNavigation> with Si
     );
   }
 
-  Widget _buildNavItem({
-    required IconData icon,
-    required String label,
-    required bool isSelected,
-    required VoidCallback onTap,
-  }) {
-    final color = isSelected ? AppColors.primary : AppColors.kTextSecondary;
+  Widget _buildUserProfile() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(border: Border(top: BorderSide(color: AppColors.kMuted, width: 1))),
+      child: _isCollapsed ? _buildCollapsedProfile() : _buildExpandedProfile(),
+    );
+  }
 
-    return Tooltip(
-      message: label,
-      waitDuration: const Duration(milliseconds: 500),
-      child: Material(
-        color: isSelected ? AppColors.primary600.withOpacity(0.08) : Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          child: Container(
-            decoration: BoxDecoration(
-              border: isSelected ? Border(left: BorderSide(color: AppColors.primary, width: 4)) : null,
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(icon, color: color, size: 22),
-                if (!_isCollapsed) ...[
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Text(
-                      label,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.lexend(
-                        color: color,
-                        fontSize: 15,
-                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                        letterSpacing: 0.2,
-                      ),
-                    ),
-                  ),
-                ],
-                if (_isCollapsed) const Spacer(),
-              ],
+  Widget _buildCollapsedProfile() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Tooltip(
+          message: 'User Profile',
+          child: CircleAvatar(
+            radius: 20,
+            backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+            child: Icon(Iconsax.user, color: AppColors.primary, size: 20),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Tooltip(
+          message: 'Logout',
+          child: InkWell(
+            onTap: () async {
+              await AuthService.instance.signOut();
+              if (mounted) {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LoginPage()),
+                );
+              }
+            },
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              child: Icon(
+                Iconsax.logout,
+                color: AppColors.kDanger,
+                size: 20,
+              ),
             ),
           ),
         ),
-      ),
+      ],
+    );
+  }
+
+  Widget _buildExpandedProfile() {
+    return Row(
+      children: [
+        Tooltip(
+          message: 'User Profile',
+          child: CircleAvatar(
+            radius: 20,
+            backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+            child: Icon(Iconsax.user, color: AppColors.primary, size: 20),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Admin',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.kTextPrimary,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+              Text(
+                'admin@hms.com',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  color: AppColors.kTextSecondary,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 4),
+        Tooltip(
+          message: 'Logout',
+          child: IconButton(
+            icon: Icon(Iconsax.logout, color: AppColors.kDanger),
+            onPressed: () async {
+              await AuthService.instance.signOut();
+              if (mounted) {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LoginPage()),
+                );
+              }
+            },
+            iconSize: 20,
+          ),
+        ),
+      ],
     );
   }
 }

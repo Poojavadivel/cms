@@ -86,6 +86,22 @@ class ApiHandler {
     }
   }
 
+  /// Performs a PATCH request (JSON).
+  Future<dynamic> patch(String endpoint, {Map<String, dynamic>? body, String? token}) async {
+    try {
+      final response = await http.patch(
+        Uri.parse('${ApiConstants.baseUrl}$endpoint'),
+        headers: _getHeaders(token),
+        body: body != null ? json.encode(body) : null,
+      );
+      return _handleResponse(response);
+    } on SocketException {
+      throw ApiException('No Internet connection');
+    } catch (e) {
+      throw ApiException('An unexpected error occurred: $e');
+    }
+  }
+
   // ============ NEW ============
 
   /// Multipart POST (for /scanner/upload).

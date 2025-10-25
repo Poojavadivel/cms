@@ -224,6 +224,56 @@ router.put('/:id', auth, async (req, res) => {
 });
 
 // -------------------------
+// PARTIAL UPDATE Patient (PATCH)
+// -------------------------
+router.patch('/:id', auth, async (req, res) => {
+  try {
+    const data = req.body || {};
+    console.log('🔄 [PATIENT PATCH] Updating patient:', req.params.id, 'with:', data);
+
+    // Build update object only with provided fields
+    const update = {};
+    
+    if (data.firstName !== undefined) update.firstName = data.firstName;
+    if (data.lastName !== undefined) update.lastName = data.lastName;
+    if (data.dateOfBirth !== undefined) update.dateOfBirth = new Date(data.dateOfBirth);
+    if (data.gender !== undefined) update.gender = data.gender;
+    if (data.phone !== undefined) update.phone = data.phone;
+    if (data.email !== undefined) update.email = data.email;
+    if (data.address !== undefined) update.address = data.address;
+    if (data.doctorId !== undefined) update.doctorId = data.doctorId;
+    if (data.allergies !== undefined) update.allergies = data.allergies;
+    if (data.notes !== undefined) update.notes = data.notes;
+    if (data.bloodGroup !== undefined) update.bloodGroup = data.bloodGroup;
+
+    // Update metadata fields
+    if (data.metadata !== undefined) {
+      update.metadata = data.metadata;
+    }
+
+    // Remove undefined fields
+    Object.keys(update).forEach(key => update[key] === undefined && delete update[key]);
+
+    const updated = await Patient.findByIdAndUpdate(
+      req.params.id,
+      { $set: update },
+      { new: true, runValidators: true }
+    ).lean();
+
+    if (!updated) {
+      console.warn('❌ [PATIENT PATCH] Patient not found:', req.params.id);
+      return res.status(404).json({ success: false, message: 'Patient not found', errorCode: 3007 });
+    }
+
+    console.log('✅ [PATIENT PATCH] Patient updated successfully:', updated._id);
+    return res.status(200).json({ success: true, patient: updated });
+  } catch (err) {
+    console.error('❌ [PATIENT PATCH] Error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to update patient', errorCode: 5003 });
+  }
+});
+
+// -------------------------
 // SOFT DELETE Patient
 // -------------------------
 router.delete('/:id', auth, async (req, res) => {

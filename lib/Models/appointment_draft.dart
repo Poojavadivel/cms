@@ -56,62 +56,113 @@ class AppointmentDraft {
       DateTime(date.year, date.month, date.day, time.hour, time.minute);
 
   /// ✅ Convert model → JSON
-  Map<String, dynamic> toJson() => {
-    '_id': id,
-    'clientName': clientName,
-    'appointmentType': appointmentType,
-    'date': date.toIso8601String().split('T').first,
-    'time':
-    '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}',
-    'location': location,
-    'notes': notes,
-    'gender': gender,
-    'patientId': patientId,
-    'phoneNumber': phoneNumber,
-    'mode': mode,
-    'priority': priority,
-    'durationMinutes': durationMinutes,
-    'reminder': reminder,
-    'chiefComplaint': chiefComplaint,
-    // ✅ vitals grouped properly for backend
-    'vitals': {
-      'heightCm': heightCm,
-      'weightKg': weightKg,
-      'bp': bp,
-      'heartRate': heartRate,
-      'spo2': spo2,
-    },
-    'status': status,
-  };
+  Map<String, dynamic> toJson() {
+    // Combine date and time into startAt
+    final startAt = DateTime(
+      date.year,
+      date.month,
+      date.day,
+      time.hour,
+      time.minute,
+    );
+
+    return {
+      '_id': id,
+      'patientId': patientId,
+      'appointmentType': appointmentType,
+      'startAt': startAt.toIso8601String(),
+      'location': location,
+      'status': status,
+      'notes': notes,
+      // Send vitals as nested object
+      'vitals': {
+        if (heightCm != null && heightCm!.isNotEmpty) 'heightCm': heightCm,
+        if (weightKg != null && weightKg!.isNotEmpty) 'weightKg': weightKg,
+        if (bp != null && bp!.isNotEmpty) 'bp': bp,
+        if (heartRate != null && heartRate!.isNotEmpty) 'heartRate': heartRate,
+        if (spo2 != null && spo2!.isNotEmpty) 'spo2': spo2,
+      },
+      // Send metadata as nested object
+      'metadata': {
+        'mode': mode,
+        'priority': priority,
+        'durationMinutes': durationMinutes,
+        'reminder': reminder,
+        'chiefComplaint': chiefComplaint,
+        if (gender != null) 'gender': gender,
+        if (phoneNumber != null && phoneNumber!.isNotEmpty) 'phoneNumber': phoneNumber,
+      },
+    };
+  }
 
   /// ✅ JSON → model
   factory AppointmentDraft.fromJson(Map<String, dynamic> json) {
-    final timeParts = (json['time'] ?? '00:00').toString().split(':');
+    // Parse date and time from startAt or separate fields
+    DateTime appointmentDate = DateTime.now();
+    TimeOfDay appointmentTime = TimeOfDay.now();
 
+    if (json['startAt'] != null) {
+      // Backend sends startAt as ISO date string
+      final startAt = DateTime.tryParse(json['startAt'].toString());
+      if (startAt != null) {
+        appointmentDate = startAt;
+        appointmentTime = TimeOfDay(hour: startAt.hour, minute: startAt.minute);
+      }
+    } else {
+      // Fallback to separate date/time fields
+      if (json['date'] != null) {
+        appointmentDate = DateTime.tryParse(json['date'].toString()) ?? DateTime.now();
+      }
+      if (json['time'] != null) {
+        final timeParts = json['time'].toString().split(':');
+        appointmentTime = TimeOfDay(
+          hour: int.tryParse(timeParts[0]) ?? 0,
+          minute: int.tryParse(timeParts.length > 1 ? timeParts[1] : '0') ?? 0,
+        );
+      }
+    }
+
+    // Extract patient info
+    String clientName = '';
+    String? patientIdStr;
+    String? phone;
+    String? gender;
+
+    if (json['patientId'] is Map) {
+      final patient = json['patientId'] as Map;
+      patientIdStr = patient['_id']?.toString();
+      final firstName = patient['firstName']?.toString() ?? '';
+      final lastName = patient['lastName']?.toString() ?? '';
+      clientName = '$firstName $lastName'.trim();
+      phone = patient['phone']?.toString();
+      gender = patient['gender']?.toString();
+    } else if (json['patientId'] is String) {
+      patientIdStr = json['patientId'];
+      clientName = json['clientName'] ?? '';
+    }
+
+    // Extract metadata
+    final metadata = json['metadata'] ?? {};
+    
     // vitals can come nested or flat
     final vitals = json['vitals'] ?? {};
 
     return AppointmentDraft(
       id: json['_id']?.toString(),
-      clientName: json['clientName'] ?? '',
-      appointmentType: json['appointmentType'] ?? '',
-      date: DateTime.tryParse(json['date'] ?? '') ?? DateTime.now(),
-      time: TimeOfDay(
-        hour: int.tryParse(timeParts[0]) ?? 0,
-        minute: int.tryParse(timeParts.length > 1 ? timeParts[1] : '0') ?? 0,
-      ),
+      clientName: clientName.isNotEmpty ? clientName : (json['clientName'] ?? ''),
+      appointmentType: json['appointmentType'] ?? 'Consultation',
+      date: appointmentDate,
+      time: appointmentTime,
       location: json['location'] ?? '',
-      notes: json['notes'] ?? '',
-      gender: json['gender'],
-      patientId: json['patientId'] is Map
-          ? json['patientId']['_id']?.toString()
-          : json['patientId']?.toString(),
-      phoneNumber: json['phoneNumber'],
-      mode: json['mode'] ?? 'In-clinic',
-      priority: json['priority'] ?? 'Normal',
-      durationMinutes: json['durationMinutes'] ?? 20,
-      reminder: json['reminder'] ?? true,
-      chiefComplaint: json['chiefComplaint'] ?? '',
+      notes: json['notes']?.toString() ?? '',
+      gender: metadata['gender']?.toString() ?? gender,
+      patientId: patientIdStr,
+      phoneNumber: metadata['phoneNumber']?.toString() ?? phone,
+      mode: metadata['mode']?.toString() ?? json['mode']?.toString() ?? 'In-clinic',
+      priority: metadata['priority']?.toString() ?? json['priority']?.toString() ?? 'Normal',
+      durationMinutes: metadata['durationMinutes'] ?? json['durationMinutes'] ?? 20,
+      reminder: metadata['reminder'] ?? json['reminder'] ?? true,
+      chiefComplaint: metadata['chiefComplaint']?.toString() ?? json['chiefComplaint']?.toString() ?? '',
       // ✅ pull from nested vitals OR flat keys
       heightCm: vitals['heightCm']?.toString() ?? json['heightCm']?.toString(),
       weightKg: vitals['weightKg']?.toString() ?? json['weightKg']?.toString(),

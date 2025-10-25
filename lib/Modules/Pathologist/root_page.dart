@@ -134,27 +134,14 @@ class _PathologistRootPageState extends State<PathologistRootPage>
                     if (!_isCollapsed) ...[
                       const SizedBox(width: 12),
                       Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Pathology',
-                              overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.lexend(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.kTextPrimary,
-                              ),
-                            ),
-                            Text(
-                              'Lab Test Management',
-                              overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.inter(
-                                fontSize: 11,
-                                color: AppColors.kTextSecondary,
-                              ),
-                            ),
-                          ],
+                        child: Text(
+                          'Karur Gastro Foundation',
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.lexend(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.primary,
+                          ),
                         ),
                       ),
                     ],
