@@ -4,12 +4,9 @@ import 'package:glowhair/Models/Patients.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:intl/intl.dart';
-
-import '../../../Models/appointment_draft.dart';
 import '../../../Models/dashboardmodels.dart';
 import '../../../Services/Authservices.dart';
 import '../../../Utils/Colors.dart';
-import 'Addnewappoiments.dart';
 import 'Editappoimentspage.dart';
 import 'doctor_appointment_preview.dart';
 import 'eyeicon.dart';

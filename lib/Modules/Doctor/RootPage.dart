@@ -10,7 +10,6 @@ import '../../Services/Authservices.dart';
 import '../../Utils/Colors.dart';
 import '../Common/ChatbotWidget.dart'; // Import the common chatbot widget
 import '../Common/LoginPage.dart';
-import 'AppoimentsPage.dart';
 import 'DashboardPage.dart';
 import 'PatientsPage.dart';
 import 'SchedulePage.dart';
