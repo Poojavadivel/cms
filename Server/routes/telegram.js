@@ -175,17 +175,62 @@ async function getOrCreatePatient(telegramUserId, telegramUsername, telegramFirs
 }
 
 // Helper: Create appointment
-async function createAppointment(chatId, telegramUserId, dateTime) {
+async function createAppointment(chatId, telegramUserId, patientData) {
   try {
     const doctor = await getDefaultDoctor();
-    const patient = await getOrCreatePatient(
-      telegramUserId.toString(),
-      conversationState.get(chatId)?.username,
-      conversationState.get(chatId)?.firstName
-    );
+    
+    // Create or update patient with full details
+    let patient = await Patient.findOne({ telegramUserId: telegramUserId.toString() });
+    
+    if (!patient) {
+      // Create new patient with full details
+      const nameParts = patientData.fullName.trim().split(' ');
+      const firstName = nameParts[0];
+      const lastName = nameParts.slice(1).join(' ') || 'User';
+      
+      patient = new Patient({
+        firstName,
+        lastName,
+        age: patientData.age,
+        gender: patientData.gender,
+        phone: patientData.phone,
+        email: patientData.email,
+        bloodGroup: patientData.bloodGroup || 'Unknown',
+        address: {
+          line1: 'Telegram User',
+          city: '',
+          state: '',
+          pincode: '',
+          country: ''
+        },
+        telegramUserId: telegramUserId.toString(),
+        telegramUsername: conversationState.get(chatId)?.username,
+        metadata: {
+          source: 'telegram',
+          createdViaBot: true
+        }
+      });
+      await patient.save();
+      console.log(`✅ Created new patient: ${patientData.fullName}`);
+    } else {
+      // Update existing patient with new details
+      const nameParts = patientData.fullName.trim().split(' ');
+      patient.firstName = nameParts[0];
+      patient.lastName = nameParts.slice(1).join(' ') || 'User';
+      patient.age = patientData.age;
+      patient.gender = patientData.gender;
+      patient.phone = patientData.phone;
+      patient.email = patientData.email;
+      patient.bloodGroup = patientData.bloodGroup || patient.bloodGroup || 'Unknown';
+      await patient.save();
+      console.log(`✅ Updated patient: ${patientData.fullName}`);
+    }
 
     // Check for duplicates
-    const isDuplicate = await checkDuplicateAppointment(telegramUserId.toString(), dateTime);
+    const isDuplicate = await checkDuplicateAppointment(
+      telegramUserId.toString(), 
+      patientData.dateTime
+    );
     if (isDuplicate) {
       return { success: false, error: 'You already have an appointment at this time' };
     }
@@ -195,11 +240,11 @@ async function createAppointment(chatId, telegramUserId, dateTime) {
       patientId: patient._id,
       doctorId: doctor._id,
       appointmentType: 'Consultation',
-      startAt: dateTime,
-      endAt: new Date(dateTime.getTime() + 30 * 60000), // 30 minutes duration
+      startAt: patientData.dateTime,
+      endAt: new Date(patientData.dateTime.getTime() + 30 * 60000), // 30 minutes duration
       location: 'Karur Gastro Foundation',
       status: 'Scheduled',
-      notes: 'Booked via Telegram Bot',
+      notes: `Reason: ${patientData.reason}\nBooked via Telegram Bot`,
       telegramUserId: telegramUserId.toString(),
       telegramChatId: chatId.toString(),
       bookingSource: 'telegram'
@@ -211,8 +256,8 @@ async function createAppointment(chatId, telegramUserId, dateTime) {
       success: true,
       appointmentCode: appointment.appointmentCode,
       doctorName: doctor.name || 'Doctor',
-      patientName: `${patient.firstName} ${patient.lastName}`.trim(),
-      dateTime
+      patientName: patientData.fullName,
+      dateTime: patientData.dateTime
     };
   } catch (error) {
     console.error('Error creating appointment:', error);
@@ -239,16 +284,26 @@ bot.onText(/\/help/, async (msg) => {
   const chatId = msg.chat.id;
 
   await bot.sendMessage(chatId,
-    `📚 How to use this bot:\n\n` +
-    `1. Send /book to start booking an appointment\n` +
-    `2. I'll ask you for the date and time\n` +
-    `3. Confirm your appointment\n` +
-    `4. Get your appointment code\n\n` +
-    `You can use natural language for dates like:\n` +
-    `• "tomorrow at 3pm"\n` +
-    `• "next Monday 10:30 AM"\n` +
-    `• "December 25th at 2pm"\n\n` +
-    `Use /cancel anytime to cancel the current booking.`
+    `📚 *How to use this bot:*\n\n` +
+    `1️⃣ Send /book to start booking an appointment\n` +
+    `2️⃣ I'll collect your details:\n` +
+    `   • Full Name\n` +
+    `   • Age\n` +
+    `   • Gender\n` +
+    `   • Phone Number\n` +
+    `   • Email (optional)\n` +
+    `   • Blood Group\n` +
+    `   • Reason for visit\n` +
+    `   • Preferred date & time\n` +
+    `3️⃣ Review and confirm your details\n` +
+    `4️⃣ Get your appointment code\n\n` +
+    `💡 *Tips:*\n` +
+    `• Use natural language for dates like:\n` +
+    `  "tomorrow at 3pm"\n` +
+    `  "next Monday 10:30 AM"\n` +
+    `  "December 25th at 2pm"\n\n` +
+    `Use /cancel anytime to cancel the current booking.`,
+    { parse_mode: 'Markdown' }
   );
 });
 
@@ -266,16 +321,14 @@ bot.onText(/\/book/, async (msg) => {
   // Store user info
   state.username = msg.from.username;
   state.firstName = msg.from.first_name;
-  state.step = 'waiting_datetime';
+  state.step = 'waiting_full_name';
   state.lastActivity = Date.now();
 
   await bot.sendMessage(chatId,
-    `📅 Great! When would you like to schedule your appointment?\n\n` +
-    `Please provide the date and time in natural language.\n\n` +
-    `Examples:\n` +
-    `• "tomorrow at 3pm"\n` +
-    `• "next Monday 10:30 AM"\n` +
-    `• "December 25th at 2pm"`
+    `👋 Welcome to Karur Gastro Foundation!\n\n` +
+    `Let's book your appointment. I'll need a few details from you.\n\n` +
+    `First, please provide your *full name*:`,
+    { parse_mode: 'Markdown' }
   );
 });
 
@@ -301,6 +354,113 @@ bot.on('message', async (msg) => {
         await bot.sendMessage(chatId,
           `👋 Hi! I can help you book appointments.\n\n` +
           `Use /book to start booking or /help for more information.`
+        );
+        break;
+
+      case 'waiting_full_name':
+        state.data.fullName = userMessage.trim();
+        state.step = 'waiting_age';
+        state.lastActivity = Date.now();
+        
+        await bot.sendMessage(chatId, `Thanks, ${state.data.fullName}!\n\nNow, please provide your *age*:`, { parse_mode: 'Markdown' });
+        break;
+
+      case 'waiting_age':
+        const age = parseInt(userMessage.trim());
+        if (isNaN(age) || age < 1 || age > 120) {
+          await bot.sendMessage(chatId, `❌ Please enter a valid age (1-120):`);
+          break;
+        }
+        state.data.age = age;
+        state.step = 'waiting_gender';
+        state.lastActivity = Date.now();
+        
+        await bot.sendMessage(chatId, 
+          `Great! Now, please select your *gender*:`,
+          {
+            parse_mode: 'Markdown',
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: '👨 Male', callback_data: 'gender_male' }],
+                [{ text: '👩 Female', callback_data: 'gender_female' }],
+                [{ text: '⚧ Other', callback_data: 'gender_other' }]
+              ]
+            }
+          }
+        );
+        break;
+
+      case 'waiting_phone':
+        const phone = userMessage.trim();
+        if (phone.length < 10 || !/^\+?[\d\s-()]+$/.test(phone)) {
+          await bot.sendMessage(chatId, `❌ Please enter a valid phone number (at least 10 digits):`);
+          break;
+        }
+        state.data.phone = phone;
+        state.step = 'waiting_email';
+        state.lastActivity = Date.now();
+        
+        await bot.sendMessage(chatId, 
+          `Perfect! Now, please provide your *email address*:\n\n` +
+          `(Or type "skip" if you don't have one)`,
+          { parse_mode: 'Markdown' }
+        );
+        break;
+
+      case 'waiting_email':
+        if (userMessage.toLowerCase() === 'skip') {
+          state.data.email = `telegram_${msg.from.id}@telegram.user`;
+        } else {
+          const email = userMessage.trim();
+          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            await bot.sendMessage(chatId, `❌ Please enter a valid email address (or type "skip"):`);
+            break;
+          }
+          state.data.email = email;
+        }
+        state.step = 'waiting_blood_group';
+        state.lastActivity = Date.now();
+        
+        await bot.sendMessage(chatId, 
+          `Excellent! What is your *blood group*?`,
+          {
+            parse_mode: 'Markdown',
+            reply_markup: {
+              inline_keyboard: [
+                [
+                  { text: 'A+', callback_data: 'blood_A+' },
+                  { text: 'A-', callback_data: 'blood_A-' },
+                  { text: 'B+', callback_data: 'blood_B+' }
+                ],
+                [
+                  { text: 'B-', callback_data: 'blood_B-' },
+                  { text: 'O+', callback_data: 'blood_O+' },
+                  { text: 'O-', callback_data: 'blood_O-' }
+                ],
+                [
+                  { text: 'AB+', callback_data: 'blood_AB+' },
+                  { text: 'AB-', callback_data: 'blood_AB-' }
+                ],
+                [{ text: "Don't Know", callback_data: 'blood_unknown' }]
+              ]
+            }
+          }
+        );
+        break;
+
+      case 'waiting_reason':
+        state.data.reason = userMessage.trim();
+        state.step = 'waiting_datetime';
+        state.lastActivity = Date.now();
+        
+        await bot.sendMessage(chatId,
+          `📅 Thank you! When would you like to schedule your appointment?\n\n` +
+          `Please provide the date and time in natural language.\n\n` +
+          `*Examples:*\n` +
+          `• "tomorrow at 3pm"\n` +
+          `• "next Monday 10:30 AM"\n` +
+          `• "December 25th at 2pm"`,
+          { parse_mode: 'Markdown' }
         );
         break;
 
@@ -342,14 +502,28 @@ bot.on('message', async (msg) => {
         const doctor = await getDefaultDoctor();
 
         await bot.sendMessage(chatId,
-          `✅ Perfect! Here are your appointment details:\n\n` +
-          `📅 Date: ${state.data.dateStr}\n` +
-          `🕐 Time: ${state.data.timeStr}\n` +
-          `👨‍⚕️ Doctor: Dr. ${doctor.name || 'Available Doctor'}\n` +
-          `📍 Location: Karur Gastro Foundation\n\n` +
-          `Please reply with:\n` +
-          `• "confirm" or "yes" to book\n` +
-          `• "cancel" or "no" to cancel`
+          `✅ *Perfect! Please review your appointment details:*\n\n` +
+          `👤 *Name:* ${state.data.fullName}\n` +
+          `🎂 *Age:* ${state.data.age}\n` +
+          `⚧ *Gender:* ${state.data.gender}\n` +
+          `📱 *Phone:* ${state.data.phone}\n` +
+          `📧 *Email:* ${state.data.email}\n` +
+          `🩸 *Blood Group:* ${state.data.bloodGroup || 'N/A'}\n` +
+          `📝 *Reason:* ${state.data.reason}\n\n` +
+          `📅 *Date:* ${state.data.dateStr}\n` +
+          `🕐 *Time:* ${state.data.timeStr}\n` +
+          `👨‍⚕️ *Doctor:* Dr. ${doctor.name || 'Available Doctor'}\n` +
+          `📍 *Location:* Karur Gastro Foundation\n\n` +
+          `Is everything correct?`,
+          {
+            parse_mode: 'Markdown',
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: '✅ Confirm & Book', callback_data: 'confirm_appointment' }],
+                [{ text: '❌ Cancel', callback_data: 'cancel_appointment' }]
+              ]
+            }
+          }
         );
         break;
 
@@ -363,20 +537,22 @@ bot.on('message', async (msg) => {
           const result = await createAppointment(
             chatId,
             msg.from.id,
-            state.data.dateTime
+            state.data
           );
 
           if (result.success) {
             await bot.sendMessage(chatId,
-              `✅ Appointment Booked Successfully!\n\n` +
-              `🎫 Appointment Code: ${result.appointmentCode}\n` +
-              `📅 Date: ${state.data.dateStr}\n` +
-              `🕐 Time: ${state.data.timeStr}\n` +
-              `👨‍⚕️ Doctor: Dr. ${result.doctorName}\n` +
-              `📍 Location: Karur Gastro Foundation\n\n` +
+              `✅ *Appointment Booked Successfully!*\n\n` +
+              `🎫 *Appointment Code:* ${result.appointmentCode}\n` +
+              `👤 *Patient:* ${result.patientName}\n` +
+              `📅 *Date:* ${state.data.dateStr}\n` +
+              `🕐 *Time:* ${state.data.timeStr}\n` +
+              `👨‍⚕️ *Doctor:* Dr. ${result.doctorName}\n` +
+              `📍 *Location:* Karur Gastro Foundation\n\n` +
               `Please save your appointment code for reference.\n` +
               `We'll see you at your appointment!\n\n` +
-              `Use /book to schedule another appointment.`
+              `Use /book to schedule another appointment.`,
+              { parse_mode: 'Markdown' }
             );
             resetState(chatId);
           } else {
@@ -395,8 +571,7 @@ bot.on('message', async (msg) => {
           resetState(chatId);
         } else {
           await bot.sendMessage(chatId,
-            `Please reply with "confirm" or "cancel".\n\n` +
-            `Or use /cancel to cancel the booking.`
+            `Please use the buttons above or reply with "confirm" or "cancel".`
           );
         }
         break;
@@ -414,6 +589,120 @@ bot.on('message', async (msg) => {
       `Use /start to restart or /help for assistance.`
     );
     resetState(chatId);
+  }
+});
+
+// Handle callback queries (inline keyboard buttons)
+bot.on('callback_query', async (query) => {
+  const chatId = query.message.chat.id;
+  const data = query.data;
+  const state = getState(chatId);
+
+  try {
+    // Gender selection
+    if (data.startsWith('gender_')) {
+      const gender = data.replace('gender_', '');
+      state.data.gender = gender.charAt(0).toUpperCase() + gender.slice(1);
+      state.step = 'waiting_phone';
+      state.lastActivity = Date.now();
+      
+      await bot.answerCallbackQuery(query.id);
+      await bot.editMessageText(
+        `✅ Gender: ${state.data.gender}`,
+        {
+          chat_id: chatId,
+          message_id: query.message.message_id
+        }
+      );
+      await bot.sendMessage(chatId, `Great! Now, please provide your *phone number*:`, { parse_mode: 'Markdown' });
+    }
+    
+    // Blood group selection
+    else if (data.startsWith('blood_')) {
+      const bloodGroup = data.replace('blood_', '');
+      state.data.bloodGroup = bloodGroup === 'unknown' ? 'Unknown' : bloodGroup;
+      state.step = 'waiting_reason';
+      state.lastActivity = Date.now();
+      
+      await bot.answerCallbackQuery(query.id);
+      await bot.editMessageText(
+        `✅ Blood Group: ${state.data.bloodGroup}`,
+        {
+          chat_id: chatId,
+          message_id: query.message.message_id
+        }
+      );
+      await bot.sendMessage(chatId, 
+        `Perfect! What is the *reason for your visit*?\n\n` +
+        `(e.g., "Regular checkup", "Stomach pain", "Follow-up consultation", etc.)`,
+        { parse_mode: 'Markdown' }
+      );
+    }
+    
+    // Appointment confirmation
+    else if (data === 'confirm_appointment') {
+      await bot.answerCallbackQuery(query.id, { text: 'Booking your appointment...' });
+      await bot.editMessageReplyMarkup(
+        { inline_keyboard: [] },
+        {
+          chat_id: chatId,
+          message_id: query.message.message_id
+        }
+      );
+      
+      await bot.sendMessage(chatId, '⏳ Creating your appointment...');
+
+      const result = await createAppointment(
+        chatId,
+        query.from.id,
+        state.data
+      );
+
+      if (result.success) {
+        await bot.sendMessage(chatId,
+          `✅ *Appointment Booked Successfully!*\n\n` +
+          `🎫 *Appointment Code:* ${result.appointmentCode}\n` +
+          `👤 *Patient:* ${result.patientName}\n` +
+          `📅 *Date:* ${state.data.dateStr}\n` +
+          `🕐 *Time:* ${state.data.timeStr}\n` +
+          `👨‍⚕️ *Doctor:* Dr. ${result.doctorName}\n` +
+          `📍 *Location:* Karur Gastro Foundation\n\n` +
+          `💡 Please save your appointment code for reference.\n` +
+          `We'll see you at your appointment!\n\n` +
+          `Use /book to schedule another appointment.`,
+          { parse_mode: 'Markdown' }
+        );
+        resetState(chatId);
+      } else {
+        await bot.sendMessage(chatId,
+          `❌ Sorry, there was an error creating your appointment:\n\n` +
+          `${result.error}\n\n` +
+          `Please try again with /book`
+        );
+        resetState(chatId);
+      }
+    }
+    
+    // Appointment cancellation
+    else if (data === 'cancel_appointment') {
+      await bot.answerCallbackQuery(query.id, { text: 'Booking cancelled' });
+      await bot.editMessageReplyMarkup(
+        { inline_keyboard: [] },
+        {
+          chat_id: chatId,
+          message_id: query.message.message_id
+        }
+      );
+      await bot.sendMessage(chatId,
+        `❌ Appointment booking cancelled.\n\n` +
+        `Use /book to start again.`
+      );
+      resetState(chatId);
+    }
+    
+  } catch (error) {
+    console.error('Error handling callback query:', error);
+    await bot.answerCallbackQuery(query.id, { text: 'An error occurred' });
   }
 });
 

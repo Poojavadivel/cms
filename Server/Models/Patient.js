@@ -12,8 +12,9 @@ const PatientSchema = new Schema({
   firstName: { type: String, required: true, index: true },
   lastName: { type: String, default: '' },
   dateOfBirth: { type: Date },
+  age: { type: Number }, // Added for Telegram bot
   gender: { type: String, enum: ['Male', 'Female', 'Other'], default: null },
-  bloodGroup: { type: String, enum: ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'], default: 'O+' },
+  bloodGroup: { type: String, enum: ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-', 'Unknown'], default: 'O+' },
   phone: { type: String, index: true, validate: phoneValidator },
   email: { type: String, default: null, index: true, validate: emailValidator },
   address: {
