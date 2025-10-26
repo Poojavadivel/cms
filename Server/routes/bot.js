@@ -16,7 +16,8 @@ const _AZURE_OPENAI_DEPLOYMENT = process.env.AZURE_OPENAI_DEPLOYMENT || "o4-mini
 const _AZURE_OPENAI_API_VERSION = process.env.AZURE_OPENAI_API_VERSION || "2024-12-01-preview";
 
 
-const MAX_RETRIES = Number(process.env.MAX_RETRIES ?? 3);const DEFAULT_MAX_COMPLETION_TOKENS = Number(process.env.MAX_COMPLETION_TOKENS ?? 700);
+const MAX_RETRIES = Number(process.env.MAX_RETRIES ?? 3);
+const DEFAULT_MAX_COMPLETION_TOKENS = Number(process.env.MAX_COMPLETION_TOKENS ?? 1500);
 const MAX_COMPLETION_TOKENS_MAX = Number(process.env.MAX_COMPLETION_TOKENS_MAX ?? 7500);
 const RETRY_BACKOFF_BASE_MS = Number(process.env.RETRY_BACKOFF_BASE_MS ?? 500);
 const AZURE_OPENAI_TIMEOUT_MS = Number(process.env.AZURE_OPENAI_TIMEOUT_MS ?? 20000);
@@ -44,6 +45,216 @@ const azureClient = axios.create({
 /* ---------------- In-memory circuit breaker & metrics ---------------- */
 const circuitBreaker = { failures: 0, state: "CLOSED", openedAt: null };
 const metrics = { calls: 0, successes: 0, failures: 0, emptyResponses: 0, retries: 0, circuitBreakersTripped: 0 };
+
+/* ---------------- ENTERPRISE: Role-Based System Prompts ---------------- */
+const ENTERPRISE_SYSTEM_PROMPTS = {
+  doctor: `You are MedGPT, an intelligent medical assistant for doctors at Karur Gastro Foundation HMS.
+
+**Your Role:**
+- Assist doctors with patient information, medical histories, lab reports, and prescriptions
+- Provide clinical insights based on patient data
+- Help manage appointments and treatment plans
+- Maintain professional medical terminology
+
+**Guidelines:**
+- Always prioritize patient safety and accuracy
+- If unsure about medical data, acknowledge the limitation
+- Present lab results and prescriptions in clear, structured format
+- Suggest follow-ups when patterns indicate medical attention needed
+- Keep responses concise but comprehensive (1-3 paragraphs)
+
+**Capabilities:**
+- Patient medical history analysis
+- Lab report interpretation
+- Prescription tracking
+- Appointment scheduling assistance
+- Clinical decision support
+
+**Tone:** Professional, precise, empathetic, clinically relevant`,
+
+  admin: `You are MedGPT, an intelligent administrative assistant for hospital management at Karur Gastro Foundation HMS.
+
+**Your Role:**
+- Provide hospital operational insights and analytics
+- Assist with staff management and scheduling
+- Track revenue, occupancy, and resource utilization
+- Generate reports and identify operational trends
+- Support decision-making with data-driven insights
+
+**Guidelines:**
+- Focus on metrics, KPIs, and operational efficiency
+- Present data in business-friendly format
+- Highlight areas needing attention (low revenue, understaffing)
+- Suggest actionable improvements
+- Keep responses data-driven and concise
+
+**Capabilities:**
+- Revenue and billing analytics
+- Bed occupancy monitoring
+- Staff attendance tracking
+- Department performance analysis
+- Resource allocation optimization
+
+**Tone:** Business-focused, analytical, solution-oriented, strategic`,
+
+  pharmacist: `You are MedGPT, an intelligent pharmacy assistant for pharmacists at Karur Gastro Foundation HMS.
+
+**Your Role:**
+- Assist with medication inventory management
+- Track prescription fulfillment
+- Monitor drug expiry dates and stock levels
+- Provide drug interaction information
+- Support pharmacy operations
+
+**Guidelines:**
+- Prioritize patient safety with drug interactions
+- Alert for low stock and expiring medications
+- Validate prescription authenticity
+- Provide dosage and administration guidance
+- Keep responses practical and actionable
+
+**Capabilities:**
+- Medicine inventory tracking
+- Prescription processing
+- Stock alerts (low/expired)
+- Drug interaction checks
+- Supplier and ordering assistance
+
+**Tone:** Precise, safety-focused, practical, detail-oriented`,
+
+  pathologist: `You are MedGPT, an intelligent laboratory assistant for pathologists at Karur Gastro Foundation HMS.
+
+**Your Role:**
+- Assist with lab test management and reporting
+- Track sample processing and results
+- Provide reference ranges and interpretation guidance
+- Monitor equipment status and calibration
+- Support quality control processes
+
+**Guidelines:**
+- Maintain high accuracy standards
+- Present test results with reference ranges
+- Flag abnormal values requiring attention
+- Track pending tests and turnaround times
+- Keep responses technically accurate
+
+**Capabilities:**
+- Test report generation
+- Sample tracking
+- Result interpretation
+- Equipment monitoring
+- Quality control assistance
+
+**Tone:** Technical, precise, analytical, quality-focused`,
+
+  default: `You are MedGPT, a professional hospital assistant at Karur Gastro Foundation HMS.
+
+**Your Role:**
+- Assist with general hospital information
+- Provide basic patient and staff information
+- Answer operational queries
+- Maintain professional healthcare standards
+
+**Guidelines:**
+- Be helpful and accurate
+- Acknowledge limitations when appropriate
+- Maintain patient confidentiality
+- Keep responses clear and concise
+
+**Tone:** Professional, helpful, courteous, informative`
+};
+
+/* ---------------- ENTERPRISE: Enhanced Context Builder ---------------- */
+async function buildEnhancedContext(entity, userRole, intent, userId) {
+  const context = {
+    role: userRole,
+    intent: intent,
+    data: {},
+    summary: []
+  };
+
+  try {
+    // For doctors: fetch appointments, labs, prescriptions
+    if (userRole === 'doctor' && entity) {
+      const Appointment = require('../Models').Appointment;
+      const appointments = await Appointment.find({
+        $or: [
+          { patientName: new RegExp(entity, 'i') },
+          { patientCode: new RegExp(entity, 'i') }
+        ]
+      }).limit(5).sort({ date: -1 }).lean();
+      
+      if (appointments && appointments.length > 0) {
+        context.data.recentAppointments = appointments.map(a => ({
+          date: a.date,
+          time: a.time,
+          reason: a.reason,
+          status: a.status,
+          diagnosis: a.diagnosis
+        }));
+        context.summary.push(`Found ${appointments.length} recent appointment(s)`);
+      }
+    }
+
+    // For admin: fetch staff metrics, revenue
+    if (userRole === 'admin') {
+      const User = require('../Models').User;
+      const staffCount = await User.countDocuments({ role: 'staff' });
+      const doctorCount = await User.countDocuments({ role: 'doctor' });
+      
+      context.data.staffMetrics = {
+        totalStaff: staffCount,
+        totalDoctors: doctorCount
+      };
+      context.summary.push(`Hospital has ${doctorCount} doctor(s) and ${staffCount} staff member(s)`);
+    }
+
+    // For pharmacist: check medicine stock
+    if (userRole === 'pharmacist' && entity) {
+      const Medicine = require('../Models').Medicine;
+      const medicine = await Medicine.findOne({
+        name: new RegExp(entity, 'i')
+      }).lean();
+      
+      if (medicine) {
+        context.data.medicineInfo = {
+          name: medicine.name,
+          stock: medicine.stock || medicine.quantity,
+          expiryDate: medicine.expiryDate,
+          supplier: medicine.supplier
+        };
+        context.summary.push(`Medicine "${medicine.name}" found in inventory`);
+      }
+    }
+
+    // For pathologist: fetch recent lab reports
+    if (userRole === 'pathologist' && entity) {
+      const Report = require('../Models').Report;
+      const reports = await Report.find({
+        $or: [
+          { patientName: new RegExp(entity, 'i') },
+          { patientCode: new RegExp(entity, 'i') }
+        ]
+      }).limit(3).sort({ createdAt: -1 }).lean();
+      
+      if (reports && reports.length > 0) {
+        context.data.recentReports = reports.map(r => ({
+          testName: r.testName,
+          result: r.result,
+          date: r.createdAt,
+          status: r.status
+        }));
+        context.summary.push(`Found ${reports.length} recent lab report(s)`);
+      }
+    }
+
+  } catch (err) {
+    console.error('[buildEnhancedContext] Error:', err);
+    context.error = 'Some context data unavailable';
+  }
+
+  return context;
+}
 
 /* ---------------- Helpers ---------------- */
 function makeCid() { return "cid_" + Math.random().toString(36).slice(2, 8) + "_" + Date.now().toString(36); }
@@ -313,7 +524,7 @@ router.get("/metrics", (req, res) => {
 
 /**
  * POST /api/bot/chat
- * Body: { message: string, chatId?: string(sessionId), title?: string }
+ * Body: { message: string, chatId?: string(sessionId), title?: string, metadata?: { userRole: string } }
  */
 router.post("/chat", auth, async (req, res) => {
   const cid = makeCid();
@@ -322,11 +533,15 @@ router.post("/chat", auth, async (req, res) => {
 
   const tStart = Date.now();
   try {
-    const { message, chatId, title } = req.body || {};
+    const { message, chatId, title, metadata } = req.body || {};
     const user = req.user;
     if (!user || !user.id) {
       return res.status(401).json({ success: false, message: "Unauthorized" });
     }
+
+    // Extract user role from metadata or user object
+    const userRole = (metadata && metadata.userRole) || user.role || 'default';
+    console.log(`[${cid}] User role: ${userRole}`);
 
     // create empty chat session with title
     if (!message && title) {
@@ -334,6 +549,7 @@ router.post("/chat", auth, async (req, res) => {
         const { botDoc, session } = await findOrCreateSessionForUser(user.id, null);
         botDoc.sessions[botDoc.sessions.length - 1].metadata = botDoc.sessions[botDoc.sessions.length - 1].metadata || {};
         botDoc.sessions[botDoc.sessions.length - 1].metadata.title = String(title);
+        botDoc.sessions[botDoc.sessions.length - 1].metadata.userRole = userRole;
         await botDoc.save();
         return res.json({ success: true, chat: { sessionId: botDoc.sessions[botDoc.sessions.length - 1].sessionId, title }, message: "New chat created successfully." });
       } catch (err) {
@@ -347,32 +563,37 @@ router.post("/chat", auth, async (req, res) => {
     }
 
     const trimmed = message.trim();
-    // greeting short-circuit
+    
+    // Get role-specific system prompt
+    const systemPrompt = ENTERPRISE_SYSTEM_PROMPTS[userRole] || ENTERPRISE_SYSTEM_PROMPTS.default;
+    
+    // greeting short-circuit with role awareness
     const lower = trimmed.toLowerCase();
     const isGreeting = lower.match(/\b(hi|hello|hey|greetings|thanks|thank you)\b/);
     if (isGreeting) {
       let finalReply;
       try {
-        const greetingSystem = `You are MedGPT, a warm, professional, and concise hospital assistant. Since the user sent a simple greeting, please reply with a polite, one-sentence welcoming remark. Do NOT mention any records or data.`;
+        const greetingMessages = [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: `User sent a greeting: ${trimmed}. Reply warmly and professionally in 1-2 sentences.` },
+        ];
+        
         const summaryText = await callAzureChatWithRetries(
-          [
-            { role: "system", content: greetingSystem },
-            { role: "user", content: `User message: ${trimmed}` },
-          ],
+          greetingMessages,
           DEFAULT_TEMPERATURE,
           Math.max(150, Math.min(DEFAULT_MAX_COMPLETION_TOKENS, 300))
         );
         finalReply = String(summaryText).trim();
       } catch (summErr) {
         console.error(`[${cid}] Greeting call failed:`, summErr);
-        finalReply = "Hello! How can I help you with the patient records today?";
+        finalReply = "Hello! How can I help you today?";
       }
       return saveAndReturnChat(cid, tStart, chatId, user, trimmed, finalReply, res);
     }
 
     // Step A: Extract intent/entity
     const extractorPromptSystem = `You are an extractor. Read the user's query and respond ONLY with a compact JSON object with keys:
-- intent: one-word intent like "patient_info", "staff_info", "appointments", "unknown"
+- intent: one-word intent like "patient_info", "staff_info", "appointments", "medicines", "lab_reports", "analytics", "unknown"
 - entity: the main entity name or id if present (e.g., "Sanjit" or "patient_id_123"), or null
 - date: optional date string if the user mentioned one (e.g., "2025-09-01")
 Return strictly valid JSON.`;
@@ -396,6 +617,10 @@ Return strictly valid JSON.`;
       const fallback = { intent: "unknown", entity: null, date: null };
       if (lowerMsg.includes("patient") || lowerMsg.includes("show me the details") || lowerMsg.includes("details of")) fallback.intent = "patient_info";
       if (lowerMsg.includes("doctor") || lowerMsg.includes("staff") || lowerMsg.includes("nurse")) fallback.intent = "staff_info";
+      if (lowerMsg.includes("appointment")) fallback.intent = "appointments";
+      if (lowerMsg.includes("medicine") || lowerMsg.includes("drug") || lowerMsg.includes("pharmacy")) fallback.intent = "medicines";
+      if (lowerMsg.includes("lab") || lowerMsg.includes("test") || lowerMsg.includes("report")) fallback.intent = "lab_reports";
+      if (lowerMsg.includes("revenue") || lowerMsg.includes("occupancy") || lowerMsg.includes("analytics")) fallback.intent = "analytics";
       const words = trimmed.split(/\s+/).filter(Boolean);
       if (words.length <= 4) fallback.entity = trimmed;
       extraction = fallback;
@@ -405,7 +630,13 @@ Return strictly valid JSON.`;
       extraction.date = extraction.date || null;
     }
 
-    // Step B: DB name-only search (Patient and User)
+    console.log(`[${cid}] Extracted intent: ${extraction.intent}, entity: ${extraction.entity}`);
+
+    // Step B: Build enhanced context based on role and intent
+    const enhancedContext = await buildEnhancedContext(extraction.entity, userRole, extraction.intent, user.id);
+    console.log(`[${cid}] Enhanced context summary:`, enhancedContext.summary);
+
+    // Step C: DB name-only search (Patient and User)
     let patientDoc = null;
     let staffDoc = null;
     const entityRaw = extraction.entity;
@@ -447,7 +678,7 @@ Return strictly valid JSON.`;
       }
     }
 
-    const isDataMissing = !patientDoc && !staffDoc;
+    const isDataMissing = !patientDoc && !staffDoc && (!enhancedContext.data || Object.keys(enhancedContext.data).length === 0);
     let finalReply = "";
 
     function buildPatientContext(p) {
@@ -490,15 +721,14 @@ Return strictly valid JSON.`;
     }
 
     if (isDataMissing) {
-      const summarizerFallbackSystem = `You are MedGPT, a professional assistant. The user searched for data (patient or staff) that was not found in the database. Reply ONLY with a single, concise sentence confirming that no relevant records were found for their query.`;
       try {
         finalReply = await callAzureChatWithRetries(
           [
-            { role: "system", content: summarizerFallbackSystem },
-            { role: "user", content: `Original Query: ${trimmed}` },
+            { role: "system", content: systemPrompt },
+            { role: "user", content: `User Query: ${trimmed}\n\nNo relevant records were found in the database. Please respond professionally acknowledging this.` },
           ],
           DEFAULT_TEMPERATURE,
-          150
+          300
         );
         finalReply = String(finalReply).trim();
       } catch (summErr) {
@@ -514,26 +744,35 @@ Return strictly valid JSON.`;
       if (safePatient) delete safePatient._hasUsefulFields;
       if (safeStaff) delete safeStaff._hasUsefulFields;
 
-      const summarizerSystem = `You are MedGPT, a concise, factual assistant. Use ONLY the provided Context to answer. If no data is available, say "No relevant records were found for this query." Do NOT hallucinate. Keep the answer short and clinically neutral.`;
-      const summarizerUser = `Question: ${trimmed}
+      // Combine all context
+      const fullContext = {
+        patient: safePatient,
+        staff: safeStaff,
+        enhanced: enhancedContext.data,
+        contextSummary: enhancedContext.summary
+      };
 
-Context:
-${JSON.stringify({ patient: safePatient, staff: safeStaff }, null, 2)}
+      const summarizerUser = `User Query: ${trimmed}
+
+Available Context:
+${JSON.stringify(fullContext, null, 2)}
 
 Instructions:
-- Use only the Context above.
-- If the user asked for a specific field and that field is present, answer it directly.
-- If no relevant records, explicitly say: "No relevant records were found for this query."
-- If multiple matching records exist, summarize the most relevant one and indicate there may be multiple matches.`;
+- Use ONLY the provided context above
+- If the query relates to your role (${userRole}), provide role-specific insights
+- If data is incomplete, acknowledge what's available
+- Keep response concise but informative (2-4 paragraphs max)
+- Format medical/technical data clearly
+- If no relevant data, state clearly`;
 
       try {
         finalReply = await callAzureChatWithRetries(
           [
-            { role: "system", content: summarizerSystem },
+            { role: "system", content: systemPrompt },
             { role: "user", content: summarizerUser },
           ],
           DEFAULT_TEMPERATURE,
-          700
+          DEFAULT_MAX_COMPLETION_TOKENS
         );
         finalReply = String(finalReply).trim();
       } catch (summErr) {
@@ -655,6 +894,91 @@ router.delete("/chats/:id", auth, async (req, res) => {
   }
 });
 
+/**
+ * POST /api/bot/feedback
+ * Body: { messageId: string, type: 'helpful'|'not_helpful', conversationId: string }
+ * Stores user feedback for bot responses
+ */
+router.post("/feedback", auth, async (req, res) => {
+  const cid = makeCid();
+  console.log(`[${cid}] POST /api/bot/feedback by user=${req.user?.id}`);
+  
+  try {
+    const { messageId, type, conversationId } = req.body || {};
+    const user = req.user;
+    
+    if (!messageId || !type || !conversationId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "messageId, type, and conversationId are required" 
+      });
+    }
+    
+    if (!['helpful', 'not_helpful'].includes(type)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "type must be 'helpful' or 'not_helpful'" 
+      });
+    }
+    
+    // Find the bot document and session
+    const botDoc = await Bot.findOne({ 
+      userId: user.id, 
+      'sessions.sessionId': conversationId 
+    });
+    
+    if (!botDoc) {
+      return res.status(404).json({ success: false, message: "Conversation not found" });
+    }
+    
+    const session = botDoc.sessions.find(s => s.sessionId === conversationId);
+    if (!session) {
+      return res.status(404).json({ success: false, message: "Conversation not found" });
+    }
+    
+    // Add feedback to session metadata
+    session.metadata = session.metadata || {};
+    session.metadata.feedback = session.metadata.feedback || [];
+    
+    // Check if feedback already exists for this message
+    const existingFeedbackIndex = session.metadata.feedback.findIndex(
+      f => f.messageId === messageId
+    );
+    
+    const feedbackEntry = {
+      messageId,
+      type,
+      timestamp: new Date(),
+      userId: user.id
+    };
+    
+    if (existingFeedbackIndex >= 0) {
+      // Update existing feedback
+      session.metadata.feedback[existingFeedbackIndex] = feedbackEntry;
+    } else {
+      // Add new feedback
+      session.metadata.feedback.push(feedbackEntry);
+    }
+    
+    botDoc.updatedAt = new Date();
+    await botDoc.save();
+    
+    console.log(`[${cid}] Feedback recorded: ${type} for message ${messageId}`);
+    
+    return res.json({ 
+      success: true, 
+      message: "Feedback recorded successfully",
+      feedback: { messageId, type }
+    });
+    
+  } catch (err) {
+    console.error(`[${cid}] Error recording feedback:`, err);
+    return res.status(500).json({ 
+      success: false, 
+      message: "Failed to record feedback", 
+      error: err.message 
+    });
+  }
+});
+
 module.exports = router;
-
-
