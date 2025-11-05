@@ -1502,28 +1502,19 @@ class _EnterpriseDoctorDashboardState extends State<EnterpriseDoctorDashboard> {
         ),
       );
       
-      // Fetch patient details
-      final patientDetails = await AuthService.instance.fetchPatientDetails(appointment.patientId);
+      // Fetch patient details using correct method
+      final patientDetails = await AuthService.instance.fetchPatientById(appointment.patientId);
       
       // Close loading indicator
       if (mounted) Navigator.of(context).pop();
       
       // Show appointment preview
-      if (mounted && patientDetails != null) {
+      if (mounted) {
         await DoctorAppointmentPreview.show(
           context,
           patientDetails,
           showBillingTab: false, // Hide billing in doctor side
         );
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Could not load patient details'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
       }
     } catch (e) {
       // Close loading if still open
@@ -1532,12 +1523,12 @@ class _EnterpriseDoctorDashboardState extends State<EnterpriseDoctorDashboard> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: ${e.toString()}'),
+            content: Text('Error loading patient: ${e.toString()}'),
             backgroundColor: Colors.red,
           ),
         );
       }
-      debugPrint('Error showing appointment preview: $e');
+      debugPrint('❌ Error showing appointment preview: $e');
     }
   }
 
