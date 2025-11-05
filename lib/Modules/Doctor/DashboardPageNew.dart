@@ -392,6 +392,13 @@ class _EnterpriseDoctorDashboardState extends State<EnterpriseDoctorDashboard> {
     // Account for padding (16 left + 16 right, 8 top + 16 bottom = 24 vertical)
     final contentHeight = allocatedHeight - 24;
     
+    // Add buffer to prevent overflow
+    final statsHeight = contentHeight * 0.19; // Reduced from 0.20
+    final chartHeight = contentHeight * 0.37; // Reduced from 0.38
+    final queueHeight = contentHeight * 0.39; // Reduced from 0.40
+    final upcomingHeight = contentHeight * 0.49; // Reduced from 0.50
+    final statusHeight = contentHeight * 0.47; // Reduced from 0.48
+    
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
       child: Row(
@@ -405,7 +412,7 @@ class _EnterpriseDoctorDashboardState extends State<EnterpriseDoctorDashboard> {
               children: [
                 // STATS CARDS - Fixed height
                 SizedBox(
-                  height: contentHeight * 0.20,
+                  height: statsHeight,
                   child: Row(
                     children: [
                       Expanded(child: _statCard(
@@ -442,14 +449,14 @@ class _EnterpriseDoctorDashboardState extends State<EnterpriseDoctorDashboard> {
 
                 // PATIENT FLOW CHART - Fixed height
                 SizedBox(
-                  height: contentHeight * 0.38,
+                  height: chartHeight,
                   child: _buildPatientFlowChart(),
                 ),
                 const SizedBox(height: 10),
 
                 // PATIENT QUEUE - Fixed height
                 SizedBox(
-                  height: contentHeight * 0.40,
+                  height: queueHeight,
                   child: _buildPatientQueue(),
                 ),
               ],
@@ -465,14 +472,14 @@ class _EnterpriseDoctorDashboardState extends State<EnterpriseDoctorDashboard> {
               children: [
                 // UPCOMING APPOINTMENTS - Fixed height
                 SizedBox(
-                  height: contentHeight * 0.50,
+                  height: upcomingHeight,
                   child: _buildUpcomingAppointments(),
                 ),
                 const SizedBox(height: 10),
 
                 // STATUS DISTRIBUTION - Fixed height
                 SizedBox(
-                  height: contentHeight * 0.48,
+                  height: statusHeight,
                   child: _buildStatusDistribution(),
                 ),
               ],
@@ -487,6 +494,10 @@ class _EnterpriseDoctorDashboardState extends State<EnterpriseDoctorDashboard> {
     // Account for padding
     final contentHeight = allocatedHeight - 24;
     
+    // Add buffer for compact
+    final statsHeight = contentHeight * 0.21; // Reduced from 0.22
+    final queueHeight = contentHeight * 0.75; // Reduced from 0.76
+    
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
       child: Column(
@@ -494,7 +505,7 @@ class _EnterpriseDoctorDashboardState extends State<EnterpriseDoctorDashboard> {
         children: [
           // STATS CARDS - Fixed height
           SizedBox(
-            height: contentHeight * 0.22,
+            height: statsHeight,
             child: Row(
               children: [
                 Expanded(child: _statCard(
@@ -531,7 +542,7 @@ class _EnterpriseDoctorDashboardState extends State<EnterpriseDoctorDashboard> {
 
           // PATIENT QUEUE - Fixed height
           SizedBox(
-            height: contentHeight * 0.76,
+            height: queueHeight,
             child: _buildPatientQueue(),
           ),
         ],
@@ -545,61 +556,76 @@ class _EnterpriseDoctorDashboardState extends State<EnterpriseDoctorDashboard> {
     required String value,
     required Color color,
   }) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.1)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Calculate available height and adjust content accordingly
+        final availableHeight = constraints.maxHeight;
+        final contentPadding = 10.0; // Reduced from 12
+        final iconSize = availableHeight > 90 ? 36.0 : 32.0;
+        final valueFontSize = availableHeight > 90 ? 22.0 : 18.0;
+        final labelFontSize = availableHeight > 90 ? 10.0 : 9.0;
+        
+        return Container(
+          padding: EdgeInsets.all(contentPadding),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: color.withOpacity(0.1)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(icon, color: color, size: 20),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: iconSize,
+                height: iconSize,
+                padding: const EdgeInsets.all(7),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, color: color, size: iconSize * 0.55),
+              ),
+              SizedBox(height: availableHeight > 90 ? 6 : 4),
+              Flexible(
+                child: Text(
+                  value,
+                  style: GoogleFonts.poppins(
+                    fontSize: valueFontSize,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF0F172A),
+                    height: 1.0,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              SizedBox(height: availableHeight > 90 ? 3 : 2),
+              Flexible(
+                child: Text(
+                  label,
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.inter(
+                    fontSize: labelFontSize,
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xFF64748B),
+                    height: 1.1,
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: GoogleFonts.poppins(
-              fontSize: 24,
-              fontWeight: FontWeight.w700,
-              color: const Color(0xFF0F172A),
-              height: 1.0,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.inter(
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
-              color: const Color(0xFF64748B),
-              height: 1.2,
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
