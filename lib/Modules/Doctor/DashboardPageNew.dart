@@ -7,7 +7,6 @@ import 'package:intl/intl.dart';
 import '../../Models/Patients.dart';
 import '../../Models/dashboardmodels.dart';
 import '../../Services/Authservices.dart';
-import '../../Utils/Colors.dart';
 
 /// ENTERPRISE-GRADE DOCTOR DASHBOARD
 /// NO SCROLLING - Fully responsive single-screen design
@@ -287,7 +286,7 @@ class _EnterpriseDoctorDashboardState extends State<EnterpriseDoctorDashboard> {
         children: [
           Expanded(
             child: _actionButton(
-              icon: Iconsax.stethoscope,
+              icon: Iconsax.health,
               label: 'Start Consultation',
               color: const Color(0xFF10B981),
               onTap: () => debugPrint('Start Consultation'),
@@ -296,7 +295,7 @@ class _EnterpriseDoctorDashboardState extends State<EnterpriseDoctorDashboard> {
           const SizedBox(width: 12),
           Expanded(
             child: _actionButton(
-              icon: Iconsax.health,
+              icon: Iconsax.danger,
               label: 'Emergency',
               color: const Color(0xFFEF4444),
               onTap: () => debugPrint('Emergency'),
