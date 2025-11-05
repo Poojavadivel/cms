@@ -1,0 +1,1174 @@
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:iconsax/iconsax.dart';
+import 'package:fl_chart/fl_chart.dart';
+import 'package:intl/intl.dart';
+
+import '../../Models/Patients.dart';
+import '../../Models/dashboardmodels.dart';
+import '../../Services/Authservices.dart';
+import '../../Utils/Colors.dart';
+
+/// ENTERPRISE-GRADE DOCTOR DASHBOARD
+/// NO SCROLLING - Fully responsive single-screen design
+/// Professional medical color scheme (Blues/Teals)
+class EnterpriseDoctorDashboard extends StatefulWidget {
+  const EnterpriseDoctorDashboard({super.key});
+
+  @override
+  State<EnterpriseDoctorDashboard> createState() => _EnterpriseDoctorDashboardState();
+}
+
+class _EnterpriseDoctorDashboardState extends State<EnterpriseDoctorDashboard> {
+  bool _loading = true;
+  List<DashboardAppointments> _appointments = [];
+  List<PatientDetails> _patients = [];
+  String _doctorName = 'Doctor';
+  String _selectedPeriod = 'Today';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    setState(() => _loading = true);
+    try {
+      final appointments = await AuthService.instance.fetchAppointments();
+      final patients = await AuthService.instance.fetchDoctorPatients();
+
+      String docName = 'Doctor';
+      try {
+        final currentStaff = AuthService.instance.currentStaff;
+        if (currentStaff != null && currentStaff.name.isNotEmpty) {
+          docName = currentStaff.name;
+        }
+      } catch (e) {
+        debugPrint('Could not load doctor name: $e');
+      }
+
+      if (mounted) {
+        setState(() {
+          _appointments = appointments;
+          _patients = patients;
+          _doctorName = docName;
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading dashboard data: $e');
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  // METRICS CALCULATIONS
+  int get _totalPatients => _patients.length;
+
+  int get _todayAppointments {
+    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    return _appointments.where((a) => _parseDate(a.date) == today).length;
+  }
+
+  int get _waitingNow {
+    return _appointments.where((a) {
+      return a.status.toLowerCase() == 'scheduled' && _parseDate(a.date) == DateFormat('yyyy-MM-dd').format(DateTime.now());
+    }).length;
+  }
+
+  int get _completedToday {
+    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    return _appointments.where((a) {
+      return _parseDate(a.date) == today && a.status.toLowerCase() == 'completed';
+    }).length;
+  }
+
+  String _parseDate(String date) {
+    try {
+      return DateFormat('yyyy-MM-dd').format(DateFormat('MMM dd, yyyy').parse(date));
+    } catch (e) {
+      return '';
+    }
+  }
+
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Good Morning';
+    if (hour < 17) return 'Good Afternoon';
+    return 'Good Evening';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) {
+      return Container(
+        color: const Color(0xFFF8FAFC),
+        child: const Center(
+          child: CircularProgressIndicator(
+            color: Color(0xFF0EA5E9),
+          ),
+        ),
+      );
+    }
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final screenHeight = constraints.maxHeight;
+        final screenWidth = constraints.maxWidth;
+        final isCompact = screenWidth < 1200;
+
+        return Container(
+          width: screenWidth,
+          height: screenHeight,
+          color: const Color(0xFFF8FAFC),
+          child: Column(
+            children: [
+              // HEADER - 12% of screen
+              SizedBox(
+                height: screenHeight * 0.12,
+                child: _buildHeader(),
+              ),
+
+              // QUICK ACTIONS - 8% of screen
+              SizedBox(
+                height: screenHeight * 0.08,
+                child: _buildQuickActions(),
+              ),
+
+              // MAIN CONTENT - 80% of screen (no scrolling)
+              SizedBox(
+                height: screenHeight * 0.80,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                  child: isCompact 
+                    ? _buildCompactLayout(screenHeight)
+                    : _buildWideLayout(screenHeight),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF0EA5E9), Color(0xFF0284C7)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0EA5E9).withOpacity(0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Iconsax.user_octagon,
+              color: Colors.white,
+              size: 28,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  '${_getGreeting()}, Dr. $_doctorName',
+                  style: GoogleFonts.poppins(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                    height: 1.2,
+                  ),
+                ),
+                Text(
+                  'You have $_waitingNow patients waiting',
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white.withOpacity(0.9),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Period Selector
+          Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              children: [
+                _periodButton('Today'),
+                _periodButton('Week'),
+                _periodButton('Month'),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Iconsax.calendar_1,
+                  color: Color(0xFF0EA5E9),
+                  size: 16,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  DateFormat('MMM dd, yyyy').format(DateTime.now()),
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF0F172A),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _periodButton(String label) {
+    final isSelected = _selectedPeriod == label;
+    return GestureDetector(
+      onTap: () => setState(() => _selectedPeriod = label),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.white : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: isSelected ? const Color(0xFF0EA5E9) : Colors.white,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickActions() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: _actionButton(
+              icon: Iconsax.stethoscope,
+              label: 'Start Consultation',
+              color: const Color(0xFF10B981),
+              onTap: () => debugPrint('Start Consultation'),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: _actionButton(
+              icon: Iconsax.health,
+              label: 'Emergency',
+              color: const Color(0xFFEF4444),
+              onTap: () => debugPrint('Emergency'),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: _actionButton(
+              icon: Iconsax.note_text,
+              label: 'Quick Notes',
+              color: const Color(0xFFF59E0B),
+              onTap: () => debugPrint('Quick Notes'),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: _actionButton(
+              icon: Iconsax.message_text,
+              label: 'Messages',
+              color: const Color(0xFF8B5CF6),
+              onTap: () => debugPrint('Messages'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _actionButton({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withOpacity(0.2), width: 1.5),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: color, size: 20),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                label,
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF0F172A),
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWideLayout(double screenHeight) {
+    final contentHeight = screenHeight * 0.80 - 16; // Subtract padding
+    
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // LEFT SECTION - 65%
+        Expanded(
+          flex: 65,
+          child: Column(
+            children: [
+              // STATS CARDS - 20% of content
+              SizedBox(
+                height: contentHeight * 0.20,
+                child: Row(
+                  children: [
+                    Expanded(child: _statCard(
+                      icon: Iconsax.user_octagon,
+                      label: 'Total Patients',
+                      value: _totalPatients.toString(),
+                      color: const Color(0xFF0EA5E9),
+                    )),
+                    const SizedBox(width: 12),
+                    Expanded(child: _statCard(
+                      icon: Iconsax.calendar_tick,
+                      label: "Today's Appointments",
+                      value: _todayAppointments.toString(),
+                      color: const Color(0xFF8B5CF6),
+                    )),
+                    const SizedBox(width: 12),
+                    Expanded(child: _statCard(
+                      icon: Iconsax.timer_1,
+                      label: 'Waiting Now',
+                      value: _waitingNow.toString(),
+                      color: const Color(0xFFF59E0B),
+                    )),
+                    const SizedBox(width: 12),
+                    Expanded(child: _statCard(
+                      icon: Iconsax.tick_circle,
+                      label: 'Completed Today',
+                      value: _completedToday.toString(),
+                      color: const Color(0xFF10B981),
+                    )),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // PATIENT FLOW CHART - 38% of content
+              SizedBox(
+                height: contentHeight * 0.38,
+                child: _buildPatientFlowChart(),
+              ),
+              const SizedBox(height: 12),
+
+              // PATIENT QUEUE - 40% of content
+              SizedBox(
+                height: contentHeight * 0.40,
+                child: _buildPatientQueue(),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 12),
+
+        // RIGHT SECTION - 35%
+        Expanded(
+          flex: 35,
+          child: Column(
+            children: [
+              // UPCOMING APPOINTMENTS - 50% of content
+              SizedBox(
+                height: contentHeight * 0.50,
+                child: _buildUpcomingAppointments(),
+              ),
+              const SizedBox(height: 12),
+
+              // STATUS DISTRIBUTION - 48% of content
+              SizedBox(
+                height: contentHeight * 0.48,
+                child: _buildStatusDistribution(),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCompactLayout(double screenHeight) {
+    final contentHeight = screenHeight * 0.80 - 16;
+    
+    return Column(
+      children: [
+        // STATS CARDS - 22% of content
+        SizedBox(
+          height: contentHeight * 0.22,
+          child: Row(
+            children: [
+              Expanded(child: _statCard(
+                icon: Iconsax.user_octagon,
+                label: 'Total',
+                value: _totalPatients.toString(),
+                color: const Color(0xFF0EA5E9),
+              )),
+              const SizedBox(width: 8),
+              Expanded(child: _statCard(
+                icon: Iconsax.calendar_tick,
+                label: "Today",
+                value: _todayAppointments.toString(),
+                color: const Color(0xFF8B5CF6),
+              )),
+              const SizedBox(width: 8),
+              Expanded(child: _statCard(
+                icon: Iconsax.timer_1,
+                label: 'Waiting',
+                value: _waitingNow.toString(),
+                color: const Color(0xFFF59E0B),
+              )),
+              const SizedBox(width: 8),
+              Expanded(child: _statCard(
+                icon: Iconsax.tick_circle,
+                label: 'Done',
+                value: _completedToday.toString(),
+                color: const Color(0xFF10B981),
+              )),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        // PATIENT QUEUE - 76% of content
+        SizedBox(
+          height: contentHeight * 0.76,
+          child: _buildPatientQueue(),
+        ),
+      ],
+    );
+  }
+
+  Widget _statCard({
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withOpacity(0.1)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: color, size: 24),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            value,
+            style: GoogleFonts.poppins(
+              fontSize: 28,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF0F172A),
+              height: 1.0,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: const Color(0xFF64748B),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPatientFlowChart() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Iconsax.chart, color: Color(0xFF0EA5E9), size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'Patient Flow',
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF0F172A),
+                ),
+              ),
+              const Spacer(),
+              _chartLegend('Scheduled', const Color(0xFF0EA5E9)),
+              const SizedBox(width: 12),
+              _chartLegend('Completed', const Color(0xFF10B981)),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: _buildLineChart(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _chartLegend(String label, Color color) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(3),
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: const Color(0xFF64748B),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLineChart() {
+    // Generate data for last 7 days
+    final now = DateTime.now();
+    final dates = List.generate(7, (i) => now.subtract(Duration(days: 6 - i)));
+    
+    return LineChart(
+      LineChartData(
+        gridData: FlGridData(
+          show: true,
+          drawVerticalLine: false,
+          horizontalInterval: 5,
+          getDrawingHorizontalLine: (value) => FlLine(
+            color: const Color(0xFFE2E8F0),
+            strokeWidth: 1,
+          ),
+        ),
+        titlesData: FlTitlesData(
+          show: true,
+          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 30,
+              interval: 1,
+              getTitlesWidget: (value, meta) {
+                if (value.toInt() >= 0 && value.toInt() < dates.length) {
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 8.0),
+                    child: Text(
+                      DateFormat('EEE').format(dates[value.toInt()]),
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: const Color(0xFF94A3B8),
+                      ),
+                    ),
+                  );
+                }
+                return const SizedBox();
+              },
+            ),
+          ),
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 35,
+              interval: 5,
+              getTitlesWidget: (value, meta) {
+                return Text(
+                  value.toInt().toString(),
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xFF94A3B8),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+        borderData: FlBorderData(show: false),
+        minX: 0,
+        maxX: 6,
+        minY: 0,
+        maxY: 20,
+        lineBarsData: [
+          // Scheduled line
+          LineChartBarData(
+            spots: List.generate(7, (i) => FlSpot(i.toDouble(), (8 + (i * 1.5) % 10))),
+            isCurved: true,
+            color: const Color(0xFF0EA5E9),
+            barWidth: 3,
+            isStrokeCapRound: true,
+            dotData: FlDotData(
+              show: true,
+              getDotPainter: (spot, percent, barData, index) {
+                return FlDotCirclePainter(
+                  radius: 4,
+                  color: Colors.white,
+                  strokeWidth: 2,
+                  strokeColor: const Color(0xFF0EA5E9),
+                );
+              },
+            ),
+            belowBarData: BarAreaData(
+              show: true,
+              color: const Color(0xFF0EA5E9).withOpacity(0.1),
+            ),
+          ),
+          // Completed line
+          LineChartBarData(
+            spots: List.generate(7, (i) => FlSpot(i.toDouble(), (5 + (i * 1.2) % 8))),
+            isCurved: true,
+            color: const Color(0xFF10B981),
+            barWidth: 3,
+            isStrokeCapRound: true,
+            dotData: FlDotData(
+              show: true,
+              getDotPainter: (spot, percent, barData, index) {
+                return FlDotCirclePainter(
+                  radius: 4,
+                  color: Colors.white,
+                  strokeWidth: 2,
+                  strokeColor: const Color(0xFF10B981),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPatientQueue() {
+    final waitingPatients = _appointments.where((a) {
+      return a.status.toLowerCase() == 'scheduled' && 
+             _parseDate(a.date) == DateFormat('yyyy-MM-dd').format(DateTime.now());
+    }).take(6).toList();
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Iconsax.profile_2user, color: Color(0xFF0EA5E9), size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'Patient Queue',
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF0F172A),
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0EA5E9).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  '$_waitingNow Waiting',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF0EA5E9),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: waitingPatients.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Iconsax.user_tick,
+                          size: 48,
+                          color: Colors.grey.shade300,
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'No patients in queue',
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: const Color(0xFF94A3B8),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.separated(
+                    padding: EdgeInsets.zero,
+                    itemCount: waitingPatients.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 8),
+                    itemBuilder: (context, index) {
+                      final appointment = waitingPatients[index];
+                      return _queueItem(appointment, index + 1);
+                    },
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _queueItem(DashboardAppointments appointment, int position) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF0EA5E9), Color(0xFF0284C7)],
+              ),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Center(
+              child: Text(
+                '#$position',
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  appointment.patientName,
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF0F172A),
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  appointment.reason.isEmpty ? 'General Consultation' : appointment.reason,
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xFF64748B),
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                appointment.time,
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF0F172A),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF59E0B).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  'Waiting',
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFFF59E0B),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(width: 8),
+          IconButton(
+            onPressed: () => debugPrint('Start consultation for ${appointment.patientName}'),
+            icon: const Icon(Iconsax.play_circle, color: Color(0xFF10B981)),
+            iconSize: 24,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildUpcomingAppointments() {
+    final upcoming = _appointments.where((a) {
+      try {
+        final apptDate = DateFormat('MMM dd, yyyy').parse(a.date);
+        return apptDate.isAfter(DateTime.now()) && a.status.toLowerCase() == 'scheduled';
+      } catch (e) {
+        return false;
+      }
+    }).take(5).toList();
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Iconsax.calendar_2, color: Color(0xFF8B5CF6), size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'Upcoming',
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF0F172A),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: upcoming.isEmpty
+                ? Center(
+                    child: Text(
+                      'No upcoming appointments',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        color: const Color(0xFF94A3B8),
+                      ),
+                    ),
+                  )
+                : ListView.separated(
+                    padding: EdgeInsets.zero,
+                    itemCount: upcoming.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 10),
+                    itemBuilder: (context, index) {
+                      final appt = upcoming[index];
+                      return _upcomingItem(appt);
+                    },
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _upcomingItem(DashboardAppointments appointment) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: const Color(0xFF8B5CF6).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(
+              Iconsax.calendar_tick,
+              color: Color(0xFF8B5CF6),
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  appointment.patientName,
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF0F172A),
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  '${appointment.date} • ${appointment.time}',
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xFF64748B),
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusDistribution() {
+    final scheduled = _appointments.where((a) => a.status.toLowerCase() == 'scheduled').length;
+    final completed = _appointments.where((a) => a.status.toLowerCase() == 'completed').length;
+    final cancelled = _appointments.where((a) => a.status.toLowerCase() == 'cancelled').length;
+    final total = _appointments.length;
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Iconsax.status, color: Color(0xFF10B981), size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'Status Overview',
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF0F172A),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _statusBar(
+                  'Scheduled',
+                  scheduled,
+                  total,
+                  const Color(0xFF0EA5E9),
+                ),
+                _statusBar(
+                  'Completed',
+                  completed,
+                  total,
+                  const Color(0xFF10B981),
+                ),
+                _statusBar(
+                  'Cancelled',
+                  cancelled,
+                  total,
+                  const Color(0xFFEF4444),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _statusBar(String label, int count, int total, Color color) {
+    final percentage = total > 0 ? (count / total * 100).toInt() : 0;
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF0F172A),
+              ),
+            ),
+            Text(
+              '$count ($percentage%)',
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: color,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: LinearProgressIndicator(
+            value: total > 0 ? count / total : 0,
+            backgroundColor: color.withOpacity(0.1),
+            valueColor: AlwaysStoppedAnimation<Color>(color),
+            minHeight: 10,
+          ),
+        ),
+      ],
+    );
+  }
+}

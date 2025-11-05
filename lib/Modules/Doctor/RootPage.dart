@@ -10,7 +10,7 @@ import '../../Services/Authservices.dart';
 import '../../Utils/Colors.dart';
 import '../Common/ChatbotWidget.dart'; // Import the common chatbot widget
 import '../Common/LoginPage.dart';
-import 'DashboardPage.dart';
+import 'DashboardPageNew.dart'; // NEW ENTERPRISE DASHBOARD
 import 'PatientsPage.dart';
 import 'SchedulePage.dart';
 import 'SettingsPAge.dart';
@@ -66,7 +66,7 @@ class _DoctorRootPageState extends State<DoctorRootPage> {
       {
         'icon': Iconsax.category,
         'label': 'Dashboard',
-        'screen': const DoctorDashboardScreen(),
+        'screen': const EnterpriseDoctorDashboard(), // NEW DASHBOARD
       },
       {
         'icon': Iconsax.calendar,
