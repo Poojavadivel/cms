@@ -12,7 +12,7 @@ import '../Common/ChatbotWidget.dart'; // Import the common chatbot widget
 import '../Common/LoginPage.dart';
 import 'DashboardPageNew.dart'; // NEW ENTERPRISE DASHBOARD
 import 'PatientsPage.dart';
-import 'SchedulePage.dart';
+import 'SchedulePageNew.dart'; // NEW ENTERPRISE SCHEDULE
 import 'SettingsPAge.dart';
 
 // --- Main Doctor Root Page Widget ---
@@ -93,7 +93,7 @@ class _DoctorRootPageState extends State<DoctorRootPage> {
       {
         'icon': Iconsax.task,
         'label': 'My Schedule',
-        'screen': const DoctorScheduleScreen(),
+        'screen': const EnterpriseScheduleScreen(), // NEW ENTERPRISE SCHEDULE
       },
       {
         'icon': Iconsax.setting_2,
