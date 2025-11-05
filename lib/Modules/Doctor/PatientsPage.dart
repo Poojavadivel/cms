@@ -134,7 +134,11 @@ class _PatientsScreenState extends State<PatientsScreen> {
   int get _totalPages => (_filteredPatients.length / _itemsPerPage).ceil();
 
   void _showPatientDetails(PatientDetails patient) {
-    DoctorAppointmentPreview.show(context, patient);
+    DoctorAppointmentPreview.show(
+      context, 
+      patient,
+      showBillingTab: false, // Hide billing tab in Doctor module
+    );
   }
 
   String _formatDate(String? isoDate) {

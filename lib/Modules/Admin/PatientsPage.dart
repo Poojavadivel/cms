@@ -267,7 +267,11 @@ class _PatientsScreenState extends State<PatientsScreen> {
     final patient = list[index];
     final details = _detailsById[patient.id];
     if (details != null) {
-      DoctorAppointmentPreview.show(context, details);
+      DoctorAppointmentPreview.show(
+        context, 
+        details,
+        showBillingTab: true, // Show billing tab in Admin module
+      );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Patient details not available')),

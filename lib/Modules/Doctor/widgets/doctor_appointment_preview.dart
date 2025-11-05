@@ -11,13 +11,26 @@ import '../../../Services/api_constants.dart';
 
 class DoctorAppointmentPreview extends StatefulWidget {
   final PatientDetails patient;
-  const DoctorAppointmentPreview({super.key, required this.patient});
+  final bool showBillingTab;
+  
+  const DoctorAppointmentPreview({
+    super.key, 
+    required this.patient,
+    this.showBillingTab = true,
+  });
 
-  static Future<void> show(BuildContext context, PatientDetails patient) {
+  static Future<void> show(
+    BuildContext context, 
+    PatientDetails patient, {
+    bool showBillingTab = true,
+  }) {
     return showDialog(
       context: context,
       barrierDismissible: true,
-      builder: (_) => DoctorAppointmentPreview(patient: patient),
+      builder: (_) => DoctorAppointmentPreview(
+        patient: patient,
+        showBillingTab: showBillingTab,
+      ),
     );
   }
 
@@ -34,7 +47,11 @@ class _DoctorAppointmentPreviewState extends State<DoctorAppointmentPreview>
   @override
   void initState() {
     super.initState();
-    _tab = TabController(length: 5, vsync: this);
+    // Adjust tab count based on whether billing tab is shown
+    _tab = TabController(
+      length: widget.showBillingTab ? 5 : 4, 
+      vsync: this,
+    );
     baseText = GoogleFonts.inter();
   }
   static const Color kPrimary = Color(0xFFEF4444);
@@ -174,12 +191,13 @@ class _DoctorAppointmentPreviewState extends State<DoctorAppointmentPreview>
                                           fontSize: 13,
                                           fontWeight: FontWeight.w800,
                                         ),
-                                        tabs: const [
-                                          Tab(text: 'Profile'),
-                                          Tab(text: 'Medical History'),
-                                          Tab(text: 'Prescription'),
-                                          Tab(text: 'Lab Result'),
-                                          Tab(text: 'Billings'),
+                                        tabs: [
+                                          const Tab(text: 'Profile'),
+                                          const Tab(text: 'Medical History'),
+                                          const Tab(text: 'Prescription'),
+                                          const Tab(text: 'Lab Result'),
+                                          if (widget.showBillingTab)
+                                            const Tab(text: 'Billings'),
                                         ],
                                       ),
                                     ),
@@ -239,7 +257,8 @@ class _DoctorAppointmentPreviewState extends State<DoctorAppointmentPreview>
                                             ),
                                             _MedicationsTab(patientId: patient.patientId),
                                             _LabsTab(patientId: patient.patientId),
-                                            const _BillingsTab(),
+                                            if (widget.showBillingTab)
+                                              const _BillingsTab(),
                                           ],
                                         ),
                                       ),
