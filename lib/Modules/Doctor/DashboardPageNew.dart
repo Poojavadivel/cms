@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
+import 'package:shimmer/shimmer.dart';
 
 import '../../Models/Patients.dart';
 import '../../Models/dashboardmodels.dart';
@@ -118,17 +119,6 @@ class _EnterpriseDoctorDashboardState extends State<EnterpriseDoctorDashboard> {
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) {
-      return Container(
-        color: const Color(0xFFF8FAFC),
-        child: const Center(
-          child: CircularProgressIndicator(
-            color: Color(0xFF0EA5E9),
-          ),
-        ),
-      );
-    }
-
     return LayoutBuilder(
       builder: (context, constraints) {
         final screenHeight = constraints.maxHeight;
@@ -139,6 +129,42 @@ class _EnterpriseDoctorDashboardState extends State<EnterpriseDoctorDashboard> {
         final headerHeight = screenHeight * 0.12;
         final quickActionsHeight = screenHeight * 0.08;
         final contentHeight = screenHeight * 0.80;
+        
+        // Show skeleton loader while loading
+        if (_loading) {
+          return Container(
+            width: screenWidth,
+            height: screenHeight,
+            color: const Color(0xFFF8FAFC),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // HEADER SKELETON
+                SizedBox(
+                  height: headerHeight,
+                  child: _buildHeaderSkeleton(headerHeight),
+                ),
+
+                // QUICK ACTIONS SKELETON
+                SizedBox(
+                  height: quickActionsHeight,
+                  child: _buildQuickActionsSkeleton(),
+                ),
+
+                // MAIN CONTENT SKELETON
+                SizedBox(
+                  height: contentHeight,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                    child: isCompact 
+                      ? _buildCompactSkeleton(contentHeight)
+                      : _buildWideSkeleton(contentHeight),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
         
         return Container(
           width: screenWidth,
@@ -170,6 +196,184 @@ class _EnterpriseDoctorDashboardState extends State<EnterpriseDoctorDashboard> {
           ),
         );
       },
+    );
+  }
+
+  // SKELETON LOADERS
+  Widget _buildHeaderSkeleton(double height) {
+    return Container(
+      height: height,
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF1E40AF), Color(0xFF1E3A8A)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF1E40AF).withOpacity(0.25),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          // Icon placeholder
+          _shimmerBox(48, 48, 12),
+          const SizedBox(width: 16),
+          // Text placeholders
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _shimmerBox(200, 20, 4, color: Colors.white.withOpacity(0.3)),
+                const SizedBox(height: 4),
+                _shimmerBox(150, 12, 4, color: Colors.white.withOpacity(0.2)),
+              ],
+            ),
+          ),
+          _shimmerBox(80, 36, 8, color: Colors.white.withOpacity(0.2)),
+          const SizedBox(width: 12),
+          _shimmerBox(120, 36, 8, color: Colors.white.withOpacity(0.95)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickActionsSkeleton() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: List.generate(4, (index) => 
+          Expanded(
+            child: Container(
+              margin: EdgeInsets.only(left: index > 0 ? 10 : 0),
+              child: _shimmerBox(double.infinity, 48, 10),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWideSkeleton(double contentHeight) {
+    final adjustedHeight = contentHeight - 24;
+    final statsHeight = adjustedHeight * 0.19;
+    final chartHeight = adjustedHeight * 0.37;
+    final queueHeight = adjustedHeight * 0.39;
+    final upcomingHeight = adjustedHeight * 0.49;
+    final statusHeight = adjustedHeight * 0.47;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // LEFT SECTION
+        Expanded(
+          flex: 65,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Stats cards skeleton
+              SizedBox(
+                height: statsHeight,
+                child: Row(
+                  children: List.generate(4, (index) => 
+                    Expanded(
+                      child: Container(
+                        margin: EdgeInsets.only(left: index > 0 ? 10 : 0),
+                        child: _shimmerBox(double.infinity, statsHeight, 12),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              // Chart skeleton
+              _shimmerBox(double.infinity, chartHeight, 14),
+              const SizedBox(height: 10),
+              // Queue skeleton
+              _shimmerBox(double.infinity, queueHeight, 14),
+            ],
+          ),
+        ),
+        const SizedBox(width: 10),
+        // RIGHT SECTION
+        Expanded(
+          flex: 35,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _shimmerBox(double.infinity, upcomingHeight, 14),
+              const SizedBox(height: 10),
+              _shimmerBox(double.infinity, statusHeight, 14),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCompactSkeleton(double contentHeight) {
+    final adjustedHeight = contentHeight - 24;
+    final statsHeight = adjustedHeight * 0.21;
+    final queueHeight = adjustedHeight * 0.75;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Stats cards skeleton
+        SizedBox(
+          height: statsHeight,
+          child: Row(
+            children: List.generate(4, (index) => 
+              Expanded(
+                child: Container(
+                  margin: EdgeInsets.only(left: index > 0 ? 8 : 0),
+                  child: _shimmerBox(double.infinity, statsHeight, 12),
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        // Queue skeleton
+        _shimmerBox(double.infinity, queueHeight, 14),
+      ],
+    );
+  }
+
+  Widget _shimmerBox(double width, double height, double radius, {Color? color}) {
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: color ?? Colors.white,
+        borderRadius: BorderRadius.circular(radius),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Shimmer.fromColors(
+        baseColor: Colors.grey.shade300,
+        highlightColor: Colors.grey.shade100,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(radius),
+          ),
+        ),
+      ),
     );
   }
 
