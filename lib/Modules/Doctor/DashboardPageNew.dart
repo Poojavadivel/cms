@@ -116,33 +116,36 @@ class _EnterpriseDoctorDashboardState extends State<EnterpriseDoctorDashboard> {
         final screenWidth = constraints.maxWidth;
         final isCompact = screenWidth < 1200;
 
+        // FIXED CALCULATIONS - Account for all padding/margins
+        final headerHeight = screenHeight * 0.12;
+        final quickActionsHeight = screenHeight * 0.08;
+        final contentHeight = screenHeight * 0.80;
+        
         return Container(
           width: screenWidth,
           height: screenHeight,
           color: const Color(0xFFF8FAFC),
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              // HEADER - 12% of screen
+              // HEADER - Exact height with internal padding handled
               SizedBox(
-                height: screenHeight * 0.12,
-                child: _buildHeader(),
+                height: headerHeight,
+                child: _buildHeader(headerHeight),
               ),
 
-              // QUICK ACTIONS - 8% of screen
+              // QUICK ACTIONS - Exact height
               SizedBox(
-                height: screenHeight * 0.08,
-                child: _buildQuickActions(),
+                height: quickActionsHeight,
+                child: _buildQuickActions(quickActionsHeight),
               ),
 
-              // MAIN CONTENT - 80% of screen (no scrolling)
+              // MAIN CONTENT - Exact height minus internal padding
               SizedBox(
-                height: screenHeight * 0.80,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                  child: isCompact 
-                    ? _buildCompactLayout(screenHeight)
-                    : _buildWideLayout(screenHeight),
-                ),
+                height: contentHeight,
+                child: isCompact 
+                  ? _buildCompactLayout(contentHeight)
+                  : _buildWideLayout(contentHeight),
               ),
             ],
           ),
@@ -151,10 +154,12 @@ class _EnterpriseDoctorDashboardState extends State<EnterpriseDoctorDashboard> {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(double allocatedHeight) {
+    // Use all allocated height, account for margin in padding
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      height: allocatedHeight,
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 8), // Total 20px vertical
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [Color(0xFF0EA5E9), Color(0xFF0284C7)],
@@ -173,7 +178,9 @@ class _EnterpriseDoctorDashboardState extends State<EnterpriseDoctorDashboard> {
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(12),
+            width: 48,
+            height: 48,
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.2),
               borderRadius: BorderRadius.circular(12),
@@ -181,7 +188,7 @@ class _EnterpriseDoctorDashboardState extends State<EnterpriseDoctorDashboard> {
             child: const Icon(
               Iconsax.user_octagon,
               color: Colors.white,
-              size: 28,
+              size: 24,
             ),
           ),
           const SizedBox(width: 16),
@@ -189,27 +196,34 @@ class _EnterpriseDoctorDashboardState extends State<EnterpriseDoctorDashboard> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   '${_getGreeting()}, Dr. $_doctorName',
                   style: GoogleFonts.poppins(
-                    fontSize: 22,
+                    fontSize: 20,
                     fontWeight: FontWeight.w700,
                     color: Colors.white,
                     height: 1.2,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
+                const SizedBox(height: 2),
                 Text(
                   'You have $_waitingNow patients waiting',
                   style: GoogleFonts.inter(
-                    fontSize: 13,
+                    fontSize: 12,
                     fontWeight: FontWeight.w500,
                     color: Colors.white.withOpacity(0.9),
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
           ),
+          const SizedBox(width: 12),
           // Period Selector
           Container(
             padding: const EdgeInsets.all(4),
@@ -218,6 +232,7 @@ class _EnterpriseDoctorDashboardState extends State<EnterpriseDoctorDashboard> {
               borderRadius: BorderRadius.circular(10),
             ),
             child: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 _periodButton('Today'),
                 _periodButton('Week'),
@@ -227,23 +242,24 @@ class _EnterpriseDoctorDashboardState extends State<EnterpriseDoctorDashboard> {
           ),
           const SizedBox(width: 12),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(10),
             ),
             child: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 const Icon(
                   Iconsax.calendar_1,
                   color: Color(0xFF0EA5E9),
-                  size: 16,
+                  size: 14,
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 6),
                 Text(
                   DateFormat('MMM dd, yyyy').format(DateTime.now()),
                   style: GoogleFonts.inter(
-                    fontSize: 13,
+                    fontSize: 11,
                     fontWeight: FontWeight.w600,
                     color: const Color(0xFF0F172A),
                   ),
@@ -261,7 +277,7 @@ class _EnterpriseDoctorDashboardState extends State<EnterpriseDoctorDashboard> {
     return GestureDetector(
       onTap: () => setState(() => _selectedPeriod = label),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           color: isSelected ? Colors.white : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
@@ -269,7 +285,7 @@ class _EnterpriseDoctorDashboardState extends State<EnterpriseDoctorDashboard> {
         child: Text(
           label,
           style: GoogleFonts.inter(
-            fontSize: 12,
+            fontSize: 11,
             fontWeight: FontWeight.w600,
             color: isSelected ? const Color(0xFF0EA5E9) : Colors.white,
           ),
@@ -278,10 +294,11 @@ class _EnterpriseDoctorDashboardState extends State<EnterpriseDoctorDashboard> {
     );
   }
 
-  Widget _buildQuickActions() {
+  Widget _buildQuickActions(double allocatedHeight) {
     return Container(
+      height: allocatedHeight,
       margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
           Expanded(
@@ -292,7 +309,7 @@ class _EnterpriseDoctorDashboardState extends State<EnterpriseDoctorDashboard> {
               onTap: () => debugPrint('Start Consultation'),
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 10),
           Expanded(
             child: _actionButton(
               icon: Iconsax.danger,
@@ -301,7 +318,7 @@ class _EnterpriseDoctorDashboardState extends State<EnterpriseDoctorDashboard> {
               onTap: () => debugPrint('Emergency'),
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 10),
           Expanded(
             child: _actionButton(
               icon: Iconsax.note_text,
@@ -310,7 +327,7 @@ class _EnterpriseDoctorDashboardState extends State<EnterpriseDoctorDashboard> {
               onTap: () => debugPrint('Quick Notes'),
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 10),
           Expanded(
             child: _actionButton(
               icon: Iconsax.message_text,
@@ -332,35 +349,37 @@ class _EnterpriseDoctorDashboardState extends State<EnterpriseDoctorDashboard> {
   }) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(10),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(10),
           border: Border.all(color: color.withOpacity(0.2), width: 1.5),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.04),
-              blurRadius: 8,
+              blurRadius: 6,
               offset: const Offset(0, 2),
             ),
           ],
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: color, size: 20),
-            const SizedBox(width: 8),
+            Icon(icon, color: color, size: 18),
+            const SizedBox(width: 6),
             Flexible(
               child: Text(
                 label,
                 style: GoogleFonts.inter(
-                  fontSize: 13,
+                  fontSize: 12,
                   fontWeight: FontWeight.w600,
                   color: const Color(0xFF0F172A),
                 ),
                 overflow: TextOverflow.ellipsis,
+                maxLines: 1,
               ),
             ),
           ],
@@ -369,143 +388,154 @@ class _EnterpriseDoctorDashboardState extends State<EnterpriseDoctorDashboard> {
     );
   }
 
-  Widget _buildWideLayout(double screenHeight) {
-    final contentHeight = screenHeight * 0.80 - 16; // Subtract padding
+  Widget _buildWideLayout(double allocatedHeight) {
+    // Account for padding (16 left + 16 right, 8 top + 16 bottom = 24 vertical)
+    final contentHeight = allocatedHeight - 24;
     
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // LEFT SECTION - 65%
-        Expanded(
-          flex: 65,
-          child: Column(
-            children: [
-              // STATS CARDS - 20% of content
-              SizedBox(
-                height: contentHeight * 0.20,
-                child: Row(
-                  children: [
-                    Expanded(child: _statCard(
-                      icon: Iconsax.user_octagon,
-                      label: 'Total Patients',
-                      value: _totalPatients.toString(),
-                      color: const Color(0xFF0EA5E9),
-                    )),
-                    const SizedBox(width: 12),
-                    Expanded(child: _statCard(
-                      icon: Iconsax.calendar_tick,
-                      label: "Today's Appointments",
-                      value: _todayAppointments.toString(),
-                      color: const Color(0xFF8B5CF6),
-                    )),
-                    const SizedBox(width: 12),
-                    Expanded(child: _statCard(
-                      icon: Iconsax.timer_1,
-                      label: 'Waiting Now',
-                      value: _waitingNow.toString(),
-                      color: const Color(0xFFF59E0B),
-                    )),
-                    const SizedBox(width: 12),
-                    Expanded(child: _statCard(
-                      icon: Iconsax.tick_circle,
-                      label: 'Completed Today',
-                      value: _completedToday.toString(),
-                      color: const Color(0xFF10B981),
-                    )),
-                  ],
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // LEFT SECTION - 65%
+          Expanded(
+            flex: 65,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // STATS CARDS - Fixed height
+                SizedBox(
+                  height: contentHeight * 0.20,
+                  child: Row(
+                    children: [
+                      Expanded(child: _statCard(
+                        icon: Iconsax.user_octagon,
+                        label: 'Total Patients',
+                        value: _totalPatients.toString(),
+                        color: const Color(0xFF0EA5E9),
+                      )),
+                      const SizedBox(width: 10),
+                      Expanded(child: _statCard(
+                        icon: Iconsax.calendar_tick,
+                        label: "Today's Appointments",
+                        value: _todayAppointments.toString(),
+                        color: const Color(0xFF8B5CF6),
+                      )),
+                      const SizedBox(width: 10),
+                      Expanded(child: _statCard(
+                        icon: Iconsax.timer_1,
+                        label: 'Waiting Now',
+                        value: _waitingNow.toString(),
+                        color: const Color(0xFFF59E0B),
+                      )),
+                      const SizedBox(width: 10),
+                      Expanded(child: _statCard(
+                        icon: Iconsax.tick_circle,
+                        label: 'Completed Today',
+                        value: _completedToday.toString(),
+                        color: const Color(0xFF10B981),
+                      )),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
+                const SizedBox(height: 10),
 
-              // PATIENT FLOW CHART - 38% of content
-              SizedBox(
-                height: contentHeight * 0.38,
-                child: _buildPatientFlowChart(),
-              ),
-              const SizedBox(height: 12),
+                // PATIENT FLOW CHART - Fixed height
+                SizedBox(
+                  height: contentHeight * 0.38,
+                  child: _buildPatientFlowChart(),
+                ),
+                const SizedBox(height: 10),
 
-              // PATIENT QUEUE - 40% of content
-              SizedBox(
-                height: contentHeight * 0.40,
-                child: _buildPatientQueue(),
-              ),
-            ],
+                // PATIENT QUEUE - Fixed height
+                SizedBox(
+                  height: contentHeight * 0.40,
+                  child: _buildPatientQueue(),
+                ),
+              ],
+            ),
           ),
-        ),
-        const SizedBox(width: 12),
+          const SizedBox(width: 10),
 
-        // RIGHT SECTION - 35%
-        Expanded(
-          flex: 35,
-          child: Column(
-            children: [
-              // UPCOMING APPOINTMENTS - 50% of content
-              SizedBox(
-                height: contentHeight * 0.50,
-                child: _buildUpcomingAppointments(),
-              ),
-              const SizedBox(height: 12),
+          // RIGHT SECTION - 35%
+          Expanded(
+            flex: 35,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // UPCOMING APPOINTMENTS - Fixed height
+                SizedBox(
+                  height: contentHeight * 0.50,
+                  child: _buildUpcomingAppointments(),
+                ),
+                const SizedBox(height: 10),
 
-              // STATUS DISTRIBUTION - 48% of content
-              SizedBox(
-                height: contentHeight * 0.48,
-                child: _buildStatusDistribution(),
-              ),
-            ],
+                // STATUS DISTRIBUTION - Fixed height
+                SizedBox(
+                  height: contentHeight * 0.48,
+                  child: _buildStatusDistribution(),
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
-  Widget _buildCompactLayout(double screenHeight) {
-    final contentHeight = screenHeight * 0.80 - 16;
+  Widget _buildCompactLayout(double allocatedHeight) {
+    // Account for padding
+    final contentHeight = allocatedHeight - 24;
     
-    return Column(
-      children: [
-        // STATS CARDS - 22% of content
-        SizedBox(
-          height: contentHeight * 0.22,
-          child: Row(
-            children: [
-              Expanded(child: _statCard(
-                icon: Iconsax.user_octagon,
-                label: 'Total',
-                value: _totalPatients.toString(),
-                color: const Color(0xFF0EA5E9),
-              )),
-              const SizedBox(width: 8),
-              Expanded(child: _statCard(
-                icon: Iconsax.calendar_tick,
-                label: "Today",
-                value: _todayAppointments.toString(),
-                color: const Color(0xFF8B5CF6),
-              )),
-              const SizedBox(width: 8),
-              Expanded(child: _statCard(
-                icon: Iconsax.timer_1,
-                label: 'Waiting',
-                value: _waitingNow.toString(),
-                color: const Color(0xFFF59E0B),
-              )),
-              const SizedBox(width: 8),
-              Expanded(child: _statCard(
-                icon: Iconsax.tick_circle,
-                label: 'Done',
-                value: _completedToday.toString(),
-                color: const Color(0xFF10B981),
-              )),
-            ],
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // STATS CARDS - Fixed height
+          SizedBox(
+            height: contentHeight * 0.22,
+            child: Row(
+              children: [
+                Expanded(child: _statCard(
+                  icon: Iconsax.user_octagon,
+                  label: 'Total',
+                  value: _totalPatients.toString(),
+                  color: const Color(0xFF0EA5E9),
+                )),
+                const SizedBox(width: 8),
+                Expanded(child: _statCard(
+                  icon: Iconsax.calendar_tick,
+                  label: "Today",
+                  value: _todayAppointments.toString(),
+                  color: const Color(0xFF8B5CF6),
+                )),
+                const SizedBox(width: 8),
+                Expanded(child: _statCard(
+                  icon: Iconsax.timer_1,
+                  label: 'Waiting',
+                  value: _waitingNow.toString(),
+                  color: const Color(0xFFF59E0B),
+                )),
+                const SizedBox(width: 8),
+                Expanded(child: _statCard(
+                  icon: Iconsax.tick_circle,
+                  label: 'Done',
+                  value: _completedToday.toString(),
+                  color: const Color(0xFF10B981),
+                )),
+              ],
+            ),
           ),
-        ),
-        const SizedBox(height: 12),
+          const SizedBox(height: 10),
 
-        // PATIENT QUEUE - 76% of content
-        SizedBox(
-          height: contentHeight * 0.76,
-          child: _buildPatientQueue(),
-        ),
-      ],
+          // PATIENT QUEUE - Fixed height
+          SizedBox(
+            height: contentHeight * 0.76,
+            child: _buildPatientQueue(),
+          ),
+        ],
+      ),
     );
   }
 
@@ -516,50 +546,56 @@ class _EnterpriseDoctorDashboardState extends State<EnterpriseDoctorDashboard> {
     required Color color,
   }) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: color.withOpacity(0.1)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            padding: const EdgeInsets.all(12),
+            width: 40,
+            height: 40,
+            padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: color.withOpacity(0.1),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, color: color, size: 24),
+            child: Icon(icon, color: color, size: 20),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           Text(
             value,
             style: GoogleFonts.poppins(
-              fontSize: 28,
+              fontSize: 24,
               fontWeight: FontWeight.w700,
               color: const Color(0xFF0F172A),
               height: 1.0,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 4),
           Text(
             label,
             textAlign: TextAlign.center,
-            maxLines: 1,
+            maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: GoogleFonts.inter(
-              fontSize: 12,
+              fontSize: 11,
               fontWeight: FontWeight.w500,
               color: const Color(0xFF64748B),
+              height: 1.2,
             ),
           ),
         ],
@@ -569,40 +605,41 @@ class _EnterpriseDoctorDashboardState extends State<EnterpriseDoctorDashboard> {
 
   Widget _buildPatientFlowChart() {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             children: [
-              const Icon(Iconsax.chart, color: Color(0xFF0EA5E9), size: 20),
+              const Icon(Iconsax.chart, color: Color(0xFF0EA5E9), size: 18),
               const SizedBox(width: 8),
               Text(
                 'Patient Flow',
                 style: GoogleFonts.poppins(
-                  fontSize: 16,
+                  fontSize: 15,
                   fontWeight: FontWeight.w600,
                   color: const Color(0xFF0F172A),
                 ),
               ),
               const Spacer(),
               _chartLegend('Scheduled', const Color(0xFF0EA5E9)),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
               _chartLegend('Completed', const Color(0xFF10B981)),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           Expanded(
             child: _buildLineChart(),
           ),
@@ -754,47 +791,48 @@ class _EnterpriseDoctorDashboardState extends State<EnterpriseDoctorDashboard> {
     final waitingPatients = _appointments.where((a) {
       return a.status.toLowerCase() == 'scheduled' && 
              _parseDate(a.date) == DateFormat('yyyy-MM-dd').format(DateTime.now());
-    }).take(6).toList();
+    }).take(5).toList(); // Limit to 5 to prevent overflow
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             children: [
-              const Icon(Iconsax.profile_2user, color: Color(0xFF0EA5E9), size: 20),
+              const Icon(Iconsax.profile_2user, color: Color(0xFF0EA5E9), size: 18),
               const SizedBox(width: 8),
               Text(
                 'Patient Queue',
                 style: GoogleFonts.poppins(
-                  fontSize: 16,
+                  fontSize: 15,
                   fontWeight: FontWeight.w600,
                   color: const Color(0xFF0F172A),
                 ),
               ),
               const Spacer(),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: const Color(0xFF0EA5E9).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
                   '$_waitingNow Waiting',
                   style: GoogleFonts.inter(
-                    fontSize: 12,
+                    fontSize: 11,
                     fontWeight: FontWeight.w600,
                     color: const Color(0xFF0EA5E9),
                   ),
@@ -802,23 +840,24 @@ class _EnterpriseDoctorDashboardState extends State<EnterpriseDoctorDashboard> {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           Expanded(
             child: waitingPatients.isEmpty
                 ? Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
                           Iconsax.user_tick,
-                          size: 48,
+                          size: 40,
                           color: Colors.grey.shade300,
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 10),
                         Text(
                           'No patients in queue',
                           style: GoogleFonts.inter(
-                            fontSize: 14,
+                            fontSize: 13,
                             fontWeight: FontWeight.w500,
                             color: const Color(0xFF94A3B8),
                           ),
@@ -843,76 +882,80 @@ class _EnterpriseDoctorDashboardState extends State<EnterpriseDoctorDashboard> {
 
   Widget _queueItem(DashboardAppointments appointment, int position) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
       child: Row(
         children: [
           Container(
-            width: 36,
-            height: 36,
+            width: 32,
+            height: 32,
             decoration: BoxDecoration(
               gradient: const LinearGradient(
                 colors: [Color(0xFF0EA5E9), Color(0xFF0284C7)],
               ),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(8),
             ),
             child: Center(
               child: Text(
                 '#$position',
                 style: GoogleFonts.poppins(
-                  fontSize: 14,
+                  fontSize: 12,
                   fontWeight: FontWeight.w700,
                   color: Colors.white,
                 ),
               ),
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   appointment.patientName,
                   style: GoogleFonts.poppins(
-                    fontSize: 14,
+                    fontSize: 13,
                     fontWeight: FontWeight.w600,
                     color: const Color(0xFF0F172A),
                   ),
                   overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 2),
                 Text(
                   appointment.reason.isEmpty ? 'General Consultation' : appointment.reason,
                   style: GoogleFonts.inter(
-                    fontSize: 12,
+                    fontSize: 11,
                     fontWeight: FontWeight.w500,
                     color: const Color(0xFF64748B),
                   ),
                   overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 8),
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisSize: MainAxisSize.min,
             children: [
               Text(
                 appointment.time,
                 style: GoogleFonts.inter(
-                  fontSize: 13,
+                  fontSize: 12,
                   fontWeight: FontWeight.w600,
                   color: const Color(0xFF0F172A),
                 ),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 2),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
                   color: const Color(0xFFF59E0B).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(6),
@@ -920,7 +963,7 @@ class _EnterpriseDoctorDashboardState extends State<EnterpriseDoctorDashboard> {
                 child: Text(
                   'Waiting',
                   style: GoogleFonts.inter(
-                    fontSize: 11,
+                    fontSize: 10,
                     fontWeight: FontWeight.w600,
                     color: const Color(0xFFF59E0B),
                   ),
@@ -928,13 +971,13 @@ class _EnterpriseDoctorDashboardState extends State<EnterpriseDoctorDashboard> {
               ),
             ],
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 6),
           IconButton(
             onPressed: () => debugPrint('Start consultation for ${appointment.patientName}'),
             icon: const Icon(Iconsax.play_circle, color: Color(0xFF10B981)),
-            iconSize: 24,
+            iconSize: 20,
             padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(),
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
           ),
         ],
       ),
@@ -949,46 +992,47 @@ class _EnterpriseDoctorDashboardState extends State<EnterpriseDoctorDashboard> {
       } catch (e) {
         return false;
       }
-    }).take(5).toList();
+    }).take(4).toList(); // Limit to prevent overflow
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             children: [
-              const Icon(Iconsax.calendar_2, color: Color(0xFF8B5CF6), size: 20),
+              const Icon(Iconsax.calendar_2, color: Color(0xFF8B5CF6), size: 18),
               const SizedBox(width: 8),
               Text(
                 'Upcoming',
                 style: GoogleFonts.poppins(
-                  fontSize: 16,
+                  fontSize: 15,
                   fontWeight: FontWeight.w600,
                   color: const Color(0xFF0F172A),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           Expanded(
             child: upcoming.isEmpty
                 ? Center(
                     child: Text(
                       'No upcoming appointments',
                       style: GoogleFonts.inter(
-                        fontSize: 13,
+                        fontSize: 12,
                         color: const Color(0xFF94A3B8),
                       ),
                     ),
@@ -996,7 +1040,7 @@ class _EnterpriseDoctorDashboardState extends State<EnterpriseDoctorDashboard> {
                 : ListView.separated(
                     padding: EdgeInsets.zero,
                     itemCount: upcoming.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 10),
+                    separatorBuilder: (_, __) => const SizedBox(height: 8),
                     itemBuilder: (context, index) {
                       final appt = upcoming[index];
                       return _upcomingItem(appt);
@@ -1010,7 +1054,7 @@ class _EnterpriseDoctorDashboardState extends State<EnterpriseDoctorDashboard> {
 
   Widget _upcomingItem(DashboardAppointments appointment) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: const Color(0xFFF8FAFC),
         borderRadius: BorderRadius.circular(10),
@@ -1019,41 +1063,44 @@ class _EnterpriseDoctorDashboardState extends State<EnterpriseDoctorDashboard> {
       child: Row(
         children: [
           Container(
-            width: 44,
-            height: 44,
+            width: 36,
+            height: 36,
             decoration: BoxDecoration(
               color: const Color(0xFF8B5CF6).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(8),
             ),
             child: const Icon(
               Iconsax.calendar_tick,
               color: Color(0xFF8B5CF6),
-              size: 20,
+              size: 18,
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   appointment.patientName,
                   style: GoogleFonts.poppins(
-                    fontSize: 13,
+                    fontSize: 12,
                     fontWeight: FontWeight.w600,
                     color: const Color(0xFF0F172A),
                   ),
                   overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
                 ),
-                const SizedBox(height: 3),
+                const SizedBox(height: 2),
                 Text(
                   '${appointment.date} • ${appointment.time}',
                   style: GoogleFonts.inter(
-                    fontSize: 11,
+                    fontSize: 10,
                     fontWeight: FontWeight.w500,
                     color: const Color(0xFF64748B),
                   ),
                   overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
                 ),
               ],
             ),
@@ -1070,39 +1117,41 @@ class _EnterpriseDoctorDashboardState extends State<EnterpriseDoctorDashboard> {
     final total = _appointments.length;
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             children: [
-              const Icon(Iconsax.status, color: Color(0xFF10B981), size: 20),
+              const Icon(Iconsax.status, color: Color(0xFF10B981), size: 18),
               const SizedBox(width: 8),
               Text(
                 'Status Overview',
                 style: GoogleFonts.poppins(
-                  fontSize: 16,
+                  fontSize: 15,
                   fontWeight: FontWeight.w600,
                   color: const Color(0xFF0F172A),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
           Expanded(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 _statusBar(
                   'Scheduled',
@@ -1110,12 +1159,14 @@ class _EnterpriseDoctorDashboardState extends State<EnterpriseDoctorDashboard> {
                   total,
                   const Color(0xFF0EA5E9),
                 ),
+                const SizedBox(height: 12),
                 _statusBar(
                   'Completed',
                   completed,
                   total,
                   const Color(0xFF10B981),
                 ),
+                const SizedBox(height: 12),
                 _statusBar(
                   'Cancelled',
                   cancelled,
@@ -1135,6 +1186,7 @@ class _EnterpriseDoctorDashboardState extends State<EnterpriseDoctorDashboard> {
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1142,7 +1194,7 @@ class _EnterpriseDoctorDashboardState extends State<EnterpriseDoctorDashboard> {
             Text(
               label,
               style: GoogleFonts.inter(
-                fontSize: 13,
+                fontSize: 12,
                 fontWeight: FontWeight.w600,
                 color: const Color(0xFF0F172A),
               ),
@@ -1150,21 +1202,21 @@ class _EnterpriseDoctorDashboardState extends State<EnterpriseDoctorDashboard> {
             Text(
               '$count ($percentage%)',
               style: GoogleFonts.inter(
-                fontSize: 13,
+                fontSize: 12,
                 fontWeight: FontWeight.w600,
                 color: color,
               ),
             ),
           ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 6),
         ClipRRect(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(6),
           child: LinearProgressIndicator(
             value: total > 0 ? count / total : 0,
             backgroundColor: color.withOpacity(0.1),
             valueColor: AlwaysStoppedAnimation<Color>(color),
-            minHeight: 10,
+            minHeight: 8,
           ),
         ),
       ],
