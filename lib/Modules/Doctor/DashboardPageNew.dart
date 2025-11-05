@@ -61,32 +61,50 @@ class _EnterpriseDoctorDashboardState extends State<EnterpriseDoctorDashboard> {
     }
   }
 
-  // METRICS CALCULATIONS
+  // METRICS CALCULATIONS - ALL REAL DATA FROM API
   int get _totalPatients => _patients.length;
 
   int get _todayAppointments {
     final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
-    return _appointments.where((a) => _parseDate(a.date) == today).length;
+    return _appointments.where((a) {
+      final apptDate = _parseDate(a.date);
+      return apptDate == today;
+    }).length;
   }
 
   int get _waitingNow {
+    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
     return _appointments.where((a) {
-      return a.status.toLowerCase() == 'scheduled' && _parseDate(a.date) == DateFormat('yyyy-MM-dd').format(DateTime.now());
+      final apptDate = _parseDate(a.date);
+      final isToday = apptDate == today;
+      final isScheduled = a.status.toLowerCase() == 'scheduled';
+      return isToday && isScheduled;
     }).length;
   }
 
   int get _completedToday {
     final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
     return _appointments.where((a) {
-      return _parseDate(a.date) == today && a.status.toLowerCase() == 'completed';
+      final apptDate = _parseDate(a.date);
+      final isToday = apptDate == today;
+      final isCompleted = a.status.toLowerCase() == 'completed';
+      return isToday && isCompleted;
     }).length;
   }
 
   String _parseDate(String date) {
     try {
+      // Try "MMM dd, yyyy" format first
       return DateFormat('yyyy-MM-dd').format(DateFormat('MMM dd, yyyy').parse(date));
     } catch (e) {
-      return '';
+      try {
+        // Try ISO format (2025-11-03T12:35:00.000Z)
+        final parsed = DateTime.parse(date);
+        return DateFormat('yyyy-MM-dd').format(parsed);
+      } catch (e2) {
+        debugPrint('❌ Failed to parse date: $date, Error: $e2');
+        return '';
+      }
     }
   }
 
@@ -161,17 +179,21 @@ class _EnterpriseDoctorDashboardState extends State<EnterpriseDoctorDashboard> {
       margin: const EdgeInsets.fromLTRB(16, 12, 16, 8), // Total 20px vertical
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       decoration: BoxDecoration(
+        // ENTERPRISE-GRADE: Deep professional blue gradient
         gradient: const LinearGradient(
-          colors: [Color(0xFF0EA5E9), Color(0xFF0284C7)],
+          colors: [
+            Color(0xFF1E40AF), // Blue-700 - Deep professional
+            Color(0xFF1E3A8A), // Blue-800 - Darker enterprise blue
+          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12), // Reduced for more professional look
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0EA5E9).withOpacity(0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
+            color: const Color(0xFF1E40AF).withOpacity(0.25),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
