@@ -198,27 +198,32 @@ class _EnterpriseDoctorDashboardState extends State<EnterpriseDoctorDashboard> {
               mainAxisAlignment: MainAxisAlignment.center,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  '${_getGreeting()}, Dr. $_doctorName',
-                  style: GoogleFonts.poppins(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                    height: 1.2,
+                Flexible(
+                  child: Text(
+                    '${_getGreeting()}, Dr. $_doctorName',
+                    style: GoogleFonts.poppins(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                      height: 1.0, // Reduced from 1.2
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  'You have $_waitingNow patients waiting',
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.white.withOpacity(0.9),
+                const SizedBox(height: 1), // Reduced from 2
+                Flexible(
+                  child: Text(
+                    'You have $_waitingNow patients waiting',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white.withOpacity(0.9),
+                      height: 1.0, // Added explicit height
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
