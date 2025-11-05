@@ -819,10 +819,35 @@ class _EnterpriseDoctorDashboardState extends State<EnterpriseDoctorDashboard> {
   }
 
   Widget _buildPatientQueue() {
+    // Get today's date in yyyy-MM-dd format
+    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    
+    // Filter appointments for today with 'scheduled' status
     final waitingPatients = _appointments.where((a) {
-      return a.status.toLowerCase() == 'scheduled' && 
-             _parseDate(a.date) == DateFormat('yyyy-MM-dd').format(DateTime.now());
-    }).take(5).toList(); // Limit to 5 to prevent overflow
+      final apptDateStr = _parseDate(a.date);
+      final isToday = apptDateStr == today;
+      final isScheduled = a.status.toLowerCase() == 'scheduled';
+      
+      debugPrint('🔍 Checking appointment: ${a.patientName}, Date: $apptDateStr, Today: $today, Match: $isToday, Status: ${a.status}, Scheduled: $isScheduled');
+      
+      return isToday && isScheduled;
+    }).toList();
+    
+    // Sort by time (earliest first)
+    waitingPatients.sort((a, b) {
+      try {
+        final timeA = _parseTime(a.time);
+        final timeB = _parseTime(b.time);
+        return timeA.compareTo(timeB);
+      } catch (e) {
+        return 0;
+      }
+    });
+    
+    // Limit to 5 to prevent overflow
+    final limitedQueue = waitingPatients.take(5).toList();
+    
+    debugPrint('📊 Patient Queue: Found ${waitingPatients.length} appointments today, showing ${limitedQueue.length}');
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -861,7 +886,7 @@ class _EnterpriseDoctorDashboardState extends State<EnterpriseDoctorDashboard> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  '$_waitingNow Waiting',
+                  '${limitedQueue.length} Waiting',
                   style: GoogleFonts.inter(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
@@ -873,7 +898,7 @@ class _EnterpriseDoctorDashboardState extends State<EnterpriseDoctorDashboard> {
           ),
           const SizedBox(height: 12),
           Expanded(
-            child: waitingPatients.isEmpty
+            child: limitedQueue.isEmpty
                 ? Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -893,15 +918,24 @@ class _EnterpriseDoctorDashboardState extends State<EnterpriseDoctorDashboard> {
                             color: const Color(0xFF94A3B8),
                           ),
                         ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'All caught up! 🎉',
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w400,
+                            color: const Color(0xFF94A3B8),
+                          ),
+                        ),
                       ],
                     ),
                   )
                 : ListView.separated(
                     padding: EdgeInsets.zero,
-                    itemCount: waitingPatients.length,
+                    itemCount: limitedQueue.length,
                     separatorBuilder: (_, __) => const SizedBox(height: 8),
                     itemBuilder: (context, index) {
-                      final appointment = waitingPatients[index];
+                      final appointment = limitedQueue[index];
                       return _queueItem(appointment, index + 1);
                     },
                   ),
@@ -909,6 +943,11 @@ class _EnterpriseDoctorDashboardState extends State<EnterpriseDoctorDashboard> {
         ],
       ),
     );
+  }
+  
+  String _parseTime(String timeStr) {
+    // Return time as-is for sorting (assumes HH:mm format like "10:30" or "14:00")
+    return timeStr;
   }
 
   Widget _queueItem(DashboardAppointments appointment, int position) {
@@ -1016,14 +1055,42 @@ class _EnterpriseDoctorDashboardState extends State<EnterpriseDoctorDashboard> {
   }
 
   Widget _buildUpcomingAppointments() {
+    // Filter for future scheduled appointments
+    final now = DateTime.now();
     final upcoming = _appointments.where((a) {
       try {
-        final apptDate = DateFormat('MMM dd, yyyy').parse(a.date);
-        return apptDate.isAfter(DateTime.now()) && a.status.toLowerCase() == 'scheduled';
+        // Parse date - handle both "MMM dd, yyyy" and ISO format
+        DateTime apptDate;
+        try {
+          apptDate = DateFormat('MMM dd, yyyy').parse(a.date);
+        } catch (e) {
+          // Try ISO format or other formats
+          apptDate = DateTime.parse(a.date);
+        }
+        
+        // Check if appointment is in the future and scheduled
+        final isFuture = apptDate.isAfter(now);
+        final isScheduled = a.status.toLowerCase() == 'scheduled';
+        
+        return isFuture && isScheduled;
       } catch (e) {
+        debugPrint('Error parsing appointment date: ${a.date}, error: $e');
         return false;
       }
-    }).take(4).toList(); // Limit to prevent overflow
+    }).toList();
+    
+    // Sort by date (earliest first) and limit to 4
+    upcoming.sort((a, b) {
+      try {
+        final dateA = _parseAppointmentDate(a.date);
+        final dateB = _parseAppointmentDate(b.date);
+        return dateA.compareTo(dateB);
+      } catch (e) {
+        return 0;
+      }
+    });
+    
+    final limitedUpcoming = upcoming.take(4).toList();
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -1054,26 +1121,54 @@ class _EnterpriseDoctorDashboardState extends State<EnterpriseDoctorDashboard> {
                   color: const Color(0xFF0F172A),
                 ),
               ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF8B5CF6).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '${limitedUpcoming.length}',
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF8B5CF6),
+                  ),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 12),
           Expanded(
-            child: upcoming.isEmpty
+            child: limitedUpcoming.isEmpty
                 ? Center(
-                    child: Text(
-                      'No upcoming appointments',
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        color: const Color(0xFF94A3B8),
-                      ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Iconsax.calendar,
+                          size: 40,
+                          color: Colors.grey.shade300,
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          'No upcoming appointments',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: const Color(0xFF94A3B8),
+                          ),
+                        ),
+                      ],
                     ),
                   )
                 : ListView.separated(
                     padding: EdgeInsets.zero,
-                    itemCount: upcoming.length,
+                    itemCount: limitedUpcoming.length,
                     separatorBuilder: (_, __) => const SizedBox(height: 8),
                     itemBuilder: (context, index) {
-                      final appt = upcoming[index];
+                      final appt = limitedUpcoming[index];
                       return _upcomingItem(appt);
                     },
                   ),
@@ -1081,6 +1176,14 @@ class _EnterpriseDoctorDashboardState extends State<EnterpriseDoctorDashboard> {
         ],
       ),
     );
+  }
+  
+  DateTime _parseAppointmentDate(String dateStr) {
+    try {
+      return DateFormat('MMM dd, yyyy').parse(dateStr);
+    } catch (e) {
+      return DateTime.parse(dateStr);
+    }
   }
 
   Widget _upcomingItem(DashboardAppointments appointment) {
