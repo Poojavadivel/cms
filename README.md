@@ -4,16 +4,18 @@
 [![Dart](https://img.shields.io/badge/Dart-3.6.2-0175C2?logo=dart)](https://dart.dev/)
 [![Node.js](https://img.shields.io/badge/Node.js-18.x-339933?logo=node.js)](https://nodejs.org/)
 [![MongoDB](https://img.shields.io/badge/MongoDB-6.19.0-47A248?logo=mongodb)](https://www.mongodb.com/)
+[![Express](https://img.shields.io/badge/Express-5.x-000000?logo=express)](https://expressjs.com/)
 [![License](https://img.shields.io/badge/License-Proprietary-red.svg)](LICENSE)
-[![Status](https://img.shields.io/badge/Status-Production_Ready-brightgreen.svg)](README.md)
+[![Status](https://img.shields.io/badge/Status-Enterprise_Ready-success.svg)](README.md)
 
-> **Enterprise-Grade Hospital Management System** - A comprehensive, full-stack healthcare solution built with modern technologies for seamless patient care, appointment management, pharmacy operations, and pathology services.
+> **Enterprise-Grade Hospital Management System** - A comprehensive, full-stack healthcare solution engineered with cutting-edge technologies for seamless patient care, intelligent appointment management, integrated pharmacy operations, and advanced pathology services.
 
-**Project Stats:**
-- 📊 **61 Dart Files** | **4,723 JavaScript Files**
-- 🏗️ **4 Major Modules** (Admin, Doctor, Pharmacist, Pathologist)
-- 🌐 **6 Platform Support** (Android, iOS, Web, Windows, Linux, macOS)
-- ⚡ **Production Ready** | **Rating: 9/10**
+**📊 System Metrics:**
+- 🎯 **4 Role-Based Modules** - Doctor, Admin, Pharmacist, Pathologist
+- 🌐 **6 Platform Support** - Android, iOS, Web, Windows, Linux, macOS
+- 🔒 **JWT Authentication** - Secure role-based access control
+- 📱 **Responsive Design** - Optimized for all screen sizes
+- ⚡ **Enterprise Architecture** - Production-ready scalable infrastructure
 
 ---
 
@@ -55,72 +57,19 @@
 
 ---
 
-## 🆕 Recent Updates
+## 🎯 Key Features
 
-### **✨ Appointments Module - Enterprise Upgrade (Latest)**
+### **Enterprise-Grade Capabilities**
 
-**Date:** January 2025  
-**Status:** ✅ **PRODUCTION READY**
-
-#### **What Changed:**
-
-1. **🎨 Enterprise UI/UX**
-   - Poppins font for headers (SemiBold, weight 600)
-   - Inter font for body text (Medium, weight 500)
-   - Professional color scheme with hover effects
-   - Large, prominent search bar (56px height)
-   - Rich visual hierarchy
-
-2. **👥 Gender & Icons**
-   - Male/Female icons with Iconsax (modern design)
-   - Professional intake clipboard icon
-   - High-quality avatar placeholders
-   - Status badges with color coding
-
-3. **🔢 Patient Codes Instead of IDs**
-   - Shows `PAT001`, `PAT002` instead of MongoDB IDs
-   - Cleaner, more professional display
-   - Easier for staff to reference
-
-4. **⚡ Independent Data Loading**
-   - Split from dashboard - no longer depends on dashboard data
-   - Direct API calls to `/api/doctor/appointments/:doctorId`
-   - Better performance and reliability
-
-5. **🎭 Skeleton Loading**
-   - Shimmer effect while data loads
-   - Professional loading experience
-   - No blank screens
-
-6. **🗑️ Removed Features**
-   - ❌ Checkboxes (cleaner interface)
-   - ❌ Bulk actions (simplified)
-   - ❌ Export functionality (focused approach)
-
-#### **New File:**
-```
-lib/Modules/Doctor/AppointmentsPageNew.dart
-```
-
-#### **Usage:**
-```dart
-import 'package:glowhair/Modules/Doctor/AppointmentsPageNew.dart';
-
-// Navigate to appointments
-Navigator.push(
-  context,
-  MaterialPageRoute(
-    builder: (context) => const AppointmentsPageNew(),
-  ),
-);
-```
-
-#### **Fixed Issues:**
-- ✅ Missing `kWarning` color in AppColors
-- ✅ Render overflow errors
-- ✅ Padding inconsistencies
-- ✅ Font readability issues
-- ✅ Dashboard dependency
+- ✅ **Multi-Platform Deployment** - Single codebase, six platforms
+- ✅ **Real-Time Data Sync** - Instant updates across all modules
+- ✅ **Secure Authentication** - JWT-based role management
+- ✅ **Scalable Architecture** - MongoDB + Node.js + Flutter stack
+- ✅ **Modern Material UI** - Custom theming with Google Fonts
+- ✅ **Production Ready** - Battle-tested enterprise code quality
+- ✅ **Document Scanner** - OCR-powered document digitization
+- ✅ **AI Chatbot** - Google Generative AI integration
+- ✅ **Advanced Analytics** - Comprehensive dashboard metrics
 
 ---
 
@@ -204,58 +153,72 @@ Navigator.push(
 
 ---
 
-## 🏗️ Architecture
+## 🏗️ System Architecture
 
-### **System Architecture**
+### **High-Level Architecture**
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                   Flutter Frontend                       │
-│  (Android, iOS, Web, Windows, Linux, macOS)             │
-│                                                          │
-│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐  │
-│  │  Doctor  │ │  Admin   │ │ Pharmacy │ │Pathology │  │
-│  │  Module  │ │  Module  │ │  Module  │ │  Module  │  │
-│  └──────────┘ └──────────┘ └──────────┘ └──────────┘  │
-│                         │                               │
-└─────────────────────────┼───────────────────────────────┘
-                          │
-                    HTTP/REST API
-                          │
-┌─────────────────────────┼───────────────────────────────┐
-│                   Node.js Backend                        │
-│                   (Express.js)                           │
-│                                                          │
-│  ┌──────────────────────────────────────────────────┐  │
-│  │          API Routes & Controllers                │  │
-│  │  /api/doctor  /api/admin  /api/pharmacy          │  │
-│  └──────────────────────────────────────────────────┘  │
-│  ┌──────────────────────────────────────────────────┐  │
-│  │      Middleware (Auth, Validation, CORS)         │  │
-│  └──────────────────────────────────────────────────┘  │
-│                         │                               │
-└─────────────────────────┼───────────────────────────────┘
-                          │
-                    MongoDB Driver
-                          │
-┌─────────────────────────┼───────────────────────────────┐
-│                   MongoDB Database                       │
-│                                                          │
-│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐  │
-│  │ Patients │ │Appoint-  │ │Medicines │ │Lab Tests │  │
-│  │Collection│ │ments     │ │Collection│ │Collection│  │
-│  └──────────┘ └──────────┘ └──────────┘ └──────────┘  │
-└──────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                      Flutter Frontend Layer                      │
+│    (Android • iOS • Web • Windows • Linux • macOS)              │
+│                                                                  │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐      │
+│  │ 👨‍⚕️ Doctor│  │ 👨‍💼 Admin │  │ 💊 Pharma │  │ 🔬 Patho │      │
+│  │  Module  │  │  Module  │  │  Module  │  │  Module  │      │
+│  └──────────┘  └──────────┘  └──────────┘  └──────────┘      │
+│                                                                  │
+│  ┌────────────────────────────────────────────────────────┐   │
+│  │  State Management (Provider + Riverpod)                │   │
+│  │  HTTP Client (http package) | Auth Service (JWT)       │   │
+│  └────────────────────────────────────────────────────────┘   │
+└──────────────────────────────┬───────────────────────────────────┘
+                               │ REST API (JSON over HTTPS)
+┌──────────────────────────────┴───────────────────────────────────┐
+│                     Node.js Backend Layer                         │
+│                   (Express.js 5.x Framework)                      │
+│                                                                   │
+│  ┌───────────────────────────────────────────────────────────┐  │
+│  │  API Routes: /auth • /doctors • /appointments             │  │
+│  │             /patients • /pharmacy • /pathology            │  │
+│  └───────────────────────────────────────────────────────────┘  │
+│  ┌───────────────────────────────────────────────────────────┐  │
+│  │  Middleware: JWT Auth • CORS • Body Parser • Validation   │  │
+│  └───────────────────────────────────────────────────────────┘  │
+│  ┌───────────────────────────────────────────────────────────┐  │
+│  │  Services: Google Vision API • Google Generative AI       │  │
+│  └───────────────────────────────────────────────────────────┘  │
+└──────────────────────────────┬───────────────────────────────────┘
+                               │ Mongoose ODM
+┌──────────────────────────────┴───────────────────────────────────┐
+│                    MongoDB Database Layer                         │
+│                       (NoSQL Document Store)                      │
+│                                                                   │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐        │
+│  │ patients │  │appoint-  │  │medicines │  │ reports  │        │
+│  │collection│  │  ments   │  │collection│  │collection│        │
+│  └──────────┘  └──────────┘  └──────────┘  └──────────┘        │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐        │
+│  │  staff   │  │ counters │  │ scanner  │  │   bot    │        │
+│  │collection│  │collection│  │documents │  │ messages │        │
+│  └──────────┘  └──────────┘  └──────────┘  └──────────┘        │
+└───────────────────────────────────────────────────────────────────┘
 ```
 
-### **Data Flow**
+### **Data Flow Pattern**
 
-1. **User Interaction** → Flutter UI
-2. **API Request** → HTTP Client (dio)
-3. **Backend Processing** → Node.js/Express
-4. **Database Operations** → MongoDB
-5. **Response** → JSON Data
-6. **UI Update** → Flutter State Management
+```
+User Action → Flutter Widget → Provider/Riverpod State
+    ↓
+AuthService (JWT Token Injection)
+    ↓
+HTTP Request → Express.js Router → Auth Middleware
+    ↓
+Controller Logic → Mongoose Model
+    ↓
+MongoDB Query → Data Processing
+    ↓
+JSON Response → State Update → UI Rebuild
+```
 
 ---
 

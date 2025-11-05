@@ -1,5 +1,6 @@
 // lib/models/patient_models.dart
 // Adjust the import path below if your Doctor.dart is in another folder.
+import 'package:flutter/foundation.dart';
 import 'Doctor.dart';
 
 /// Represents detailed information about a patient.
@@ -13,6 +14,9 @@ class PatientDetails {
   final String bloodGroup;
   final String weight;
   final String height;
+  final String bp;           // Blood pressure
+  final String pulse;        // Pulse rate
+  final String temp;         // Temperature
   final String emergencyContactName;
   final String emergencyContactPhone;
   final String phone;
@@ -58,6 +62,9 @@ class PatientDetails {
     required this.bloodGroup,
     required this.weight,
     required this.height,
+    this.bp = '',
+    this.pulse = '',
+    this.temp = '',
     required this.emergencyContactName,
     required this.emergencyContactPhone,
     required this.phone,
@@ -124,12 +131,12 @@ class PatientDetails {
 
   factory PatientDetails.fromMap(Map<String, dynamic> map) {
     // DEBUG: Log incoming data to see what backend is sending
-    print('🔍 PatientDetails.fromMap - Checking for vitals...');
-    print('   Has vitals key: ${map.containsKey('vitals')}');
+    debugPrint('🔍 PatientDetails.fromMap - Checking for vitals...');
+    debugPrint('   Has vitals key: ${map.containsKey('vitals')}');
     if (map.containsKey('vitals')) {
-      print('   Vitals data: ${map['vitals']}');
+      debugPrint('   Vitals data: ${map['vitals']}');
     }
-    print('   Legacy fields - height: ${map['height']}, weight: ${map['weight']}, bmi: ${map['bmi']}');
+    debugPrint('   Legacy fields - height: ${map['height']}, weight: ${map['weight']}, bmi: ${map['bmi']}');
     
     final first = map['firstName']?.toString() ?? '';
     final last = map['lastName']?.toString() ?? '';
@@ -196,6 +203,32 @@ class PatientDetails {
       extractedPatientCode = null;
     }
 
+    // Extract metadata for commonly nested fields
+    final metadata = (map['metadata'] is Map) 
+        ? Map<String, dynamic>.from(map['metadata'] as Map) 
+        : <String, dynamic>{};
+    
+    // Extract address object
+    final addressObj = (map['address'] is Map)
+        ? Map<String, dynamic>.from(map['address'] as Map)
+        : <String, dynamic>{};
+    
+    // Extract age from multiple possible locations
+    int extractedAge = 0;
+    if (map['age'] is int) {
+      extractedAge = map['age'] as int;
+    } else if (map['age'] != null) {
+      extractedAge = int.tryParse(map['age'].toString()) ?? 0;
+    }
+    // Fallback to metadata.age
+    if (extractedAge == 0 && metadata['age'] != null) {
+      if (metadata['age'] is int) {
+        extractedAge = metadata['age'] as int;
+      } else {
+        extractedAge = int.tryParse(metadata['age'].toString()) ?? 0;
+      }
+    }
+    
     return PatientDetails(
       patientId: map['_id']?.toString() ??
           map['id']?.toString() ??
@@ -204,31 +237,52 @@ class PatientDetails {
       name: fullName,
       firstName: first.isNotEmpty ? first : null,
       lastName: last.isNotEmpty ? last : null,
-      age: map['age'] is int
-          ? map['age'] as int
-          : int.tryParse(map['age']?.toString() ?? '') ?? 0,
+      age: extractedAge,
       gender: map['gender']?.toString() ?? '',
-      bloodGroup: map['bloodGroup']?.toString() ?? 'O+',
+      bloodGroup: map['bloodGroup']?.toString() ?? 
+          metadata['bloodGroup']?.toString() ?? 'O+',
       // Extract from vitals object first, then fallback to legacy fields
       weight: _extractVital(map, 'weightKg', 'weight'),
       height: _extractVital(map, 'heightCm', 'height'),
       bmi: _extractVital(map, 'bmi', 'bmi'),
       oxygen: _extractVital(map, 'spo2', 'oxygen'),
-      emergencyContactName: map['emergencyContactName']?.toString() ?? '',
-      emergencyContactPhone: map['emergencyContactPhone']?.toString() ?? '',
+      bp: _extractVital(map, 'bp', 'bp'),
+      pulse: _extractVital(map, 'pulse', 'pulse'),
+      temp: _extractVital(map, 'temp', 'temp'),
+      // Emergency contact from metadata
+      emergencyContactName: metadata['emergencyContactName']?.toString() ?? 
+          map['emergencyContactName']?.toString() ?? '',
+      emergencyContactPhone: metadata['emergencyContactPhone']?.toString() ?? 
+          map['emergencyContactPhone']?.toString() ?? '',
       phone: map['phone']?.toString() ?? '',
-      city: map['city']?.toString() ?? '',
-      address: map['address']?.toString() ?? '',
-      pincode: map['pincode']?.toString() ?? '',
-      insuranceNumber: map['insuranceNumber']?.toString() ?? '',
-      expiryDate: map['expiryDate']?.toString() ?? '',
-      avatarUrl: map['avatarUrl']?.toString() ?? '',
+      // Address fields from address object or root level
+      city: addressObj['city']?.toString() ?? map['city']?.toString() ?? '',
+      address: addressObj['line1']?.toString() ?? map['address']?.toString() ?? '',
+      pincode: addressObj['pincode']?.toString() ?? map['pincode']?.toString() ?? '',
+      // Insurance from metadata
+      insuranceNumber: metadata['insuranceNumber']?.toString() ?? 
+          map['insuranceNumber']?.toString() ?? '',
+      expiryDate: metadata['expiryDate']?.toString() ?? 
+          map['expiryDate']?.toString() ?? '',
+      avatarUrl: metadata['avatarUrl']?.toString() ?? 
+          map['avatarUrl']?.toString() ?? '',
       dateOfBirth: map['dateOfBirth']?.toString() ?? '',
       lastVisitDate: map['lastVisitDate']?.toString() ?? map['updatedAt']?.toString() ?? '',
-      doctorId: map['doctorId']?.toString() ?? '',
+      doctorId: (() {
+        // Handle doctorId - can be String ID or Map (doctor object)
+        final doctorIdValue = map['doctorId'];
+        if (doctorIdValue == null) return '';
+        if (doctorIdValue is String) return doctorIdValue;
+        if (doctorIdValue is Map) {
+          // Backend returned full doctor object - extract ID
+          return (doctorIdValue['_id'] ?? doctorIdValue['id'] ?? '').toString();
+        }
+        return doctorIdValue.toString();
+      })(),
       doctor: parsedDoctor,
       doctorName: parsedDoctorName,
       medicalHistory:
+      (metadata['medicalHistory'] as List?)?.map((e) => e.toString()).toList() ?? 
       (map['medicalHistory'] as List?)?.map((e) => e.toString()).toList() ?? [],
       allergies:
       (map['allergies'] as List?)?.map((e) => e.toString()).toList() ?? [],
@@ -245,16 +299,16 @@ class PatientDetails {
       final vitals = map['vitals'] as Map<String, dynamic>;
       final value = vitals[vitalKey];
       if (value != null) {
-        print('   ✅ Extracted $vitalKey from vitals: $value');
+        debugPrint('   ✅ Extracted $vitalKey from vitals: $value');
         return value.toString();
       }
     }
     // Fallback to legacy field
     final legacyValue = map[legacyKey]?.toString() ?? '';
     if (legacyValue.isNotEmpty) {
-      print('   ⚠️ Using legacy field $legacyKey: $legacyValue');
+      debugPrint('   ⚠️ Using legacy field $legacyKey: $legacyValue');
     } else {
-      print('   ❌ No value for $vitalKey/$legacyKey');
+      debugPrint('   ❌ No value for $vitalKey/$legacyKey');
     }
     return legacyValue;
   }
@@ -262,36 +316,57 @@ class PatientDetails {
   /// Prefer showing patientCode (PAT-xxx) if available, otherwise fallback to patientId.
   String get patientCodeOrId => (patientCode != null && patientCode!.isNotEmpty) ? patientCode! : patientId;
 
+  /// Helper to parse number from string
+  static num? _parseNumber(String value) {
+    if (value.isEmpty) return null;
+    return num.tryParse(value);
+  }
+
   Map<String, dynamic> toJson() {
     final base = <String, dynamic>{
       'patientId': patientId,
       'name': name,
       'firstName': firstName,
       'lastName': lastName,
-      'age': age,
       'gender': gender,
-      'bloodGroup': bloodGroup,
-      'weight': weight,
-      'height': height,
-      'emergencyContactName': emergencyContactName,
-      'emergencyContactPhone': emergencyContactPhone,
       'phone': phone,
-      'city': city,
-      'address': address,
-      'pincode': pincode,
-      'insuranceNumber': insuranceNumber,
-      'expiryDate': expiryDate,
-      'avatarUrl': avatarUrl,
       'dateOfBirth': dateOfBirth,
-      'lastVisitDate': lastVisitDate,
+      
+      // Address as structured object
+      'address': {
+        'line1': address,
+        'city': city,
+        'state': '',
+        'pincode': pincode,
+        'country': '',
+      },
+      
+      // Vitals as structured object
+      'vitals': {
+        'heightCm': _parseNumber(height),
+        'weightKg': _parseNumber(weight),
+        'bmi': _parseNumber(bmi),
+        'bp': bp.isNotEmpty ? bp : null,
+        'pulse': _parseNumber(pulse),
+        'spo2': _parseNumber(oxygen),
+        'temp': _parseNumber(temp),
+      },
+      
       'doctorId': doctorId,
-      'doctorName': doctorName,
-      'medicalHistory': medicalHistory,
       'allergies': allergies,
       'notes': notes,
-      'oxygen': oxygen,
-      'bmi': bmi,
-      'isSelected': isSelected,
+      
+      // Metadata for extra fields
+      'metadata': {
+        'age': age,
+        'bloodGroup': bloodGroup,
+        'emergencyContactName': emergencyContactName,
+        'emergencyContactPhone': emergencyContactPhone,
+        'insuranceNumber': insuranceNumber,
+        'expiryDate': expiryDate,
+        'avatarUrl': avatarUrl,
+        'medicalHistory': medicalHistory,
+      },
     };
 
     if (patientCode != null) {
@@ -325,6 +400,9 @@ class PatientDetails {
     String? bloodGroup,
     String? weight,
     String? height,
+    String? bp,
+    String? pulse,
+    String? temp,
     String? emergencyContactName,
     String? emergencyContactPhone,
     String? phone,
@@ -357,6 +435,9 @@ class PatientDetails {
       bloodGroup: bloodGroup ?? this.bloodGroup,
       weight: weight ?? this.weight,
       height: height ?? this.height,
+      bp: bp ?? this.bp,
+      pulse: pulse ?? this.pulse,
+      temp: temp ?? this.temp,
       emergencyContactName: emergencyContactName ?? this.emergencyContactName,
       emergencyContactPhone: emergencyContactPhone ?? this.emergencyContactPhone,
       phone: phone ?? this.phone,

@@ -1,10 +1,13 @@
 import 'dart:io';
+import 'dart:convert';
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:http/http.dart';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' show MultipartFile;
 import 'package:http_parser/http_parser.dart';
 import 'package:path/path.dart' as p;
@@ -15,10 +18,10 @@ import '../Models/Pathologist.dart';
 import '../Models/Patients.dart';
 import '../Models/User.dart';
 import '../Models/appointment_draft.dart';
+import 'api_constants.dart';
 import '../Models/dashboardmodels.dart';
 import '../Models/staff.dart';
 import '../Utils/Api_handler.dart';
-import 'constants.dart';
 
 /// A result object to safely return data from authentication methods.
 class AuthResult {
@@ -39,20 +42,34 @@ class AuthService {
 
   // -------------------- Token helpers & keys --------------------
   static const String _tokenKey = 'x-auth-token';
+  static const String _userDataKey = 'user_data'; // Store user data for faster reload
 
   Future<String?> _getToken() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_tokenKey);
+    final token = prefs.getString(_tokenKey);
+    print('🔑 [AUTH] Retrieved token: ${token != null ? "EXISTS (${token.substring(0, 20)}...)" : "NULL"}');
+    return token;
+  }
+
+  /// Public method to get token for external use (like Image headers)
+  Future<String?> getToken() async {
+    return await _getToken();
   }
 
   Future<void> _saveToken(String token) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_tokenKey, token);
+    final saved = await prefs.setString(_tokenKey, token);
+    print('💾 [AUTH] Token saved: $saved (${token.substring(0, 20)}...)');
+    // Force commit on web
+    await prefs.reload();
   }
 
   Future<void> _clearToken() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_tokenKey);
+    await prefs.remove(_userDataKey);
+    print('🗑️ [AUTH] Token and user data cleared');
+    await prefs.reload();
   }
 
   Future<T> _withAuth<T>(Future<T> Function(String token) fn) async {
@@ -88,6 +105,31 @@ class AuthService {
     return await _withAuth<dynamic>((token) async {
       return await _apiHandler.delete(path, token: token);
     });
+  }
+
+  /// Send feedback for chatbot messages
+  Future<bool> sendChatbotFeedback({
+    required String messageId,
+    required String type,
+    required String conversationId,
+  }) async {
+    try {
+      return await _withAuth<bool>((token) async {
+        final response = await _apiHandler.post(
+          '${ChatbotEndpoints.chat}/feedback',
+          token: token,
+          body: {
+            'messageId': messageId,
+            'type': type,
+            'conversationId': conversationId,
+          },
+        );
+        return response != null && response['success'] == true;
+      });
+    } catch (e) {
+      print('❌ Error sending chatbot feedback: $e');
+      return false;
+    }
   }
 
   // -------------------- Staff cache (kept in AuthService) --------------------
@@ -1230,7 +1272,7 @@ class AuthService {
       }
 
       // FIX: Only call the implemented route: /api/bot/chats/:id
-      final path = '/api/bot/chats/$conversationId';
+      final path = ChatbotEndpoints.getHistory(conversationId);
       print('DEBUG: [getConversationMessages] Attempting path: $path');
       var response = await _apiHandler.get(path, token: token);
 
@@ -1350,6 +1392,422 @@ class AuthService {
         return response['data'] ?? response['intake'];
       }
       return response;
+    });
+  }
+
+  /// Fetch lab reports for a patient
+  Future<List<Map<String, dynamic>>> getLabReports({required String patientId, int limit = 50, int page = 0}) async {
+    if (patientId.trim().isEmpty) throw ApiException('patientId is required');
+
+    return await _withAuth<List<Map<String, dynamic>>>((token) async {
+      // Use new dedicated lab reports endpoint
+      try {
+        final scannerEndpoint = ScannerEndpoints.getLabReports(patientId);
+        print('🔬 [LAB REPORTS] Fetching from dedicated endpoint: $scannerEndpoint');
+        
+        final scannerResponse = await _apiHandler.get(scannerEndpoint, token: token);
+        
+        if (scannerResponse is Map && scannerResponse['success'] == true && scannerResponse.containsKey('reports')) {
+          final reportsList = scannerResponse['reports'] as List;
+          print('✅ [LAB REPORTS] Got ${reportsList.length} lab reports from scanner');
+          return reportsList.map((e) => Map<String, dynamic>.from(e)).toList();
+        }
+      } catch (e) {
+        print('⚠️  [LAB REPORTS] Dedicated endpoint failed: $e');
+      }
+      
+      // Fallback to old combined reports endpoint and filter
+      try {
+        final scannerEndpoint = ScannerEndpoints.getReports(patientId);
+        print('🔬 [LAB REPORTS] Trying fallback combined endpoint: $scannerEndpoint');
+        
+        final scannerResponse = await _apiHandler.get(scannerEndpoint, token: token);
+        
+        if (scannerResponse is Map && scannerResponse['success'] == true && scannerResponse.containsKey('reports')) {
+          final reportsList = scannerResponse['reports'] as List;
+          
+          // Filter out prescriptions, keep only lab reports
+          final labReports = reportsList.where((report) {
+            final intent = report['intent']?.toString().toUpperCase();
+            final testType = report['testType']?.toString().toUpperCase();
+            return intent != 'PRESCRIPTION' && testType != 'PRESCRIPTION';
+          }).toList();
+          
+          print('✅ [LAB REPORTS] Got ${labReports.length} lab reports from combined endpoint');
+          return labReports.map((e) => Map<String, dynamic>.from(e)).toList();
+        }
+      } catch (e) {
+        print('⚠️  [LAB REPORTS] Combined endpoint failed: $e');
+      }
+      
+      // Final fallback to old pathology endpoint
+      try {
+        final endpoint = LabEndpoints.getReports(patientId: patientId) + '&limit=$limit&page=$page';
+        print('📡 [LAB REPORTS] Trying legacy pathology endpoint: $endpoint');
+
+        final response = await _apiHandler.get(endpoint, token: token);
+
+        if (response is Map && response['success'] == true && response.containsKey('reports')) {
+          final reportsList = response['reports'] as List;
+          print('📦 [LAB REPORTS] Received ${reportsList.length} reports from legacy');
+          return reportsList.map((e) => Map<String, dynamic>.from(e)).toList();
+        } else if (response is List) {
+          print('📦 [LAB REPORTS] Received ${response.length} reports (direct list)');
+          return response.map((e) => Map<String, dynamic>.from(e)).toList();
+        }
+      } catch (e) {
+        print('❌ [LAB REPORTS] Legacy endpoint failed: $e');
+      }
+      
+      return [];
+    });
+  }
+
+  /// Get lab report download URL
+  String getLabReportDownloadUrl(String reportId) {
+    return '${ApiConfig.baseUrl}/api/pathology/reports/$reportId/download';
+  }
+
+  /// Fetch prescriptions for a patient (uses dedicated prescription endpoint)
+  Future<List<Map<String, dynamic>>> getPrescriptions({required String patientId, int limit = 50, int page = 0}) async {
+    if (patientId.trim().isEmpty) throw ApiException('patientId is required');
+
+    return await _withAuth<List<Map<String, dynamic>>>((token) async {
+      try {
+        // Use new dedicated prescriptions endpoint
+        final scannerEndpoint = ScannerEndpoints.getPrescriptions(patientId);
+        print('💊 [PRESCRIPTIONS] Fetching from dedicated endpoint: $scannerEndpoint');
+        
+        final scannerResponse = await _apiHandler.get(scannerEndpoint, token: token);
+        
+        if (scannerResponse is Map && scannerResponse['success'] == true && scannerResponse.containsKey('prescriptions')) {
+          final prescriptionsList = scannerResponse['prescriptions'] as List;
+          print('✅ [PRESCRIPTIONS] Found ${prescriptionsList.length} prescriptions');
+          return prescriptionsList.map((e) => Map<String, dynamic>.from(e)).toList();
+        }
+      } catch (e) {
+        print('⚠️  [PRESCRIPTIONS] Dedicated endpoint failed: $e');
+      }
+      
+      // Fallback: Try combined reports endpoint and filter
+      try {
+        final scannerEndpoint = ScannerEndpoints.getReports(patientId);
+        print('💊 [PRESCRIPTIONS] Trying fallback combined endpoint: $scannerEndpoint');
+        
+        final scannerResponse = await _apiHandler.get(scannerEndpoint, token: token);
+        
+        if (scannerResponse is Map && scannerResponse['success'] == true && scannerResponse.containsKey('reports')) {
+          final reportsList = scannerResponse['reports'] as List;
+          
+          // Filter only PRESCRIPTION type reports
+          final prescriptions = reportsList.where((report) {
+            final intent = report['intent']?.toString().toUpperCase();
+            final testType = report['testType']?.toString().toUpperCase();
+            return intent == 'PRESCRIPTION' || testType == 'PRESCRIPTION';
+          }).toList();
+          
+          print('✅ [PRESCRIPTIONS] Found ${prescriptions.length} prescriptions out of ${reportsList.length} total reports');
+          return prescriptions.map((e) => Map<String, dynamic>.from(e)).toList();
+        }
+      } catch (e) {
+        print('❌ [PRESCRIPTIONS] Fallback failed: $e');
+      }
+      
+      print('⚠️  [PRESCRIPTIONS] No prescriptions found');
+      return [];
+    });
+  }
+
+  /// Scan medical document and extract data with AI (accepts XFile for web compatibility)
+  Future<Map<String, dynamic>> scanAndExtractMedicalDataFromXFile(XFile imageFile, {String? patientId}) async {
+    return await _withAuth<Map<String, dynamic>>((token) async {
+      try {
+        print('📸 [SCANNER] Starting image scan: ${imageFile.path}');
+        print('📸 [SCANNER] File name: ${imageFile.name}');
+        print('📸 [SCANNER] File length: ${await imageFile.length()} bytes');
+        if (patientId != null) {
+          print('👤 [SCANNER] Patient ID: $patientId - Will save to patient record');
+        }
+
+        // Create multipart request
+        final url = '${ApiConfig.baseUrl}/api/scanner-enterprise/scan-medical';
+        print('📸 [SCANNER] Target URL: $url');
+        
+        final request = http.MultipartRequest(
+          'POST',
+          Uri.parse(url),
+        );
+
+        // Add auth token
+        if (token != null && token.isNotEmpty) {
+          request.headers['x-auth-token'] = token;
+          print('🔑 [SCANNER] Auth token added');
+        } else {
+          print('⚠️  [SCANNER] No auth token!');
+        }
+        
+        // Add patientId if provided
+        if (patientId != null && patientId.isNotEmpty) {
+          request.fields['patientId'] = patientId;
+          print('👤 [SCANNER] Added patientId to request: $patientId');
+        }
+
+        // Platform-specific file handling
+        http.MultipartFile file;
+        if (kIsWeb) {
+          // Web: Read bytes from XFile
+          final bytes = await imageFile.readAsBytes();
+          print('📸 [SCANNER] Read ${bytes.length} bytes from XFile');
+          print('📸 [SCANNER] File name: ${imageFile.name}');
+          print('📸 [SCANNER] XFile mimeType: ${imageFile.mimeType}');
+          
+          // Determine MIME type - prioritize extension over XFile.mimeType
+          // because XFile on web sometimes returns incorrect MIME types
+          String mimeType = 'image/jpeg'; // default
+          final fileName = imageFile.name.toLowerCase();
+          
+          if (fileName.endsWith('.png')) {
+            mimeType = 'image/png';
+          } else if (fileName.endsWith('.jpg') || fileName.endsWith('.jpeg')) {
+            mimeType = 'image/jpeg';
+          } else if (fileName.endsWith('.pdf')) {
+            mimeType = 'application/pdf';
+          } else if (imageFile.mimeType != null && imageFile.mimeType!.isNotEmpty && !imageFile.mimeType!.contains('text/plain')) {
+            // Use XFile mimeType only if valid and not text/plain
+            mimeType = imageFile.mimeType!;
+          }
+          
+          print('📸 [SCANNER] Final MIME type: $mimeType');
+          
+          final mimeTypeParts = mimeType.split('/');
+          file = http.MultipartFile.fromBytes(
+            'image',
+            bytes,
+            filename: imageFile.name,
+            contentType: MediaType(mimeTypeParts[0], mimeTypeParts[1]),
+          );
+          print('📸 [SCANNER] Created MultipartFile with contentType: ${file.contentType}');
+        } else {
+          // Mobile/Desktop: Use fromPath with explicit MIME type
+          String? mimeType;
+          final fileName = imageFile.name.toLowerCase();
+          if (fileName.endsWith('.png')) {
+            mimeType = 'image/png';
+          } else if (fileName.endsWith('.jpg') || fileName.endsWith('.jpeg')) {
+            mimeType = 'image/jpeg';
+          } else if (fileName.endsWith('.pdf')) {
+            mimeType = 'application/pdf';
+          }
+          
+          file = await http.MultipartFile.fromPath(
+            'image',
+            imageFile.path,
+            filename: imageFile.name,
+            contentType: mimeType != null ? MediaType(mimeType.split('/')[0], mimeType.split('/')[1]) : null,
+          );
+          print('📸 [SCANNER] Created MultipartFile from path with contentType: ${file.contentType}');
+        }
+        request.files.add(file);
+
+        print('📤 [SCANNER] Uploading to: ${request.url}');
+
+        // Send request
+        final streamedResponse = await request.send();
+        final response = await http.Response.fromStream(streamedResponse);
+
+        print('📥 [SCANNER XFile] Response status: ${response.statusCode}');
+        
+        // Check if HTML error page
+        final responseBody = response.body;
+        if (responseBody.trim().startsWith('<!DOCTYPE') || responseBody.trim().startsWith('<html')) {
+          print('❌ [SCANNER] ERROR: Server returned HTML instead of JSON!');
+          print('📄 [SCANNER] First 300 chars:');
+          print(responseBody.substring(0, responseBody.length > 300 ? 300 : responseBody.length));
+          throw ApiException('Server error - returned HTML page. Backend may need restart or check logs.');
+        }
+        
+        print('📥 [SCANNER XFile] Response body: $responseBody');
+
+        if (response.statusCode == 200) {
+          final data = json.decode(responseBody);
+          
+          if (data is Map && data['success'] == true) {
+            return {
+              'medicalHistory': data['extractedData']?['medicalHistory'] ?? '',
+              'allergies': data['extractedData']?['allergies'] ?? '',
+              'diagnosis': data['extractedData']?['diagnosis'] ?? '',
+              'medications': data['extractedData']?['medications'] ?? '',
+              'testResults': data['extractedData']?['testResults'] ?? {},
+              'intent': data['intent'] ?? '',
+              'ocrText': data['ocrText'] ?? '',
+            };
+          } else {
+            throw ApiException(data['message'] ?? 'Scan failed');
+          }
+        } else {
+          try {
+            final errorData = json.decode(responseBody);
+            throw ApiException(
+                errorData['message'] ?? 'Failed to scan document: ${response.statusCode}');
+          } catch (e) {
+            throw ApiException('Failed to scan document: ${response.statusCode} - $responseBody');
+          }
+        }
+      } catch (e) {
+        print('❌ [SCANNER] Error: $e');
+        throw ApiException('Scanner error: $e');
+      }
+    });
+  }
+
+  /// Scan medical document and extract data with AI
+  Future<Map<String, dynamic>> scanAndExtractMedicalData(String imagePath) async {
+    return await _withAuth<Map<String, dynamic>>((token) async {
+      try {
+        print('📸 [SCANNER] Starting image scan: $imagePath');
+
+        // Create multipart request
+        final request = http.MultipartRequest(
+          'POST',
+          Uri.parse('${ApiConfig.baseUrl}/api/scanner-enterprise/scan-medical'),
+        );
+
+        // Add auth token
+        if (token != null && token.isNotEmpty) {
+          request.headers['x-auth-token'] = token;
+        }
+
+        // Add image file
+        final file = await http.MultipartFile.fromPath(
+          'image',
+          imagePath,
+          filename: imagePath.split('/').last,
+        );
+        request.files.add(file);
+
+        print('📤 [SCANNER] Uploading to: ${request.url}');
+
+        // Send request
+        final streamedResponse = await request.send();
+        final response = await http.Response.fromStream(streamedResponse);
+
+        print('📥 [SCANNER] Response status: ${response.statusCode}');
+        print('📥 [SCANNER] Response body: ${response.body}');
+
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+          
+          if (data is Map && data['success'] == true) {
+            return {
+              'medicalHistory': data['extractedData']?['medicalHistory'] ?? '',
+              'allergies': data['extractedData']?['allergies'] ?? '',
+              'diagnosis': data['extractedData']?['diagnosis'] ?? '',
+              'medications': data['extractedData']?['medications'] ?? '',
+              'testResults': data['extractedData']?['testResults'] ?? {},
+              'intent': data['intent'] ?? '',
+              'ocrText': data['ocrText'] ?? '',
+            };
+          } else {
+            throw ApiException(data['message'] ?? 'Scan failed');
+          }
+        } else {
+          final errorData = json.decode(response.body);
+          throw ApiException(
+              errorData['message'] ?? 'Failed to scan document: ${response.statusCode}');
+        }
+      } catch (e) {
+        print('❌ [SCANNER] Error: $e');
+        throw ApiException('Scanner error: $e');
+      }
+    });
+  }
+
+  /// Attach report to existing patient (after patient creation)
+  Future<void> attachReportToPatient(String patientId, String imagePath) async {
+    return await _withAuth<void>((token) async {
+      try {
+        final request = http.MultipartRequest(
+          'POST',
+          Uri.parse('${ApiConfig.baseUrl}/api/scanner-enterprise/attach-report/$patientId'),
+        );
+
+        if (token != null && token.isNotEmpty) {
+          request.headers['x-auth-token'] = token;
+        }
+
+        // Platform-specific file handling
+        http.MultipartFile file;
+        if (kIsWeb) {
+          // Web: Use bytes from picked file (imagePath is actually base64 or URL)
+          // For web, we need to handle this differently
+          throw ApiException('Web upload not yet supported for this operation. Please use mobile/desktop app.');
+        } else {
+          // Mobile/Desktop: use fromPath
+          file = await http.MultipartFile.fromPath(
+            'image',
+            imagePath,
+            filename: imagePath.split('/').last.split('\\').last,
+          );
+          request.files.add(file);
+        }
+
+        final streamedResponse = await request.send();
+        final response = await http.Response.fromStream(streamedResponse);
+
+        if (response.statusCode == 200) {
+          print('✅ [ATTACH REPORT] Success');
+        } else {
+          throw ApiException('Failed to attach report: ${response.body}');
+        }
+      } catch (e) {
+        print('❌ [ATTACH REPORT] Error: $e');
+        throw ApiException('Attach report error: $e');
+      }
+    });
+  }
+
+  /// Bulk upload reports with automatic patient matching
+  Future<Map<String, dynamic>> bulkUploadReports(List<String> imagePaths) async {
+    return await _withAuth<Map<String, dynamic>>((token) async {
+      try {
+        final request = http.MultipartRequest(
+          'POST',
+          Uri.parse('${ApiConfig.baseUrl}/api/scanner-enterprise/bulk-upload-with-matching'),
+        );
+
+        if (token != null && token.isNotEmpty) {
+          request.headers['x-auth-token'] = token;
+        }
+
+        // Platform-specific file handling
+        if (kIsWeb) {
+          throw ApiException('Web upload not yet supported for bulk operations. Please use mobile/desktop app.');
+        }
+        
+        for (final imagePath in imagePaths) {
+          // Mobile/Desktop: use fromPath
+          final file = await http.MultipartFile.fromPath(
+            'images',
+            imagePath,
+            filename: imagePath.split('/').last.split('\\').last,
+          );
+          request.files.add(file);
+        }
+
+        final streamedResponse = await request.send();
+        final response = await http.Response.fromStream(streamedResponse);
+
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+          print('✅ [BULK UPLOAD] Success: ${data['processed']} processed, ${data['failed']} failed');
+          return data;
+        } else {
+          throw ApiException('Bulk upload failed: ${response.body}');
+        }
+      } catch (e) {
+        print('❌ [BULK UPLOAD] Error: $e');
+        throw ApiException('Bulk upload error: $e');
+      }
     });
   }
 
@@ -1590,6 +2048,42 @@ class AuthService {
     if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
     if (lower.endsWith('.png')) return 'image/png';
     return null;
+  }
+
+  /// Update patient ID for all scanned documents (from temp ID to real ID)
+  Future<void> updatePatientIdForDocuments({
+    required String oldPatientId,
+    required String newPatientId,
+  }) async {
+    if (oldPatientId.trim().isEmpty || newPatientId.trim().isEmpty) {
+      throw ApiException('oldPatientId and newPatientId are required');
+    }
+
+    return await _withAuth<void>((token) async {
+      try {
+        final endpoint = '/api/scanner-enterprise/update-patient-id';
+        print('🔄 [UPDATE PATIENT ID] Updating documents from $oldPatientId to $newPatientId');
+        
+        final response = await _apiHandler.post(
+          endpoint,
+          body: {
+            'oldPatientId': oldPatientId,
+            'newPatientId': newPatientId,
+          },
+          token: token,
+        );
+        
+        if (response is Map && response['success'] == true) {
+          final updated = response['updated'] ?? 0;
+          print('✅ [UPDATE PATIENT ID] Updated $updated document(s)');
+        } else {
+          throw ApiException('Failed to update patient ID for documents');
+        }
+      } catch (e) {
+        print('❌ [UPDATE PATIENT ID] Error: $e');
+        rethrow;
+      }
+    });
   }
 
 

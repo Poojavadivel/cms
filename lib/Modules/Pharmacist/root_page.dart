@@ -1,4 +1,3 @@
-// lib/Modules/Pharmacist/root_page.dart
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:iconsax/iconsax.dart';
@@ -7,7 +6,7 @@ import '../../Services/Authservices.dart';
 import '../../Utils/Colors.dart';
 import '../Common/LoginPage.dart';
 import 'dashboard_page.dart';
-import 'medicines_page.dart';
+import 'medicines_page_enterprise.dart'; // Changed to enterprise version
 import 'prescriptions_page.dart';
 import 'settings_page.dart';
 
@@ -75,7 +74,7 @@ class _PharmacistRootPageState extends State<PharmacistRootPage>
 
   List<Widget> get _pages => [
     const PharmacistDashboardPage(),
-    const PharmacistMedicinesPage(),
+    const PharmacistMedicinesPageEnterprise(), // Changed to enterprise version
     const PharmacistPrescriptionsPage(),
     const PharmacistSettingsPage(),
   ];

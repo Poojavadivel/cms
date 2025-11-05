@@ -4,7 +4,7 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart'; // for MediaType (multipart)
 import 'package:path/path.dart' as p;          // optional helper for filenames
-import '../Services/Constants.dart';
+import '../Services/api_constants.dart';
 
 /// A custom exception class to handle API-specific errors.
 class ApiException implements Exception {

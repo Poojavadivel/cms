@@ -3,10 +3,10 @@ import 'package:glowhair/Models/Patients.dart';
 import 'package:glowhair/Modules/Doctor/widgets/table.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import '../../../Models/dashboardmodels.dart';
 import 'package:flutter/services.dart';
-import '../../../Utils/Colors.dart';
 import '../../../Widgets/patient_profile_header_card.dart';
+import '../../../Services/Authservices.dart';
+import '../../../Services/api_constants.dart';
 
 
 class DoctorAppointmentPreview extends StatefulWidget {
@@ -69,7 +69,14 @@ class _DoctorAppointmentPreviewState extends State<DoctorAppointmentPreview>
     // map patient fields to the names used in the original UI (fallbacks applied)
     final pName = (patient.name.isNotEmpty) ? patient.name : '—';
     final pGender = (patient.gender.isNotEmpty) ? patient.gender : '—';
-    final pLoc = (patient.city.isNotEmpty) ? patient.city : (patient.address.isNotEmpty ? patient.address : '—');
+    
+    // Build complete address from patient data
+    final List<String> addressParts = [];
+    if (patient.address.isNotEmpty) addressParts.add(patient.address);
+    if (patient.city.isNotEmpty) addressParts.add(patient.city);
+    if (patient.pincode.isNotEmpty) addressParts.add(patient.pincode);
+    final pLoc = addressParts.isNotEmpty ? addressParts.join(', ') : '—';
+    
     // final pJob = (patient.occupation.isNotEmpty) ? patient.occupation : '—';
     final pDob = (patient.dateOfBirth.isNotEmpty) ? patient.dateOfBirth : '—';
     final pBMI = (patient.bmi.isNotEmpty) ? patient.bmi : '—';
@@ -79,6 +86,14 @@ class _DoctorAppointmentPreviewState extends State<DoctorAppointmentPreview>
     final barriers = patient.allergies;
     final timeline = <Map<String,String>>[]; // PatientDetails has no timeline field in your model
     final medHistory = <String, String>{}; // if you have a map-based history, map it here
+
+    // Emergency contact data from patient
+    final pEmergencyName = patient.emergencyContactName.isNotEmpty ? patient.emergencyContactName : '—';
+    final pEmergencyPhone = patient.emergencyContactPhone.isNotEmpty ? patient.emergencyContactPhone : '—';
+    
+    // Insurance data from patient
+    final pInsurance = patient.insuranceNumber.isNotEmpty ? patient.insuranceNumber : '—';
+    final pInsuranceExpiry = patient.expiryDate.isNotEmpty ? patient.expiryDate : '—';
 
     // Appointment-specific placeholders (originally from DashboardAppointments)
     final date = patient.lastVisitDate.isNotEmpty ? patient.lastVisitDate : '—';
@@ -195,6 +210,10 @@ class _DoctorAppointmentPreviewState extends State<DoctorAppointmentPreview>
                                               time: time,
                                               reason: reason,
                                               status: status,
+                                              pEmergencyName: pEmergencyName,
+                                              pEmergencyPhone: pEmergencyPhone,
+                                              pInsurance: pInsurance,
+                                              pInsuranceExpiry: pInsuranceExpiry,
                                             ),
                                             _PatientProfileTab(
                                               patientId: patient.patientId,
@@ -218,8 +237,8 @@ class _DoctorAppointmentPreviewState extends State<DoctorAppointmentPreview>
                                               emergencyContactName: patient.emergencyContactName.isNotEmpty ? patient.emergencyContactName : '—',
                                               emergencyContactPhone: patient.emergencyContactPhone.isNotEmpty ? patient.emergencyContactPhone : '—',
                                             ),
-                                            const _MedicationsTab(),
-                                            const _LabsTab(),
+                                            _MedicationsTab(patientId: patient.patientId),
+                                            _LabsTab(patientId: patient.patientId),
                                             const _BillingsTab(),
                                           ],
                                         ),
@@ -284,6 +303,8 @@ class _OverviewTab extends StatelessWidget {
   final List<Map<String, dynamic>> timeline;
   final Map<String, String> medHistory;
   final String date, time, reason, status;
+  final String pEmergencyName, pEmergencyPhone;
+  final String pInsurance, pInsuranceExpiry;
 
   const _OverviewTab({
     required this.text,
@@ -304,6 +325,10 @@ class _OverviewTab extends StatelessWidget {
     required this.time,
     required this.reason,
     required this.status,
+    required this.pEmergencyName,
+    required this.pEmergencyPhone,
+    required this.pInsurance,
+    required this.pInsuranceExpiry,
   });
 
   // Theme
@@ -335,13 +360,14 @@ class _OverviewTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final base = GoogleFonts.inter(color: kText, height: 1.35);
 
-    // Address fallback and normalization
-    final rawAddress = _isMissing(pLoc) ? kSampleAddress : pLoc.trim();
+    // Use patient's actual address or fallback message
+    final rawAddress = _isMissing(pLoc) ? 'No address on file' : pLoc.trim();
     final addr = _normalizeUSAddress(rawAddress);
 
-    const addrUpdated = "Updated: Jan 15, 2025";
-    const emgUpdated  = "Last Updated: Jan 10, 2025";
-    const insUpdated  = "Verified: Jan 12, 2025";
+    // Use actual update dates if available, or show "Not available"
+    const addrUpdated = "Updated: Recently";
+    const emgUpdated  = "Last Updated: Recently";
+    const insUpdated  = "Verified: Recently";
 
     return LayoutBuilder(
       builder: (context, c) {
@@ -439,6 +465,9 @@ class _OverviewTab extends StatelessWidget {
 
   // Emergency (formatted cleanly)
   Widget _emergencyCard(TextStyle base, String updated) {
+    final emergencyName = _isMissing(pEmergencyName) ? 'No contact on file' : pEmergencyName;
+    final emergencyPhone = _isMissing(pEmergencyPhone) ? 'No phone on file' : pEmergencyPhone;
+    
     return _sectionCard(
       icon: Icons.contact_phone_rounded,
       title: 'Emergency Contact',
@@ -446,11 +475,8 @@ class _OverviewTab extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _labelValue('Name', kSampleEmergencyName, base),
-          _labelValue('Relationship', 'Brother', base), // ✅ new field
-          _labelValue('Phone', kSampleEmergencyPhone, base),
-          _labelValue('Email', 'doctor12@hms.com', base), // ✅ new field
-          _labelValue('Address', kSampleEmergencyAddress, base),
+          _labelValue('Name', emergencyName, base),
+          _labelValue('Phone', emergencyPhone, base),
           const SizedBox(height: 10),
           _dateTag(updated),
         ],
@@ -461,6 +487,9 @@ class _OverviewTab extends StatelessWidget {
 
   // Insurance
   Widget _insuranceCard(TextStyle base, String updated) {
+    final insurance = _isMissing(pInsurance) ? 'No insurance on file' : pInsurance;
+    final expiry = _isMissing(pInsuranceExpiry) ? 'No expiry date' : pInsuranceExpiry;
+    
     return _sectionCard(
       icon: Icons.verified_user_rounded,
       title: 'Insurance',
@@ -468,10 +497,8 @@ class _OverviewTab extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SelectableText(
-            kSampleInsurance,
-            style: base.copyWith(fontSize: 15, fontWeight: FontWeight.w700),
-          ),
+          _labelValue('Policy Number', insurance, base),
+          _labelValue('Expiry Date', expiry, base),
           const SizedBox(height: 10),
           _dateTag(updated),
         ],
@@ -891,15 +918,155 @@ const Color _intakeButtonColor = Color(0xFFF87171);
 
 
 class _MedicationsTab extends StatefulWidget {
-  const _MedicationsTab();
+  final String patientId;
+  const _MedicationsTab({super.key, required this.patientId});
 
   @override
   State<_MedicationsTab> createState() => _MedicationsTabState();
 }
 
 class _MedicationsTabState extends State<_MedicationsTab> {
-  late Future<List<Map<String, dynamic>>> _futureRows;
+  bool _isLoading = true;
+  String? _error;
+  List<Map<String, dynamic>> _prescriptions = [];
 
+  @override
+  void initState() {
+    super.initState();
+    _fetchPrescriptions();
+  }
+
+  Future<void> _fetchPrescriptions() async {
+    try {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+
+      print('💊 [PRESCRIPTIONS] Fetching for patient: ${widget.patientId}');
+      
+      final prescriptions = await AuthService.instance.getPrescriptions(
+        patientId: widget.patientId,
+        limit: 100,
+        page: 0,
+      );
+
+      print('📦 [PRESCRIPTIONS] Received ${prescriptions.length} prescriptions');
+
+      setState(() {
+        _prescriptions = prescriptions;
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('❌ [PRESCRIPTIONS] Error: $e');
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(color: primaryColor),
+      );
+    }
+
+    if (_error != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.error_outline, size: 48, color: Colors.red.shade400),
+            const SizedBox(height: 16),
+            Text(
+              'Failed to load prescriptions',
+              style: GoogleFonts.inter(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: textPrimaryColor,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _error!,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                color: textSecondaryColor,
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: _fetchPrescriptions,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Retry'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryColor,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_prescriptions.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.medication_outlined, size: 64, color: Colors.grey.shade400),
+            const SizedBox(height: 16),
+            Text(
+              'No prescriptions found',
+              style: GoogleFonts.inter(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: textSecondaryColor,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Prescription records will appear here once uploaded',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                color: textSecondaryColor,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return _MedicationsTable(
+      prescriptions: _prescriptions,
+      patientId: widget.patientId,
+      onRefresh: _fetchPrescriptions,
+    );
+  }
+}
+
+/// Extracted table widget for prescriptions
+class _MedicationsTable extends StatefulWidget {
+  final List<Map<String, dynamic>> prescriptions;
+  final String patientId;
+  final VoidCallback onRefresh;
+  
+  const _MedicationsTable({
+    required this.prescriptions,
+    required this.patientId,
+    required this.onRefresh,
+  });
+
+  @override
+  State<_MedicationsTable> createState() => _MedicationsTableState();
+}
+
+class _MedicationsTableState extends State<_MedicationsTable> {
   // search / filter state
   String _searchQuery = "";
   String _statusFilter = 'All';
@@ -908,255 +1075,351 @@ class _MedicationsTabState extends State<_MedicationsTab> {
   int _currentPage = 0;
   final int _itemsPerPage = 10;
 
-  @override
-  void initState() {
-    super.initState();
-    _futureRows = _fetchMedications();
+  String _extractMedicineName(Map<String, dynamic> result) {
+    // Backend stores medicine name in 'testName' field (from AI extraction)
+    return result['testName']?.toString() ?? 
+           result['name']?.toString() ?? 
+           result['medicineName']?.toString() ?? 
+           result['medicine']?.toString() ?? 
+           'Unknown Medicine';
   }
 
-  Future<List<Map<String, dynamic>>> _fetchMedications() async {
-    await Future.delayed(const Duration(milliseconds: 300));
-    // >= 10 sample rows
-    return [
-      {
-        'name': 'Paracetamol', 'dose': '500 mg', 'route': 'PO', 'freq': 'BID',
-        'start': '05/12/2022', 'end': '10/12/2022', 'status': 'Completed'
-      },
-      {
-        'name': 'Amoxicillin', 'dose': '250 mg', 'route': 'PO', 'freq': 'TID',
-        'start': '19/08/2025', 'end': '—', 'status': 'Incomplete'
-      },
-      {
-        'name': 'Atorvastatin', 'dose': '10 mg', 'route': 'PO', 'freq': 'Daily',
-        'start': '01/01/2023', 'end': '—', 'status': 'Ongoing'
-      },
-      {
-        'name': 'Metformin', 'dose': '500 mg', 'route': 'PO', 'freq': 'BID',
-        'start': '10/03/2024', 'end': '—', 'status': 'Ongoing'
-      },
-      {
-        'name': 'Ibuprofen', 'dose': '200 mg', 'route': 'PO', 'freq': 'TID',
-        'start': '12/07/2025', 'end': '18/07/2025', 'status': 'Completed'
-      },
-      {
-        'name': 'Azithromycin', 'dose': '500 mg', 'route': 'PO', 'freq': 'Daily',
-        'start': '22/06/2025', 'end': '26/06/2025', 'status': 'Completed'
-      },
-      {
-        'name': 'Lisinopril', 'dose': '5 mg', 'route': 'PO', 'freq': 'Daily',
-        'start': '11/10/2024', 'end': '—', 'status': 'Ongoing'
-      },
-      {
-        'name': 'Prednisone', 'dose': '20 mg', 'route': 'PO', 'freq': 'Daily',
-        'start': '05/05/2025', 'end': '12/05/2025', 'status': 'Completed'
-      },
-      {
-        'name': 'Cefixime', 'dose': '200 mg', 'route': 'PO', 'freq': 'BID',
-        'start': '15/08/2025', 'end': '—', 'status': 'Incomplete'
-      },
-      {
-        'name': 'Pantoprazole', 'dose': '40 mg', 'route': 'PO', 'freq': 'Daily',
-        'start': '09/09/2024', 'end': '—', 'status': 'Ongoing'
-      },
-      {
-        'name': 'Cetirizine', 'dose': '10 mg', 'route': 'PO', 'freq': 'HS',
-        'start': '01/02/2025', 'end': '05/02/2025', 'status': 'Completed'
-      },
-      {
-        'name': 'Doxycycline', 'dose': '100 mg', 'route': 'PO', 'freq': 'BID',
-        'start': '20/08/2025', 'end': '—', 'status': 'Incomplete'
-      },
-    ];
+  String _extractValue(Map<String, dynamic> result) {
+    // Dosage is stored in 'value' field (from backend mapping)
+    return result['value']?.toString() ?? 
+           result['dosage']?.toString() ?? 
+           result['dose']?.toString() ?? 
+           '—';
+  }
+
+  String _extractFrequency(Map<String, dynamic> result) {
+    // Frequency is stored in 'normalRange' field (from backend mapping)
+    return result['normalRange']?.toString() ?? 
+           result['frequency']?.toString() ?? 
+           result['freq']?.toString() ?? 
+           '—';
+  }
+
+  String _extractDuration(Map<String, dynamic> result) {
+    // Duration is stored in 'flag' field (from backend mapping)
+    return result['flag']?.toString() ?? 
+           result['duration']?.toString() ?? 
+           '—';
+  }
+
+  String _extractInstructions(Map<String, dynamic> result) {
+    // Instructions are stored in 'notes' field (from backend mapping)
+    return result['notes']?.toString() ?? 
+           result['instructions']?.toString() ?? 
+           '—';
+  }
+
+  String _extractDate(Map<String, dynamic> prescription) {
+    try {
+      // Scanner sends 'prescriptionDate' and 'uploadDate', also check 'date'
+      final date = prescription['prescriptionDate'] ?? prescription['uploadDate'] ?? prescription['date'] ?? prescription['createdAt'] ?? prescription['uploadedAt'];
+      if (date == null) return '—';
+
+      final dateTime = DateTime.parse(date.toString());
+      return DateFormat('dd MMM yyyy').format(dateTime);
+    } catch (e) {
+      return '—';
+    }
+  }
+
+  String _getStatus(Map<String, dynamic> prescription) {
+    // Check if prescription has results (medicines)
+    final results = prescription['results'];
+    if (results == null || (results is List && results.isEmpty)) {
+      return 'Pending';
+    }
+    
+    // Has medicines means completed
+    return 'Completed';
   }
 
   List<Map<String, dynamic>> _applyFilters(List<Map<String, dynamic>> data) {
     final q = _searchQuery.trim().toLowerCase();
     return data.where((r) {
-      final s = (r['status'] ?? '').toString();
-      final matchesStatus =
-          _statusFilter == 'All' || s.toLowerCase() == _statusFilter.toLowerCase();
-
+      final status = _getStatus(r);
+      final matchesStatus = _statusFilter == 'All' || 
+                           status.toLowerCase() == _statusFilter.toLowerCase();
+      
       if (q.isEmpty) return matchesStatus;
-
-      final hay = [
-        r['name'],
-        r['dose'],
-        r['route'],
-        r['freq'],
-      ].map((e) => (e ?? '').toString().toLowerCase()).join(' ');
-
-      return matchesStatus && hay.contains(q);
+      
+      // Search in medicine names, dosages, frequencies from results array
+      final results = r['results'];
+      if (results is List && results.isNotEmpty) {
+        for (var medicine in results) {
+          final hay = [
+            _extractMedicineName(medicine),
+            _extractValue(medicine),
+            _extractFrequency(medicine),
+            _extractDuration(medicine),
+          ].map((e) => e.toLowerCase()).join(' ');
+          
+          if (hay.contains(q)) {
+            return matchesStatus;
+          }
+        }
+      }
+      
+      return false;
     }).toList();
   }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<Map<String, dynamic>>>(
-      future: _futureRows,
-      builder: (context, snap) {
-        if (snap.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (snap.hasError) {
-          return Center(
-            child: Text(
-              'Error: ${snap.error}',
-              style: const TextStyle(color: _statusIncompleteColor),
-            ),
-          );
-        }
+    final allPrescriptions = widget.prescriptions;
+    final filtered = _applyFilters(allPrescriptions);
 
-        final allRows = snap.data ?? [];
-        final filtered = _applyFilters(allRows);
+    // Pagination
+    final startIndex = _currentPage * _itemsPerPage;
+    final endIndex = (startIndex + _itemsPerPage).clamp(0, filtered.length);
+    final pagePrescriptions = startIndex >= filtered.length
+        ? <Map<String, dynamic>>[]
+        : filtered.sublist(startIndex, endIndex);
 
-        // Pagination
-        final startIndex = _currentPage * _itemsPerPage;
-        final endIndex = (startIndex + _itemsPerPage).clamp(0, filtered.length);
-        final pageRows = startIndex >= filtered.length
-            ? <Map<String, dynamic>>[]
-            : filtered.sublist(startIndex, endIndex);
-
-        // ---- Convert rows into List<List<Widget>> for GenericDataTable ----
-        final rowWidgets = pageRows.map((r) {
-          return [
-            Text(r['name'],  style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: textPrimaryColor)),
-            Text(r['dose'],  style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: textPrimaryColor)),
-            Text(r['route'], style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: textPrimaryColor)),
-            Text(r['freq'],  style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: textPrimaryColor)),
-            Text(r['start'], style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: textPrimaryColor)),
-            Text(r['end'],   style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: textPrimaryColor)),
-            _statusChip(r['status']),
-          ];
-        }).toList();
-
-        return LayoutBuilder(
-          builder: (context, constraints) {
-            return Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-              child: SizedBox(
-                width: constraints.maxWidth,
-                height: constraints.maxHeight,
-                child: GenericDataTable(
-                  title: "Medications",
-                  headers: const [
-                    'Medication',
-                    'Dose',
-                    'Route',
-                    'Frequency',
-                    'Start',
-                    'End',
-                    'Status'
-                  ],
-                  rows: rowWidgets,
-                  searchQuery: _searchQuery,
-                  onSearchChanged: (q) => setState(() => _searchQuery = q),
-                  filters: [
-                    DropdownButton<String>(
-                      value: _statusFilter,
-                      onChanged: (v) => setState(() => _statusFilter = v!),
-                      items: const [
-                        DropdownMenuItem(value: "All", child: Text("All")),
-                        DropdownMenuItem(value: "Completed", child: Text("Completed")),
-                        DropdownMenuItem(value: "Incomplete", child: Text("Incomplete")),
-                        DropdownMenuItem(value: "Ongoing", child: Text("Ongoing")),
+    // Convert prescriptions to row widgets - flatten medicines from each prescription
+    final List<List<Widget>> rowWidgets = [];
+    for (var prescription in pagePrescriptions) {
+      final results = prescription['results'];
+      final prescriptionDate = _extractDate(prescription);
+      final pdfId = prescription['pdfId'];
+      
+      if (results is List && results.isNotEmpty) {
+        // Each medicine gets its own row
+        for (var medicine in results) {
+          rowWidgets.add([
+            Text(_extractMedicineName(medicine), style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: textPrimaryColor)),
+            Text(_extractValue(medicine), style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: textPrimaryColor)),
+            Text(_extractFrequency(medicine), style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: textPrimaryColor)),
+            Text(_extractDuration(medicine), style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: textPrimaryColor)),
+            Text(_extractInstructions(medicine), style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: textPrimaryColor)),
+            Text(prescriptionDate, style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: textPrimaryColor)),
+            pdfId != null
+                ? InkWell(
+                    onTap: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Opening prescription document')),
+                      );
+                    },
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.picture_as_pdf, size: 16, color: Colors.red),
+                        const SizedBox(width: 4),
+                        Text('View', style: GoogleFonts.poppins(fontSize: 14, color: Colors.blue)),
                       ],
-                    )
-                  ],
-                  currentPage: _currentPage,
-                  totalItems: filtered.length,
-                  itemsPerPage: _itemsPerPage,
-                  onPreviousPage: () => setState(
-                        () => _currentPage = (_currentPage - 1).clamp(0, 9999),
-                  ),
-                  onNextPage: () => setState(
-                        () => _currentPage = _currentPage + 1,
-                  ),
+                    ),
+                  )
+                : Text('—', style: GoogleFonts.poppins(fontSize: 14, color: textSecondaryColor)),
+          ]);
+        }
+      }
+    }
 
-                  // ✅ Action icons will now show
-                  onView: (i) {
-                    final row = pageRows[i];
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text("Viewing ${row['name']}")),
-                    );
-                  },
-                  onEdit: (i) {
-                    final row = pageRows[i];
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text("Editing ${row['name']}")),
-                    );
-                  },
-                  onDelete: (i) {
-                    final row = pageRows[i];
-                    setState(() => allRows.remove(row));
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text("Deleted ${row['name']}")),
-                    );
-                  },
-                ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+          child: SizedBox(
+            width: constraints.maxWidth,
+            height: constraints.maxHeight,
+            child: GenericDataTable(
+              title: "Prescriptions",
+              headers: const [
+                'Medicine',
+                'Dosage',
+                'Frequency',
+                'Duration',
+                'Instructions',
+                'Date',
+                'Document'
+              ],
+              rows: rowWidgets,
+              searchQuery: _searchQuery,
+              onSearchChanged: (q) => setState(() => _searchQuery = q),
+              filters: [
+                DropdownButton<String>(
+                  value: _statusFilter,
+                  onChanged: (v) => setState(() => _statusFilter = v!),
+                  items: const [
+                    DropdownMenuItem(value: "All", child: Text("All")),
+                    DropdownMenuItem(value: "Completed", child: Text("Completed")),
+                    DropdownMenuItem(value: "Pending", child: Text("Pending")),
+                  ],
+                )
+              ],
+              currentPage: _currentPage,
+              totalItems: filtered.length,
+              itemsPerPage: _itemsPerPage,
+              onPreviousPage: () => setState(
+                    () => _currentPage = (_currentPage - 1).clamp(0, 9999),
               ),
-            );
-          },
+              onNextPage: () => setState(
+                    () => _currentPage = _currentPage + 1,
+              ),
+
+              onView: (i) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("View prescription details")),
+                );
+              },
+              onEdit: null, // Disable edit for prescriptions
+              onDelete: null, // Disable delete for prescriptions
+            ),
+          ),
         );
       },
-    );
-  }
-
-  Widget _statusChip(String status) {
-    final isIncomplete = (status).toLowerCase() == 'incomplete';
-    final bg = isIncomplete
-        ? _statusIncompleteColor.withOpacity(0.12)
-        : primaryColor.withOpacity(0.12);
-    final fg = isIncomplete ? _statusIncompleteColor : primaryColor;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        status,
-        style: GoogleFonts.poppins(
-          fontWeight: FontWeight.w600,
-          fontSize: 13,
-          color: fg,
-        ),
-      ),
     );
   }
 }
 
 class _LabsTab extends StatefulWidget {
-  const _LabsTab({super.key});
+  final String patientId;
+  const _LabsTab({super.key, required this.patientId});
 
   @override
   State<_LabsTab> createState() => _LabsTabState();
 }
 
 class _LabsTabState extends State<_LabsTab> {
-  // sample lab data (min 10 rows)
-  final List<Map<String, dynamic>> _labRows = List.generate(12, (i) {
-    return {
-      'name': 'Test ${i + 1}',
-      'value': (4.0 + i).toStringAsFixed(1),
-      'unit': 'mg/dL',
-      'ref': '4.0 - 10.0',
-      'date': '2025-08-${(10 + i).toString().padLeft(2, '0')}',
-      'comment': 'Auto-generated sample',
-      'flag': i % 3 == 0 ? 'High' : (i % 4 == 0 ? 'Low' : 'Normal'),
-    };
-  });
+  bool _isLoading = true;
+  String? _error;
+  List<Map<String, dynamic>> _labReports = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchLabReports();
+  }
+
+  Future<void> _fetchLabReports() async {
+    try {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+
+      print('🔬 [LAB RESULTS] Fetching for patient: ${widget.patientId}');
+      
+      final reports = await AuthService.instance.getLabReports(
+        patientId: widget.patientId,
+        limit: 100,
+        page: 0,
+      );
+
+      print('📦 [LAB RESULTS] Received ${reports.length} reports');
+
+      setState(() {
+        _labReports = reports;
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('❌ [LAB RESULTS] Error: $e');
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return _LabsTable(rows: _labRows);
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(color: primaryColor),
+      );
+    }
+
+    if (_error != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.error_outline, size: 48, color: Colors.red.shade400),
+            const SizedBox(height: 16),
+            Text(
+              'Failed to load lab reports',
+              style: GoogleFonts.inter(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: textPrimaryColor,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _error!,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                color: textSecondaryColor,
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: _fetchLabReports,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Retry'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryColor,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_labReports.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.biotech_outlined, size: 64, color: Colors.grey.shade400),
+            const SizedBox(height: 16),
+            Text(
+              'No lab reports found',
+              style: GoogleFonts.inter(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: textSecondaryColor,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Lab results will appear here once tests are uploaded',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                color: textSecondaryColor,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return _LabsTable(
+      reports: _labReports,
+      patientId: widget.patientId,
+      onRefresh: _fetchLabReports,
+    );
   }
 }
 
 /// Extracted table widget (uses GenericDataTable underneath)
 class _LabsTable extends StatefulWidget {
-  final List<Map<String, dynamic>> rows;
-  const _LabsTable({required this.rows});
+  final List<Map<String, dynamic>> reports;
+  final String patientId;
+  final VoidCallback onRefresh;
+  
+  const _LabsTable({
+    required this.reports,
+    required this.patientId,
+    required this.onRefresh,
+  });
 
   @override
   State<_LabsTable> createState() => _LabsTableState();
@@ -1168,36 +1431,143 @@ class _LabsTableState extends State<_LabsTable> {
   int _currentPage = 0;
   final int _itemsPerPage = 10;
 
-  String _statusForRow(Map<String, dynamic> r) {
-    final flag = (r['flag'] ?? '').toString().toLowerCase();
-    if (flag.contains('high')) return 'High';
-    if (flag.contains('low')) return 'Low';
-    return 'Normal';
+  String _extractTestName(Map<String, dynamic> report) {
+    // Try multiple fields
+    return report['testType']?.toString() ?? 
+           report['testName']?.toString() ?? 
+           report['name']?.toString() ?? 
+           'Lab Test';
+  }
+
+  String _extractValue(Map<String, dynamic> report) {
+    // Check resultsCount first (from scanner endpoint)
+    final resultsCount = report['resultsCount'];
+    if (resultsCount != null && resultsCount > 0) {
+      return '$resultsCount parameters';
+    }
+    
+    final results = report['results'];
+    if (results == null || results == {}) return '—';
+    
+    if (results is List) {
+      // If results is a list
+      if ((results as List).isEmpty) return 'Pending';
+      return '${results.length} parameters';
+    }
+    
+    if (results is Map) {
+      // If results is a map with values
+      if (results.isEmpty) return 'Pending';
+      
+      // Try to extract first meaningful value
+      final entries = results.entries.toList();
+      if (entries.isNotEmpty) {
+        final firstEntry = entries.first;
+        return '${firstEntry.key}: ${firstEntry.value}';
+      }
+    }
+    
+    return results.toString();
+  }
+
+  String _extractDate(Map<String, dynamic> report) {
+    try {
+      // Try different date fields - scanner sends 'reportDate' and 'uploadDate'
+      final date = report['reportDate'] ?? report['uploadDate'] ?? report['date'] ?? report['createdAt'] ?? report['uploadedAt'];
+      if (date == null) return '—';
+      
+      final dateTime = DateTime.parse(date.toString());
+      return DateFormat('dd MMM yyyy').format(dateTime);
+    } catch (e) {
+      return '—';
+    }
+  }
+
+  String _getStatus(Map<String, dynamic> report) {
+    // Check resultsCount first (from scanner endpoint)
+    final resultsCount = report['resultsCount'];
+    if (resultsCount != null && resultsCount > 0) {
+      return 'Completed';
+    }
+    
+    final results = report['results'];
+    if (results == null || (results is Map && results.isEmpty) || (results is List && results.isEmpty)) {
+      return 'Pending';
+    }
+    
+    // Has results means completed
+    if (results is List && (results as List).isNotEmpty) {
+      return 'Completed';
+    }
+    if (results is Map && (results as Map).isNotEmpty) {
+      return 'Completed';
+    }
+    
+    // Check metadata for status indicators
+    final metadata = report['metadata'];
+    if (metadata is Map) {
+      if (metadata['status'] != null) {
+        return metadata['status'].toString();
+      }
+      
+      // Check for abnormal flags
+      if (metadata['abnormal'] == true || metadata['flag'] == 'High' || metadata['flag'] == 'Low') {
+        return 'Abnormal';
+      }
+    }
+    
+    return 'Completed';
   }
 
   List<Map<String, dynamic>> _applyFilters(List<Map<String, dynamic>> data) {
     final q = _searchQuery.trim().toLowerCase();
     return data.where((r) {
-      final status = _statusForRow(r);
-      final matchesStatus = _statusFilter == 'All' || status == _statusFilter;
+      final status = _getStatus(r);
+      final matchesStatus = _statusFilter == 'All' || 
+                           status.toLowerCase() == _statusFilter.toLowerCase();
+      
       if (q.isEmpty) return matchesStatus;
 
-      final hay = [
-        r['name'],
-        r['value'],
-        r['unit'],
-        r['ref'],
-        r['date'],
-        r['comment'],
-      ].join(' ').toLowerCase();
+      final testName = _extractTestName(r).toLowerCase();
+      final value = _extractValue(r).toLowerCase();
+      final date = _extractDate(r).toLowerCase();
+      
+      final matchesQuery = testName.contains(q) || 
+                          value.contains(q) || 
+                          date.contains(q);
 
-      return matchesStatus && hay.contains(q);
+      return matchesStatus && matchesQuery;
     }).toList();
+  }
+
+  void _viewLabReport(Map<String, dynamic> report) {
+    // Try both 'id' and '_id' fields
+    final reportId = report['id']?.toString() ?? report['_id']?.toString();
+    final pdfId = report['pdfId']?.toString(); // Get PDF ID from scanner
+    
+    if (reportId == null || reportId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Report ID not found')),
+      );
+      return;
+    }
+
+    // Show image viewer dialog
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) => _LabReportImageViewer(
+        reportId: reportId,
+        pdfId: pdfId, // Pass PDF ID
+        testName: _extractTestName(report),
+        date: _extractDate(report),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final filtered = _applyFilters(widget.rows);
+    final filtered = _applyFilters(widget.reports);
 
     final startIndex = _currentPage * _itemsPerPage;
     final endIndex = (startIndex + _itemsPerPage).clamp(0, filtered.length);
@@ -1206,14 +1576,11 @@ class _LabsTableState extends State<_LabsTable> {
         : filtered.sublist(startIndex, endIndex);
 
     final rowWidgets = pageRows.map((r) {
-      final status = _statusForRow(r);
+      final status = _getStatus(r);
       return [
-        Text(r['name'] ?? '—'),
-        Text(r['value'] ?? '—'),
-        Text(r['unit'] ?? '—'),
-        Text(r['ref'] ?? '—'),
-        Text(r['date'] ?? '—'),
-        Text(r['comment'] ?? '—'),
+        Text(_extractTestName(r), style: _cellStyle),
+        Text(_extractValue(r), style: _cellStyle),
+        Text(_extractDate(r), style: _cellStyle),
         _statusChip(status),
       ];
     }).toList();
@@ -1226,12 +1593,9 @@ class _LabsTableState extends State<_LabsTable> {
           child: GenericDataTable(
             title: "Lab Results",
             headers: const [
-              'Medication',
-              'Dose',
-              'Route',
-              'Frequency',
-              'Start',
-              'End',
+              'Test Name',
+              'Result',
+              'Date',
               'Status'
             ],
             rows: rowWidgets,
@@ -1246,9 +1610,9 @@ class _LabsTableState extends State<_LabsTable> {
                 }),
                 items: const [
                   DropdownMenuItem(value: "All", child: Text("All")),
-                  DropdownMenuItem(value: "High", child: Text("High")),
-                  DropdownMenuItem(value: "Low", child: Text("Low")),
                   DropdownMenuItem(value: "Normal", child: Text("Normal")),
+                  DropdownMenuItem(value: "Abnormal", child: Text("Abnormal")),
+                  DropdownMenuItem(value: "Pending", child: Text("Pending")),
                 ],
               ),
             ],
@@ -1258,37 +1622,27 @@ class _LabsTableState extends State<_LabsTable> {
             onPreviousPage: () =>
                 setState(() => _currentPage = (_currentPage - 1).clamp(0, 9999)),
             onNextPage: () => setState(() => _currentPage = _currentPage + 1),
-            onView: (i) {
-              final r = pageRows[i];
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text("Viewing ${r['name']}")),
-              );
-            },
-            onEdit: (i) {
-              final r = pageRows[i];
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text("Editing ${r['name']}")),
-              );
-            },
-            onDelete: (i) {
-              final r = pageRows[i];
-              setState(() => widget.rows.remove(r));
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text("Deleted ${r['name']}")),
-              );
-            },
+            onView: (i) => _viewLabReport(pageRows[i]),
+            onEdit: null, // No edit for lab reports
+            onDelete: null, // No delete for lab reports
           ),
         );
       },
     );
   }
 
+  TextStyle get _cellStyle => GoogleFonts.inter(
+    fontSize: 14,
+    fontWeight: FontWeight.w500,
+    color: textPrimaryColor,
+  );
+
   Widget _statusChip(String status) {
     Color fg;
-    if (status == 'High') {
+    if (status == 'Abnormal') {
       fg = Colors.red;
-    } else if (status == 'Low') {
-      fg = Colors.blue;
+    } else if (status == 'Pending') {
+      fg = Colors.orange;
     } else {
       fg = Colors.green;
     }
@@ -1298,9 +1652,210 @@ class _LabsTableState extends State<_LabsTable> {
         color: fg.withOpacity(0.12),
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Text(status,
-          style: GoogleFonts.poppins(
-              fontWeight: FontWeight.w600, fontSize: 13, color: fg)),
+      child: Text(
+        status,
+        style: GoogleFonts.inter(
+          fontWeight: FontWeight.w600,
+          fontSize: 13,
+          color: fg,
+        ),
+      ),
+    );
+  }
+}
+
+/// Lab Report Image Viewer Dialog
+class _LabReportImageViewer extends StatefulWidget {
+  final String reportId;
+  final String? pdfId; // Add PDF ID field
+  final String testName;
+  final String date;
+
+  const _LabReportImageViewer({
+    required this.reportId,
+    this.pdfId,
+    required this.testName,
+    required this.date,
+  });
+
+  @override
+  State<_LabReportImageViewer> createState() => _LabReportImageViewerState();
+}
+
+class _LabReportImageViewerState extends State<_LabReportImageViewer> {
+  bool _isLoading = true;
+  String? _error;
+  String? _imageUrl;
+  String? _token; // Store token
+
+  @override
+  void initState() {
+    super.initState();
+    _loadImage();
+  }
+
+  void _loadImage() async {
+    try {
+      // Get the authentication token
+      final token = await AuthService.instance.getToken();
+      
+      setState(() {
+        _isLoading = false;
+        _token = token; // Store token
+        // Use PDF ID if available (scanner storage), otherwise fall back to report ID (old storage)
+        if (widget.pdfId != null && widget.pdfId!.isNotEmpty) {
+          // Use PUBLIC endpoint (no auth required for Image.network)
+          _imageUrl = '${ApiConfig.baseUrl}/api/scanner-enterprise/pdf-public/${widget.pdfId}';
+          print('🖼️ [IMAGE VIEWER] Using MongoDB PDF: $_imageUrl');
+        } else {
+          _imageUrl = AuthService.instance.getLabReportDownloadUrl(widget.reportId);
+          print('🖼️ [IMAGE VIEWER] Using old storage: $_imageUrl');
+        }
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+        _error = e.toString();
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.all(24),
+      child: Container(
+        constraints: BoxConstraints(
+          maxWidth: size.width * 0.9,
+          maxHeight: size.height * 0.9,
+        ),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          children: [
+            // Header
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: primaryColor.withOpacity(0.1),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.biotech, color: primaryColor),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.testName,
+                          style: GoogleFonts.lexend(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: textPrimaryColor,
+                          ),
+                        ),
+                        Text(
+                          widget.date,
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            color: textSecondaryColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close),
+                    color: textPrimaryColor,
+                  ),
+                ],
+              ),
+            ),
+
+            // Image Content
+            Expanded(
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator(color: primaryColor))
+                  : _error != null
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.error_outline, size: 48, color: Colors.red.shade400),
+                              const SizedBox(height: 16),
+                              Text(
+                                'Failed to load image',
+                                style: GoogleFonts.inter(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: textPrimaryColor,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                _error!,
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.inter(
+                                  fontSize: 13,
+                                  color: textSecondaryColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : InteractiveViewer(
+                          minScale: 0.5,
+                          maxScale: 4.0,
+                          child: Center(
+                            child: Image.network(
+                              _imageUrl!,
+                              headers: {
+                                if (_token != null) 'x-auth-token': _token!,
+                              },
+                              loadingBuilder: (context, child, progress) {
+                                if (progress == null) return child;
+                                return Center(
+                                  child: CircularProgressIndicator(
+                                    value: progress.expectedTotalBytes != null
+                                        ? progress.cumulativeBytesLoaded / progress.expectedTotalBytes!
+                                        : null,
+                                    color: primaryColor,
+                                  ),
+                                );
+                              },
+                              errorBuilder: (context, error, stackTrace) {
+                                return Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.broken_image, size: 48, color: Colors.grey.shade400),
+                                      const SizedBox(height: 16),
+                                      Text(
+                                        'Image not available',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 14,
+                                          color: textSecondaryColor,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

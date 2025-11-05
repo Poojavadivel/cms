@@ -37,9 +37,9 @@ app.use('/api/doctors', require('./routes/doctors'));
 app.use('/api/pharmacy', require('./routes/pharmacy'));
 app.use('/api/pathology', require('./routes/pathology')); // New: Pathology routes
 app.use('/api/bot', require('./routes/bot'));
-app.use('/api/telegram', require('./routes/telegram'));
+// app.use('/api/telegram', require('./routes/telegram'));
 app.use('/api/intake', require('./routes/intake'));
-app.use('/api/scanner', require('./routes/scanner'));
+app.use('/api/scanner-enterprise', require('./routes/scanner-enterprise')); // Legacy: Enterprise scanner with intent detection
 app.use('/api/card', require('./routes/card')); // New: Profile card data endpoint
 // --- Health / Root Endpoint ---
 

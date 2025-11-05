@@ -5,7 +5,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../Models/Staff.dart';
 import '../../Utils/Colors.dart';
 import '../../Services/Authservices.dart';
-import 'widget/generic_data_table.dart';
+import 'Widgets/generic_data_table.dart';
+
 
 // ---------------------------------------------------------------------
 
@@ -36,14 +37,22 @@ class Medicine {
   });
 
   factory Medicine.fromMap(Map<String, dynamic> map) {
+    // Backend may return 'availableQty', 'stock', or computed quantity
+    int stockValue = 0;
+    if (map.containsKey('availableQty')) {
+      stockValue = map['availableQty'] is int ? map['availableQty'] : int.tryParse(map['availableQty']?.toString() ?? '0') ?? 0;
+    } else if (map.containsKey('stock')) {
+      stockValue = map['stock'] is int ? map['stock'] : int.tryParse(map['stock']?.toString() ?? '0') ?? 0;
+    }
+    
     return Medicine(
       id: map['id'] ?? map['_id']?.toString() ?? '',
-      name: map['name'] ?? '',
-      brand: map['brand'] ?? '',
-      stock: map['stock'] is int ? map['stock'] : int.tryParse(map['stock']?.toString() ?? '0') ?? 0,
-      status: map['status'] ?? 'In Stock',
+      name: map['name']?.toString() ?? '',
+      brand: map['brand']?.toString() ?? '',
+      stock: stockValue,
+      status: map['status']?.toString() ?? 'In Stock',
       salePrice: map.containsKey('salePrice')
-          ? (map['salePrice'] is num ? (map['salePrice'] as num).toDouble() : double.tryParse(map['salePrice'].toString()))
+          ? (map['salePrice'] is num ? (map['salePrice'] as num).toDouble() : double.tryParse(map['salePrice']!.toString()))
           : null,
     );
   }

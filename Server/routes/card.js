@@ -18,7 +18,7 @@ router.get('/:patientId', auth, async (req, res) => {
 
     // Fetch patient with only required fields for profile card
     const patient = await Patient.findById(patientId)
-      .select('firstName lastName dateOfBirth gender bloodGroup phone vitals metadata')
+      .select('firstName lastName dateOfBirth gender bloodGroup phone address vitals metadata')
       .lean();
 
     if (!patient || patient.deleted_at) {
@@ -64,6 +64,13 @@ router.get('/:patientId', auth, async (req, res) => {
       bloodGroup: patient.bloodGroup || 'O+',
       phone: patient.phone || '',
       patientCode: patientCode,
+      
+      // Address - include nested object
+      address: patient.address || {},
+      
+      // For backward compatibility, also send flat address fields
+      city: patient.address?.city || '',
+      pincode: patient.address?.pincode || '',
       
       // Vitals - extract from vitals object
       vitals: {

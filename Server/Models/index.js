@@ -18,6 +18,8 @@ const File = require('./File');
 const AuditLog = require('./AuditLog');
 const Bot = require('./Bot');
 const PatientPDF = require('./PatientPDF');
+const PrescriptionDocument = require('./PrescriptionDocument');
+const LabReportDocument = require('./LabReportDocument');
 
 // Export all models
 module.exports = {
@@ -35,6 +37,8 @@ module.exports = {
   AuditLog,
   Bot,
   PatientPDF,
+  PrescriptionDocument,
+  LabReportDocument,
   // Helper function for transactions
   startSession: () => mongoose.startSession()
 };

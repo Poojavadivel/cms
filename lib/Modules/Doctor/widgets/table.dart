@@ -344,32 +344,44 @@ class _DataTableView extends StatelessWidget {
                             if (actionPresent)
                               Padding(
                                 padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 2),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    if (onView != null)
-                                      _ActionGhostButton(
-                                        icon: Icons.remove_red_eye_outlined,
-                                        label: 'View',
-                                        color: AppColors.primary700,
-                                        onPressed: () => onView!(i),
-                                      ),
-                                    if (onEdit != null)
-                                      const SizedBox(width: 8),
-                                    if (onEdit != null)
-                                      _ActionGhostButton(
-                                        icon: Icons.edit_outlined,
-                                        label: 'Edit',
-                                        color: AppColors.primary700,
-                                        onPressed: () => onEdit!(i),
-                                      ),
-                                    if (onDelete != null) const SizedBox(width: 8),
-                                    if (onDelete != null)
-                                      _DestructiveActionButton(
-                                        label: 'Delete',
-                                        onConfirmed: () => onDelete!(i),
-                                      ),
-                                  ],
+                                child: LayoutBuilder(
+                                  builder: (context, constraints) {
+                                    return Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        if (onView != null)
+                                          Flexible(
+                                            child: _ActionGhostButton(
+                                              icon: Icons.remove_red_eye_outlined,
+                                              label: 'View',
+                                              color: AppColors.primary700,
+                                              onPressed: () => onView!(i),
+                                            ),
+                                          ),
+                                        if (onEdit != null && onView != null)
+                                          const SizedBox(width: 2),
+                                        if (onEdit != null)
+                                          Flexible(
+                                            child: _ActionGhostButton(
+                                              icon: Icons.edit_outlined,
+                                              label: 'Edit',
+                                              color: AppColors.kInfo,
+                                              onPressed: () => onEdit!(i),
+                                            ),
+                                          ),
+                                        if (onDelete != null && (onEdit != null || onView != null))
+                                          const SizedBox(width: 2),
+                                        if (onDelete != null)
+                                          Flexible(
+                                            child: _DestructiveActionButton(
+                                              label: 'Delete',
+                                              onConfirmed: () => onDelete!(i),
+                                            ),
+                                          ),
+                                      ],
+                                    );
+                                  },
                                 ),
                               ),
                           ],

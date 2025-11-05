@@ -1,13 +1,20 @@
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'Modules/Common/SplashPage.dart';
 import 'Modules/Common/no_internet_screen.dart';
 import 'Providers/app_providers.dart';
 import 'dart:async';
 
 
-void main() {
+void main() async {
+  // Ensure Flutter bindings are initialized
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Pre-initialize SharedPreferences to avoid issues on web
+  await SharedPreferences.getInstance();
+  
   runApp(const MyApp());
 }
 

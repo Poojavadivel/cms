@@ -6,6 +6,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import '../../Utils/Colors.dart';
 import '../../Services/Authservices.dart';
+import '../../Services/api_constants.dart';
 import 'dart:convert';
 import 'package:shimmer/shimmer.dart';
 
@@ -36,7 +37,7 @@ class _PathologistDashboardPageState extends State<PathologistDashboardPage> {
     try {
       setState(() => _isLoading = true);
       
-      final response = await AuthService.instance.get('/api/pathology/reports?limit=50');
+      final response = await AuthService.instance.get(LabEndpoints.getReports() + '?limit=50');
       
       if (response != null) {
         final data = response is String ? jsonDecode(response) : response;

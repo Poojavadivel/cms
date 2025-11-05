@@ -54,6 +54,17 @@ const PatientSchema = new Schema({
   ],
   notes: { type: String, default: '' },
   metadata: { type: Schema.Types.Mixed, default: {} },
+  // Medical reports storage
+  medicalReports: [{
+    reportId: { type: String, default: () => uuidv4() },
+    reportType: { type: String, enum: ['LAB_REPORT', 'PRESCRIPTION', 'MEDICAL_HISTORY', 'DISCHARGE_SUMMARY', 'RADIOLOGY_REPORT', 'GENERAL'], default: 'GENERAL' },
+    imagePath: { type: String, required: true },
+    uploadDate: { type: Date, default: Date.now },
+    uploadedBy: { type: String, ref: 'User' },
+    extractedData: { type: Schema.Types.Mixed, default: {} },
+    ocrText: { type: String, default: '' },
+    intent: { type: String, default: '' }
+  }],
   // Telegram-specific fields
   telegramUserId: { type: String, index: true },
   telegramUsername: { type: String },

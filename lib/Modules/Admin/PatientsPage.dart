@@ -4,14 +4,13 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
 import '../../Models/Patients.dart' show PatientDetails; // backend model (adjust path if needed)
-import '../../Models/Staff.dart';
 import '../../Utils/Colors.dart';
 import '../Doctor/widgets/doctor_appointment_preview.dart';
-import 'widget/generic_data_table.dart';
+import 'Widgets/generic_data_table.dart';
 
 // New imports (adjust paths if needed)
 import '../../Services/Authservices.dart';
-import 'widget/patientspopup.dart'; // PatientFormPage / patient popup
+import 'Widgets/enterprise_patient_form.dart'; // New enterprise form
 
 // ---------------------------------------------------------------------
 // --- Data Models (view-layer lightweight model used by this screen) ---
@@ -107,8 +106,8 @@ class Patient {
       id: d.patientId,
       name: name.isNotEmpty ? name : 'Unknown',
       age: d.age,
-      // PatientDetails.gender is a String in your model; ensure non-null
-      gender: d.gender ?? '',
+      // PatientDetails.gender is a String in your model
+      gender: d.gender.isNotEmpty ? d.gender : 'Other',
       lastVisit: d.lastVisitDate ?? '',
       doctor: docStr,
       condition: '',
@@ -138,8 +137,8 @@ String patientDisplayDoctorFromDetails(PatientDetails d) {
               if (ln.toString().trim().isNotEmpty) parts.add(ln.toString().trim());
             } catch (_) {}
             try {
-              final combined = userProfile.toMap()['name']?.toString() ?? '';
-              if (combined.trim().isNotEmpty) return combined.trim();
+              final combined = userProfile.toMap()['name']?.toString();
+              if (combined != null && combined.trim().isNotEmpty) return combined.trim();
             } catch (_) {}
             if (parts.isNotEmpty) return parts.join(' ');
           }
@@ -208,9 +207,8 @@ class _PatientsScreenState extends State<PatientsScreen> {
       if (mounted) {
         setState(() {
           _allPatients = mapped;
-          _detailsById
-            ..clear()
-            ..addAll(tempMap);
+          _detailsById.clear();
+          _detailsById.addAll(tempMap);
         });
       }
     } catch (e, st) {
@@ -228,14 +226,14 @@ class _PatientsScreenState extends State<PatientsScreen> {
   }
 
   Future<void> _onAddPressed() async {
-    // show PatientFormPage which returns PatientDetails on success
+    // show EnterprisePatientForm which returns PatientDetails on success
     final created = await showDialog<dynamic>(
       context: context,
       barrierDismissible: false,
       builder: (ctx) => Dialog(
         insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
         backgroundColor: Colors.transparent,
-        child: PatientFormPage(), // ensure PatientFormPage returns PatientDetails on Navigator.pop
+        child: EnterprisePatientForm(), // New enterprise-grade form
       ),
     );
 
@@ -245,7 +243,7 @@ class _PatientsScreenState extends State<PatientsScreen> {
       if (mounted) {
         final addedName = (created is PatientDetails)
             ? created.name
-            : (created is Map ? (created['name'] ?? created['firstName'] ?? 'added') : 'added');
+            : ((created is Map ? (created['name'] ?? created['firstName'] ?? 'added') : 'added'));
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Patient $addedName added successfully')),
         );
@@ -285,14 +283,14 @@ class _PatientsScreenState extends State<PatientsScreen> {
       return;
     }
 
-    // open the same PatientFormPage in edit mode
+    // open the enterprise patient form in edit mode
     final result = await showDialog<dynamic>(
       context: context,
       barrierDismissible: false,
       builder: (ctx) => Dialog(
         insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
         backgroundColor: Colors.transparent,
-        child: PatientFormPage(initial: details),
+        child: EnterprisePatientForm(initial: details), // New enterprise form
       ),
     );
 

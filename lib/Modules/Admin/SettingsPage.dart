@@ -50,11 +50,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _pickAndUpload() async {
     try {
-      // Pick up to 10 PDF/JPG/PNG files
+      // Pick up to 10 JPG/PNG files (images only for scanner)
       final res = await FilePicker.platform.pickFiles(
         allowMultiple: true,
         type: FileType.custom,
-        allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
+        allowedExtensions: ['jpg', 'jpeg', 'png'],
         withReadStream: false,
       );
       if (res == null || res.files.isEmpty) return;
@@ -66,36 +66,44 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _log = '';
       });
 
-      _appendLog('📤 Uploading ${files.length} file(s)…');
+      _appendLog('📤 Uploading ${files.length} file(s) with scanner...');
 
-      // Send to AuthService (single source of truth for upload logic)
-      final payload = await _authService.uploadScansUnified(platformFiles: files);
+      // Get file paths
+      final imagePaths = <String>[];
+      for (final file in files) {
+        if (file.path != null) {
+          imagePaths.add(file.path!);
+        }
+      }
 
-      if (payload == null) {
-        _appendLog('❌ Upload failed (null response).');
+      if (imagePaths.isEmpty) {
+        _appendLog('❌ No valid file paths');
         setState(() => _busy = false);
         return;
       }
 
-      final List results = (payload['results'] as List?) ?? [];
-      final List failed = (payload['failed'] as List?) ?? [];
+      // Send to bulk upload with patient matching
+      final payload = await _authService.bulkUploadReports(imagePaths);
 
-      _appendLog('✅ ok=${payload['ok']} batch=${payload['batchId']} '
-          'processed=${results.length} failed=${failed.length}');
+      final List results = (payload['results'] as List?) ?? [];
+      final List failures = (payload['failures'] as List?) ?? [];
+
+      _appendLog('✅ success=${payload['success']} '
+          'processed=${results.length} failed=${failures.length}');
 
       final parsed = <_UploadResult>[];
       for (final r in results) {
         parsed.add(_UploadResult(
           file: r['file']?.toString() ?? '',
           patientId: r['patient']?['id']?.toString() ?? '',
-          pdfId: r['pdf']?['id']?.toString() ?? '',
-          labReportId: r['labReport']?['id']?.toString() ?? '',
-          action: r['action']?.toString() ?? '',
+          pdfId: r['report']?['imagePath']?.toString() ?? '',
+          labReportId: r['report']?['intent']?.toString() ?? '',
+          action: r['patient']?['matchedBy']?.toString() ?? '',
           engine: r['ocr']?['engine']?.toString() ?? '',
           confidence: (r['ocr']?['confidence'] as num?)?.toDouble(),
-          resultsCount: (r['labReport']?['resultsCount'] as num?)?.toInt() ?? 0,
-          size: (r['pdf']?['size'] as num?)?.toInt() ?? 0,
-          mime: r['pdf']?['mimeType']?.toString() ?? '',
+          resultsCount: 0,
+          size: (r['ocr']?['textLength'] as num?)?.toInt() ?? 0,
+          mime: 'image/jpeg',
         ));
       }
 
@@ -103,9 +111,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _results = parsed;
       });
 
-      if (failed.isNotEmpty) {
-        for (final f in failed) {
-          _appendLog('   ✗ ${f['file']}: ${f['reason']}');
+      if (failures.isNotEmpty) {
+        for (final f in failures) {
+          _appendLog('   ✗ ${f['file']}: ${f['error']} (Patient: ${f['extractedName']})');
         }
       }
     } catch (e) {

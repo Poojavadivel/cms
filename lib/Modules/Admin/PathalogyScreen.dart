@@ -5,7 +5,8 @@ import 'package:google_fonts/google_fonts.dart';
 // Adjust these imports to your project
 import '../../Models/Staff.dart';
 import '../../Utils/Colors.dart';
-import 'widget/generic_data_table.dart';
+import 'Widgets/generic_data_table.dart';
+
 // ---------------------------------------------------------------------
 
 // --- Data Models ---

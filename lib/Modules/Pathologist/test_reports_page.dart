@@ -9,7 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../../Utils/Colors.dart';
 import '../../Services/Authservices.dart';
-import '../../Services/Constants.dart';
+import '../../Services/api_constants.dart';
 import '../../Utils/Api_handler.dart';
 import 'package:shimmer/shimmer.dart';
 
@@ -206,7 +206,7 @@ class _PathologistTestReportsPageState extends State<PathologistTestReportsPage>
 
       final request = http.MultipartRequest(
         'POST',
-        Uri.parse('${ApiConstants.baseUrl}${ApiEndpoints.createPathologyReport().url}'),
+        Uri.parse('${ApiConfig.baseUrl}${ApiEndpoints.createPathologyReport().url}'),
       );
 
       request.headers['Authorization'] = 'Bearer $token';
@@ -501,7 +501,7 @@ class _PathologistTestReportsPageState extends State<PathologistTestReportsPage>
 
         final request = http.MultipartRequest(
           'PUT',
-          Uri.parse('${ApiConstants.baseUrl}${ApiEndpoints.updatePathologyReport(report['_id']).url}'),
+          Uri.parse('${ApiConfig.baseUrl}${ApiEndpoints.updatePathologyReport(report['_id']).url}'),
         );
 
         request.headers['Authorization'] = 'Bearer $token';
@@ -594,7 +594,7 @@ class _PathologistTestReportsPageState extends State<PathologistTestReportsPage>
 
   Future<void> _downloadReport(String reportId) async {
     try {
-      final url = '${ApiConstants.baseUrl}${ApiEndpoints.downloadPathologyReport(reportId).url}';
+      final url = '${ApiConfig.baseUrl}${ApiEndpoints.downloadPathologyReport(reportId).url}';
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Download URL: $url')),

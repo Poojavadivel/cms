@@ -8,9 +8,9 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../Models/staff.dart';
 import '../../Services/Authservices.dart';
 import '../../Utils/Colors.dart';
-import 'widget/Staffview.dart';
-import 'widget/generic_data_table.dart';
-import 'widget/staffpopup.dart'; // should export StaffFormPage
+import 'Widgets/Staffview.dart';
+import 'Widgets/generic_data_table.dart';
+import 'Widgets/staffpopup.dart'; // should export StaffFormPage
 
 // ---------------------------------------------------------------------
 

@@ -7,10 +7,9 @@ import '../../Models/appointment_draft.dart';
 import '../../Models/dashboardmodels.dart';
 import '../../Services/Authservices.dart';
 import '../../Utils/Colors.dart';
-import '../Doctor/widgets/Addnewappoiments.dart';
 import '../Doctor/widgets/doctor_appointment_preview.dart';
 import 'PatientsPage.dart';
-import 'widget/generic_data_table.dart';
+import 'widgets/generic_data_table.dart';
 
 // ---------------------------------------------------------------------
 // Appointments Screen (supports Admin + Doctor; uses backend `doctor` field)

@@ -10,6 +10,7 @@ const router = express.Router();
 router.post('/', auth, async (req, res) => {
   try {
     const data = req.body || {};
+    console.log('📥 [PATIENT CREATE] Received data:', JSON.stringify(data, null, 2));
 
     if (!data.firstName || !data.phone) {
       return res.status(400).json({
@@ -19,6 +20,30 @@ router.post('/', auth, async (req, res) => {
       });
     }
 
+    // Build address object (handle both structured and flat formats)
+    const address = data.address && typeof data.address === 'object'
+      ? data.address
+      : {
+          line1: data.address || '',
+          city: data.city || '',
+          state: data.state || '',
+          pincode: data.pincode || '',
+          country: data.country || '',
+        };
+
+    // Build vitals object (handle both structured and flat formats)
+    const vitals = data.vitals && typeof data.vitals === 'object'
+      ? data.vitals
+      : {
+          heightCm: data.height ? parseFloat(data.height) : null,
+          weightKg: data.weight ? parseFloat(data.weight) : null,
+          bmi: data.bmi ? parseFloat(data.bmi) : null,
+          bp: data.bp || null,
+          temp: data.temp ? parseFloat(data.temp) : null,
+          pulse: data.pulse ? parseInt(data.pulse) : null,
+          spo2: data.oxygen ? parseFloat(data.oxygen) : (data.spo2 ? parseFloat(data.spo2) : null),
+        };
+
     const payload = {
       firstName: data.firstName.trim(),
       lastName: (data.lastName || '').trim(),
@@ -26,26 +51,45 @@ router.post('/', auth, async (req, res) => {
       gender: data.gender || null,
       phone: data.phone,
       email: data.email || null,
-      address: data.address || {},
+      
+      // Address object
+      address: address,
+      
+      // Vitals object
+      vitals: vitals,
+      
       doctorId: data.doctorId || req.user.id || null,
       allergies: Array.isArray(data.allergies) ? data.allergies : [],
       prescriptions: Array.isArray(data.prescriptions) ? data.prescriptions : [],
       notes: data.notes || '',
+      
+      // Metadata object (prioritize nested metadata, fallback to top-level)
       metadata: {
-        ...(data.metadata || {}),
-        age: data.age || null,
-        bloodGroup: data.bloodGroup || null,
-        insuranceNumber: data.insuranceNumber || null,
-        emergencyContactName: data.emergencyContactName || null,
-        emergencyContactPhone: data.emergencyContactPhone || null,
+        age: data.metadata?.age ?? data.age ?? null,
+        bloodGroup: data.metadata?.bloodGroup ?? data.bloodGroup ?? null,
+        insuranceNumber: data.metadata?.insuranceNumber ?? data.insuranceNumber ?? null,
+        expiryDate: data.metadata?.expiryDate ?? data.expiryDate ?? null,
+        emergencyContactName: data.metadata?.emergencyContactName ?? data.emergencyContactName ?? null,
+        emergencyContactPhone: data.metadata?.emergencyContactPhone ?? data.emergencyContactPhone ?? null,
+        avatarUrl: data.metadata?.avatarUrl ?? data.avatarUrl ?? null,
+        medicalHistory: Array.isArray(data.metadata?.medicalHistory) ? data.metadata.medicalHistory : (Array.isArray(data.medicalHistory) ? data.medicalHistory : []),
       },
     };
 
+    console.log('💾 [PATIENT CREATE] Storing payload:', JSON.stringify(payload, null, 2));
+
     const created = await Patient.create(payload);
+    
+    console.log('✅ [PATIENT CREATE] Success:', created._id);
     return res.status(201).json(created);
   } catch (err) {
     console.error('💥 [PATIENT CREATE] Error:', err);
-    return res.status(500).json({ success: false, message: 'Failed to create patient', errorCode: 5000 });
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Failed to create patient', 
+      error: err.message,
+      errorCode: 5000 
+    });
   }
 });
 
@@ -183,6 +227,43 @@ router.get('/:id', auth, async (req, res) => {
 router.put('/:id', auth, async (req, res) => {
   try {
     const data = req.body || {};
+    console.log('🔄 [PATIENT UPDATE] ID:', req.params.id);
+    console.log('📥 [PATIENT UPDATE] Data:', JSON.stringify(data, null, 2));
+
+    // Build address object (handle both formats)
+    let address = undefined;
+    if (data.address !== undefined) {
+      address = typeof data.address === 'object'
+        ? data.address
+        : {
+            line1: data.address || '',
+            city: data.city || '',
+            state: data.state || '',
+            pincode: data.pincode || '',
+            country: data.country || '',
+          };
+    }
+
+    // Build vitals object (handle both formats)
+    let vitals = undefined;
+    if (data.vitals !== undefined || data.height !== undefined || data.weight !== undefined) {
+      vitals = data.vitals && typeof data.vitals === 'object'
+        ? data.vitals
+        : {
+            heightCm: data.height ? parseFloat(data.height) : undefined,
+            weightKg: data.weight ? parseFloat(data.weight) : undefined,
+            bmi: data.bmi ? parseFloat(data.bmi) : undefined,
+            bp: data.bp || undefined,
+            temp: data.temp ? parseFloat(data.temp) : undefined,
+            pulse: data.pulse ? parseInt(data.pulse) : undefined,
+            spo2: data.oxygen ? parseFloat(data.oxygen) : (data.spo2 ? parseFloat(data.spo2) : undefined),
+          };
+      
+      // Remove undefined fields from vitals
+      if (vitals) {
+        Object.keys(vitals).forEach(k => vitals[k] === undefined && delete vitals[k]);
+      }
+    }
 
     const update = {
       firstName: data.firstName,
@@ -191,35 +272,65 @@ router.put('/:id', auth, async (req, res) => {
       gender: data.gender,
       phone: data.phone,
       email: data.email,
-      address: data.address,
+      
+      // Address object
+      address: address,
+      
+      // Vitals object
+      vitals: vitals,
+      
       doctorId: data.doctorId,
       allergies: data.allergies,
       prescriptions: data.prescriptions,
       notes: data.notes,
-      metadata: {
-        ...(data.metadata || {}),
-        age: data.age || null,
-        bloodGroup: data.bloodGroup || null,
-        insuranceNumber: data.insuranceNumber || null,
-        emergencyContactName: data.emergencyContactName || null,
-        emergencyContactPhone: data.emergencyContactPhone || null,
+      
+      // Metadata object
+      metadata: data.metadata || {
+        age: data.age || undefined,
+        bloodGroup: data.bloodGroup || undefined,
+        insuranceNumber: data.insuranceNumber || undefined,
+        expiryDate: data.expiryDate || undefined,
+        emergencyContactName: data.emergencyContactName || undefined,
+        emergencyContactPhone: data.emergencyContactPhone || undefined,
+        avatarUrl: data.avatarUrl || undefined,
+        medicalHistory: data.medicalHistory || undefined,
       },
     };
 
+    // Remove undefined fields
     Object.keys(update).forEach(k => update[k] === undefined && delete update[k]);
+    if (update.metadata) {
+      Object.keys(update.metadata).forEach(k => update.metadata[k] === undefined && delete update.metadata[k]);
+    }
 
-    const updated = await Patient.findByIdAndUpdate(req.params.id, update, { new: true, runValidators: true })
+    console.log('💾 [PATIENT UPDATE] Payload:', JSON.stringify(update, null, 2));
+
+    const updated = await Patient.findByIdAndUpdate(
+      req.params.id, 
+      update, 
+      { new: true, runValidators: true }
+    )
       .populate('doctorId', 'firstName lastName email')
       .lean();
 
     if (!updated) {
-      return res.status(404).json({ success: false, message: 'Patient not found', errorCode: 3007 });
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Patient not found', 
+        errorCode: 3007 
+      });
     }
 
+    console.log('✅ [PATIENT UPDATE] Success');
     return res.status(200).json(updated);
   } catch (err) {
     console.error('❌ [PATIENT UPDATE] Error:', err);
-    return res.status(500).json({ success: false, message: 'Failed to update patient', errorCode: 5003 });
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Failed to update patient', 
+      error: err.message,
+      errorCode: 5003 
+    });
   }
 });
 

@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../Utils/Colors.dart';
 import '../../Services/Authservices.dart';
+import '../../Services/api_constants.dart';
 import 'dart:convert';
 
 class PharmacistDashboardPage extends StatefulWidget {
@@ -33,7 +34,7 @@ class _PharmacistDashboardPageState extends State<PharmacistDashboardPage> {
     try {
       setState(() => _isLoading = true);
       
-      final response = await AuthService.instance.get('/api/pharmacy/records?limit=50');
+      final response = await AuthService.instance.get(PharmacyEndpoints.getPrescriptions() + '?limit=50');
       
       if (response != null) {
         final data = response is String ? jsonDecode(response) : response;
