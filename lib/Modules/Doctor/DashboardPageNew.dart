@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import '../../Models/Patients.dart';
 import '../../Models/dashboardmodels.dart';
 import '../../Services/Authservices.dart';
+import 'widgets/doctor_appointment_preview.dart';
 
 /// ENTERPRISE-GRADE DOCTOR DASHBOARD
 /// NO SCROLLING - Fully responsive single-screen design
@@ -1261,9 +1262,79 @@ class _EnterpriseDoctorDashboardState extends State<EnterpriseDoctorDashboard> {
               ],
             ),
           ),
+          const SizedBox(width: 8),
+          // Eye icon to view appointment details
+          InkWell(
+            onTap: () => _showAppointmentPreview(appointment),
+            borderRadius: BorderRadius.circular(6),
+            child: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: const Color(0xFF8B5CF6).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: const Icon(
+                Iconsax.eye,
+                color: Color(0xFF8B5CF6),
+                size: 16,
+              ),
+            ),
+          ),
         ],
       ),
     );
+  }
+  
+  Future<void> _showAppointmentPreview(DashboardAppointments appointment) async {
+    try {
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(
+            color: Color(0xFF8B5CF6),
+          ),
+        ),
+      );
+      
+      // Fetch patient details
+      final patientDetails = await AuthService.instance.fetchPatientDetails(appointment.patientId);
+      
+      // Close loading indicator
+      if (mounted) Navigator.of(context).pop();
+      
+      // Show appointment preview
+      if (mounted && patientDetails != null) {
+        await DoctorAppointmentPreview.show(
+          context,
+          patientDetails,
+          showBillingTab: false, // Hide billing in doctor side
+        );
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Could not load patient details'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      // Close loading if still open
+      if (mounted) Navigator.of(context).pop();
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      debugPrint('Error showing appointment preview: $e');
+    }
   }
 
   Widget _buildStatusDistribution() {
