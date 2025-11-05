@@ -1655,7 +1655,11 @@ class _AppointmentDataView extends StatelessWidget {
   }
 
   void _openPreviewDialog(BuildContext context, PatientDetails patient) {
-    DoctorAppointmentPreview.show(context, patient);
+    DoctorAppointmentPreview.show(
+      context, 
+      patient,
+      showBillingTab: false, // Hide billing tab in Doctor module
+    );
   }
 
   void _openEditDialog(BuildContext context, DashboardAppointments appt) {
