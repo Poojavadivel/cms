@@ -40,11 +40,34 @@ class _PatientProfileHeaderCardState extends State<PatientProfileHeaderCard> {
     _fetchFreshData();
   }
 
+  @override
+  void didUpdateWidget(PatientProfileHeaderCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Refresh data if patient ID changed OR if patient object reference changed
+    if (oldWidget.patient.patientId != widget.patient.patientId ||
+        oldWidget.patient != widget.patient) {
+      print('🔄 [PROFILE CARD] Patient data changed, refreshing...');
+      setState(() {
+        _isLoading = true;
+      });
+      _fetchFreshData();
+    }
+  }
+
   Future<void> _fetchFreshData() async {
     try {
       print('🔄 [PROFILE CARD] Fetching fresh data for patient: ${widget.patient.patientId}');
       final freshData = await AuthService.instance.fetchProfileCardData(widget.patient.patientId);
       if (mounted) {
+        // Debug: Print what we received
+        print('📊 [PROFILE CARD] Received data:');
+        print('   Name: ${freshData.name}');
+        print('   Age: ${freshData.age}');
+        print('   Gender: ${freshData.gender}');
+        print('   Blood Group: ${freshData.bloodGroup}');
+        print('   Height: ${freshData.height}');
+        print('   Weight: ${freshData.weight}');
+        
         setState(() {
           _freshPatientData = freshData;
           _isLoading = false;
@@ -126,6 +149,18 @@ class _PatientProfileHeaderCardContent extends StatelessWidget {
       return _ss(bg);
     } catch (_) {
       return '—';
+    }
+  }
+
+  String _getAgeDisplay() {
+    try {
+      final age = patient.age;
+      if (age == null || age == 0) {
+        return 'Age: —';
+      }
+      return '$age yrs';
+    } catch (_) {
+      return 'Age: —';
     }
   }
 
@@ -324,7 +359,7 @@ class _PatientProfileHeaderCardContent extends StatelessWidget {
               _ss(patient.gender), 
               isFemale ? Colors.pink.shade400 : Colors.blue.shade400
             ),
-            _infoPill(Icons.cake, '${patient.age != 0 ? '${patient.age} yrs' : 'Age: —'}', AppColors.kInfo),
+            _infoPill(Icons.calendar_today, _getAgeDisplay(), AppColors.kInfo),
           ],
         ),
       ],

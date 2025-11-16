@@ -41,6 +41,7 @@ app.use('/api/bot', require('./routes/bot'));
 app.use('/api/intake', require('./routes/intake'));
 app.use('/api/scanner-enterprise', require('./routes/scanner-enterprise')); // Legacy: Enterprise scanner with intent detection
 app.use('/api/card', require('./routes/card')); // New: Profile card data endpoint
+app.use('/api/payroll', require('./routes/payroll')); // New: Payroll management routes
 // --- Health / Root Endpoint ---
 
 

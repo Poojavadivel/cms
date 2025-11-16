@@ -1,46 +1,34 @@
 // routes/bot.js
-// Updated to work with models_core (Mongoose): Bot, Patient, User
+// Updated to work with Gemini API and Mongoose models: Bot, Patient, User
 const express = require("express");
-const axios = require("axios");
 const { v4: uuidv4 } = require('uuid');
 const auth = require("../Middleware/Auth");
 const { Bot, Patient, User } = require("../Models");
 const mongoose = require("mongoose");
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 const router = express.Router();
 
-/* ---------------- CONFIG (unchanged) ---------------- */
-const _AZURE_OPENAI_API_KEY = process.env.AZURE_OPENAI_API_KEY || "<YOUR_AZURE_OPENAI_API_KEY>";
-const _AZURE_OPENAI_ENDPOINT = (process.env.AZURE_OPENAI_ENDPOINT || "").replace(/\/$/, "") || "https://mobye-mg2e55bd-eastus2.cognitiveservices.azure.com";
-const _AZURE_OPENAI_DEPLOYMENT =  "o4-mini";
-const _AZURE_OPENAI_API_VERSION = process.env.AZURE_OPENAI_API_VERSION || "2024-12-01-preview";
-
+/* ---------------- CONFIG (Gemini) ---------------- */
+const GEMINI_API_KEY = process.env.Gemi_Api_Key || process.env.GEMINI_API_KEY;
+const GEMINI_MODEL_NAME = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 
 const MAX_RETRIES = Number(process.env.MAX_RETRIES ?? 3);
 const DEFAULT_MAX_COMPLETION_TOKENS = Number(process.env.MAX_COMPLETION_TOKENS ?? 1500);
 const MAX_COMPLETION_TOKENS_MAX = Number(process.env.MAX_COMPLETION_TOKENS_MAX ?? 7500);
 const RETRY_BACKOFF_BASE_MS = Number(process.env.RETRY_BACKOFF_BASE_MS ?? 500);
-const AZURE_OPENAI_TIMEOUT_MS = Number(process.env.AZURE_OPENAI_TIMEOUT_MS ?? 20000);
 
 const CIRCUIT_BREAKER_FAILURES = Number(process.env.CIRCUIT_BREAKER_FAILURES ?? 6);
 const CIRCUIT_BREAKER_COOLDOWN_MS = Number(process.env.CIRCUIT_BREAKER_COOLDOWN_MS ?? 60000);
 
 const DEFAULT_TEMPERATURE = Number(process.env.TEMPERATURE ?? 1);
 
-const CHAT_COMPLETIONS_URL = `${_AZURE_OPENAI_ENDPOINT}/openai/deployments/${encodeURIComponent(_AZURE_OPENAI_DEPLOYMENT)}/chat/completions?api-version=${encodeURIComponent(_AZURE_OPENAI_API_VERSION)}`;
-
-if (!_AZURE_OPENAI_API_KEY || _AZURE_OPENAI_ENDPOINT.includes("<YOUR_")) {
-  console.warn("[bot.js] WARNING: Azure OpenAI config missing or contains placeholders.");
+if (!GEMINI_API_KEY) {
+  console.warn("[bot.js] WARNING: Gemini API key missing. Please set Gemi_Api_Key in .env file.");
 }
 
-/* Axios client */
-const azureClient = axios.create({
-  headers: {
-    "Content-Type": "application/json",
-    "api-key": _AZURE_OPENAI_API_KEY,
-  },
-  timeout: AZURE_OPENAI_TIMEOUT_MS,
-});
+/* Initialize Gemini */
+const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
 /* ---------------- In-memory circuit breaker & metrics ---------------- */
 const circuitBreaker = { failures: 0, state: "CLOSED", openedAt: null };
@@ -325,30 +313,6 @@ function safeParseJsonLike(text) {
   }
 }
 
-function extractTextFromChoice(choice) {
-  if (!choice) return "";
-  if (choice.message) {
-    const c = choice.message.content;
-    if (typeof c === "string" && c.trim()) return c.trim();
-    if (Array.isArray(c)) {
-      const joined = c.map(p => (typeof p === "string" ? p : (p?.text ?? ""))).join("");
-      if (joined.trim()) return joined.trim();
-    }
-    if (typeof c === "object" && c !== null) {
-      if (Array.isArray(c.parts)) { const j = c.parts.join(""); if (j.trim()) return j.trim(); }
-      if (typeof c.text === "string" && c.text.trim()) return c.text.trim();
-    }
-  }
-  if (typeof choice.text === "string" && choice.text.trim()) return choice.text.trim();
-  if (choice.delta) {
-    if (typeof choice.delta === "string" && choice.delta.trim()) return choice.delta.trim();
-    if (typeof choice.delta.content === "string" && choice.delta.content.trim()) return choice.delta.content.trim();
-  }
-  if (choice.output_text && typeof choice.output_text === "string" && choice.output_text.trim()) return choice.output_text.trim();
-  if (choice.response && typeof choice.response === "string" && choice.response.trim()) return choice.response.trim();
-  return "";
-}
-
 /* Circuit breaker */
 function circuitIsOpen() {
   if (circuitBreaker.state === "OPEN") {
@@ -374,43 +338,63 @@ function recordFailureAndMaybeTripCircuit() {
   }
 }
 
-/* ---------------- Core Azure call (unchanged logic) ---------------- */
-async function callAzureChatWithRetries(messages, temperature = DEFAULT_TEMPERATURE, initialMaxTokens = DEFAULT_MAX_COMPLETION_TOKENS) {
+/* ---------------- Core Gemini call (same logic, different provider) ---------------- */
+async function callGeminiChatWithRetries(messages, temperature = DEFAULT_TEMPERATURE, initialMaxTokens = DEFAULT_MAX_COMPLETION_TOKENS) {
   metrics.calls += 1;
-  if (circuitIsOpen()) { metrics.failures += 1; throw new Error("Circuit breaker is open; aborting call to Azure OpenAI"); }
+  if (circuitIsOpen()) { metrics.failures += 1; throw new Error("Circuit breaker is open; aborting call to Gemini API"); }
   if (!Array.isArray(messages) || messages.length === 0) throw new Error("messages must be a non-empty array");
 
   let attempt = 0;
   let maxTokens = Number(initialMaxTokens) || DEFAULT_MAX_COMPLETION_TOKENS;
   maxTokens = Math.min(maxTokens, MAX_COMPLETION_TOKENS_MAX);
-  let sawLengthFinish = false;
 
   while (attempt <= MAX_RETRIES) {
     attempt += 1;
     const cid = makeCid();
     try {
-      const payload = { messages, max_completion_tokens: Math.floor(maxTokens) };
-      if (typeof temperature === "number" && Number.isFinite(temperature) && temperature !== 1) {
-        console.warn(`[${cid}] Omitting unsupported temperature=${temperature}; using model default (1).`);
-      }
+      // Convert OpenAI-style messages to Gemini format
+      const model = genAI.getGenerativeModel({ 
+        model: GEMINI_MODEL_NAME,
+        generationConfig: {
+          temperature: temperature,
+          maxOutputTokens: Math.floor(maxTokens),
+        }
+      });
 
-      console.debug(`[${cid}] POST ${CHAT_COMPLETIONS_URL} payload: max_completion_tokens=${payload.max_completion_tokens}`);
-      const resp = await azureClient.post(CHAT_COMPLETIONS_URL, payload);
-      if (!resp || !resp.data) throw new Error("Azure returned empty body");
-      const data = resp.data;
+      // Build chat history and current prompt
+      let systemPrompt = "";
+      const chatHistory = [];
+      let userPrompt = "";
 
-      let content = "";
-      if (Array.isArray(data.choices) && data.choices.length > 0) {
-        content = extractTextFromChoice(data.choices[0]) || "";
-        if (!content.trim()) {
-          for (let i = 1; i < data.choices.length; i++) {
-            const alt = extractTextFromChoice(data.choices[i]);
-            if (alt && alt.trim()) { content = alt; break; }
-          }
+      for (const msg of messages) {
+        if (msg.role === "system") {
+          systemPrompt = msg.content;
+        } else if (msg.role === "user") {
+          userPrompt = msg.content;
+        } else if (msg.role === "assistant") {
+          chatHistory.push({
+            role: "model",
+            parts: [{ text: msg.content }]
+          });
         }
       }
-      const finishReason = (data.choices && data.choices[0] && data.choices[0].finish_reason) || null;
-      if (finishReason === "length") sawLengthFinish = true;
+
+      // Combine system prompt with user prompt if system prompt exists
+      const finalPrompt = systemPrompt ? `${systemPrompt}\n\n${userPrompt}` : userPrompt;
+
+      console.debug(`[${cid}] Calling Gemini API with model: ${GEMINI_MODEL_NAME}, maxTokens=${maxTokens}`);
+      
+      // Start chat or generate content
+      let result;
+      if (chatHistory.length > 0) {
+        const chat = model.startChat({ history: chatHistory });
+        result = await chat.sendMessage(finalPrompt);
+      } else {
+        result = await model.generateContent(finalPrompt);
+      }
+
+      const response = result.response;
+      const content = response.text();
 
       if (content && String(content).trim()) {
         metrics.successes += 1;
@@ -419,9 +403,10 @@ async function callAzureChatWithRetries(messages, temperature = DEFAULT_TEMPERAT
         return String(content).trim();
       }
 
-      if ((sawLengthFinish || !content || !String(content).trim()) && maxTokens < MAX_COMPLETION_TOKENS_MAX) {
+      // Handle empty response
+      if ((!content || !String(content).trim()) && maxTokens < MAX_COMPLETION_TOKENS_MAX) {
         const newTokens = Math.min(MAX_COMPLETION_TOKENS_MAX, Math.floor(maxTokens * 2));
-        console.warn(`[${cid}] Azure returned empty/truncated output. Increasing max_completion_tokens ${maxTokens} -> ${newTokens} and retrying (attempt ${attempt}/${MAX_RETRIES}).`);
+        console.warn(`[${cid}] Gemini returned empty output. Increasing maxOutputTokens ${maxTokens} -> ${newTokens} and retrying (attempt ${attempt}/${MAX_RETRIES}).`);
         metrics.emptyResponses += 1;
         metrics.retries += 1;
         maxTokens = newTokens;
@@ -429,20 +414,18 @@ async function callAzureChatWithRetries(messages, temperature = DEFAULT_TEMPERAT
         continue;
       }
 
-      console.error(`[${cid}] Azure returned no usable text. Full response:`, data);
+      console.error(`[${cid}] Gemini returned no usable text.`);
       metrics.failures += 1;
       recordFailureAndMaybeTripCircuit();
-      throw new Error("Azure Chat Completions returned empty/whitespace response content.");
+      throw new Error("Gemini API returned empty/whitespace response content.");
     } catch (err) {
-      const isHttpErr = err && err.response;
-      const status = isHttpErr ? (err.response && err.response.status) : null;
-      const transient = isHttpErr ? (status >= 500 || status === 429) : true;
+      // Check if it's a rate limit or server error
+      const errorMessage = err.message || String(err);
+      const isRateLimitError = errorMessage.includes("429") || errorMessage.includes("quota") || errorMessage.includes("rate limit");
+      const isServerError = errorMessage.includes("500") || errorMessage.includes("503") || errorMessage.includes("internal error");
+      const transient = isRateLimitError || isServerError;
 
-      if (isHttpErr) {
-        console.error(`[${cid}] Azure HTTP error ${status}:`, err.response && err.response.data ? err.response.data : err.message);
-      } else {
-        console.error(`[${cid}] Azure request error:`, err.message || err);
-      }
+      console.error(`[${cid}] Gemini API error:`, errorMessage);
 
       if (!transient || attempt > MAX_RETRIES) {
         metrics.failures += 1;
@@ -452,7 +435,7 @@ async function callAzureChatWithRetries(messages, temperature = DEFAULT_TEMPERAT
 
       metrics.retries += 1;
       const backoffMs = RETRY_BACKOFF_BASE_MS * Math.pow(2, attempt - 1);
-      console.warn(`[${cid}] Transient error detected (status=${status}). Backing off ${backoffMs}ms and retrying (attempt ${attempt}/${MAX_RETRIES})`);
+      console.warn(`[${cid}] Transient error detected. Backing off ${backoffMs}ms and retrying (attempt ${attempt}/${MAX_RETRIES})`);
       await sleep(backoffMs);
       continue;
     }
@@ -460,7 +443,7 @@ async function callAzureChatWithRetries(messages, temperature = DEFAULT_TEMPERAT
 
   metrics.failures += 1;
   recordFailureAndMaybeTripCircuit();
-  throw new Error("Exceeded retry attempts calling Azure OpenAI");
+  throw new Error("Exceeded retry attempts calling Gemini API");
 }
 
 /* ---------------- Bot session helpers (adapted to new Bot schema) ---------------- */
@@ -487,7 +470,7 @@ async function findOrCreateSessionForUser(userId, sessionId = null) {
   // Create new session
   const newSession = {
     sessionId: sessionId || uuidv4(),
-    model: _AZURE_OPENAI_DEPLOYMENT,
+    model: GEMINI_MODEL_NAME,
     messages: [], // messages are { sender, text, ts, meta? }
     metadata: {},
     createdAt: new Date(),
@@ -511,7 +494,7 @@ async function appendMessagesToSession(botDoc, sessionId, newMessages = []) {
     // session missing — create it
     const sess = {
       sessionId,
-      model: _AZURE_OPENAI_DEPLOYMENT,
+      model: GEMINI_MODEL_NAME,
       messages: newMessages,
       metadata: {},
       createdAt: new Date(),
@@ -538,7 +521,7 @@ async function saveAndReturnChat(cid, tStart, sessionId, user, userMessage, botR
     const now = new Date().toISOString();
     await appendMessagesToSession(botDoc, sessId, [
       { sender: "user", text: userMessage, ts: now },
-      { sender: "bot", text: botReply, ts: now, meta: { model: _AZURE_OPENAI_DEPLOYMENT } },
+      { sender: "bot", text: botReply, ts: now, meta: { model: GEMINI_MODEL_NAME } },
     ]);
 
     const latency = Date.now() - tStart;
@@ -629,7 +612,7 @@ router.post("/chat", auth, async (req, res) => {
           { role: "user", content: `User sent a greeting: ${trimmed}. Reply warmly and professionally in 1-2 sentences.` },
         ];
         
-        const summaryText = await callAzureChatWithRetries(
+        const summaryText = await callGeminiChatWithRetries(
           greetingMessages,
           DEFAULT_TEMPERATURE,
           Math.max(150, Math.min(DEFAULT_MAX_COMPLETION_TOKENS, 300))
@@ -656,7 +639,7 @@ Return strictly valid JSON.`;
 
     let extractionText;
     try {
-      extractionText = await callAzureChatWithRetries(extractorMessages, DEFAULT_TEMPERATURE, 400);
+      extractionText = await callGeminiChatWithRetries(extractorMessages, DEFAULT_TEMPERATURE, 400);
     } catch (err) {
       console.error(`[${cid}] Extraction call failed:`, err && err.message ? err.message : err);
       extractionText = null;
@@ -697,16 +680,49 @@ Return strictly valid JSON.`;
       const nameRegex = new RegExp(safe, "i");
 
       try {
+        console.log(`[${cid}] 🔍 Searching for patient with entity: "${entity}"`);
+        
+        // Search patient by name, phone, email, or ID
         patientDoc = await Patient.findOne({
           $or: [
+            { _id: entity }, // Direct ID match
             { firstName: nameRegex },
             { lastName: nameRegex },
             { email: nameRegex },
+            { phone: entity }, // Exact phone match
             { phone: nameRegex },
-            { 'metadata.fullName': nameRegex },
-            { 'metadata.name': nameRegex },
+            { telegramUsername: nameRegex }, // Telegram username
           ]
         }).lean().exec();
+        
+        if (patientDoc) {
+          console.log(`[${cid}] ✅ Found patient: ${patientDoc.firstName} ${patientDoc.lastName} (ID: ${patientDoc._id})`);
+        } else {
+          console.log(`[${cid}] ⚠️ No patient found with simple search, trying full name split...`);
+        }
+        
+        // If not found and entity looks like a full name, try splitting
+        if (!patientDoc && entity.includes(' ')) {
+          const nameParts = entity.split(' ').filter(Boolean);
+          if (nameParts.length >= 2) {
+            const firstNameRegex = new RegExp(nameParts[0], "i");
+            const lastNameRegex = new RegExp(nameParts.slice(1).join(' '), "i");
+            console.log(`[${cid}] 🔍 Trying split search: firstName="${nameParts[0]}", lastName="${nameParts.slice(1).join(' ')}"`);
+            
+            patientDoc = await Patient.findOne({
+              firstName: firstNameRegex,
+              lastName: lastNameRegex
+            }).lean().exec();
+            
+            if (patientDoc) {
+              console.log(`[${cid}] ✅ Found patient via split: ${patientDoc.firstName} ${patientDoc.lastName}`);
+            }
+          }
+        }
+        
+        if (!patientDoc) {
+          console.log(`[${cid}] ❌ No patient found for entity: "${entity}"`);
+        }
       } catch (e) {
         console.error(`[${cid}] Patient name search error:`, e && e.message ? e.message : e);
         patientDoc = null;
@@ -736,20 +752,43 @@ Return strictly valid JSON.`;
       if (!p) return null;
       const firstName = p.firstName || "";
       const lastName = p.lastName || "";
-      const fullName = (p.metadata && (p.metadata.fullName || p.metadata.name)) || `${firstName} ${lastName}`.trim() || null;
-      const hasUseful = Boolean(fullName || p.dateOfBirth || (p.prescriptions && p.prescriptions.length) || (p.allergies && p.allergies.length) || p.phone || p.email);
+      const fullName = `${firstName} ${lastName}`.trim() || "Unknown Patient";
+      
+      const hasUseful = Boolean(
+        fullName || 
+        p.dateOfBirth || 
+        p.age ||
+        (p.prescriptions && p.prescriptions.length) || 
+        (p.allergies && p.allergies.length) || 
+        p.phone || 
+        p.email ||
+        p.gender ||
+        p.bloodGroup
+      );
+      
       return {
         id: p._id || null,
-        name: fullName || null,
+        name: fullName,
+        age: p.age || (p.metadata && p.metadata.age) || null,
         dob: p.dateOfBirth || null,
+        gender: p.gender || null,
+        bloodGroup: p.bloodGroup || (p.metadata && p.metadata.bloodGroup) || null,
         phone: p.phone || null,
         email: p.email || null,
+        address: p.address ? `${p.address.houseNo || ''} ${p.address.street || ''} ${p.address.city || ''}`.trim() || null : null,
+        vitals: p.vitals || null,
         prescriptions: (p.prescriptions || []).slice(0,5).map(pr => ({
           appointmentId: pr.appointmentId || null,
-          medicines: (pr.medicines || []).map(m => ({ name: m.name || null, dosage: m.dosage || null, quantity: m.quantity || null })),
+          medicines: (pr.medicines || []).map(m => ({ 
+            name: m.name || null, 
+            dosage: m.dosage || null, 
+            frequency: m.frequency || null,
+            quantity: m.quantity || null 
+          })),
           issuedAt: pr.issuedAt || null,
         })),
         allergies: p.allergies || [],
+        notes: p.notes || null,
         _hasUsefulFields: hasUseful,
       };
     }
@@ -773,7 +812,7 @@ Return strictly valid JSON.`;
 
     if (isDataMissing) {
       try {
-        finalReply = await callAzureChatWithRetries(
+        finalReply = await callGeminiChatWithRetries(
           [
             { role: "system", content: systemPrompt },
             { role: "user", content: `User Query: ${trimmed}\n\nNo relevant records were found in the database. Please respond professionally acknowledging this.` },
@@ -817,7 +856,7 @@ Instructions:
 - If no relevant data, state clearly`;
 
       try {
-        finalReply = await callAzureChatWithRetries(
+        finalReply = await callGeminiChatWithRetries(
           [
             { role: "system", content: systemPrompt },
             { role: "user", content: summarizerUser },

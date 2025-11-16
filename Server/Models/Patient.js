@@ -18,7 +18,9 @@ const PatientSchema = new Schema({
   phone: { type: String, index: true, validate: phoneValidator },
   email: { type: String, default: null, index: true, validate: emailValidator },
   address: {
-    line1: String,
+    houseNo: String,
+    street: String,
+    line1: String,    // Keep for backward compatibility
     city: String,
     state: String,
     pincode: String,

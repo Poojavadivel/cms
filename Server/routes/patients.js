@@ -24,12 +24,16 @@ router.post('/', auth, async (req, res) => {
     const address = data.address && typeof data.address === 'object'
       ? data.address
       : {
+          houseNo: data.houseNo || '',
+          street: data.street || '',
           line1: data.address || '',
           city: data.city || '',
           state: data.state || '',
           pincode: data.pincode || '',
           country: data.country || '',
         };
+    
+    console.log('🏠 [PATIENT CREATE] Address object:', JSON.stringify(address, null, 2));
 
     // Build vitals object (handle both structured and flat formats)
     const vitals = data.vitals && typeof data.vitals === 'object'
@@ -208,6 +212,14 @@ router.get('/:id', auth, async (req, res) => {
     // DEBUG: Log what we're sending to frontend
     console.log('📤 [PATIENT GET] Sending patient data:');
     console.log('   Patient ID:', patient._id);
+    console.log('   Name:', patient.firstName, patient.lastName);
+    console.log('   Age:', patient.age);
+    console.log('   Gender:', patient.gender);
+    console.log('   Blood Group:', patient.bloodGroup);
+    console.log('   Has metadata:', !!patient.metadata);
+    if (patient.metadata) {
+      console.log('   Metadata:', JSON.stringify(patient.metadata, null, 2));
+    }
     console.log('   Has vitals:', !!patient.vitals);
     if (patient.vitals) {
       console.log('   Vitals:', patient.vitals);
@@ -236,12 +248,16 @@ router.put('/:id', auth, async (req, res) => {
       address = typeof data.address === 'object'
         ? data.address
         : {
+            houseNo: data.houseNo || '',
+            street: data.street || '',
             line1: data.address || '',
             city: data.city || '',
             state: data.state || '',
             pincode: data.pincode || '',
             country: data.country || '',
           };
+      
+      console.log('🏠 [PATIENT UPDATE] Address object:', JSON.stringify(address, null, 2));
     }
 
     // Build vitals object (handle both formats)
@@ -269,7 +285,9 @@ router.put('/:id', auth, async (req, res) => {
       firstName: data.firstName,
       lastName: data.lastName,
       dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : undefined,
+      age: data.age || data.metadata?.age || undefined,               // ✅ Save to root level
       gender: data.gender,
+      bloodGroup: data.bloodGroup || data.metadata?.bloodGroup || undefined,  // ✅ Save to root level
       phone: data.phone,
       email: data.email,
       
@@ -284,7 +302,7 @@ router.put('/:id', auth, async (req, res) => {
       prescriptions: data.prescriptions,
       notes: data.notes,
       
-      // Metadata object
+      // Metadata object (keep for backward compatibility)
       metadata: data.metadata || {
         age: data.age || undefined,
         bloodGroup: data.bloodGroup || undefined,

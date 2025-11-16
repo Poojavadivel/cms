@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import '../../../Widgets/patient_profile_header_card.dart';
 import '../../../Services/Authservices.dart';
 import '../../../Services/api_constants.dart';
+import '../../Admin/widgets/enterprise_patient_form.dart';
 
 
 class DoctorAppointmentPreview extends StatefulWidget {
@@ -43,16 +44,75 @@ class _DoctorAppointmentPreviewState extends State<DoctorAppointmentPreview>
     with SingleTickerProviderStateMixin {
   late final TabController _tab;
   late final TextStyle baseText;
+  late PatientDetails _currentPatient;
+  bool _isRefreshing = false;
 
   @override
   void initState() {
     super.initState();
+    _currentPatient = widget.patient;
     // Adjust tab count based on whether billing tab is shown
     _tab = TabController(
       length: widget.showBillingTab ? 5 : 4, 
       vsync: this,
     );
     baseText = GoogleFonts.inter();
+  }
+
+  Future<void> _refreshPatientData() async {
+    if (_isRefreshing) return;
+    
+    setState(() {
+      _isRefreshing = true;
+    });
+
+    try {
+      debugPrint('🔄 [APPOINTMENT PREVIEW] Refreshing patient data for: ${_currentPatient.patientId}');
+      final freshData = await AuthService.instance.fetchProfileCardData(_currentPatient.patientId);
+      if (mounted) {
+        setState(() {
+          _currentPatient = freshData;
+          _isRefreshing = false;
+        });
+        debugPrint('✅ [APPOINTMENT PREVIEW] Patient data refreshed successfully');
+      }
+    } catch (e) {
+      debugPrint('⚠️ [APPOINTMENT PREVIEW] Failed to refresh patient data: $e');
+      if (mounted) {
+        setState(() {
+          _isRefreshing = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _openEditPatientDialog(BuildContext context, PatientDetails patient) async {
+    // Import the form dynamically to avoid circular dependencies
+    final result = await showDialog<dynamic>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(16),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: MediaQuery.of(context).size.width * 0.9,
+            maxHeight: MediaQuery.of(context).size.height * 0.9,
+          ),
+          child: _buildEditPatientForm(patient),
+        ),
+      ),
+    );
+
+    // Refresh patient data after edit
+    if (result != null) {
+      debugPrint('✅ [APPOINTMENT PREVIEW] Patient edited, refreshing data...');
+      await _refreshPatientData();
+    }
+  }
+
+  Widget _buildEditPatientForm(PatientDetails patient) {
+    return EnterprisePatientForm(initial: patient);
   }
   static const Color kPrimary = Color(0xFFEF4444);
   static const Color kBg = Color(0xFFF9FAFB);
@@ -80,18 +140,24 @@ class _DoctorAppointmentPreviewState extends State<DoctorAppointmentPreview>
 
   @override
   Widget build(BuildContext context) {
-    final patient = widget.patient;
+    final patient = _currentPatient;
     final size = MediaQuery.of(context).size;
 
     // map patient fields to the names used in the original UI (fallbacks applied)
     final pName = (patient.name.isNotEmpty) ? patient.name : '—';
     final pGender = (patient.gender.isNotEmpty) ? patient.gender : '—';
     
-    // Build complete address from patient data
+    // Build complete address from patient data (for legacy display in other tabs)
+    debugPrint('🏠 Address Debug - HouseNo: "${patient.houseNo}", Street: "${patient.street}"');
+    debugPrint('🏠 Address Debug - City: "${patient.city}", State: "${patient.state}"');
+    
     final List<String> addressParts = [];
-    if (patient.address.isNotEmpty) addressParts.add(patient.address);
+    if (patient.houseNo.isNotEmpty) addressParts.add(patient.houseNo);
+    if (patient.street.isNotEmpty) addressParts.add(patient.street);
     if (patient.city.isNotEmpty) addressParts.add(patient.city);
+    if (patient.state.isNotEmpty) addressParts.add(patient.state);
     if (patient.pincode.isNotEmpty) addressParts.add(patient.pincode);
+    if (patient.country.isNotEmpty) addressParts.add(patient.country);
     final pLoc = addressParts.isNotEmpty ? addressParts.join(', ') : '—';
     
     // final pJob = (patient.occupation.isNotEmpty) ? patient.occupation : '—';
@@ -143,7 +209,13 @@ class _DoctorAppointmentPreviewState extends State<DoctorAppointmentPreview>
                             // PATIENT HEADER
                             Container(
                               padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-                              child: PatientProfileHeaderCard(patient: patient),
+                              child: PatientProfileHeaderCard(
+                                patient: patient,
+                                onEdit: () async {
+                                  debugPrint('📝 [APPOINTMENT PREVIEW] Opening edit patient dialog...');
+                                  await _openEditPatientDialog(context, patient);
+                                },
+                              ),
                             ),
 
                             const SizedBox(height: 12),
@@ -232,6 +304,12 @@ class _DoctorAppointmentPreviewState extends State<DoctorAppointmentPreview>
                                               pEmergencyPhone: pEmergencyPhone,
                                               pInsurance: pInsurance,
                                               pInsuranceExpiry: pInsuranceExpiry,
+                                              pHouseNo: patient.houseNo,
+                                              pStreet: patient.street,
+                                              pCity: patient.city,
+                                              pState: patient.state,
+                                              pPincode: patient.pincode,
+                                              pCountry: patient.country.isNotEmpty ? patient.country : 'India',
                                             ),
                                             _PatientProfileTab(
                                               patientId: patient.patientId,
@@ -324,6 +402,8 @@ class _OverviewTab extends StatelessWidget {
   final String date, time, reason, status;
   final String pEmergencyName, pEmergencyPhone;
   final String pInsurance, pInsuranceExpiry;
+  // Direct address fields (no parsing needed)
+  final String pHouseNo, pStreet, pCity, pState, pPincode, pCountry;
 
   const _OverviewTab({
     required this.text,
@@ -348,6 +428,12 @@ class _OverviewTab extends StatelessWidget {
     required this.pEmergencyPhone,
     required this.pInsurance,
     required this.pInsuranceExpiry,
+    required this.pHouseNo,
+    required this.pStreet,
+    required this.pCity,
+    required this.pState,
+    required this.pPincode,
+    required this.pCountry,
   });
 
   // Theme
@@ -379,9 +465,20 @@ class _OverviewTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final base = GoogleFonts.inter(color: kText, height: 1.35);
 
-    // Use patient's actual address or fallback message
-    final rawAddress = _isMissing(pLoc) ? 'No address on file' : pLoc.trim();
-    final addr = _normalizeUSAddress(rawAddress);
+    // Use direct address fields (no parsing needed!)
+    debugPrint('📍 Display Debug - pHouseNo: "$pHouseNo", pStreet: "$pStreet"');
+    debugPrint('📍 Display Debug - pCity: "$pCity", pState: "$pState", pPincode: "$pPincode"');
+    
+    final addr = _USAddress(
+      street1: pHouseNo,
+      street2: pStreet,
+      city: pCity,
+      state: pState,
+      zip: pPincode,
+      country: pCountry,
+    );
+    
+    debugPrint('📦 _USAddress created - street1: "${addr.street1}", street2: "${addr.street2}"');
 
     // Use actual update dates if available, or show "Not available"
     const addrUpdated = "Updated: Recently";
@@ -445,11 +542,12 @@ class _OverviewTab extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _labelValue('Street',  _joinNonEmpty([addr.street1, addr.street2], sep: ', '), base),
-          _labelValue('City',    addr.city, base),
-          _labelValue('State',   addr.state, base),
-          _labelValue('ZIP',     addr.zip, base),
-          _labelValue('Country', addr.country, base),
+          _labelValue('House No', addr.street1.isNotEmpty ? addr.street1 : 'Not Provided', base),
+          _labelValue('Street',   addr.street2.isNotEmpty ? addr.street2 : 'Not Provided', base),
+          _labelValue('City',     addr.city.isNotEmpty ? addr.city : 'Not Provided', base),
+          _labelValue('State',    addr.state.isNotEmpty ? addr.state : 'Not Provided', base),
+          _labelValue('Pincode',  addr.zip.isNotEmpty ? addr.zip : 'Not Provided', base),
+          _labelValue('Country',  addr.country.isNotEmpty ? addr.country : 'India', base),
           const SizedBox(height: 10),
           Wrap(
             spacing: 8,
@@ -798,118 +896,126 @@ class _PatientProfileTab extends StatefulWidget {
 
 
 class _PatientProfileTabState extends State<_PatientProfileTab> {
-  String _searchQuery = "";
-  int _currentPage = 0;
-  final int _itemsPerPage = 5;
+  bool _isLoading = true;
+  String? _error;
+  List<Map<String, dynamic>> _medicalHistory = [];
 
-  final List<Map<String, String>> _medicalHistory = List.generate(10, (i) {
-    return {
-      'doctor':
-      'Dr. ${["Smith", "Johnson", "Lee", "Kumar", "Patel", "Brown", "Miller", "Taylor", "Davis", "Wilson"][i]}',
-      'date': '2025-08-${(i + 10).toString().padLeft(2, "0")}',
-      'time': '${9 + i % 3}:30 AM',
-      'category': ['Checkup', 'Surgery', 'Therapy', 'Consultation', 'Follow-up'][i % 5],
-      'notes': 'Sample note ${i + 1}',
-      'document': 'Doc_${i + 1}.pdf',
-    };
-  });
+  @override
+  void initState() {
+    super.initState();
+    _fetchMedicalHistory();
+  }
+
+  Future<void> _fetchMedicalHistory() async {
+    try {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+
+      print('📋 [MEDICAL HISTORY] Fetching for patient: ${widget.patientId}');
+      
+      final history = await AuthService.instance.getMedicalHistory(
+        patientId: widget.patientId,
+        limit: 100,
+        page: 0,
+      );
+
+      print('📦 [MEDICAL HISTORY] Received ${history.length} records');
+
+      setState(() {
+        _medicalHistory = history;
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('❌ [MEDICAL HISTORY] Error: $e');
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    // filter
-    final filtered = _medicalHistory.where((row) {
-      if (_searchQuery.isEmpty) return true;
-      final hay = [
-        row['doctor'],
-        row['category'],
-        row['notes'],
-        row['document'],
-      ].join(' ').toLowerCase();
-      return hay.contains(_searchQuery.toLowerCase());
-    }).toList();
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(color: primaryColor),
+      );
+    }
 
-    // paginate
-    final startIndex = _currentPage * _itemsPerPage;
-    final endIndex = (startIndex + _itemsPerPage).clamp(0, filtered.length);
-    final pageRows = startIndex >= filtered.length
-        ? <Map<String, String>>[]
-        : filtered.sublist(startIndex, endIndex);
-
-    // rows -> widgets
-    final rowWidgets = pageRows.map((r) {
-      return [
-        Text(r['doctor']!, style: _cellStyle),
-        Text(r['date']!, style: _cellStyle),
-        Text(r['time']!, style: _cellStyle),
-        Text(r['category']!, style: _cellStyle),
-        Text(r['notes']!, style: _cellStyle),
-        InkWell(
-          onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Opening ${r['document']}')),
-            );
-          },
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.picture_as_pdf, size: 16, color: Colors.red),
-              const SizedBox(width: 4),
-              Text(r['document']!, style: _cellStyle.copyWith(color: Colors.blue)),
-            ],
-          ),
-        ),
-      ];
-    }).toList();
-
-    // fill available height cleanly
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-          child: SizedBox(
-            width: constraints.maxWidth,
-            height: constraints.maxHeight,
-            child: GenericDataTable(
-              title: 'Medical History',
-              headers: const ['Doctor Name', 'Date', 'Time', 'Category', 'Notes', 'Document'],
-              rows: rowWidgets,
-              searchQuery: _searchQuery,
-              onSearchChanged: (q) => setState(() => _searchQuery = q),
-              filters: const [],
-              currentPage: _currentPage,
-              totalItems: filtered.length,
-              itemsPerPage: _itemsPerPage,
-              onPreviousPage: () {
-                setState(() => _currentPage = (_currentPage - 1).clamp(0, 9999));
-              },
-              onNextPage: () {
-                setState(() => _currentPage = _currentPage + 1);
-              },
-
-              // actions
-              onView: (index) {
-                final row = pageRows[index];
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Viewing ${row['doctor']}')),
-                );
-              },
-              onEdit: (index) {
-                final row = pageRows[index];
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Editing ${row['doctor']}')),
-                );
-              },
-              onDelete: (index) {
-                final row = pageRows[index];
-                setState(() => _medicalHistory.remove(row));
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Deleted ${row['doctor']}')),
-                );
-              },
+    if (_error != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.error_outline, size: 48, color: Colors.red.shade400),
+            const SizedBox(height: 16),
+            Text(
+              'Failed to load medical history',
+              style: GoogleFonts.inter(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: textPrimaryColor,
+              ),
             ),
-          ),
-        );
-      },
+            const SizedBox(height: 8),
+            Text(
+              _error!,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                color: textSecondaryColor,
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: _fetchMedicalHistory,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Retry'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryColor,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_medicalHistory.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.history_outlined, size: 64, color: Colors.grey.shade400),
+            const SizedBox(height: 16),
+            Text(
+              'No medical history found',
+              style: GoogleFonts.inter(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: textSecondaryColor,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Medical history records will appear here once uploaded',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                color: textSecondaryColor,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return _MedicalHistoryTable(
+      history: _medicalHistory,
+      patientId: widget.patientId,
+      onRefresh: _fetchMedicalHistory,
     );
   }
 
@@ -918,6 +1024,517 @@ class _PatientProfileTabState extends State<_PatientProfileTab> {
     fontWeight: FontWeight.w500,
     color: const Color(0xFF1F2937),
   );
+}
+
+/// Medical History Table Widget
+class _MedicalHistoryTable extends StatefulWidget {
+  final List<Map<String, dynamic>> history;
+  final String patientId;
+  final VoidCallback onRefresh;
+  
+  const _MedicalHistoryTable({
+    required this.history,
+    required this.patientId,
+    required this.onRefresh,
+  });
+
+  @override
+  State<_MedicalHistoryTable> createState() => _MedicalHistoryTableState();
+}
+
+class _MedicalHistoryTableState extends State<_MedicalHistoryTable> {
+  String _searchQuery = "";
+  String _categoryFilter = "All";
+  int _currentPage = 0;
+  final int _itemsPerPage = 10;
+
+  String _extractTitle(Map<String, dynamic> record) {
+    return record['title']?.toString() ?? 
+           record['diagnosis']?.toString() ?? 
+           record['condition']?.toString() ?? 
+           'Medical Record';
+  }
+
+  String _extractDate(Map<String, dynamic> record) {
+    try {
+      final date = record['reportDate'] ?? record['uploadDate'] ?? record['date'] ?? record['createdAt'];
+      if (date == null) return '—';
+
+      final dateTime = DateTime.parse(date.toString());
+      return DateFormat('dd MMM yyyy').format(dateTime);
+    } catch (e) {
+      return '—';
+    }
+  }
+
+  String _extractCategory(Map<String, dynamic> record) {
+    return record['category']?.toString() ?? 
+           record['type']?.toString() ?? 
+           'General';
+  }
+
+  String _extractNotes(Map<String, dynamic> record) {
+    // Try to extract meaningful notes from various fields
+    final extractedData = record['extractedData'];
+    if (extractedData is Map) {
+      final medHistory = extractedData['medicalHistory']?.toString();
+      if (medHistory != null && medHistory.isNotEmpty) {
+        return medHistory.length > 100 ? '${medHistory.substring(0, 100)}...' : medHistory;
+      }
+    }
+    
+    final notes = record['notes']?.toString() ?? record['description']?.toString();
+    if (notes != null && notes.isNotEmpty) {
+      return notes.length > 100 ? '${notes.substring(0, 100)}...' : notes;
+    }
+    
+    return '—';
+  }
+
+  List<Map<String, dynamic>> _applyFilters(List<Map<String, dynamic>> data) {
+    final q = _searchQuery.trim().toLowerCase();
+    return data.where((r) {
+      final category = _extractCategory(r);
+      final matchesCategory = _categoryFilter == 'All' || 
+                              category.toLowerCase() == _categoryFilter.toLowerCase();
+      
+      if (q.isEmpty) return matchesCategory;
+
+      final title = _extractTitle(r).toLowerCase();
+      final notes = _extractNotes(r).toLowerCase();
+      final date = _extractDate(r).toLowerCase();
+      
+      final matchesQuery = title.contains(q) || 
+                          notes.contains(q) || 
+                          date.contains(q) ||
+                          category.toLowerCase().contains(q);
+
+      return matchesCategory && matchesQuery;
+    }).toList();
+  }
+
+  void _viewMedicalHistory(Map<String, dynamic> record) {
+    final recordId = record['id']?.toString() ?? record['_id']?.toString();
+    final pdfId = record['pdfId']?.toString();
+    
+    if (pdfId != null && pdfId.isNotEmpty) {
+      // Show image viewer dialog
+      showDialog(
+        context: context,
+        barrierDismissible: true,
+        builder: (context) => _MedicalHistoryImageViewer(
+          recordId: recordId ?? '',
+          pdfId: pdfId,
+          title: _extractTitle(record),
+          date: _extractDate(record),
+        ),
+      );
+    } else {
+      // Show details dialog with extracted data
+      showDialog(
+        context: context,
+        barrierDismissible: true,
+        builder: (context) => _MedicalHistoryDetailsDialog(
+          record: record,
+          title: _extractTitle(record),
+          date: _extractDate(record),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final filtered = _applyFilters(widget.history);
+
+    final startIndex = _currentPage * _itemsPerPage;
+    final endIndex = (startIndex + _itemsPerPage).clamp(0, filtered.length);
+    final pageRows = startIndex >= filtered.length
+        ? <Map<String, dynamic>>[]
+        : filtered.sublist(startIndex, endIndex);
+
+    final rowWidgets = pageRows.map((r) {
+      return [
+        Text(_extractTitle(r), style: _cellStyle),
+        Text(_extractDate(r), style: _cellStyle),
+        Text(_extractCategory(r), style: _cellStyle),
+        Text(_extractNotes(r), style: _cellStyle),
+        r['pdfId'] != null
+            ? InkWell(
+                onTap: () => _viewMedicalHistory(r),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.picture_as_pdf, size: 16, color: Colors.red),
+                    const SizedBox(width: 4),
+                    Text('View', style: GoogleFonts.poppins(fontSize: 14, color: Colors.blue)),
+                  ],
+                ),
+              )
+            : Text('—', style: GoogleFonts.poppins(fontSize: 14, color: textSecondaryColor)),
+      ];
+    }).toList();
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SizedBox(
+          width: constraints.maxWidth,
+          height: constraints.maxHeight,
+          child: GenericDataTable(
+            title: "Medical History",
+            headers: const [
+              'Title',
+              'Date',
+              'Category',
+              'Notes',
+              'Document'
+            ],
+            rows: rowWidgets,
+            searchQuery: _searchQuery,
+            onSearchChanged: (q) => setState(() => _searchQuery = q),
+            filters: [
+              DropdownButton<String>(
+                value: _categoryFilter,
+                onChanged: (v) => setState(() {
+                  _categoryFilter = v!;
+                  _currentPage = 0;
+                }),
+                items: const [
+                  DropdownMenuItem(value: "All", child: Text("All")),
+                  DropdownMenuItem(value: "General", child: Text("General")),
+                  DropdownMenuItem(value: "Chronic", child: Text("Chronic")),
+                  DropdownMenuItem(value: "Acute", child: Text("Acute")),
+                ],
+              ),
+            ],
+            currentPage: _currentPage,
+            totalItems: filtered.length,
+            itemsPerPage: _itemsPerPage,
+            onPreviousPage: () =>
+                setState(() => _currentPage = (_currentPage - 1).clamp(0, 9999)),
+            onNextPage: () => setState(() => _currentPage = _currentPage + 1),
+            onView: (i) => _viewMedicalHistory(pageRows[i]),
+            onEdit: null,
+            onDelete: null,
+          ),
+        );
+      },
+    );
+  }
+
+  TextStyle get _cellStyle => GoogleFonts.inter(
+    fontSize: 14,
+    fontWeight: FontWeight.w500,
+    color: textPrimaryColor,
+  );
+}
+
+/// Medical History Image Viewer Dialog
+class _MedicalHistoryImageViewer extends StatefulWidget {
+  final String recordId;
+  final String pdfId;
+  final String title;
+  final String date;
+
+  const _MedicalHistoryImageViewer({
+    required this.recordId,
+    required this.pdfId,
+    required this.title,
+    required this.date,
+  });
+
+  @override
+  State<_MedicalHistoryImageViewer> createState() => _MedicalHistoryImageViewerState();
+}
+
+class _MedicalHistoryImageViewerState extends State<_MedicalHistoryImageViewer> {
+  bool _isLoading = true;
+  String? _error;
+  String? _imageUrl;
+  String? _token;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadImage();
+  }
+
+  void _loadImage() async {
+    try {
+      final token = await AuthService.instance.getToken();
+      
+      setState(() {
+        _isLoading = false;
+        _token = token;
+        _imageUrl = '${ApiConfig.baseUrl}/api/scanner-enterprise/pdf-public/${widget.pdfId}';
+        print('🖼️ [MEDICAL HISTORY VIEWER] Using PDF: $_imageUrl');
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+        _error = e.toString();
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.all(24),
+      child: Container(
+        constraints: BoxConstraints(
+          maxWidth: size.width * 0.9,
+          maxHeight: size.height * 0.9,
+        ),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          children: [
+            // Header
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: primaryColor.withOpacity(0.1),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.history, color: primaryColor),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.title,
+                          style: GoogleFonts.lexend(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: textPrimaryColor,
+                          ),
+                        ),
+                        Text(
+                          widget.date,
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            color: textSecondaryColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close),
+                    color: textPrimaryColor,
+                  ),
+                ],
+              ),
+            ),
+
+            // Image Content
+            Expanded(
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator(color: primaryColor))
+                  : _error != null
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.error_outline, size: 48, color: Colors.red.shade400),
+                              const SizedBox(height: 16),
+                              Text(
+                                'Failed to load image',
+                                style: GoogleFonts.inter(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: textPrimaryColor,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                _error!,
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.inter(
+                                  fontSize: 13,
+                                  color: textSecondaryColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : InteractiveViewer(
+                          minScale: 0.5,
+                          maxScale: 4.0,
+                          child: Center(
+                            child: Image.network(
+                              _imageUrl!,
+                              headers: {
+                                if (_token != null) 'x-auth-token': _token!,
+                              },
+                              loadingBuilder: (context, child, progress) {
+                                if (progress == null) return child;
+                                return Center(
+                                  child: CircularProgressIndicator(
+                                    value: progress.expectedTotalBytes != null
+                                        ? progress.cumulativeBytesLoaded / progress.expectedTotalBytes!
+                                        : null,
+                                    color: primaryColor,
+                                  ),
+                                );
+                              },
+                              errorBuilder: (context, error, stackTrace) {
+                                return Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.broken_image, size: 48, color: Colors.grey.shade400),
+                                      const SizedBox(height: 16),
+                                      Text(
+                                        'Image not available',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 14,
+                                          color: textSecondaryColor,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Medical History Details Dialog (for records without PDF)
+class _MedicalHistoryDetailsDialog extends StatelessWidget {
+  final Map<String, dynamic> record;
+  final String title;
+  final String date;
+
+  const _MedicalHistoryDetailsDialog({
+    required this.record,
+    required this.title,
+    required this.date,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final extractedData = record['extractedData'] as Map?;
+    final medicalHistory = extractedData?['medicalHistory']?.toString() ?? '—';
+    final allergies = extractedData?['allergies']?.toString() ?? '—';
+    final diagnosis = extractedData?['diagnosis']?.toString() ?? '—';
+
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.all(24),
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 600),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Header
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: primaryColor.withOpacity(0.1),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.history, color: primaryColor),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: GoogleFonts.lexend(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: textPrimaryColor,
+                          ),
+                        ),
+                        Text(
+                          date,
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            color: textSecondaryColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close),
+                    color: textPrimaryColor,
+                  ),
+                ],
+              ),
+            ),
+
+            // Content
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildDetailRow('Medical History', medicalHistory),
+                  const SizedBox(height: 16),
+                  _buildDetailRow('Diagnosis', diagnosis),
+                  const SizedBox(height: 16),
+                  _buildDetailRow('Allergies', allergies),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: textSecondaryColor,
+            letterSpacing: 0.5,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          value,
+          style: GoogleFonts.inter(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: textPrimaryColor,
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 

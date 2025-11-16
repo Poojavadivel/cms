@@ -28,7 +28,8 @@ class ApiConfig {
   static const _Environment _currentEnv = _Environment.staging;
   
   /// Get base URL for current environment
-  static const  String baseUrl = 'https://hms-dev.onrender.com';
+  static const  String baseUrl = 'http://10.165.144.132:3000';
+  // static const  String baseUrl = 'https://hms-dev.onrender.com';
   
   /// API version
   static const String apiVersion = 'v1';
@@ -160,6 +161,7 @@ class ScannerEndpoints {
   // New separate endpoints
   static String getPrescriptions(String patientId) => '$_base/prescriptions/$patientId';
   static String getLabReports(String patientId) => '$_base/lab-reports/$patientId';
+  static String getMedicalHistory(String patientId) => '$_base/medical-history/$patientId';
 }
 
 
@@ -191,6 +193,24 @@ class StaffEndpoints {
   static String create() => _base;
   static String update(String id) => '$_base/$id';
   static String delete(String id) => '$_base/$id';
+}
+
+/// Payroll management endpoints
+class PayrollEndpoints {
+  static const String _base = '/api/payroll';
+  
+  static String getAll() => _base;
+  static String getById(String id) => '$_base/$id';
+  static String create() => _base;
+  static String update(String id) => '$_base/$id';
+  static String delete(String id) => '$_base/$id';
+  static String approve(String id) => '$_base/$id/approve';
+  static String reject(String id) => '$_base/$id/reject';
+  static String processPayment(String id) => '$_base/$id/process-payment';
+  static String markPaid(String id) => '$_base/$id/mark-paid';
+  static String calculate(String id) => '$_base/$id/calculate';
+  static String bulkGenerate() => '$_base/bulk/generate';
+  static String getSummary() => '$_base/summary/stats';
 }
 
 /// Chatbot/AI endpoints
@@ -300,6 +320,20 @@ class ApiEndpoints {
   static RestApi getStaffById(String id) => RestApi(url: StaffEndpoints.getById(id), method: ApiConstants.get);
   static RestApi updateStaff(String id) => RestApi(url: StaffEndpoints.update(id), method: ApiConstants.put);
   static RestApi deleteStaff(String id) => RestApi(url: StaffEndpoints.delete(id), method: ApiConstants.delete);
+  
+  // Payroll
+  static RestApi createPayroll() => RestApi(url: PayrollEndpoints.create(), method: ApiConstants.post);
+  static RestApi getPayrolls() => RestApi(url: PayrollEndpoints.getAll(), method: ApiConstants.get);
+  static RestApi getPayrollById(String id) => RestApi(url: PayrollEndpoints.getById(id), method: ApiConstants.get);
+  static RestApi updatePayroll(String id) => RestApi(url: PayrollEndpoints.update(id), method: ApiConstants.put);
+  static RestApi deletePayroll(String id) => RestApi(url: PayrollEndpoints.delete(id), method: ApiConstants.delete);
+  static RestApi approvePayroll(String id) => RestApi(url: PayrollEndpoints.approve(id), method: ApiConstants.patch);
+  static RestApi rejectPayroll(String id) => RestApi(url: PayrollEndpoints.reject(id), method: ApiConstants.patch);
+  static RestApi processPayrollPayment(String id) => RestApi(url: PayrollEndpoints.processPayment(id), method: ApiConstants.patch);
+  static RestApi markPayrollPaid(String id) => RestApi(url: PayrollEndpoints.markPaid(id), method: ApiConstants.patch);
+  static RestApi calculatePayroll(String id) => RestApi(url: PayrollEndpoints.calculate(id), method: ApiConstants.post);
+  static RestApi bulkGeneratePayroll() => RestApi(url: PayrollEndpoints.bulkGenerate(), method: ApiConstants.post);
+  static RestApi getPayrollSummary() => RestApi(url: PayrollEndpoints.getSummary(), method: ApiConstants.get);
   
   // Doctors
   static RestApi getAllDoctors() => RestApi(url: DoctorEndpoints.getAll(), method: ApiConstants.get);

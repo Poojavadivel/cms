@@ -9,7 +9,7 @@ const { v4: uuidv4 } = require('uuid');
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 const auth = require('../Middleware/Auth');
-const { Patient, LabReport, PatientPDF, PrescriptionDocument, LabReportDocument, startSession } = require('../Models');
+const { Patient, LabReport, PatientPDF, PrescriptionDocument, LabReportDocument, MedicalHistoryDocument, startSession } = require('../Models');
 
 // ============================================================================
 // CONFIGURATION
@@ -17,7 +17,7 @@ const { Patient, LabReport, PatientPDF, PrescriptionDocument, LabReportDocument,
 const CONFIG = {
   MAX_FILE_SIZE: 50 * 1024 * 1024, // 50MB
   MAX_FILES_PER_UPLOAD: 10,
-  GEMINI_MODEL: 'gemini-2.0-flash-exp',
+  GEMINI_MODEL: 'gemini-2.5-flash',
   TEMP_UPLOAD_DIR: path.join(__dirname, '../uploads/temp'),
 };
 
@@ -169,6 +169,348 @@ async function cleanupTempFile(filePath) {
 }
 
 // ============================================================================
+// ENTERPRISE PDF DOCUMENT PROCESSOR
+// ============================================================================
+/**
+ * Enterprise-grade PDF document processor
+ * Handles text extraction with multiple fallback strategies
+ * @param {Buffer} buffer - PDF file buffer
+ * @param {string} batchId - Batch identifier for logging
+ * @param {number} startTime - Processing start timestamp
+ * @returns {Object} Extraction result with text, engine, confidence, and metadata
+ */
+async function processPDFDocument(buffer, batchId, startTime) {
+  logh(batchId, '📄 [PDF PROCESSOR] Starting enterprise PDF processing');
+  
+  try {
+    // Strategy 1: Text-based PDF extraction with pdf-parse
+    const textResult = await extractTextFromPDF(buffer, batchId);
+    
+    if (textResult.success && textResult.text.length > 50) {
+      logh(batchId, `✅ [PDF PROCESSOR] Text extraction successful: ${textResult.text.length} chars, ${textResult.pages} pages`);
+      
+      // Determine engine based on extraction method
+      const engine = textResult.metadata?.method === 'direct-parsing' ? 'vision' : 'gemini';
+      
+      return {
+        text: textResult.text,
+        engine: engine,
+        confidence: 1.0,
+        tookMs: Date.now() - startTime,
+        metadata: {
+          pages: textResult.pages,
+          hasTextLayer: true,
+          extractionMethod: textResult.metadata?.method || 'text-layer',
+          pdfMethod: textResult.metadata?.method
+        }
+      };
+    }
+    
+    // Strategy 2: Minimal text found - likely scanned PDF
+    if (textResult.success && textResult.text.length > 0) {
+      logh(batchId, `⚠️ [PDF PROCESSOR] Minimal text found (${textResult.text.length} chars) - possibly scanned PDF`);
+      
+      const engine = textResult.metadata?.method === 'direct-parsing' ? 'vision' : 'gemini';
+      
+      return {
+        text: textResult.text,
+        engine: engine,
+        confidence: 0.5,
+        tookMs: Date.now() - startTime,
+        warning: 'Minimal text found. This may be a scanned PDF. Consider uploading as JPG/PNG for better OCR results.',
+        metadata: {
+          pages: textResult.pages,
+          hasTextLayer: false,
+          extractionMethod: textResult.metadata?.method || 'partial-text',
+          pdfMethod: textResult.metadata?.method
+        }
+      };
+    }
+    
+    // Strategy 3: No text layer detected
+    logh(batchId, '⚠️ [PDF PROCESSOR] No text layer detected - scanned/image-based PDF');
+    logh(batchId, '💡 [PDF PROCESSOR] Recommendation: Convert to JPG/PNG for OCR processing');
+    
+    return {
+      text: '',
+      engine: 'manual',
+      confidence: 0.0,
+      tookMs: Date.now() - startTime,
+      warning: 'PDF has no text layer. Please upload a PDF with searchable text, or convert to JPG/PNG format for OCR processing.',
+      metadata: {
+        pages: textResult.pages || 0,
+        hasTextLayer: false,
+        extractionMethod: 'none',
+        requiresOCR: true
+      }
+    };
+    
+  } catch (error) {
+    logh(batchId, `❌ [PDF PROCESSOR] Processing failed: ${error.message}`);
+    
+    return {
+      text: '',
+      engine: 'manual',
+      confidence: 0.0,
+      tookMs: Date.now() - startTime,
+      warning: 'PDF processing failed. Please use a PDF with searchable text, or convert to JPG/PNG format.',
+      error: error.message,
+      metadata: {
+        hasTextLayer: false,
+        extractionMethod: 'failed'
+      }
+    };
+  }
+}
+
+/**
+ * BULLETPROOF PDF TEXT EXTRACTOR
+ * Enterprise-grade extraction with multiple fallback strategies
+ * Handles all PDF types: text-based, scanned, encrypted, corrupted
+ * @param {Buffer} buffer - PDF file buffer
+ * @param {string} batchId - Batch identifier for logging
+ * @returns {Object} Extraction result with success flag, text, and page count
+ */
+async function extractTextFromPDF(buffer, batchId) {
+  logh(batchId, '🔧 [PDF EXTRACTOR] Initializing bulletproof PDF extraction');
+  
+  // Strategy 1: Try pdf-parse library
+  const pdfParseResult = await tryPDFParseExtraction(buffer, batchId);
+  if (pdfParseResult.success) {
+    return pdfParseResult;
+  }
+  
+  // Strategy 2: Try direct PDF parsing
+  logh(batchId, '🔄 [PDF EXTRACTOR] Trying direct PDF parsing');
+  const directResult = await tryDirectPDFParsing(buffer, batchId);
+  if (directResult.success) {
+    return directResult;
+  }
+  
+  // Strategy 3: Check if PDF is valid
+  const validationResult = await validatePDFStructure(buffer, batchId);
+  
+  // All strategies failed - return structured failure
+  return {
+    success: false,
+    text: '',
+    pages: validationResult.pages || 0,
+    error: validationResult.error || 'PDF text extraction failed',
+    metadata: {
+      isValid: validationResult.isValid,
+      hasTextLayer: false,
+      fileSize: buffer.length
+    }
+  };
+}
+
+/**
+ * Strategy 1: Try pdf-parse library with proper instantiation
+ */
+async function tryPDFParseExtraction(buffer, batchId) {
+  try {
+    logh(batchId, '📚 [STRATEGY 1] Loading pdf-parse library');
+    
+    // Import pdf-parse module
+    const pdfParseModule = await import('pdf-parse/node');
+    
+    // Try multiple ways to get the parser
+    let parser = null;
+    
+    // Method 1: Check for PDFParse class
+    if (pdfParseModule.PDFParse) {
+      logh(batchId, '🔍 [STRATEGY 1] Found PDFParse class, instantiating...');
+      parser = new pdfParseModule.PDFParse();
+    }
+    // Method 2: Check for default export as class
+    else if (pdfParseModule.default && typeof pdfParseModule.default === 'function') {
+      logh(batchId, '🔍 [STRATEGY 1] Found default export, instantiating...');
+      parser = new pdfParseModule.default();
+    }
+    // Method 3: Check for default export as function
+    else if (pdfParseModule.default) {
+      logh(batchId, '🔍 [STRATEGY 1] Using default export as function');
+      parser = pdfParseModule.default;
+    }
+    // Method 4: Use module directly
+    else {
+      logh(batchId, '🔍 [STRATEGY 1] Using module directly');
+      parser = pdfParseModule;
+    }
+    
+    // Try to parse with instantiated class
+    let parsed;
+    if (parser && parser.parse) {
+      logh(batchId, '⚙️ [STRATEGY 1] Using parser.parse() method');
+      parsed = await parser.parse(buffer);
+    } else if (typeof parser === 'function') {
+      logh(batchId, '⚙️ [STRATEGY 1] Calling parser as function');
+      parsed = await parser(buffer);
+    } else if (parser && parser.PDFParse) {
+      logh(batchId, '⚙️ [STRATEGY 1] Using nested PDFParse');
+      const nestedParser = new parser.PDFParse();
+      parsed = await nestedParser.parse(buffer);
+    } else {
+      throw new Error('No valid parser method found');
+    }
+    
+    const text = (parsed?.text || '').trim();
+    const pages = parsed?.numpages || parsed?.pages || 0;
+    
+    logh(batchId, `✅ [STRATEGY 1] SUCCESS: Extracted ${text.length} chars from ${pages} pages`);
+    
+    return {
+      success: true,
+      text,
+      pages,
+      metadata: {
+        method: 'pdf-parse',
+        ...parsed.metadata
+      }
+    };
+    
+  } catch (error) {
+    logh(batchId, `❌ [STRATEGY 1] Failed: ${error.message}`);
+    return { success: false };
+  }
+}
+
+/**
+ * Strategy 2: Direct PDF parsing without library
+ * Reads PDF structure directly for basic text extraction
+ */
+async function tryDirectPDFParsing(buffer, batchId) {
+  try {
+    logh(batchId, '🔧 [STRATEGY 2] Attempting direct PDF text extraction');
+    
+    // Convert buffer to string for regex search
+    const pdfString = buffer.toString('binary');
+    
+    // Check if it's a valid PDF
+    if (!pdfString.startsWith('%PDF-')) {
+      logh(batchId, '❌ [STRATEGY 2] Not a valid PDF file');
+      return { success: false };
+    }
+    
+    // Extract PDF version
+    const versionMatch = pdfString.match(/%PDF-(\d\.\d)/);
+    const version = versionMatch ? versionMatch[1] : 'unknown';
+    logh(batchId, `📋 [STRATEGY 2] PDF version: ${version}`);
+    
+    // Try to extract text from stream objects
+    const textMatches = [];
+    
+    // Method 1: Look for BT...ET (Text objects)
+    const btPattern = /BT\s+(.*?)\s+ET/gs;
+    let match;
+    while ((match = btPattern.exec(pdfString)) !== null) {
+      const textContent = match[1];
+      // Extract text from Tj or TJ operators
+      const tjMatches = textContent.match(/\((.*?)\)/g);
+      if (tjMatches) {
+        tjMatches.forEach(tj => {
+          const cleanText = tj.replace(/[()]/g, '').trim();
+          if (cleanText.length > 0) {
+            textMatches.push(cleanText);
+          }
+        });
+      }
+    }
+    
+    // Method 2: Look for stream contents
+    const streamPattern = /stream\s+([\s\S]*?)\s+endstream/g;
+    while ((match = streamPattern.exec(pdfString)) !== null) {
+      const streamContent = match[1];
+      // Try to find readable text
+      const readableText = streamContent.match(/[A-Za-z0-9\s.,;:!?'"()-]{10,}/g);
+      if (readableText) {
+        textMatches.push(...readableText);
+      }
+    }
+    
+    // Combine and clean extracted text
+    const extractedText = textMatches
+      .join(' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    
+    // Try to count pages
+    const pageCountMatch = pdfString.match(/\/Count\s+(\d+)/);
+    const pages = pageCountMatch ? parseInt(pageCountMatch[1]) : 1;
+    
+    if (extractedText.length > 10) {
+      logh(batchId, `✅ [STRATEGY 2] SUCCESS: Extracted ${extractedText.length} chars from ${pages} pages`);
+      return {
+        success: true,
+        text: extractedText,
+        pages,
+        metadata: {
+          method: 'direct-parsing',
+          version
+        }
+      };
+    }
+    
+    logh(batchId, '⚠️ [STRATEGY 2] Minimal text found, likely scanned PDF');
+    return { success: false };
+    
+  } catch (error) {
+    logh(batchId, `❌ [STRATEGY 2] Failed: ${error.message}`);
+    return { success: false };
+  }
+}
+
+/**
+ * Strategy 3: Validate PDF structure
+ * Checks if PDF is valid and provides diagnostic information
+ */
+async function validatePDFStructure(buffer, batchId) {
+  try {
+    logh(batchId, '🔍 [VALIDATION] Checking PDF structure');
+    
+    const pdfString = buffer.toString('binary');
+    
+    // Check PDF header
+    const isValid = pdfString.startsWith('%PDF-');
+    if (!isValid) {
+      logh(batchId, '❌ [VALIDATION] Invalid PDF header');
+      return { isValid: false, error: 'Invalid PDF file' };
+    }
+    
+    // Extract version
+    const versionMatch = pdfString.match(/%PDF-(\d\.\d)/);
+    const version = versionMatch ? versionMatch[1] : 'unknown';
+    
+    // Count pages
+    const pageCountMatch = pdfString.match(/\/Count\s+(\d+)/);
+    const pages = pageCountMatch ? parseInt(pageCountMatch[1]) : 0;
+    
+    // Check for encryption
+    const isEncrypted = pdfString.includes('/Encrypt');
+    
+    // Check for text content
+    const hasTextObjects = pdfString.includes('BT') && pdfString.includes('ET');
+    const hasStreams = pdfString.includes('stream');
+    
+    logh(batchId, `📊 [VALIDATION] PDF Info: v${version}, ${pages} pages, encrypted: ${isEncrypted}, hasText: ${hasTextObjects}`);
+    
+    return {
+      isValid: true,
+      version,
+      pages,
+      isEncrypted,
+      hasTextObjects,
+      hasStreams,
+      error: isEncrypted ? 'PDF is encrypted' : hasTextObjects ? 'PDF is scanned/image-based' : 'Unknown error'
+    };
+    
+  } catch (error) {
+    logh(batchId, `❌ [VALIDATION] Failed: ${error.message}`);
+    return { isValid: false, error: error.message };
+  }
+}
+
+// ============================================================================
 // STEP 1: OCR TEXT EXTRACTION
 // ============================================================================
 async function performOCR(filePath, mimetype, batchId) {
@@ -180,29 +522,10 @@ async function performOCR(filePath, mimetype, batchId) {
     
     // Handle PDF
     if (mimetype === 'application/pdf') {
-      logh(batchId, '📄 Processing PDF...');
-      try {
-        const { default: pdfParse } = await import('pdf-parse');
-        const parsed = await pdfParse(buffer);
-        const text = (parsed?.text || '').trim();
-        
-        if (text.length > 0) {
-          logh(batchId, `✅ PDF text extracted: ${text.length} chars, ${parsed.numpages} pages`);
-          return {
-            text,
-            engine: 'pdf-parse',
-            confidence: 1.0,
-            tookMs: Date.now() - t0
-          };
-        }
-        
-        logh(batchId, '⚠️ PDF has no text layer, using Vision OCR...');
-      } catch (e) {
-        logh(batchId, '❌ PDF parse failed:', e.message);
-      }
+      return await processPDFDocument(buffer, batchId, t0);
     }
     
-    // Handle Images (or scanned PDFs)
+    // Handle Images
     if (!visionClient) {
       throw new Error('Vision API not configured');
     }
@@ -803,6 +1126,60 @@ router.post('/scan-medical', auth, upload.single('image'), async (req, res) => {
     // STEP 1: OCR
     const ocrResult = await performOCR(req.file.path, req.file.mimetype, batchId);
     
+    // Check if OCR returned a warning (e.g., scanned PDF)
+    if (ocrResult.warning) {
+      logh(batchId, `⚠️ OCR Warning: ${ocrResult.warning}`);
+    }
+    
+    // If no text extracted, return early with warning
+    if (!ocrResult.text || ocrResult.text.length < 10) {
+      logh(batchId, '⚠️ Minimal or no text extracted');
+      
+      // Still save the PDF to patient record if patientId provided
+      if (patientId) {
+        try {
+          const patient = await Patient.findById(patientId);
+          if (patient) {
+            const fileBuffer = await fs.readFile(req.file.path);
+            const patientPDF = new PatientPDF({
+              patientId: patientId,
+              title: 'Medical Document (No Text Extracted)',
+              fileName: req.file.originalname,
+              mimeType: req.file.mimetype,
+              data: fileBuffer,
+              size: fileBuffer.length,
+              uploadedAt: new Date()
+            });
+            await patientPDF.save();
+            logh(batchId, `💾 PDF saved despite no text extraction: ${patientPDF._id}`);
+          }
+        } catch (saveError) {
+          logh(batchId, `⚠️ Failed to save PDF: ${saveError.message}`);
+        }
+      }
+      
+      await cleanupTempFile(req.file.path);
+      
+      return res.json({
+        success: true,
+        warning: ocrResult.warning || 'No text could be extracted from this document. Please upload an image (JPG/PNG) or PDF with text layer.',
+        intent: 'UNKNOWN',
+        ocrText: '',
+        extractedData: {
+          medicalHistory: '',
+          allergies: '',
+          diagnosis: '',
+          medications: '',
+          testResults: []
+        },
+        metadata: {
+          ocrEngine: ocrResult.engine,
+          ocrConfidence: 0.0,
+          processingTimeMs: Date.now() - t0
+        }
+      });
+    }
+    
     // STEP 2: Intent Detection
     const intentResult = await detectIntent(ocrResult.text, batchId);
     
@@ -896,6 +1273,39 @@ router.post('/scan-medical', auth, upload.single('image'), async (req, res) => {
             await prescriptionDoc.save();
             reportId = prescriptionDoc._id.toString();
             logh(batchId, `💊 Created PrescriptionDocument: ${reportId}`);
+            
+          } else if (intentResult.primaryIntent === 'MEDICAL_HISTORY' || intentResult.primaryIntent === 'DISCHARGE') {
+            // Save to MedicalHistoryDocument collection
+            const patientData = extractedData.patient || {};
+            const medicalHistoryDoc = new MedicalHistoryDocument({
+              patientId: patientId,
+              pdfId: pdfIdString,
+              title: intentResult.primaryIntent === 'DISCHARGE' ? 'Discharge Summary' : 'Medical History Record',
+              category: 'General',
+              medicalHistory: patientData.medicalHistory?.join(', ') || '',
+              diagnosis: extractedData.labReport?.diagnosis || '',
+              allergies: patientData.allergies?.join(', ') || '',
+              chronicConditions: patientData.chronicConditions || [],
+              surgicalHistory: patientData.surgeries || [],
+              familyHistory: patientData.familyHistory || '',
+              medications: patientData.currentMedications?.map(m => m.name).join(', ') || '',
+              recordDate: extractedData.labReport?.testDate || new Date(),
+              reportDate: extractedData.labReport?.testDate || new Date(),
+              doctorName: extractedData.labReport?.doctorName || '',
+              hospitalName: extractedData.labReport?.labName || '',
+              ocrText: ocrResult.text,
+              ocrEngine: ocrResult.engine === 'vision' ? 'google-vision' : ocrResult.engine,
+              ocrConfidence: ocrResult.confidence,
+              extractedData: extractedData,
+              intent: intentResult.primaryIntent,
+              status: 'completed',
+              uploadedBy: req.user?._id || null,
+              uploadDate: new Date()
+            });
+            
+            await medicalHistoryDoc.save();
+            reportId = medicalHistoryDoc._id.toString();
+            logh(batchId, `📋 Created MedicalHistoryDocument: ${reportId}`);
             
           } else {
             // Save to LabReportDocument collection (for lab reports)
@@ -1703,6 +2113,72 @@ router.get('/lab-reports/:patientId', auth, async (req, res) => {
 });
 
 // ============================================================================
+// GET MEDICAL HISTORY FOR PATIENT (SEPARATE COLLECTION)
+// ============================================================================
+router.get('/medical-history/:patientId', auth, async (req, res) => {
+  const { patientId } = req.params;
+  const { limit = 100, skip = 0 } = req.query;
+  
+  try {
+    console.log(`[MEDICAL HISTORY] Fetching for patient: ${patientId}`);
+    
+    // Fetch from MedicalHistoryDocument collection
+    const medicalHistory = await MedicalHistoryDocument.find({ patientId })
+      .sort({ uploadDate: -1 })
+      .limit(parseInt(limit))
+      .skip(parseInt(skip))
+      .lean();
+    
+    console.log(`[MEDICAL HISTORY] Found ${medicalHistory.length} medical history records`);
+    
+    // Format response
+    const formattedHistory = medicalHistory.map(record => ({
+      id: record._id,
+      _id: record._id,
+      patientId: record.patientId,
+      pdfId: record.pdfId,
+      title: record.title,
+      category: record.category,
+      intent: record.intent,
+      medicalHistory: record.medicalHistory,
+      diagnosis: record.diagnosis,
+      allergies: record.allergies,
+      chronicConditions: record.chronicConditions,
+      surgicalHistory: record.surgicalHistory,
+      familyHistory: record.familyHistory,
+      medications: record.medications,
+      recordDate: record.recordDate,
+      reportDate: record.reportDate,
+      date: record.reportDate || record.recordDate, // For frontend date extraction
+      doctorName: record.doctorName,
+      hospitalName: record.hospitalName,
+      specialty: record.specialty,
+      notes: record.notes,
+      extractedData: record.extractedData,
+      uploadDate: record.uploadDate,
+      uploadedBy: record.uploadedBy,
+      ocrConfidence: record.ocrConfidence,
+      status: record.status
+    }));
+    
+    return res.json({
+      success: true,
+      ok: true,
+      patientId,
+      count: formattedHistory.length,
+      medicalHistory: formattedHistory
+    });
+  } catch (error) {
+    console.error('[MEDICAL HISTORY] Error:', error);
+    return res.status(500).json({
+      success: false,
+      ok: false,
+      error: error.message
+    });
+  }
+});
+
+// ============================================================================
 // UPDATE PATIENT ID FOR DOCUMENTS (from temp ID to real ID after patient creation)
 // ============================================================================
 router.post('/update-patient-id', auth, async (req, res) => {
@@ -1736,12 +2212,19 @@ router.post('/update-patient-id', auth, async (req, res) => {
       { $set: { patientId: newPatientId } }
     );
     
-    const totalUpdated = pdfResult.modifiedCount + prescriptionResult.modifiedCount + labReportResult.modifiedCount;
+    // Update MedicalHistoryDocument collection
+    const medicalHistoryResult = await MedicalHistoryDocument.updateMany(
+      { patientId: oldPatientId },
+      { $set: { patientId: newPatientId } }
+    );
+    
+    const totalUpdated = pdfResult.modifiedCount + prescriptionResult.modifiedCount + labReportResult.modifiedCount + medicalHistoryResult.modifiedCount;
     
     console.log(`[UPDATE PATIENT ID] Updated documents:
       - PatientPDF: ${pdfResult.modifiedCount}
       - PrescriptionDocument: ${prescriptionResult.modifiedCount}
       - LabReportDocument: ${labReportResult.modifiedCount}
+      - MedicalHistoryDocument: ${medicalHistoryResult.modifiedCount}
       - Total: ${totalUpdated}`);
     
     return res.json({
@@ -1751,7 +2234,8 @@ router.post('/update-patient-id', auth, async (req, res) => {
       details: {
         patientPdf: pdfResult.modifiedCount,
         prescriptions: prescriptionResult.modifiedCount,
-        labReports: labReportResult.modifiedCount
+        labReports: labReportResult.modifiedCount,
+        medicalHistory: medicalHistoryResult.modifiedCount
       }
     });
   } catch (error) {

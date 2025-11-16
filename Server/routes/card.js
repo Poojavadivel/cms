@@ -16,9 +16,9 @@ router.get('/:patientId', auth, async (req, res) => {
     
     console.log('📇 [PROFILE CARD] Fetching data for patient:', patientId);
 
-    // Fetch patient with only required fields for profile card
+    // Fetch patient with only required fields for profile card (including age)
     const patient = await Patient.findById(patientId)
-      .select('firstName lastName dateOfBirth gender bloodGroup phone address vitals metadata')
+      .select('firstName lastName age dateOfBirth gender bloodGroup phone address vitals metadata')
       .lean();
 
     if (!patient || patient.deleted_at) {
@@ -36,9 +36,9 @@ router.get('/:patientId', auth, async (req, res) => {
       console.log('   Vitals:', JSON.stringify(patient.vitals));
     }
 
-    // Calculate age from dateOfBirth
-    let age = 0;
-    if (patient.dateOfBirth) {
+    // Use stored age if available, otherwise calculate from dateOfBirth
+    let age = patient.age || 0;
+    if (!age && patient.dateOfBirth) {
       const today = new Date();
       const birthDate = new Date(patient.dateOfBirth);
       age = today.getFullYear() - birthDate.getFullYear();
@@ -46,6 +46,9 @@ router.get('/:patientId', auth, async (req, res) => {
       if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
         age--;
       }
+      console.log('📅 [PROFILE CARD] Calculated age from DOB:', age);
+    } else if (age) {
+      console.log('✅ [PROFILE CARD] Using stored age:', age);
     }
 
     // Extract patientCode from metadata

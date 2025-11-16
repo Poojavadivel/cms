@@ -166,7 +166,7 @@ class _GenericDataTableState extends State<GenericDataTable> {
                         const SizedBox(height: 16),
                         Text(
                           'Loading ${widget.title}',
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.poppins(
                             fontSize: 15,
                             fontWeight: FontWeight.w700,
                             color: AppColors.kTextPrimary,
@@ -176,7 +176,7 @@ class _GenericDataTableState extends State<GenericDataTable> {
                         const SizedBox(height: 6),
                         Text(
                           'Please wait while we fetch your data...',
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.roboto(
                             fontSize: 13,
                             fontWeight: FontWeight.w400,
                             color: AppColors.kTextSecondary,
@@ -344,7 +344,7 @@ class _StatItem extends StatelessWidget {
           children: [
             Text(
               value,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.poppins(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
                 color: AppColors.kTextPrimary,
@@ -403,7 +403,7 @@ class _EnterpriseTableControls extends StatelessWidget {
             const SizedBox(width: 12),
             Text(
               title.toUpperCase(),
-              style: GoogleFonts.inter(
+              style: GoogleFonts.lexend(
                 fontSize: 21,
                 fontWeight: FontWeight.w700,
                 color: AppColors.appointmentsHeader,
@@ -552,7 +552,7 @@ class _EnterpriseTableDataView extends StatelessWidget {
                   Expanded(
                     child: Text(
                       allHeaders[i].toUpperCase(),
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.poppins(
                         fontWeight: FontWeight.w700,
                         color: AppColors.tableHeader,
                         fontSize: 12,
@@ -578,7 +578,7 @@ class _EnterpriseTableDataView extends StatelessWidget {
                         const SizedBox(height: 16),
                         Text(
                           'No data available',
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.poppins(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
                             color: AppColors.kTextSecondary,
@@ -735,7 +735,7 @@ class _EnhancedPaginationControls extends StatelessWidget {
             children: [
               Text(
                 'Show:',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.roboto(
                   fontSize: 12.5,
                   color: AppColors.kTextSecondary,
                   fontWeight: FontWeight.w600,
@@ -770,7 +770,7 @@ class _EnhancedPaginationControls extends StatelessWidget {
                         value: size,
                         child: Text(
                           size.toString(),
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.roboto(
                             fontSize: 13,
                             fontWeight: FontWeight.w500,
                           ),
@@ -786,7 +786,7 @@ class _EnhancedPaginationControls extends StatelessWidget {
               const SizedBox(width: 24),
               Text(
                 'Showing $startItem-$endItem of $totalItems',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.roboto(
                   fontSize: 12.5,
                   color: AppColors.kTextSecondary,
                   fontWeight: FontWeight.w600,
@@ -831,7 +831,7 @@ class _EnhancedPaginationControls extends StatelessWidget {
                 ),
                 child: Text(
                   'Page ${currentPage + 1} of $totalPages',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.roboto(
                     fontSize: 12.5,
                     fontWeight: FontWeight.w700,
                     color: AppColors.primary,

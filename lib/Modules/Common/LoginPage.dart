@@ -5,6 +5,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shimmer/shimmer.dart';
 
 import '../../Providers/app_providers.dart';
 import '../../Services/Authservices.dart';
@@ -25,7 +26,7 @@ class LoginPage extends StatefulWidget {
   State<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMixin {
+class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -37,22 +38,11 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
   bool _rememberMe = false;
   String _captchaText = "";
 
-  late final AnimationController _animController;
-  late final Animation<Offset> _slideAnim;
-  late final Animation<double> _fadeAnim;
-
   @override
   void initState() {
     super.initState();
     _refreshCaptcha();
     _loadUserPreferences();
-
-    _animController = AnimationController(vsync: this, duration: const Duration(milliseconds: 600));
-    _slideAnim = Tween<Offset>(begin: const Offset(0, 0.06), end: Offset.zero).animate(
-      CurvedAnimation(parent: _animController, curve: Curves.easeOutCubic),
-    );
-    _fadeAnim = CurvedAnimation(parent: _animController, curve: Curves.easeOut);
-    _animController.forward();
   }
 
   void _loadUserPreferences() async {
@@ -71,7 +61,6 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
 
   @override
   void dispose() {
-    _animController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _captchaController.dispose();
@@ -146,216 +135,288 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
 
   @override
   Widget build(BuildContext context) {
-    final isMobile = MediaQuery.of(context).size.width < 800;
+    final size = MediaQuery.of(context).size;
+    final isMobile = size.width < 800;
 
     return Scaffold(
       backgroundColor: AppColors.kBg,
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 1100),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(22),
-                child: Container(
-                  color: AppColors.white,
-                  child: isMobile ? _buildMobileLayout() : _buildDesktopLayout(),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: isMobile ? 16 : 20,
+                  vertical: isMobile ? 12 : 20,
+                ),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: 1100,
+                    maxHeight: constraints.maxHeight - (isMobile ? 24 : 40),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(isMobile ? 16 : 22),
+                    child: Container(
+                      color: AppColors.white,
+                      child: isMobile ? _buildMobileLayout() : _buildDesktopLayout(),
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ),
+            );
+          },
         ),
       ),
     );
   }
 
   Widget _buildDesktopLayout() {
-    // Use IntrinsicHeight so both Expanded children will match height.
-    return IntrinsicHeight(
-      child: Row(
-        children: [
-          // Left enterprise hero
-          Expanded(
-            flex: 1,
-            child: Container(
-              // Make container fill the available vertical space created by IntrinsicHeight
-              height: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 44, vertical: 30),
-              decoration: BoxDecoration(
-                gradient: AppColors.brandGradient,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(22),
-                  bottomLeft: Radius.circular(22),
-                ),
-                boxShadow: [
-                  BoxShadow(color: AppColors.primary.withOpacity(0.06), blurRadius: 24, offset: const Offset(0, 8)),
-                ],
-              ),
-              // Make scrollable to avoid overflow on smaller heights
-              child: SingleChildScrollView(
-                physics: const ClampingScrollPhysics(),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Top row: logo + contact
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        // Use the provided karurlogo.png with fallback
-                        _logoWithFallback(),
-                        const SizedBox(width: 22),
-                        Flexible(
-                          child: Text(
-                            'Karur Gastro Foundation',
-                            style: GoogleFonts.lexend(
-                              fontSize: 24,
-                              color: AppColors.white,
-                              fontWeight: FontWeight.w600,
-                            ),
-                            softWrap: true,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Row(
+          children: [
+            // Left enterprise hero with shimmer effect
+            Expanded(
+              flex: 1,
+              child: Stack(
+                children: [
+                  // Base container
+                  Container(
+                    decoration: BoxDecoration(
+                      gradient: AppColors.brandGradient,
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(22),
+                        bottomLeft: Radius.circular(22),
+                      ),
+                      boxShadow: [
+                        BoxShadow(color: AppColors.primary.withOpacity(0.06), blurRadius: 24, offset: const Offset(0, 8)),
                       ],
                     ),
-
-                    const SizedBox(height: 20),
-
-                    FadeTransition(
-                      opacity: _fadeAnim,
-                      child: SlideTransition(
-                        position: _slideAnim,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const SizedBox(height: 18),
-                            // Big heading with safe layout
-                            Text(
-                              'Secure Clinical\nOperations',
-                              style: GoogleFonts.poppins(
-                                color: AppColors.white,
-                                fontSize: 36,
-                                fontWeight: FontWeight.w800,
-                                height: 1.05,
-                              ),
-                            ),
-                            const SizedBox(height: 22),
-                            SizedBox(
-                              width: 460,
-                              child: Text(
-                                'Designed for hospitals and clinics — secure role based access, audit trails, HIPAA-like controls, realtime reporting and scalable integrations.',
-                                style: GoogleFonts.poppins(color: AppColors.white70, fontSize: 14, height: 1.6),
-                              ),
-                            ),
-                            const SizedBox(height: 60),
-
-                            Wrap(
-                              spacing: 10,
-                              runSpacing: 10,
-                              children: [
-                                _featureChip(Icons.lock_outline, 'Secure SSO'),
-                                _featureChip(Icons.storage_outlined, 'Reliable Backups'),
-                                _featureChip(Icons.dashboard_outlined, 'Realtime Dashboards'),
-                                _featureChip(Icons.shield_outlined, 'Audit Trails'),
-                              ],
-                            ),
-
-                            const SizedBox(height: 92),
-
-                            // Trust badges + CTA
-                            Row(
-                              children: [
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text('Trusted by', style: GoogleFonts.poppins(color: AppColors.white70, fontSize: 12)),
-                                    const SizedBox(height: 8),
-                                    Wrap(
-                                      spacing: 8,
-                                      runSpacing: 8,
-                                      children: [
-                                        _smallBadge('assets/karurlogo.png'),
-                                        _smallBadge('assets/icons/medical_cross.svg', isSvg: true),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                                const Spacer(),
-                                ElevatedButton(
-                                  onPressed: () {
-                                    // Request demo / contact sales
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    elevation: 8,
-                                    backgroundColor: Colors.white,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                  ),
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 18.0, vertical: 12),
-                                    child: Text('Help & Support', style: GoogleFonts.poppins(color: AppColors.primary700, fontWeight: FontWeight.w700)),
-                                  ),
-                                )
-                              ],
-                            ),
+                  ),
+                  // Z-axis diagonal shimmer overlay
+                  Shimmer.fromColors(
+                    baseColor: Colors.transparent,
+                    highlightColor: Colors.white.withOpacity(0.2),
+                    direction: ShimmerDirection.ttb,
+                    period: const Duration(seconds: 4),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.transparent,
+                            Colors.white.withOpacity(0.15),
+                            Colors.white.withOpacity(0.3),
+                            Colors.white.withOpacity(0.15),
+                            Colors.transparent,
                           ],
+                          stops: const [0.0, 0.3, 0.5, 0.7, 1.0],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          transform: GradientRotation(0.5),
+                        ),
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(22),
+                          bottomLeft: Radius.circular(22),
                         ),
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                  // Content
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 28),
+                    child: Column(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Top section
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Logo + Title
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Container(
+                                height: 44,
+                                width: 44,
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.15),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: Colors.white.withOpacity(0.2),
+                                    width: 1.5,
+                                  ),
+                                ),
+                                child: Center(
+                                  child: Icon(
+                                    Icons.local_hospital_rounded,
+                                    color: Colors.white,
+                                    size: 24,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'KARUR GASTRO',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 13,
+                                        color: AppColors.white,
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: 1.5,
+                                        height: 1.2,
+                                      ),
+                                    ),
+                                    Text(
+                                      'Healthcare Management',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 11,
+                                        color: AppColors.white.withOpacity(0.75),
+                                        fontWeight: FontWeight.w400,
+                                        letterSpacing: 0.3,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 32),
+                          // Hero heading
+                          Text(
+                            'Enterprise Healthcare\nManagement System',
+                            style: GoogleFonts.inter(
+                              color: AppColors.white,
+                              fontSize: 34,
+                              fontWeight: FontWeight.w800,
+                              height: 1.15,
+                              letterSpacing: -1.2,
+                            ),
+                          ),
+                          const SizedBox(height: 18),
+                          Text(
+                            'Secure, HIPAA-compliant platform with role-based access control, comprehensive audit trails, and real-time analytics for modern healthcare operations.',
+                            style: GoogleFonts.inter(
+                              color: AppColors.white.withOpacity(0.88),
+                              fontSize: 15,
+                              height: 1.65,
+                              fontWeight: FontWeight.w400,
+                              letterSpacing: 0.1,
+                            ),
+                            maxLines: 3,
+                          ),
+                        ],
+                      ),
+
+                      // Middle section - Features
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'KEY FEATURES',
+                            style: GoogleFonts.inter(
+                              fontSize: 10,
+                              color: AppColors.white.withOpacity(0.6),
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 1.8,
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          Wrap(
+                            spacing: 10,
+                            runSpacing: 10,
+                            children: [
+                              _featureChip(Icons.lock_outline, 'Secure Access'),
+                              _featureChip(Icons.shield_outlined, 'HIPAA Compliant'),
+                              _featureChip(Icons.analytics_outlined, 'Real-time Analytics'),
+                              _featureChip(Icons.backup_outlined, 'Auto Backup'),
+                            ],
+                          ),
+                        ],
+                      ),
+
+                      // Bottom section
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: AppColors.white.withOpacity(0.12),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: AppColors.white.withOpacity(0.2),
+                                width: 1,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.verified_rounded, color: AppColors.white, size: 16),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Trusted by 150+ Healthcare Institutions',
+                                  style: GoogleFonts.inter(
+                                    color: AppColors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: 0.2,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          Text(
+                            '24/7 Support  •  ISO 27001 Certified  •  99.9% Uptime',
+                            style: GoogleFonts.inter(
+                              color: AppColors.white.withOpacity(0.72),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              letterSpacing: 0.3,
+                            ),
+                          ),
+                        ],
+                      ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
-          ),
 
-          // Right form
-          Expanded(
-            flex: 1,
-            child: Container(
-              // Force fill vertical space from IntrinsicHeight
-              height: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 36),
-              color: AppColors.white,
-              child: FadeTransition(
-                opacity: _fadeAnim,
-                child: SlideTransition(
-                  position: _slideAnim,
+            // Right form
+            Expanded(
+              flex: 1,
+              child: Container(
+                color: AppColors.white,
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 28),
                   child: _buildLoginForm(),
                 ),
               ),
             ),
-          ),
-        ],
-      ),
+          ],
+        );
+      },
     );
   }
 
   Widget _logoWithFallback() {
-    return SizedBox(
-      height: 44,
-      width: 44,
-      child: Builder(
-        builder: (context) {
+    return ClipOval(
+      child: Image.asset(
+        'assets/karurlogo.png',
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
           return ClipOval(
-            child: Image.asset(
-              'assets/karurlogo.png',
-              height: 44,
-              width: 44,
-              fit: BoxFit.cover, // ensures it fills circle
-              errorBuilder: (context, error, stackTrace) {
-                // First fallback: try SVG logo inside circle
-                return ClipOval(
-                  child: SvgPicture.asset(
-                    'assets/icons/medical_cross.svg',
-                    height: 44,
-                    width: 44,
-                    color: AppColors.white,
-                    fit: BoxFit.scaleDown,
-                    placeholderBuilder: (_) => _circleFallback(),
-                  ),
-                );
-              },
+            child: SvgPicture.asset(
+              'assets/icons/medical_cross.svg',
+              color: AppColors.white,
+              fit: BoxFit.scaleDown,
+              placeholderBuilder: (_) => _circleFallback(),
             ),
           );
         },
@@ -365,8 +426,6 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
 
   Widget _circleFallback() {
     return Container(
-      height: 44,
-      width: 44,
       decoration: const BoxDecoration(
         shape: BoxShape.circle,
         color: Colors.white24,
@@ -374,7 +433,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
       child: Icon(
         Icons.local_hospital_rounded,
         color: AppColors.white,
-        size: 22,
+        size: 20,
       ),
     );
   }
@@ -386,154 +445,304 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
         // compact hero
         Container(
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           decoration: const BoxDecoration(gradient: AppColors.brandGradient),
           child: Column(
             children: [
-              // Prefer using the png for mobile too, with fallback handled
-              _logoWithFallback(),
-              const SizedBox(height: 12),
-              Text('Karur Gastro Foundation',
-                  style: GoogleFonts.poppins(color: AppColors.white, fontSize: 20, fontWeight: FontWeight.w700)),
+              SizedBox(
+                height: 32,
+                width: 32,
+                child: _logoWithFallback(),
+              ),
               const SizedBox(height: 8),
-              Text('Secure access to patient dashboards and reports.',
-                  style: GoogleFonts.poppins(color: AppColors.white70, fontSize: 13), textAlign: TextAlign.center),
+              Text('KARUR GASTRO',
+                  style: GoogleFonts.inter(
+                    color: AppColors.white, 
+                    fontSize: 15, 
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.2,
+                  )),
+              const SizedBox(height: 4),
+              Text('Healthcare Management System',
+                  style: GoogleFonts.inter(
+                    color: AppColors.white.withOpacity(0.8), 
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: 0.3,
+                  ), 
+                  textAlign: TextAlign.center),
             ],
           ),
         ),
 
-        // form card
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
-          color: AppColors.white,
-          child: _buildLoginForm(),
+        // form card - scrollable if needed
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            child: _buildLoginForm(compact: true),
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildLoginForm() {
+  Widget _buildLoginForm({bool compact = false}) {
+    final double spacing = compact ? 10 : 14;
+    final double sectionSpacing = compact ? 14 : 18;
+    
     return Form(
       key: _formKey,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // brand row
-          Row(
-            children: [
-              Container(
-                height: 46,
-                width: 46,
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.06),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Center(
-                  child: Icon(Icons.local_hospital_rounded, color: AppColors.primary, size: 26),
-                ),
+          if (!compact) ...[
+            // Professional brand header (desktop only)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: AppColors.grey50,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: AppColors.grey200, width: 1),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text('Karur Gastro Foundation',
-                    style: GoogleFonts.poppins(color: AppColors.grey800, fontSize: 18, fontWeight: FontWeight.w600)),
+              child: Row(
+                children: [
+                  Container(
+                    height: 34,
+                    width: 34,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [AppColors.primary700, AppColors.primary600],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Center(
+                      child: Icon(Icons.local_hospital_rounded, color: Colors.white, size: 18),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('KARUR GASTRO',
+                            style: GoogleFonts.inter(
+                              color: AppColors.grey800, 
+                              fontSize: 12, 
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.8,
+                            )),
+                        Text('Healthcare Management',
+                            style: GoogleFonts.inter(
+                              color: AppColors.grey500, 
+                              fontSize: 10, 
+                              fontWeight: FontWeight.w500,
+                              letterSpacing: 0.2,
+                            )),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
-          const SizedBox(height: 18),
-          Text('Hello!', style: GoogleFonts.poppins(fontSize: 26, fontWeight: FontWeight.w700, color: AppColors.grey800)),
+            ),
+            SizedBox(height: sectionSpacing + 4),
+          ],
+          Text('Welcome Back', 
+              style: GoogleFonts.inter(
+                fontSize: compact ? 22 : 28, 
+                fontWeight: FontWeight.w700, 
+                color: AppColors.grey800, 
+                letterSpacing: -0.8,
+                height: 1.2,
+              )),
           const SizedBox(height: 6),
-          Text('Please enter your credentials to continue.',
-              style: GoogleFonts.poppins(fontSize: 13, color: AppColors.grey600)),
-          const SizedBox(height: 22),
+          Text('Sign in to access your healthcare dashboard',
+              style: GoogleFonts.inter(
+                fontSize: 14, 
+                color: AppColors.grey600, 
+                fontWeight: FontWeight.w400,
+                letterSpacing: 0.1,
+                height: 1.5,
+              )),
+          SizedBox(height: sectionSpacing + 2),
 
-          // Email
-          Text('Email or Mobile', style: GoogleFonts.poppins(fontSize: 13, color: AppColors.grey700)),
+          // Email field with enhanced styling
+          Text('Email Address or Mobile', 
+              style: GoogleFonts.inter(
+                fontSize: 13, 
+                color: AppColors.grey700, 
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.2,
+              )),
           const SizedBox(height: 8),
           TextFormField(
             controller: _emailController,
             keyboardType: TextInputType.emailAddress,
             autofillHints: const [AutofillHints.email],
             textInputAction: TextInputAction.next,
+            style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, letterSpacing: 0.2),
             decoration: InputDecoration(
-              prefixIcon: Icon(Icons.person_outline, color: AppColors.grey400),
-              hintText: 'Email or Mobile',
+              prefixIcon: Icon(Icons.email_outlined, color: AppColors.grey500, size: 19),
+              hintText: 'Enter your email or mobile number',
+              hintStyle: GoogleFonts.inter(fontSize: 13, color: AppColors.grey400, letterSpacing: 0.1),
               filled: true,
-              fillColor: AppColors.grey100,
-              contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 14),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+              fillColor: AppColors.grey50,
+              contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10), 
+                borderSide: BorderSide(color: AppColors.grey200, width: 1),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10), 
+                borderSide: BorderSide(color: AppColors.grey200, width: 1),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10), 
+                borderSide: BorderSide(color: AppColors.primary, width: 2),
+              ),
+              errorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10), 
+                borderSide: const BorderSide(color: Colors.red, width: 1),
+              ),
             ),
-            validator: (value) => value == null || value.trim().isEmpty ? 'Please enter email or mobile' : null,
+            validator: (value) => value == null || value.trim().isEmpty ? 'Required' : null,
           ),
-          const SizedBox(height: 14),
+          SizedBox(height: spacing),
 
-          // Password
-          Text('Password', style: GoogleFonts.poppins(fontSize: 13, color: AppColors.grey700)),
+          // Password field with enhanced styling
+          Text('Password', 
+              style: GoogleFonts.inter(
+                fontSize: 13, 
+                color: AppColors.grey700, 
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.2,
+              )),
           const SizedBox(height: 8),
           TextFormField(
             controller: _passwordController,
             obscureText: _obscurePassword,
             textInputAction: TextInputAction.done,
+            style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, letterSpacing: 0.2),
             decoration: InputDecoration(
-              prefixIcon: Icon(Icons.lock_outline, color: AppColors.grey400),
+              prefixIcon: Icon(Icons.lock_outline, color: AppColors.grey500, size: 19),
               suffixIcon: IconButton(
-                icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility, color: AppColors.grey400),
+                icon: Icon(
+                  _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined, 
+                  color: AppColors.grey500,
+                  size: 19,
+                ),
                 onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                 tooltip: _obscurePassword ? 'Show password' : 'Hide password',
               ),
-              hintText: 'Password',
+              hintText: 'Enter your secure password',
+              hintStyle: GoogleFonts.inter(fontSize: 13, color: AppColors.grey400, letterSpacing: 0.1),
               filled: true,
-              fillColor: AppColors.grey100,
-              contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 14),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+              fillColor: AppColors.grey50,
+              contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10), 
+                borderSide: BorderSide(color: AppColors.grey200, width: 1),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10), 
+                borderSide: BorderSide(color: AppColors.grey200, width: 1),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10), 
+                borderSide: BorderSide(color: AppColors.primary, width: 2),
+              ),
+              errorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10), 
+                borderSide: const BorderSide(color: Colors.red, width: 1),
+              ),
             ),
-            validator: (value) => value == null || value.isEmpty ? 'Please enter your password' : null,
+            validator: (value) => value == null || value.isEmpty ? 'Required' : null,
           ),
-          const SizedBox(height: 14),
+          SizedBox(height: spacing),
 
-          // Captcha row
+          // Professional Captcha Section
+          Text('Security Verification', 
+              style: GoogleFonts.inter(
+                fontSize: 13, 
+                color: AppColors.grey700, 
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.2,
+              )),
+          const SizedBox(height: 8),
           Row(
             children: [
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Captcha', style: GoogleFonts.poppins(fontSize: 13, color: AppColors.grey700)),
-                    const SizedBox(height: 8),
-                    TextFormField(
-                      controller: _captchaController,
-                      decoration: InputDecoration(
-                        prefixIcon: Icon(Icons.verified_user_outlined, color: AppColors.grey400),
-                        hintText: 'Enter Captcha',
-                        filled: true,
-                        fillColor: AppColors.grey100,
-                        contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 14),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                      ),
-                      validator: (value) => value == null || value.isEmpty ? 'Please enter the captcha' : null,
+                flex: 3,
+                child: TextFormField(
+                  controller: _captchaController,
+                  textCapitalization: TextCapitalization.characters,
+                  style: GoogleFonts.robotoMono(fontSize: 14, fontWeight: FontWeight.w700, letterSpacing: 2.5),
+                  decoration: InputDecoration(
+                    prefixIcon: Icon(Icons.shield_outlined, color: AppColors.grey500, size: 19),
+                    hintText: 'Enter code',
+                    hintStyle: GoogleFonts.inter(fontSize: 13, color: AppColors.grey400, letterSpacing: 0.1),
+                    filled: true,
+                    fillColor: AppColors.grey50,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10), 
+                      borderSide: BorderSide(color: AppColors.grey200, width: 1),
                     ),
-                  ],
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: AppColors.grey200, width: 1),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: AppColors.primary, width: 2),
+                    ),
+                    errorBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10), 
+                      borderSide: const BorderSide(color: Colors.red, width: 1),
+                    ),
+                  ),
+                  validator: (value) => value == null || value.isEmpty ? 'Required' : null,
                 ),
               ),
-              const SizedBox(width: 12),
-              // Captcha preview
+              const SizedBox(width: 8),
+              // Compact Captcha Display
               Container(
-                width: 120,
-                height: 52,
-                decoration: BoxDecoration(color: AppColors.grey200, borderRadius: BorderRadius.circular(12)),
-                child: Row(
+                width: 95,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppColors.grey200, width: 1),
+                ),
+                child: Stack(
                   children: [
                     ClipRRect(
-                      borderRadius: const BorderRadius.only(topLeft: Radius.circular(12), bottomLeft: Radius.circular(12)),
+                      borderRadius: BorderRadius.circular(9),
                       child: CustomPaint(
-                        size: const Size(80, 52),
-                        painter: CaptchaPainter(_captchaText, key: ValueKey('c1_')),
+                        size: const Size(95, 44),
+                        painter: EnterpriseCaptchaPainter(_captchaText),
                       ),
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.refresh, size: 18),
-                      color: AppColors.grey600,
-                      onPressed: _refreshCaptcha,
-                      tooltip: 'Regenerate captcha',
+                    Positioned(
+                      top: 2,
+                      right: 2,
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: _refreshCaptcha,
+                          borderRadius: BorderRadius.circular(4),
+                          child: Container(
+                            padding: const EdgeInsets.all(3),
+                            decoration: BoxDecoration(
+                              color: AppColors.white.withOpacity(0.9),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Icon(Icons.refresh, size: 13, color: AppColors.grey600),
+                          ),
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -541,173 +750,231 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
             ],
           ),
 
-          const SizedBox(height: 12),
+          SizedBox(height: sectionSpacing),
 
-          // Remember + forgot
+          // Remember + forgot with better styling
           Row(
             children: [
-              Checkbox(
-                value: _rememberMe,
-                onChanged: (val) => setState(() => _rememberMe = val ?? false),
-                activeColor: AppColors.primary600,
+              SizedBox(
+                height: 18,
+                width: 18,
+                child: Checkbox(
+                  value: _rememberMe,
+                  onChanged: (val) => setState(() => _rememberMe = val ?? false),
+                  activeColor: AppColors.primary600,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                ),
               ),
-              Text('Remember Me', style: GoogleFonts.poppins(color: AppColors.grey600)),
+              const SizedBox(width: 8),
+              Text('Remember me for 30 days', 
+                  style: GoogleFonts.inter(
+                    color: AppColors.grey600, 
+                    fontSize: 13, 
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: 0.1,
+                  )),
               const Spacer(),
               TextButton(
                 onPressed: () {
                   // TODO: Forgot password
                 },
-                child: Text('Forgot?', style: GoogleFonts.poppins(color: AppColors.primary600)),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  minimumSize: const Size(0, 28),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: Text('Forgot Password?', 
+                    style: GoogleFonts.inter(
+                      color: AppColors.primary600, 
+                      fontSize: 13, 
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.1,
+                    )),
               ),
             ],
           ),
 
-          const SizedBox(height: 12),
+          SizedBox(height: sectionSpacing),
 
-          // CTA button
+          // Professional CTA button
           SizedBox(
-            height: 52,
+            height: 48,
             child: ElevatedButton(
               onPressed: _isLoading ? null : _handleLogin,
               style: ElevatedButton.styleFrom(
-                elevation: 14,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 padding: EdgeInsets.zero,
-                shadowColor: AppColors.primary.withOpacity(0.25),
                 backgroundColor: AppColors.primary,
               ),
               child: Ink(
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: [AppColors.primary700, AppColors.primary600]),
-                  borderRadius: BorderRadius.circular(14),
+                  gradient: LinearGradient(
+                    colors: [AppColors.primary700, AppColors.primary600],
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                  ),
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primary.withOpacity(0.35),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
                 child: Center(
                   child: _isLoading
-                      ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                      : Text('Login', style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16)),
+                      ? const SizedBox(
+                          height: 22, 
+                          width: 22, 
+                          child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
+                      : Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text('Sign In to Dashboard', 
+                                style: GoogleFonts.inter(
+                                  color: Colors.white, 
+                                  fontWeight: FontWeight.w700, 
+                                  fontSize: 15,
+                                  letterSpacing: 0.3,
+                                  height: 1,
+                                )),
+                            const SizedBox(width: 10),
+                            const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 18),
+                          ],
+                        ),
                 ),
               ),
             ),
           ),
 
-          const SizedBox(height: 18),
-
-          // Footer small text
-          Row(
-            children: [
-              Text('Version 1.0.0', style: GoogleFonts.poppins(color: AppColors.grey400, fontSize: 12)),
-              const Spacer(),
-              Text('Built for Karur Gastro', style: GoogleFonts.poppins(color: AppColors.grey400, fontSize: 12)),
-            ],
-          ),
+          if (!compact) ...[
+            SizedBox(height: sectionSpacing + 4),
+            // Professional footer
+            Divider(color: AppColors.grey200, thickness: 1),
+            const SizedBox(height: 14),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.security_rounded, size: 14, color: AppColors.grey500),
+                const SizedBox(width: 6),
+                Text('Enterprise-grade Security', 
+                    style: GoogleFonts.inter(
+                      color: AppColors.grey600, 
+                      fontSize: 11, 
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.3,
+                    )),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Center(
+              child: Text('v1.0.0 • © 2024 Karur Gastro Foundation', 
+                  style: GoogleFonts.inter(
+                    color: AppColors.grey400, 
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: 0.2,
+                  )),
+            ),
+          ],
         ],
       ),
-    );
-  }
-
-  Widget _stat(String value, String label) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(value, style: GoogleFonts.poppins(color: AppColors.white, fontSize: 20, fontWeight: FontWeight.w700)),
-        const SizedBox(height: 4),
-        Text(label, style: GoogleFonts.poppins(color: AppColors.white70, fontSize: 12)),
-      ],
     );
   }
 
   Widget _featureChip(IconData icon, String text) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(color: AppColors.white.withOpacity(0.06), borderRadius: BorderRadius.circular(10)),
+      decoration: BoxDecoration(
+        color: AppColors.white.withOpacity(0.1), 
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.white.withOpacity(0.15), width: 1),
+      ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16, color: AppColors.white70),
-          const SizedBox(width: 8),
-          Text(text, style: GoogleFonts.poppins(color: AppColors.white70, fontSize: 13)),
+          Icon(icon, size: 15, color: AppColors.white.withOpacity(0.95)),
+          const SizedBox(width: 7),
+          Text(text, style: GoogleFonts.inter(
+            color: AppColors.white.withOpacity(0.95), 
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.2,
+          )),
         ],
       ),
     );
   }
 
-  Widget _smallBadge(String assetPath, {bool isSvg = false}) {
-    return Container(
-      height: 28,
-      width: 28,
-      decoration: BoxDecoration(color: AppColors.white.withOpacity(0.06), borderRadius: BorderRadius.circular(6)),
-      child: Center(
-        child: isSvg
-            ? SvgPicture.asset(assetPath, height: 18, width: 18, color: AppColors.white70)
-        :Image.asset(
-          assetPath,
-          height: 18,
-          width: 18,
-          fit: BoxFit.contain,
-          // If the image fails to load, show a backup asset first,
-          // and if even that fails, show an icon.
-          errorBuilder: (context, error, stackTrace) {
-            return Image.asset(
-              'assets/sampledoctor.png',
-              height: 18,
-              width: 18,
-              fit: BoxFit.contain,
-              errorBuilder: (context, error, stackTrace) {
-                return Icon(
-                  Icons.work_outline,
-                  color: AppColors.white70,
-                  size: 16,
-                );
-              },
-            );
-          },
-        )
-
-      ),
-    );
-  }
 }
 
-class CaptchaPainter extends CustomPainter {
+// Enterprise-grade Captcha Painter - Clean and Professional
+class EnterpriseCaptchaPainter extends CustomPainter {
   final String text;
-  final Key key;
 
-  CaptchaPainter(this.text, {required this.key});
+  EnterpriseCaptchaPainter(this.text);
 
   @override
   void paint(Canvas canvas, Size size) {
     final random = Random(text.hashCode);
     final paint = Paint();
-    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), Paint()..color = AppColors.transparent);
 
-    // background noise lines
-    for (int i = 0; i < 3; i++) {
-      paint.color = AppColors.captchaGreyVariants[random.nextInt(AppColors.captchaGreyVariants.length)];
-      paint.strokeWidth = 1.0;
-      canvas.drawLine(
+    // Clean subtle background
+    final bgPaint = Paint()..color = const Color(0xFFF8F9FA);
+    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), bgPaint);
+
+    // Minimal noise pattern - subtle dots
+    paint.color = AppColors.grey300.withOpacity(0.3);
+    for (int i = 0; i < 8; i++) {
+      canvas.drawCircle(
         Offset(random.nextDouble() * size.width, random.nextDouble() * size.height),
-        Offset(random.nextDouble() * size.width, random.nextDouble() * size.height),
+        0.8,
         paint,
       );
     }
 
-    double x = 8.0;
+    // Single subtle diagonal line
+    paint.style = PaintingStyle.stroke;
+    paint.strokeWidth = 0.5;
+    paint.color = AppColors.grey300.withOpacity(0.4);
+    canvas.drawLine(
+      Offset(0, size.height * 0.3),
+      Offset(size.width, size.height * 0.7),
+      paint,
+    );
+
+    paint.style = PaintingStyle.fill;
+
+    // Calculate positioning for centered text
+    double totalWidth = 0;
+    List<TextPainter> painters = [];
+    
     for (int i = 0; i < text.length; i++) {
       final char = text[i];
+      // Professional monospace-style font
       final textStyle = TextStyle(
-        color: AppColors.captchaGreyVariants[random.nextInt(AppColors.captchaGreyVariants.length)],
-        fontSize: 18 + random.nextDouble() * 6,
-        fontWeight: FontWeight.bold,
-        fontStyle: FontStyle.italic,
-        shadows: [Shadow(color: AppColors.white.withOpacity(0.8), offset: const Offset(1, 1), blurRadius: 1)],
+        color: AppColors.grey800,
+        fontSize: 20,
+        fontWeight: FontWeight.w700,
+        fontFamily: 'RobotoMono',
+        letterSpacing: 1,
       );
 
       final textSpan = TextSpan(text: char, style: textStyle);
       final textPainter = TextPainter(text: textSpan, textDirection: TextDirection.ltr);
       textPainter.layout();
+      painters.add(textPainter);
+      totalWidth += textPainter.width + 2;
+    }
 
-      final y = 6 + random.nextDouble() * (size.height - textPainter.height - 12);
-      final rotation = (random.nextDouble() - 0.5) * 0.45;
+    // Center and render characters with minimal rotation
+    double x = (size.width - totalWidth) / 2;
+    for (int i = 0; i < painters.length; i++) {
+      final textPainter = painters[i];
+      final y = (size.height - textPainter.height) / 2 + (random.nextDouble() - 0.5) * 4;
+      final rotation = (random.nextDouble() - 0.5) * 0.15; // Minimal rotation
 
       canvas.save();
       canvas.translate(x + textPainter.width / 2, y + textPainter.height / 2);
@@ -715,12 +982,12 @@ class CaptchaPainter extends CustomPainter {
       textPainter.paint(canvas, Offset(-textPainter.width / 2, -textPainter.height / 2));
       canvas.restore();
 
-      x += textPainter.width + (random.nextDouble() * 2);
+      x += textPainter.width + 2;
     }
   }
 
   @override
-  bool shouldRepaint(covariant CaptchaPainter oldDelegate) {
-    return oldDelegate.text != text || oldDelegate.key != key;
+  bool shouldRepaint(covariant EnterpriseCaptchaPainter oldDelegate) {
+    return oldDelegate.text != text;
   }
 }

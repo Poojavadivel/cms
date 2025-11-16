@@ -21,6 +21,7 @@ import '../Models/appointment_draft.dart';
 import 'api_constants.dart';
 import '../Models/dashboardmodels.dart';
 import '../Models/staff.dart';
+import '../Models/Payroll.dart';
 import '../Utils/Api_handler.dart';
 
 /// A result object to safely return data from authentication methods.
@@ -1518,6 +1519,56 @@ class AuthService {
     });
   }
 
+  /// Fetch medical history reports for a patient
+  Future<List<Map<String, dynamic>>> getMedicalHistory({required String patientId, int limit = 50, int page = 0}) async {
+    if (patientId.trim().isEmpty) throw ApiException('patientId is required');
+
+    return await _withAuth<List<Map<String, dynamic>>>((token) async {
+      try {
+        // Use new dedicated medical history endpoint
+        final scannerEndpoint = ScannerEndpoints.getMedicalHistory(patientId);
+        print('📋 [MEDICAL HISTORY] Fetching from dedicated endpoint: $scannerEndpoint');
+        
+        final scannerResponse = await _apiHandler.get(scannerEndpoint, token: token);
+        
+        if (scannerResponse is Map && scannerResponse['success'] == true && scannerResponse.containsKey('medicalHistory')) {
+          final historyList = scannerResponse['medicalHistory'] as List;
+          print('✅ [MEDICAL HISTORY] Found ${historyList.length} medical history records');
+          return historyList.map((e) => Map<String, dynamic>.from(e)).toList();
+        }
+      } catch (e) {
+        print('⚠️  [MEDICAL HISTORY] Dedicated endpoint failed: $e');
+      }
+      
+      // Fallback: Try combined reports endpoint and filter
+      try {
+        final scannerEndpoint = ScannerEndpoints.getReports(patientId);
+        print('📋 [MEDICAL HISTORY] Trying fallback combined endpoint: $scannerEndpoint');
+        
+        final scannerResponse = await _apiHandler.get(scannerEndpoint, token: token);
+        
+        if (scannerResponse is Map && scannerResponse['success'] == true && scannerResponse.containsKey('reports')) {
+          final reportsList = scannerResponse['reports'] as List;
+          
+          // Filter only MEDICAL_HISTORY type reports
+          final medicalHistory = reportsList.where((report) {
+            final intent = report['intent']?.toString().toUpperCase();
+            final testType = report['testType']?.toString().toUpperCase();
+            return intent == 'MEDICAL_HISTORY' || testType == 'MEDICAL_HISTORY' || intent == 'MEDICAL HISTORY' || testType == 'MEDICAL HISTORY';
+          }).toList();
+          
+          print('✅ [MEDICAL HISTORY] Found ${medicalHistory.length} medical history records out of ${reportsList.length} total reports');
+          return medicalHistory.map((e) => Map<String, dynamic>.from(e)).toList();
+        }
+      } catch (e) {
+        print('❌ [MEDICAL HISTORY] Fallback failed: $e');
+      }
+      
+      print('⚠️  [MEDICAL HISTORY] No medical history found');
+      return [];
+    });
+  }
+
   /// Scan medical document and extract data with AI (accepts XFile for web compatibility)
   Future<Map<String, dynamic>> scanAndExtractMedicalDataFromXFile(XFile imageFile, {String? patientId}) async {
     return await _withAuth<Map<String, dynamic>>((token) async {
@@ -2086,5 +2137,298 @@ class AuthService {
     });
   }
 
+  // ===============================
+  // --- Payroll Management ---
+  // ===============================
 
+  /// Fetch all payroll records (supports pagination & filters)
+  Future<List<Payroll>> fetchPayrolls({
+    bool forceRefresh = false,
+    int page = 0,
+    int limit = 50,
+    String q = '',
+    String department = '',
+    String status = '',
+    int? month,
+    int? year,
+    String? staffId,
+  }) async {
+    try {
+      return await _withAuth<List<Payroll>>((token) async {
+        final uri = ApiEndpoints.getPayrolls().url +
+            '?page=$page&limit=$limit' +
+            (q.isNotEmpty ? '&q=${Uri.encodeComponent(q)}' : '') +
+            (department.isNotEmpty ? '&department=${Uri.encodeComponent(department)}' : '') +
+            (status.isNotEmpty ? '&status=${Uri.encodeComponent(status)}' : '') +
+            (month != null ? '&month=$month' : '') +
+            (year != null ? '&year=$year' : '') +
+            (staffId != null && staffId.isNotEmpty ? '&staffId=${Uri.encodeComponent(staffId)}' : '');
+
+        final response = await _apiHandler.get(uri, token: token);
+
+        List data;
+        if (response is List) {
+          data = response;
+        } else if (response is Map && (response.containsKey('payroll') || response.containsKey('data'))) {
+          data = (response['payroll'] ?? response['data']) as List;
+        } else {
+          throw ApiException('Unexpected response format while fetching payroll: $response');
+        }
+
+        return data.map((j) => Payroll.fromMap(Map<String, dynamic>.from(j))).toList();
+      });
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Fetch single payroll by id
+  Future<Payroll> fetchPayrollById(String id) async {
+    try {
+      return await _withAuth<Payroll>((token) async {
+        final url = ApiEndpoints.getPayrollById(id).url;
+        final response = await _apiHandler.get(url, token: token);
+
+        final data = (response is Map && (response.containsKey('payroll') || response.containsKey('data')))
+            ? (response['payroll'] ?? response['data'])
+            : response;
+
+        return Payroll.fromMap(Map<String, dynamic>.from(data));
+      });
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Create new payroll
+  Future<Payroll?> createPayroll(Map<String, dynamic> payload) async {
+    try {
+      return await _withAuth<Payroll?>((token) async {
+        final response = await _apiHandler.post(
+          ApiEndpoints.createPayroll().url,
+          token: token,
+          body: payload,
+        );
+
+        final data = (response is Map && (response.containsKey('payroll') || response.containsKey('data')))
+            ? (response['payroll'] ?? response['data'])
+            : response;
+
+        if (data == null) return null;
+        return Payroll.fromMap(Map<String, dynamic>.from(data));
+      });
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Update payroll
+  Future<bool> updatePayroll(String id, Map<String, dynamic> payload) async {
+    try {
+      if (id.isEmpty) {
+        throw ApiException('Payroll id is required for update');
+      }
+
+      return await _withAuth<bool>((token) async {
+        final response = await _apiHandler.put(
+          ApiEndpoints.updatePayroll(id).url,
+          token: token,
+          body: payload,
+        );
+
+        if (response is Map && (response['success'] == true)) {
+          return true;
+        }
+
+        final data = (response is Map && (response.containsKey('payroll') || response.containsKey('data')))
+            ? (response['payroll'] ?? response['data'])
+            : response;
+
+        return data != null;
+      });
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Delete payroll
+  Future<bool> deletePayroll(String id) async {
+    try {
+      return await _withAuth<bool>((token) async {
+        final response = await _apiHandler.delete(ApiEndpoints.deletePayroll(id).url, token: token);
+
+        if (response is Map &&
+            (response['success'] == true ||
+                response['deletedId'] == id ||
+                response['id'] == id ||
+                response['_id'] == id)) {
+          return true;
+        }
+        return false;
+      });
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Approve payroll
+  Future<Payroll> approvePayroll(String id, {String? remarks}) async {
+    try {
+      return await _withAuth<Payroll>((token) async {
+        final payload = remarks != null ? {'approvalRemarks': remarks} : <String, dynamic>{};
+        
+        final response = await _apiHandler.patch(
+          ApiEndpoints.approvePayroll(id).url,
+          token: token,
+          body: payload,
+        );
+
+        final data = (response is Map && (response.containsKey('payroll') || response.containsKey('data')))
+            ? (response['payroll'] ?? response['data'])
+            : response;
+
+        return Payroll.fromMap(Map<String, dynamic>.from(data));
+      });
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Reject payroll
+  Future<Payroll> rejectPayroll(String id, {required String reason}) async {
+    try {
+      return await _withAuth<Payroll>((token) async {
+        final response = await _apiHandler.patch(
+          ApiEndpoints.rejectPayroll(id).url,
+          token: token,
+          body: {'reason': reason},
+        );
+
+        final data = (response is Map && (response.containsKey('payroll') || response.containsKey('data')))
+            ? (response['payroll'] ?? response['data'])
+            : response;
+
+        return Payroll.fromMap(Map<String, dynamic>.from(data));
+      });
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Process payment for payroll
+  Future<Payroll> processPayrollPayment(String id, {String? transactionId, String? chequeNumber, String? paymentMode}) async {
+    try {
+      return await _withAuth<Payroll>((token) async {
+        final payload = <String, dynamic>{};
+        if (transactionId != null) payload['transactionId'] = transactionId;
+        if (chequeNumber != null) payload['chequeNumber'] = chequeNumber;
+        if (paymentMode != null) payload['paymentMode'] = paymentMode;
+
+        final response = await _apiHandler.patch(
+          ApiEndpoints.processPayrollPayment(id).url,
+          token: token,
+          body: payload,
+        );
+
+        final data = (response is Map && (response.containsKey('payroll') || response.containsKey('data')))
+            ? (response['payroll'] ?? response['data'])
+            : response;
+
+        return Payroll.fromMap(Map<String, dynamic>.from(data));
+      });
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Mark payroll as paid
+  Future<Payroll> markPayrollPaid(String id, {String? remarks}) async {
+    try {
+      return await _withAuth<Payroll>((token) async {
+        final payload = remarks != null ? {'remarks': remarks} : <String, dynamic>{};
+
+        final response = await _apiHandler.patch(
+          ApiEndpoints.markPayrollPaid(id).url,
+          token: token,
+          body: payload,
+        );
+
+        final data = (response is Map && (response.containsKey('payroll') || response.containsKey('data')))
+            ? (response['payroll'] ?? response['data'])
+            : response;
+
+        return Payroll.fromMap(Map<String, dynamic>.from(data));
+      });
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Calculate net salary for payroll
+  Future<Map<String, dynamic>> calculatePayroll(String id) async {
+    try {
+      return await _withAuth<Map<String, dynamic>>((token) async {
+        final response = await _apiHandler.post(
+          ApiEndpoints.calculatePayroll(id).url,
+          token: token,
+          body: {},
+        );
+
+        return Map<String, dynamic>.from(response);
+      });
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Bulk generate payroll for multiple staff
+  Future<Map<String, dynamic>> bulkGeneratePayroll({
+    required int month,
+    required int year,
+    String? department,
+    List<String>? staffIds,
+  }) async {
+    try {
+      return await _withAuth<Map<String, dynamic>>((token) async {
+        final payload = <String, dynamic>{
+          'month': month,
+          'year': year,
+        };
+        if (department != null) payload['department'] = department;
+        if (staffIds != null && staffIds.isNotEmpty) payload['staffIds'] = staffIds;
+
+        final response = await _apiHandler.post(
+          ApiEndpoints.bulkGeneratePayroll().url,
+          token: token,
+          body: payload,
+        );
+
+        return Map<String, dynamic>.from(response);
+      });
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Get payroll summary/statistics
+  Future<Map<String, dynamic>> getPayrollSummary({int? month, int? year, String? department}) async {
+    try {
+      return await _withAuth<Map<String, dynamic>>((token) async {
+        var uri = ApiEndpoints.getPayrollSummary().url;
+        final params = <String>[];
+        if (month != null) params.add('month=$month');
+        if (year != null) params.add('year=$year');
+        if (department != null && department.isNotEmpty) params.add('department=${Uri.encodeComponent(department)}');
+        
+        if (params.isNotEmpty) {
+          uri += '?${params.join('&')}';
+        }
+
+        final response = await _apiHandler.get(uri, token: token);
+        return Map<String, dynamic>.from(response);
+      });
+    } catch (e) {
+      rethrow;
+    }
+  }
 }

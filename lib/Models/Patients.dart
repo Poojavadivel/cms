@@ -20,9 +20,13 @@ class PatientDetails {
   final String emergencyContactName;
   final String emergencyContactPhone;
   final String phone;
+  final String houseNo;
+  final String street;
   final String city;
-  final String address;
+  final String state;
   final String pincode;
+  final String country;
+  final String address; // Legacy field for backward compatibility
   final String insuranceNumber;
   final String expiryDate;
   final String avatarUrl;
@@ -68,9 +72,13 @@ class PatientDetails {
     required this.emergencyContactName,
     required this.emergencyContactPhone,
     required this.phone,
+    this.houseNo = '',
+    this.street = '',
     required this.city,
-    required this.address,
+    this.state = '',
     required this.pincode,
+    this.country = '',
+    this.address = '', // Legacy field
     required this.insuranceNumber,
     required this.expiryDate,
     required this.avatarUrl,
@@ -228,6 +236,19 @@ class PatientDetails {
         extractedAge = int.tryParse(metadata['age'].toString()) ?? 0;
       }
     }
+    // If still 0, try to calculate from dateOfBirth
+    if (extractedAge == 0 && map['dateOfBirth'] != null) {
+      try {
+        final dob = DateTime.tryParse(map['dateOfBirth'].toString());
+        if (dob != null) {
+          final now = DateTime.now();
+          extractedAge = now.year - dob.year;
+          if (now.month < dob.month || (now.month == dob.month && now.day < dob.day)) {
+            extractedAge--;
+          }
+        }
+      } catch (_) {}
+    }
     
     return PatientDetails(
       patientId: map['_id']?.toString() ??
@@ -256,9 +277,13 @@ class PatientDetails {
           map['emergencyContactPhone']?.toString() ?? '',
       phone: map['phone']?.toString() ?? '',
       // Address fields from address object or root level
+      houseNo: addressObj['houseNo']?.toString() ?? map['houseNo']?.toString() ?? '',
+      street: addressObj['street']?.toString() ?? map['street']?.toString() ?? '',
       city: addressObj['city']?.toString() ?? map['city']?.toString() ?? '',
-      address: addressObj['line1']?.toString() ?? map['address']?.toString() ?? '',
+      state: addressObj['state']?.toString() ?? map['state']?.toString() ?? '',
       pincode: addressObj['pincode']?.toString() ?? map['pincode']?.toString() ?? '',
+      country: addressObj['country']?.toString() ?? map['country']?.toString() ?? '',
+      address: addressObj['line1']?.toString() ?? map['address']?.toString() ?? '', // Legacy
       // Insurance from metadata
       insuranceNumber: metadata['insuranceNumber']?.toString() ?? 
           map['insuranceNumber']?.toString() ?? '',
@@ -328,17 +353,21 @@ class PatientDetails {
       'name': name,
       'firstName': firstName,
       'lastName': lastName,
+      'age': age,                   // ✅ FIXED - Add age to root level
       'gender': gender,
+      'bloodGroup': bloodGroup,     // ✅ FIXED - Add bloodGroup to root level
       'phone': phone,
       'dateOfBirth': dateOfBirth,
       
       // Address as structured object
       'address': {
-        'line1': address,
+        'houseNo': houseNo,
+        'street': street,
         'city': city,
-        'state': '',
+        'state': state,
         'pincode': pincode,
-        'country': '',
+        'country': country,
+        'line1': address, // Legacy field for backward compatibility
       },
       
       // Vitals as structured object
@@ -406,9 +435,13 @@ class PatientDetails {
     String? emergencyContactName,
     String? emergencyContactPhone,
     String? phone,
+    String? houseNo,
+    String? street,
     String? city,
-    String? address,
+    String? state,
     String? pincode,
+    String? country,
+    String? address,
     String? insuranceNumber,
     String? expiryDate,
     String? avatarUrl,
@@ -441,9 +474,13 @@ class PatientDetails {
       emergencyContactName: emergencyContactName ?? this.emergencyContactName,
       emergencyContactPhone: emergencyContactPhone ?? this.emergencyContactPhone,
       phone: phone ?? this.phone,
+      houseNo: houseNo ?? this.houseNo,
+      street: street ?? this.street,
       city: city ?? this.city,
-      address: address ?? this.address,
+      state: state ?? this.state,
       pincode: pincode ?? this.pincode,
+      country: country ?? this.country,
+      address: address ?? this.address,
       insuranceNumber: insuranceNumber ?? this.insuranceNumber,
       expiryDate: expiryDate ?? this.expiryDate,
       avatarUrl: avatarUrl ?? this.avatarUrl,

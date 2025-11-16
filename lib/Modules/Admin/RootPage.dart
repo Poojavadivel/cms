@@ -14,6 +14,7 @@ import 'InvoicePage.dart';
 import 'PathalogyScreen.dart';
 import 'PatientsPage.dart';
 import 'PharmacyPage.dart';
+import 'PayrollPageEnterprise.dart';
 import 'SettingsPage.dart';
 import 'StaffPage.dart';
 
@@ -56,12 +57,10 @@ class _AdminRootPageState extends State<AdminRootPage> {
         'label': 'Staff',
         'screen': const StaffScreen(),
       },
-
-
       {
         'icon': Icons.receipt_long_rounded,
         'label': 'Payroll',
-        'screen': const PayrollScreen(),
+        'screen': const PayrollPageEnterprise(),
       },
       {
         'icon': Icons.biotech_rounded,

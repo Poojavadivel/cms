@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
 
 import '../../../Models/Patients.dart';
 import '../../../Models/Doctor.dart';
@@ -35,10 +36,12 @@ class _EnterprisePatientFormState extends State<EnterprisePatientForm> {
   late final TextEditingController _emailCtrl;
   late final TextEditingController _emergencyNameCtrl;
   late final TextEditingController _emergencyPhoneCtrl;
-  late final TextEditingController _addressCtrl;
+  late final TextEditingController _houseNoCtrl;
+  late final TextEditingController _streetCtrl;
   late final TextEditingController _cityCtrl;
   late final TextEditingController _stateCtrl;
   late final TextEditingController _pincodeCtrl;
+  late final TextEditingController _countryCtrl;
   late final TextEditingController _bloodGroupCtrl;
   late final TextEditingController _heightCtrl;
   late final TextEditingController _weightCtrl;
@@ -127,10 +130,12 @@ class _EnterprisePatientFormState extends State<EnterprisePatientForm> {
         TextEditingController(text: initial?.emergencyContactName ?? '');
     _emergencyPhoneCtrl =
         TextEditingController(text: initial?.emergencyContactPhone ?? '');
-    _addressCtrl = TextEditingController(text: initial?.address ?? '');
+    _houseNoCtrl = TextEditingController(text: initial?.houseNo ?? '');
+    _streetCtrl = TextEditingController(text: initial?.street ?? '');
     _cityCtrl = TextEditingController(text: initial?.city ?? '');
-    _stateCtrl = TextEditingController(text: '');
+    _stateCtrl = TextEditingController(text: initial?.state ?? '');
     _pincodeCtrl = TextEditingController(text: initial?.pincode ?? '');
+    _countryCtrl = TextEditingController(text: initial?.country ?? 'India');
     _bloodGroupCtrl = TextEditingController(text: initial?.bloodGroup ?? '');
     _heightCtrl = TextEditingController(text: initial?.height ?? '');
     _weightCtrl = TextEditingController(text: initial?.weight ?? '');
@@ -206,10 +211,12 @@ class _EnterprisePatientFormState extends State<EnterprisePatientForm> {
     _emailCtrl.dispose();
     _emergencyNameCtrl.dispose();
     _emergencyPhoneCtrl.dispose();
-    _addressCtrl.dispose();
+    _houseNoCtrl.dispose();
+    _streetCtrl.dispose();
     _cityCtrl.dispose();
     _stateCtrl.dispose();
     _pincodeCtrl.dispose();
+    _countryCtrl.dispose();
     _bloodGroupCtrl.dispose();
     _heightCtrl.dispose();
     _weightCtrl.dispose();
@@ -401,9 +408,12 @@ class _EnterprisePatientFormState extends State<EnterprisePatientForm> {
       emergencyContactName: _emergencyNameCtrl.text.trim(),
       emergencyContactPhone: _emergencyPhoneCtrl.text.trim(),
       phone: _phoneCtrl.text.trim(),
+      houseNo: _houseNoCtrl.text.trim(),
+      street: _streetCtrl.text.trim(),
       city: _cityCtrl.text.trim(),
-      address: _addressCtrl.text.trim(),
+      state: _stateCtrl.text.trim(),
       pincode: _pincodeCtrl.text.trim(),
+      country: _countryCtrl.text.trim(),
       insuranceNumber: _insuranceNumberCtrl.text.trim(),
       expiryDate: _fmtDate(_insuranceExpiry),
       avatarUrl: widget.initial?.avatarUrl ?? '',
@@ -638,6 +648,175 @@ class _EnterprisePatientFormState extends State<EnterprisePatientForm> {
     } catch (e) {
       debugPrint('❌ Scanner processing error: $e');
       rethrow;
+    }
+  }
+
+  // PDF upload and scanner processing
+  Future<void> _pickAndUploadPDF() async {
+    try {
+      setState(() {
+        _isProcessingImages = true;
+        _scannerError = null;
+      });
+
+      // Pick PDF file
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf'],
+        allowMultiple: false,
+      );
+
+      if (result == null || result.files.isEmpty) {
+        setState(() => _isProcessingImages = false);
+        return;
+      }
+
+      final pickedFile = result.files.first;
+      
+      // Create XFile from picked file
+      XFile pdfFile;
+      if (kIsWeb) {
+        // For web, use bytes
+        if (pickedFile.bytes != null) {
+          pdfFile = XFile.fromData(
+            pickedFile.bytes!,
+            name: pickedFile.name,
+            mimeType: 'application/pdf',
+          );
+        } else {
+          throw Exception('Failed to read PDF file');
+        }
+      } else {
+        // For mobile/desktop, use path
+        if (pickedFile.path != null) {
+          pdfFile = XFile(
+            pickedFile.path!,
+            name: pickedFile.name,
+            mimeType: 'application/pdf',
+          );
+        } else {
+          throw Exception('Failed to read PDF file');
+        }
+      }
+
+      debugPrint('📄 PDF picked: ${pickedFile.name}, size: ${pickedFile.size} bytes');
+
+      // Process with scanner API
+      final scanResult = await _processImageWithScanner(pdfFile);
+
+      if (scanResult != null) {
+        // Check if there's a warning (e.g., scanned PDF with no text)
+        final warning = scanResult['warning'] as String?;
+        final hasData = scanResult['medicalHistory'] != null && 
+                       (scanResult['medicalHistory'] as String).isNotEmpty;
+        
+        // Store scanned data for display
+        setState(() {
+          _lastScannedData = scanResult;
+        });
+
+        // Auto-fill medical history if extracted
+        if (scanResult['medicalHistory'] != null &&
+            (scanResult['medicalHistory'] as String).isNotEmpty) {
+          final currentHistory = _medicalHistoryCtrl.text.trim();
+          final newHistory = scanResult['medicalHistory'] as String;
+          _medicalHistoryCtrl.text = currentHistory.isEmpty
+              ? newHistory
+              : '$currentHistory, $newHistory';
+        }
+
+        // Auto-fill allergies if extracted
+        if (scanResult['allergies'] != null &&
+            (scanResult['allergies'] as String).isNotEmpty) {
+          final currentAllergies = _allergiesCtrl.text.trim();
+          final newAllergies = scanResult['allergies'] as String;
+          _allergiesCtrl.text = currentAllergies.isEmpty
+              ? newAllergies
+              : '$currentAllergies, $newAllergies';
+        }
+
+        // Store file reference for later upload (for mobile only)
+        if (!kIsWeb && pickedFile.path != null) {
+          setState(() {
+            _uploadedImages.add(File(pickedFile.path!));
+          });
+        }
+
+        if (mounted) {
+          // Show warning or success message
+          if (warning != null && warning.isNotEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Row(
+                  children: [
+                    const Icon(Icons.warning_amber, color: Colors.white),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        warning,
+                        style: GoogleFonts.inter(fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                  ],
+                ),
+                backgroundColor: Colors.orange,
+                duration: const Duration(seconds: 6),
+                action: SnackBarAction(
+                  label: 'OK',
+                  textColor: Colors.white,
+                  onPressed: () {},
+                ),
+              ),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Row(
+                  children: [
+                    const Icon(Icons.check_circle, color: Colors.white),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        hasData 
+                            ? 'PDF scanned and processed successfully!'
+                            : 'PDF uploaded successfully!',
+                        style: GoogleFonts.inter(fontWeight: FontWeight.w500),
+                    ),
+                  ),
+                ],
+              ),
+              backgroundColor: AppColors.kSuccess,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('❌ Error uploading PDF: $e');
+      setState(() => _scannerError = 'Failed to process PDF: $e');
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error_outline, color: Colors.white),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Failed to process PDF: $e',
+                    style: GoogleFonts.inter(fontWeight: FontWeight.w500),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    } finally {
+      setState(() => _isProcessingImages = false);
     }
   }
 
@@ -1245,17 +1424,29 @@ class _EnterprisePatientFormState extends State<EnterprisePatientForm> {
                     keyboardType: TextInputType.phone,
                   ),
                 ),
-                // Address (full width)
+                // House No
                 SizedBox(
-                  width: constraints.maxWidth,
+                  width: colWidth,
                   child: TextFormField(
-                    controller: _addressCtrl,
+                    controller: _houseNoCtrl,
                     decoration: _buildInputDecoration(
-                      label: 'Address',
-                      icon: Iconsax.location,
-                      hint: 'Enter full address',
+                      label: 'House No / Flat No',
+                      icon: Iconsax.home,
+                      hint: 'Enter house/flat number',
                     ),
-                    maxLines: 2,
+                  ),
+                ),
+                // Street
+                SizedBox(
+                  width: colWidth,
+                  child: TextFormField(
+                    controller: _streetCtrl,
+                    decoration: _buildInputDecoration(
+                      label: 'Street Name',
+                      icon: Iconsax.location,
+                      hint: 'Enter street name',
+                    ),
+                    textCapitalization: TextCapitalization.words,
                   ),
                 ),
                 // City
@@ -1296,6 +1487,19 @@ class _EnterprisePatientFormState extends State<EnterprisePatientForm> {
                     ),
                     keyboardType: TextInputType.number,
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  ),
+                ),
+                // Country
+                SizedBox(
+                  width: colWidth,
+                  child: TextFormField(
+                    controller: _countryCtrl,
+                    decoration: _buildInputDecoration(
+                      label: 'Country',
+                      icon: Iconsax.global,
+                      hint: 'Enter country',
+                    ),
+                    textCapitalization: TextCapitalization.words,
                   ),
                 ),
               ],
@@ -1452,15 +1656,17 @@ class _EnterprisePatientFormState extends State<EnterprisePatientForm> {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      // Upload button
-                      Row(
+                      // Upload buttons
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
                         children: [
                           ElevatedButton.icon(
                             onPressed: _isProcessingImages
                                 ? null
                                 : () => _pickAndUploadImage(ImageSource.gallery),
                             icon: const Icon(Iconsax.gallery, size: 18),
-                            label: const Text('Choose from Gallery'),
+                            label: const Text('Choose Image'),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.primary,
                               foregroundColor: Colors.white,
@@ -1471,15 +1677,14 @@ class _EnterprisePatientFormState extends State<EnterprisePatientForm> {
                               ),
                             ),
                           ),
-                          const SizedBox(width: 12),
                           ElevatedButton.icon(
                             onPressed: _isProcessingImages
                                 ? null
-                                : () => _pickAndUploadImage(ImageSource.camera),
-                            icon: const Icon(Iconsax.camera, size: 18),
-                            label: const Text('Take Photo'),
+                                : _pickAndUploadPDF,
+                            icon: const Icon(Iconsax.document, size: 18),
+                            label: const Text('Choose PDF'),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.kSuccess,
+                              backgroundColor: Colors.deepOrange,
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 20, vertical: 12),
@@ -1488,6 +1693,23 @@ class _EnterprisePatientFormState extends State<EnterprisePatientForm> {
                               ),
                             ),
                           ),
+                          if (!kIsWeb)
+                            ElevatedButton.icon(
+                              onPressed: _isProcessingImages
+                                  ? null
+                                  : () => _pickAndUploadImage(ImageSource.camera),
+                              icon: const Icon(Iconsax.camera, size: 18),
+                              label: const Text('Take Photo'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.kSuccess,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 20, vertical: 12),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                            ),
                         ],
                       ),
                       if (_isProcessingImages) ...[
