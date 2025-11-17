@@ -28,8 +28,8 @@ class ApiConfig {
   static const _Environment _currentEnv = _Environment.staging;
   
   /// Get base URL for current environment
-  static const  String baseUrl = 'http://10.165.144.132:3000';
-  // static const  String baseUrl = 'https://hms-dev.onrender.com';
+  // static const  String baseUrl = 'http://10.165.144.132:3000';
+  static const  String baseUrl = 'https://hms-dev.onrender.com';
   
   /// API version
   static const String apiVersion = 'v1';
