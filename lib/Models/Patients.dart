@@ -348,6 +348,12 @@ class PatientDetails {
   }
 
   Map<String, dynamic> toJson() {
+    // Ensure doctorId is always a string (defensive programming)
+    String safeDoctorId = '';
+    if (doctorId.isNotEmpty) {
+      safeDoctorId = doctorId;
+    }
+    
     final base = <String, dynamic>{
       'patientId': patientId,
       'name': name,
@@ -381,7 +387,7 @@ class PatientDetails {
         'temp': _parseNumber(temp),
       },
       
-      'doctorId': doctorId,
+      'doctorId': safeDoctorId,
       'allergies': allergies,
       'notes': notes,
       

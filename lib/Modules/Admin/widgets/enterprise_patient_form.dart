@@ -394,6 +394,18 @@ class _EnterprisePatientFormState extends State<EnterprisePatientForm> {
 
     final isEdit = widget.initial != null;
 
+    // Ensure doctorId is always a string
+    String finalDoctorId = '';
+    if (_selectedDoctorId != null) {
+      if (_selectedDoctorId is String) {
+        finalDoctorId = _selectedDoctorId as String;
+      } else {
+        debugPrint('⚠️ [SUBMIT] _selectedDoctorId is not a String: ${_selectedDoctorId.runtimeType}');
+        finalDoctorId = _selectedDoctorId.toString();
+      }
+    }
+    debugPrint('🔵 [SUBMIT] Final doctorId being sent: $finalDoctorId');
+
     final draft = PatientDetails(
       patientId:
           widget.initial?.patientId ?? 'temp-${Random().nextInt(999999)}',
@@ -419,7 +431,7 @@ class _EnterprisePatientFormState extends State<EnterprisePatientForm> {
       avatarUrl: widget.initial?.avatarUrl ?? '',
       dateOfBirth: _fmtDate(_dob),
       lastVisitDate: _fmtDate(_lastVisit),
-      doctorId: _selectedDoctorId ?? '',
+      doctorId: finalDoctorId,
       medicalHistory: _splitCsv(_medicalHistoryCtrl.text),
       allergies: _splitCsv(_allergiesCtrl.text),
       notes: _notesCtrl.text.trim(),
@@ -781,14 +793,15 @@ class _EnterprisePatientFormState extends State<EnterprisePatientForm> {
                             ? 'PDF scanned and processed successfully!'
                             : 'PDF uploaded successfully!',
                         style: GoogleFonts.inter(fontWeight: FontWeight.w500),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
+                backgroundColor: AppColors.kSuccess,
+                duration: const Duration(seconds: 3),
               ),
-              backgroundColor: AppColors.kSuccess,
-              duration: const Duration(seconds: 3),
-            ),
-          );
+            );
+          }
         }
       }
     } catch (e) {
@@ -2067,7 +2080,7 @@ class _EnterprisePatientFormState extends State<EnterprisePatientForm> {
                               ),
                               // Use the safe String value
                               value: safeValue,
-                          items: [
+                              items: [
                             const DropdownMenuItem<String?>(
                               value: null,
                               child: Text('None'),

@@ -136,12 +136,24 @@ class DashboardAppointments {
             ? _formatTime(DateTime.tryParse(json['startAt']))
             : '');
 
-    // ✅ Fix: read reason (chiefComplaint) from both top-level and metadata
+    // ✅ Fix: read reason (chiefComplaint) from multiple possible locations
     String reason = '';
-    if (json['chiefComplaint'] != null && json['chiefComplaint'].toString().isNotEmpty) {
-      reason = json['chiefComplaint'];
-    } else if (json['metadata'] is Map && json['metadata']?['chiefComplaint'] != null) {
-      reason = json['metadata']['chiefComplaint'];
+    if (json['chiefComplaint'] != null && json['chiefComplaint'].toString().trim().isNotEmpty) {
+      reason = json['chiefComplaint'].toString().trim();
+    } else if (json['reason'] != null && json['reason'].toString().trim().isNotEmpty) {
+      reason = json['reason'].toString().trim();
+    } else if (json['metadata'] is Map) {
+      final meta = json['metadata'] as Map;
+      if (meta['chiefComplaint'] != null && meta['chiefComplaint'].toString().trim().isNotEmpty) {
+        reason = meta['chiefComplaint'].toString().trim();
+      } else if (meta['reason'] != null && meta['reason'].toString().trim().isNotEmpty) {
+        reason = meta['reason'].toString().trim();
+      }
+    }
+    
+    // Final fallback: check notes
+    if (reason.isEmpty && json['notes'] != null && json['notes'].toString().trim().isNotEmpty) {
+      reason = json['notes'].toString().trim();
     }
 
     return DashboardAppointments(

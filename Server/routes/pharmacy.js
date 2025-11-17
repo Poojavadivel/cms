@@ -104,7 +104,30 @@ router.post('/medicines', auth, async (req, res) => {
     });
 
     console.log('✅ [MEDICINE CREATE] Created medicine:', med._id, med.name);
-    return res.status(201).json(med);
+    
+    // Create initial batch if stock is provided
+    if (MedicineBatch && Object.prototype.hasOwnProperty.call(data, 'stock')) {
+      const initialStock = toNumberOrNull(data.stock) ?? 0;
+      if (initialStock > 0) {
+        const batch = await MedicineBatch.create({
+          medicineId: String(med._id),
+          batchNumber: 'DEFAULT',
+          quantity: initialStock,
+          salePrice: toNumberOrNull(data.salePrice) ?? 0,
+          purchasePrice: toNumberOrNull(data.costPrice) ?? 0,
+          supplier: '',
+          location: '',
+          expiryDate: null,
+          metadata: { autoCreated: true },
+          createdAt: Date.now(),
+          updatedAt: Date.now()
+        });
+        console.log('✅ [MEDICINE CREATE] Created initial batch:', batch._id, 'qty:', batch.quantity);
+        return res.status(201).json({ ...med.toObject(), availableQty: initialStock });
+      }
+    }
+    
+    return res.status(201).json({ ...med.toObject(), availableQty: 0 });
   } catch (err) {
     console.error('💥 [MEDICINE CREATE] Error:', err);
     return res.status(500).json({
@@ -177,11 +200,24 @@ router.get('/medicines', auth, async (req, res) => {
       if (medIds.length > 0) {
         const agg = await MedicineBatch.aggregate([
           { $match: { medicineId: { $in: medIds } } },
-          { $group: { _id: '$medicineId', qty: { $sum: '$quantity' } } },
+          { $group: { 
+              _id: '$medicineId', 
+              qty: { $sum: '$quantity' },
+              avgSalePrice: { $avg: '$salePrice' }
+            } 
+          },
         ]);
         const qtyMap = {};
-        agg.forEach((a) => { qtyMap[String(a._id)] = a.qty; });
-        items = items.map((m) => ({ ...m, availableQty: qtyMap[String(m._id)] ?? 0 }));
+        const priceMap = {};
+        agg.forEach((a) => { 
+          qtyMap[String(a._id)] = a.qty; 
+          priceMap[String(a._id)] = a.avgSalePrice || 0;
+        });
+        items = items.map((m) => ({ 
+          ...m, 
+          availableQty: qtyMap[String(m._id)] ?? 0,
+          salePrice: priceMap[String(m._id)] ?? 0
+        }));
       }
       console.log(`📦 [PHARMACY MEDICINES] returning ${items.length} medicines (page ${page}, limit ${limit})`);
     }
@@ -260,6 +296,73 @@ router.put('/medicines/:id', auth, async (req, res) => {
     if (!updated) {
       console.warn('⚠️ [MEDICINE UPDATE] Not found:', req.params.id);
       return res.status(404).json({ success: false, message: 'Medicine not found', errorCode: 6007 });
+    }
+
+    // Handle stock update via batch if 'stock' field is provided
+    if (Object.prototype.hasOwnProperty.call(data, 'stock') && MedicineBatch) {
+      const newStock = toNumberOrNull(data.stock) ?? 0;
+      console.log('📦 [MEDICINE UPDATE] Stock adjustment requested:', newStock);
+      
+      // Get current stock from batches
+      const batches = await MedicineBatch.find({ medicineId: String(req.params.id) });
+      const currentStock = batches.reduce((sum, b) => sum + (b.quantity || 0), 0);
+      console.log('📦 [MEDICINE UPDATE] Current stock:', currentStock);
+      
+      if (newStock !== currentStock) {
+        const diff = newStock - currentStock;
+        console.log('📦 [MEDICINE UPDATE] Stock difference:', diff);
+        
+        // Find or create a default batch for this medicine
+        let defaultBatch = await MedicineBatch.findOne({ 
+          medicineId: String(req.params.id),
+          batchNumber: 'DEFAULT'
+        });
+        
+        if (!defaultBatch && batches.length > 0) {
+          // Use the first existing batch
+          defaultBatch = batches[0];
+        }
+        
+        if (defaultBatch) {
+          // Update existing batch
+          defaultBatch.quantity = Math.max(0, (defaultBatch.quantity || 0) + diff);
+          defaultBatch.updatedAt = Date.now();
+          
+          // Set sale price if provided
+          if (Object.prototype.hasOwnProperty.call(data, 'salePrice')) {
+            defaultBatch.salePrice = toNumberOrNull(data.salePrice) ?? 0;
+          }
+          
+          await defaultBatch.save();
+          console.log('✅ [MEDICINE UPDATE] Updated batch:', defaultBatch._id, 'new qty:', defaultBatch.quantity);
+        } else {
+          // Create new default batch
+          const newBatch = await MedicineBatch.create({
+            medicineId: String(req.params.id),
+            batchNumber: 'DEFAULT',
+            quantity: Math.max(0, newStock),
+            salePrice: toNumberOrNull(data.salePrice) ?? 0,
+            purchasePrice: toNumberOrNull(data.costPrice) ?? 0,
+            supplier: '',
+            location: '',
+            expiryDate: null,
+            metadata: { autoCreated: true },
+            createdAt: Date.now(),
+            updatedAt: Date.now()
+          });
+          console.log('✅ [MEDICINE UPDATE] Created new batch:', newBatch._id, 'qty:', newBatch.quantity);
+        }
+      }
+      
+      // Get updated stock
+      const updatedBatches = await MedicineBatch.find({ medicineId: String(req.params.id) });
+      const finalStock = updatedBatches.reduce((sum, b) => sum + (b.quantity || 0), 0);
+      console.log('✅ [MEDICINE UPDATE] Final stock:', finalStock);
+      
+      return res.status(200).json({ 
+        success: true, 
+        medicine: { ...updated.toObject(), availableQty: finalStock }
+      });
     }
 
     console.log('✅ [MEDICINE UPDATE] updated:', updated._id);
@@ -408,8 +511,18 @@ router.get('/batches', auth, async (req, res) => {
     const items = await MedicineBatch.find(filter).skip(skip).limit(limit).sort({ expiryDate: 1 }).lean();
     const total = await MedicineBatch.countDocuments(filter);
 
-    console.log(`📦 [BATCH LIST] returning ${items.length} batches (total ${total})`);
-    return res.status(200).json({ success: true, batches: items, total, page, limit });
+    // Populate medicine names
+    const medicineIds = [...new Set(items.map(b => b.medicineId).filter(Boolean))];
+    const medicines = await Medicine.find({ _id: { $in: medicineIds } }).select('_id name').lean();
+    const medicineMap = Object.fromEntries(medicines.map(m => [String(m._id), m.name]));
+    
+    const enrichedBatches = items.map(batch => ({
+      ...batch,
+      medicineName: medicineMap[String(batch.medicineId)] || 'Unknown Medicine'
+    }));
+
+    console.log(`📦 [BATCH LIST] returning ${enrichedBatches.length} batches (total ${total})`);
+    return res.status(200).json({ success: true, batches: enrichedBatches, total, page, limit });
   } catch (err) {
     console.error('❌ [BATCH LIST] Error:', err);
     return res.status(500).json({ success: false, message: 'Failed to fetch batches', errorCode: 6506 });
@@ -705,44 +818,50 @@ router.get('/pending-prescriptions', auth, async (req, res) => {
     const limit = Math.min(200, Math.max(1, parseInt(req.query.limit || '50', 10)));
     const skip = page * limit;
 
-    // Find intakes that have pharmacy items and haven't been dispensed yet
+    // Find intakes that have pharmacy records created (pharmacyId exists)
     const intakes = await Intake.find({
-      'meta.pharmacyId': { $exists: false } // No pharmacy record created yet
+      'meta.pharmacyId': { $exists: true } // Has pharmacy record created from intake
     })
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(limit)
     .lean();
 
-    // Filter intakes that actually have pharmacy data in meta or notes
-    const pendingPrescriptions = [];
+    const total = await Intake.countDocuments({ 'meta.pharmacyId': { $exists: true } });
+
+    // Fetch the pharmacy records to get medicine details
+    const prescriptions = [];
     for (const intake of intakes) {
-      // Check if there's pharmacy data in attachments or meta
-      const hasPharmacyData = intake.meta?.pharmacy || 
-                              (Array.isArray(intake.attachments) && 
-                               intake.attachments.some(a => a.type === 'pharmacy'));
-      
-      if (hasPharmacyData || intake.meta?.pharmacyItems) {
-        pendingPrescriptions.push({
+      try {
+        const pharmacyId = intake.meta?.pharmacyId;
+        if (!pharmacyId) continue;
+
+        const pharmacyRecord = await PharmacyRecord.findById(String(pharmacyId)).lean();
+        if (!pharmacyRecord) continue;
+
+        prescriptions.push({
           _id: intake._id,
           patientName: `${intake.patientSnapshot?.firstName || ''} ${intake.patientSnapshot?.lastName || ''}`.trim(),
           patientId: intake.patientId,
           patientPhone: intake.patientSnapshot?.phone,
           doctorId: intake.doctorId,
           appointmentId: intake.appointmentId,
-          pharmacyItems: intake.meta?.pharmacyItems || intake.meta?.pharmacy || [],
+          pharmacyItems: pharmacyRecord.items || [],
           createdAt: intake.createdAt,
-          notes: intake.notes
+          notes: intake.notes || pharmacyRecord.notes || '',
+          pharmacyId: pharmacyRecord._id,
+          paid: pharmacyRecord.paid || false,
+          total: pharmacyRecord.total || 0
         });
+      } catch (err) {
+        console.warn('Error processing intake:', intake._id, err.message);
       }
     }
 
-    const total = pendingPrescriptions.length;
-
-    console.log(`📦 [PENDING PRESCRIPTIONS] returning ${pendingPrescriptions.length} prescriptions`);
+    console.log(`📦 [PENDING PRESCRIPTIONS] returning ${prescriptions.length} prescriptions`);
     return res.status(200).json({ 
       success: true, 
-      prescriptions: pendingPrescriptions, 
+      prescriptions, 
       total, 
       page, 
       limit 
@@ -750,6 +869,118 @@ router.get('/pending-prescriptions', auth, async (req, res) => {
   } catch (err) {
     console.error('❌ [PENDING PRESCRIPTIONS] Error:', err);
     return res.status(500).json({ success: false, message: 'Failed to fetch pending prescriptions', errorCode: 6512 });
+  }
+});
+
+// POST auto-create prescription from intake and reduce stock
+router.post('/prescriptions/create-from-intake', auth, async (req, res) => {
+  try {
+    console.log('📝 [CREATE PRESCRIPTION] data:', req.body, 'by user:', req.user?.id);
+    
+    const data = req.body || {};
+    const items = Array.isArray(data.items) ? data.items : [];
+    
+    if (items.length === 0) {
+      return res.status(400).json({ success: false, message: 'No medicine items provided', errorCode: 6210 });
+    }
+
+    // Prepare record items and reduce stock
+    const recordItems = [];
+    const stockReductions = [];
+
+    for (const item of items) {
+      const medicineId = item.medicineId;
+      const quantity = Math.max(1, parseInt(item.quantity) || 1);
+      const price = parseFloat(item.price) || 0;
+      const total = quantity * price;
+      
+      console.log(`💊 Processing item: ${item.Medicine || item.name} | Qty: ${quantity} | Price: ₹${price} | Total: ₹${total}`);
+
+      // Find medicine to verify stock
+      if (medicineId) {
+        const medicine = await Medicine.findById(medicineId);
+        if (medicine) {
+          // Get available batches
+          const batches = await MedicineBatch.find({
+            medicineId: String(medicineId),
+            quantity: { $gt: 0 }
+          }).sort({ expiryDate: 1 }); // FIFO - use oldest first
+
+          let remainingQty = quantity;
+          
+          // Reduce stock from batches
+          for (const batch of batches) {
+            if (remainingQty <= 0) break;
+            
+            const deductQty = Math.min(batch.quantity, remainingQty);
+            batch.quantity -= deductQty;
+            remainingQty -= deductQty;
+            
+            await batch.save();
+            stockReductions.push({
+              batchId: batch._id,
+              batchNumber: batch.batchNumber,
+              deducted: deductQty
+            });
+            
+            console.log(`✅ Reduced ${deductQty} from batch ${batch.batchNumber}`);
+          }
+
+          if (remainingQty > 0) {
+            console.warn(`⚠️ Insufficient stock for ${medicine.name}. Short by ${remainingQty} units`);
+          }
+        }
+      }
+
+      recordItems.push({
+        medicineId: medicineId || null,
+        name: item.Medicine || item.name || '',
+        dosage: item.Dosage || item.dosage || '',
+        frequency: item.Frequency || item.frequency || '',
+        notes: item.Notes || item.notes || '',
+        quantity: quantity,
+        unitPrice: price,
+        lineTotal: total,
+        stockReductions: stockReductions.filter(sr => sr.medicineId === medicineId)
+      });
+    }
+
+    const grandTotal = recordItems.reduce((sum, item) => sum + (item.lineTotal || 0), 0);
+
+    // Create pharmacy record
+    const pharmacyRecord = await PharmacyRecord.create({
+      type: 'Dispense',
+      patientId: data.patientId || null,
+      appointmentId: data.appointmentId || null,
+      createdBy: req.user?.id || '',
+      items: recordItems,
+      total: grandTotal,
+      paid: data.paid || false,
+      paymentMethod: data.paymentMethod || 'Cash',
+      notes: data.notes || null,
+      metadata: {
+        intakeId: data.intakeId || null,
+        patientName: data.patientName || '',
+        stockReduced: true,
+        reductions: stockReductions,
+        ...(data.metadata || {})
+      },
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    });
+
+    console.log('✅ [CREATE PRESCRIPTION] Created record:', pharmacyRecord._id, 'Total: ₹', grandTotal);
+    console.log('📦 [STOCK REDUCED]', stockReductions.length, 'batch(es) updated');
+    
+    return res.status(201).json({
+      success: true,
+      record: pharmacyRecord,
+      stockReductions: stockReductions,
+      total: grandTotal
+    });
+  } catch (err) {
+    console.error('❌ [CREATE PRESCRIPTION] Error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to create prescription', errorCode: 6514 });
   }
 });
 
@@ -822,6 +1053,357 @@ router.post('/prescriptions/:intakeId/dispense', auth, async (req, res) => {
   } catch (err) {
     console.error('💥 [DISPENSE PRESCRIPTION] Error:', err);
     return res.status(500).json({ success: false, message: 'Failed to dispense prescription', errorCode: 6513 });
+  }
+});
+
+/**
+ * ------------------
+ * ADMIN INVENTORY ANALYTICS
+ * ------------------
+ */
+
+// GET inventory analytics for admin dashboard
+router.get('/admin/analytics', auth, async (req, res) => {
+  try {
+    if (!requireAdminOrPharmacist(req, res)) return;
+    if (!ensureModel(Medicine, 'Medicine', res)) return;
+    if (!ensureModel(MedicineBatch, 'MedicineBatch', res)) return;
+    if (!ensureModel(PharmacyRecord, 'PharmacyRecord', res)) return;
+
+    console.log('📊 [ADMIN ANALYTICS] requestedBy:', req.user?.id);
+
+    // Total medicines count
+    const totalMedicines = await Medicine.countDocuments({ deleted_at: null });
+
+    // Get all medicine IDs
+    const allMedicines = await Medicine.find({ deleted_at: null }).select('_id reorderLevel').lean();
+    const medIds = allMedicines.map(m => String(m._id));
+
+    // Calculate stock levels
+    const batchAgg = await MedicineBatch.aggregate([
+      { $match: { medicineId: { $in: medIds } } },
+      { $group: { _id: '$medicineId', totalQty: { $sum: '$quantity' } } },
+    ]);
+
+    const stockMap = {};
+    batchAgg.forEach(b => { stockMap[String(b._id)] = b.totalQty || 0; });
+
+    let lowStockCount = 0;
+    let outOfStockCount = 0;
+    let inStockCount = 0;
+
+    allMedicines.forEach(med => {
+      const stock = stockMap[String(med._id)] || 0;
+      const reorder = med.reorderLevel || 20;
+      
+      if (stock <= 0) {
+        outOfStockCount++;
+      } else if (stock <= reorder) {
+        lowStockCount++;
+      } else {
+        inStockCount++;
+      }
+    });
+
+    // Recent transactions (last 30 days)
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const recentTransactions = await PharmacyRecord.countDocuments({
+      createdAt: { $gte: thirtyDaysAgo }
+    });
+
+    // Revenue (last 30 days)
+    const revenueAgg = await PharmacyRecord.aggregate([
+      { 
+        $match: { 
+          type: 'Dispense',
+          paid: true,
+          createdAt: { $gte: thirtyDaysAgo }
+        } 
+      },
+      { $group: { _id: null, totalRevenue: { $sum: '$total' } } }
+    ]);
+    const totalRevenue = revenueAgg.length > 0 ? revenueAgg[0].totalRevenue : 0;
+
+    // Expiring batches (next 30 days)
+    const thirtyDaysFromNow = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    const expiringBatches = await MedicineBatch.countDocuments({
+      expiryDate: { $lte: thirtyDaysFromNow, $gte: new Date() },
+      quantity: { $gt: 0 }
+    });
+
+    // Top medicines by quantity dispensed (last 30 days)
+    const topMedicines = await PharmacyRecord.aggregate([
+      { $match: { type: 'Dispense', createdAt: { $gte: thirtyDaysAgo } } },
+      { $unwind: '$items' },
+      { 
+        $group: { 
+          _id: '$items.medicineId',
+          name: { $first: '$items.name' },
+          totalQuantity: { $sum: '$items.quantity' },
+          totalRevenue: { $sum: '$items.lineTotal' }
+        } 
+      },
+      { $sort: { totalQuantity: -1 } },
+      { $limit: 10 }
+    ]);
+
+    const analytics = {
+      inventory: {
+        totalMedicines,
+        inStock: inStockCount,
+        lowStock: lowStockCount,
+        outOfStock: outOfStockCount,
+      },
+      transactions: {
+        last30Days: recentTransactions,
+        totalRevenue: totalRevenue.toFixed(2),
+      },
+      alerts: {
+        expiringBatches,
+        lowStockItems: lowStockCount,
+      },
+      topMedicines: topMedicines.map(m => ({
+        id: m._id,
+        name: m.name,
+        quantityDispensed: m.totalQuantity,
+        revenue: m.totalRevenue.toFixed(2),
+      })),
+    };
+
+    console.log('✅ [ADMIN ANALYTICS] Analytics generated:', analytics);
+    return res.status(200).json({ success: true, analytics });
+  } catch (err) {
+    console.error('❌ [ADMIN ANALYTICS] Error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to fetch analytics', errorCode: 6514 });
+  }
+});
+
+// GET low stock medicines for admin alerts
+router.get('/admin/low-stock', auth, async (req, res) => {
+  try {
+    if (!requireAdminOrPharmacist(req, res)) return;
+    if (!ensureModel(Medicine, 'Medicine', res)) return;
+    if (!ensureModel(MedicineBatch, 'MedicineBatch', res)) return;
+
+    console.log('🔔 [ADMIN LOW-STOCK] requestedBy:', req.user?.id);
+
+    const threshold = parseInt(req.query.threshold || '20', 10);
+    const allMedicines = await Medicine.find({ deleted_at: null }).lean();
+    const medIds = allMedicines.map(m => String(m._id));
+
+    const batchAgg = await MedicineBatch.aggregate([
+      { $match: { medicineId: { $in: medIds } } },
+      { $group: { _id: '$medicineId', totalQty: { $sum: '$quantity' } } },
+    ]);
+
+    const stockMap = {};
+    batchAgg.forEach(b => { stockMap[String(b._id)] = b.totalQty || 0; });
+
+    const lowStockMedicines = allMedicines.filter(med => {
+      const stock = stockMap[String(med._id)] || 0;
+      const reorder = med.reorderLevel || threshold;
+      return stock <= reorder && stock > 0;
+    }).map(med => ({
+      ...med,
+      availableQty: stockMap[String(med._id)] || 0,
+    }));
+
+    console.log(`✅ [ADMIN LOW-STOCK] Found ${lowStockMedicines.length} low stock medicines`);
+    return res.status(200).json({ success: true, lowStockMedicines, count: lowStockMedicines.length });
+  } catch (err) {
+    console.error('❌ [ADMIN LOW-STOCK] Error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to fetch low stock medicines', errorCode: 6515 });
+  }
+});
+
+// GET expiring batches for admin alerts
+router.get('/admin/expiring-batches', auth, async (req, res) => {
+  try {
+    if (!requireAdminOrPharmacist(req, res)) return;
+    if (!ensureModel(MedicineBatch, 'MedicineBatch', res)) return;
+    if (!ensureModel(Medicine, 'Medicine', res)) return;
+
+    console.log('⏰ [ADMIN EXPIRING] requestedBy:', req.user?.id);
+
+    const daysAhead = parseInt(req.query.days || '30', 10);
+    const futureDate = new Date(Date.now() + daysAhead * 24 * 60 * 60 * 1000);
+
+    const expiringBatches = await MedicineBatch.find({
+      expiryDate: { $lte: futureDate, $gte: new Date() },
+      quantity: { $gt: 0 }
+    }).sort({ expiryDate: 1 }).lean();
+
+    // Enrich with medicine details
+    const enrichedBatches = await Promise.all(
+      expiringBatches.map(async (batch) => {
+        const medicine = await Medicine.findById(batch.medicineId).lean();
+        return {
+          ...batch,
+          medicineName: medicine?.name || 'Unknown',
+          medicineCategory: medicine?.category || 'N/A',
+        };
+      })
+    );
+
+    console.log(`✅ [ADMIN EXPIRING] Found ${enrichedBatches.length} expiring batches`);
+    return res.status(200).json({ 
+      success: true, 
+      expiringBatches: enrichedBatches, 
+      count: enrichedBatches.length 
+    });
+  } catch (err) {
+    console.error('❌ [ADMIN EXPIRING] Error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to fetch expiring batches', errorCode: 6516 });
+  }
+});
+
+// POST bulk import medicines (admin only)
+router.post('/admin/bulk-import', auth, async (req, res) => {
+  try {
+    if (!requireAdminOrPharmacist(req, res)) return;
+    if (!ensureModel(Medicine, 'Medicine', res)) return;
+
+    console.log('📦 [ADMIN BULK-IMPORT] requestedBy:', req.user?.id);
+
+    const { medicines } = req.body;
+    if (!Array.isArray(medicines) || medicines.length === 0) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'medicines array is required', 
+        errorCode: 6301 
+      });
+    }
+
+    const results = {
+      success: [],
+      failed: [],
+      skipped: [],
+    };
+
+    for (const medData of medicines) {
+      try {
+        if (!medData.name) {
+          results.failed.push({ data: medData, reason: 'Missing name' });
+          continue;
+        }
+
+        // Check for duplicate SKU
+        if (medData.sku) {
+          const exists = await Medicine.findOne({ sku: medData.sku }).lean();
+          if (exists) {
+            results.skipped.push({ data: medData, reason: 'SKU already exists' });
+            continue;
+          }
+        }
+
+        const med = await Medicine.create({
+          name: medData.name,
+          genericName: maybeNull(medData.genericName),
+          sku: maybeNull(medData.sku),
+          form: maybeNull(medData.form) || 'Tablet',
+          strength: maybeNull(medData.strength) || '',
+          unit: maybeNull(medData.unit) || 'pcs',
+          manufacturer: maybeNull(medData.manufacturer) || '',
+          brand: maybeNull(medData.brand) || '',
+          category: maybeNull(medData.category) || '',
+          description: maybeNull(medData.description) || '',
+          status: medData.status || 'In Stock',
+          metadata: medData.metadata || {},
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        });
+
+        // Create initial batch if stock provided
+        if (MedicineBatch && medData.stock > 0) {
+          await MedicineBatch.create({
+            medicineId: String(med._id),
+            batchNumber: medData.batchNumber || 'DEFAULT',
+            quantity: medData.stock,
+            salePrice: toNumberOrNull(medData.salePrice) ?? 0,
+            purchasePrice: toNumberOrNull(medData.costPrice) ?? 0,
+            supplier: medData.supplier || '',
+            expiryDate: medData.expiryDate ? new Date(medData.expiryDate) : null,
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+          });
+        }
+
+        results.success.push({ id: med._id, name: med.name });
+      } catch (err) {
+        results.failed.push({ data: medData, reason: err.message });
+      }
+    }
+
+    console.log(`✅ [ADMIN BULK-IMPORT] Completed: ${results.success.length} success, ${results.failed.length} failed, ${results.skipped.length} skipped`);
+    return res.status(200).json({ success: true, results });
+  } catch (err) {
+    console.error('❌ [ADMIN BULK-IMPORT] Error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to bulk import', errorCode: 6517 });
+  }
+});
+
+// GET inventory report (admin only)
+router.get('/admin/inventory-report', auth, async (req, res) => {
+  try {
+    if (!requireAdminOrPharmacist(req, res)) return;
+    if (!ensureModel(Medicine, 'Medicine', res)) return;
+    if (!ensureModel(MedicineBatch, 'MedicineBatch', res)) return;
+
+    console.log('📊 [ADMIN INVENTORY-REPORT] requestedBy:', req.user?.id);
+
+    const allMedicines = await Medicine.find({ deleted_at: null }).lean();
+    const medIds = allMedicines.map(m => String(m._id));
+
+    const batchAgg = await MedicineBatch.aggregate([
+      { $match: { medicineId: { $in: medIds } } },
+      { 
+        $group: { 
+          _id: '$medicineId', 
+          totalQty: { $sum: '$quantity' },
+          totalValue: { $sum: { $multiply: ['$quantity', '$purchasePrice'] } },
+          batches: { $sum: 1 }
+        } 
+      },
+    ]);
+
+    const inventoryMap = {};
+    batchAgg.forEach(b => { 
+      inventoryMap[String(b._id)] = {
+        quantity: b.totalQty || 0,
+        value: b.totalValue || 0,
+        batches: b.batches || 0,
+      };
+    });
+
+    const report = allMedicines.map(med => ({
+      id: med._id,
+      name: med.name,
+      sku: med.sku,
+      category: med.category,
+      manufacturer: med.manufacturer,
+      stock: inventoryMap[String(med._id)]?.quantity || 0,
+      value: inventoryMap[String(med._id)]?.value || 0,
+      batches: inventoryMap[String(med._id)]?.batches || 0,
+      reorderLevel: med.reorderLevel || 20,
+      status: med.status,
+    }));
+
+    const totalValue = report.reduce((sum, item) => sum + item.value, 0);
+    const totalItems = report.reduce((sum, item) => sum + item.stock, 0);
+
+    console.log(`✅ [ADMIN INVENTORY-REPORT] Generated report: ${report.length} items, total value: ${totalValue}`);
+    return res.status(200).json({ 
+      success: true, 
+      report,
+      summary: {
+        totalMedicines: report.length,
+        totalItems,
+        totalValue: totalValue.toFixed(2),
+      }
+    });
+  } catch (err) {
+    console.error('❌ [ADMIN INVENTORY-REPORT] Error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to generate inventory report', errorCode: 6518 });
   }
 });
 

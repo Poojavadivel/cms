@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:iconsax/iconsax.dart';
 
 import '../../Models/Patients.dart';
 import '/Modules/Doctor/widgets/Editappoimentspage.dart';
@@ -437,8 +438,9 @@ class _NewAppointmentOverlayContent extends StatefulWidget {
   State<_NewAppointmentOverlayContent> createState() => _NewAppointmentOverlayContentState();
 }
 
-class _NewAppointmentOverlayContentState extends State<_NewAppointmentOverlayContent> {
+class _NewAppointmentOverlayContentState extends State<_NewAppointmentOverlayContent> with SingleTickerProviderStateMixin {
   bool _isLoading = true;
+  bool _isSaving = false;
   List<Patient> _patients = [];
   List<Patient> _filtered = [];
   Patient? _selectedPatient;
@@ -449,16 +451,38 @@ class _NewAppointmentOverlayContentState extends State<_NewAppointmentOverlayCon
 
   DateTime? _selectedDate;
   TimeOfDay? _selectedTime;
+  
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
 
   @override
   void initState() {
     super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+    _fadeAnimation = CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOut,
+    );
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.05),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeOutCubic,
+    ));
+    
     _searchCtrl.addListener(_onSearchChanged);
     _loadPatients();
+    _animationController.forward();
   }
 
   @override
   void dispose() {
+    _animationController.dispose();
     _searchCtrl.removeListener(_onSearchChanged);
     _searchCtrl.dispose();
     _reasonCtrl.dispose();
@@ -548,23 +572,42 @@ class _NewAppointmentOverlayContentState extends State<_NewAppointmentOverlayCon
     return 'assets/boyicon.png';
   }
 
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Iconsax.warning_2, color: Colors.white),
+            const SizedBox(width: 12),
+            Expanded(child: Text(message, style: GoogleFonts.inter(fontWeight: FontWeight.w500))),
+          ],
+        ),
+        backgroundColor: AppColors.kDanger,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+    );
+  }
+
   Future<void> _submit() async {
     if (_selectedPatient == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select a patient')));
+      _showError('Please select a patient');
       return;
     }
     if (_selectedDate == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select a date')));
+      _showError('Please select a date');
       return;
     }
     if (_selectedTime == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select a time')));
+      _showError('Please select a time');
       return;
     }
     if (_reasonCtrl.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter reason/complaint')));
+      _showError('Please enter reason/complaint');
       return;
     }
+
+    setState(() => _isSaving = true);
 
     final draft = AppointmentDraft(
       clientName: _selectedPatient!.name,
@@ -584,15 +627,33 @@ class _NewAppointmentOverlayContentState extends State<_NewAppointmentOverlayCon
     try {
       final ok = await AuthService.instance.createAppointment(draft);
       if (ok && mounted) {
-        // return true so parent can refresh automatically (parent should await showDialog and refresh when true)
         Navigator.of(context).pop(true);
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Appointment added successfully')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Iconsax.tick_circle, color: Colors.white),
+                const SizedBox(width: 12),
+                Expanded(child: Text('Appointment created successfully', style: GoogleFonts.inter(fontWeight: FontWeight.w500))),
+              ],
+            ),
+            backgroundColor: AppColors.kSuccess,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+        );
       } else {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to add appointment')));
+        if (mounted) {
+          setState(() => _isSaving = false);
+          _showError('Failed to add appointment');
+        }
       }
     } catch (e) {
       debugPrint('Failed to create appointment: $e');
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to add appointment')));
+      if (mounted) {
+        setState(() => _isSaving = false);
+        _showError('Failed to add appointment: $e');
+      }
     }
   }
 
@@ -603,40 +664,80 @@ class _NewAppointmentOverlayContentState extends State<_NewAppointmentOverlayCon
     return GestureDetector(
       onTap: () => setState(() => _selectedPatient = p),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 140),
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeInOut,
+        padding: const EdgeInsets.all(12),
+        margin: const EdgeInsets.only(bottom: 2),
         decoration: BoxDecoration(
-          color: selected ? Colors.white.withOpacity(0.18) : Colors.transparent,
-          borderRadius: BorderRadius.circular(10),
-          border: selected ? Border.all(color: Colors.white.withOpacity(0.26), width: 1.2) : null,
+          color: selected ? Colors.white.withOpacity(0.2) : Colors.white.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(12),
+          border: selected ? Border.all(color: Colors.white.withOpacity(0.4), width: 2) : null,
+          boxShadow: selected ? [
+            BoxShadow(
+              color: Colors.white.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ] : null,
         ),
         child: Row(
           children: [
-            // Avatar circle that *fills* the icon perfectly
+            // Avatar with shadow
             Container(
-              width: 40,
-              height: 40,
-              decoration: const BoxDecoration(
+              width: 46,
+              height: 46,
+              decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white24,
+                color: Colors.white.withOpacity(0.15),
+                boxShadow: selected ? [
+                  BoxShadow(
+                    color: Colors.white.withOpacity(0.2),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ] : null,
               ),
               child: ClipOval(
                 child: Image.asset(
                   asset,
-                  fit: BoxFit.cover, // ensures icon fills circle (zoom/crop)
-                  width: 40,
-                  height: 40,
+                  fit: BoxFit.cover,
+                  width: 46,
+                  height: 46,
                 ),
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 14),
             Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(p.name ?? '-', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w700)),
-                // intentionally NOT showing phone/email per your request
-              ]),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    p.name ?? '-',
+                    style: GoogleFonts.inter(
+                      color: Colors.white,
+                      fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+                      fontSize: 15,
+                    ),
+                  ),
+                  if (p.age != null && p.age! > 0) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      '${p.age} years',
+                      style: GoogleFonts.inter(
+                        color: Colors.white.withOpacity(0.7),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ),
-            const Icon(Icons.chevron_right, color: Colors.white70),
+            Icon(
+              selected ? Iconsax.tick_circle5 : Iconsax.arrow_right_3,
+              color: selected ? Colors.white : Colors.white.withOpacity(0.6),
+              size: selected ? 24 : 20,
+            ),
           ],
         ),
       ),
@@ -646,203 +747,586 @@ class _NewAppointmentOverlayContentState extends State<_NewAppointmentOverlayCon
   @override
   Widget build(BuildContext context) {
     final height = MediaQuery.of(context).size.height;
-    return Container(
-      height: height * 0.86,
-      decoration: BoxDecoration(
-        color: AppColors.cardBackground,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 12, offset: Offset(0, 6))],
-      ),
-      child: Row(
-        children: [
-          // LEFT: patient list (blue)
-          Expanded(
-            flex: 3,
-            child: Container(
-              decoration: const BoxDecoration(
-                gradient: AppColors.brandGradient,
-                borderRadius: BorderRadius.horizontal(left: Radius.circular(14)),
+    final width = MediaQuery.of(context).size.width;
+    
+    return FadeTransition(
+      opacity: _fadeAnimation,
+      child: SlideTransition(
+        position: _slideAnimation,
+        child: Container(
+          height: height * 0.88,
+          constraints: BoxConstraints(maxWidth: width > 1400 ? 1200 : width * 0.95),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primary.withOpacity(0.08),
+                blurRadius: 24,
+                offset: const Offset(0, 8),
               ),
-              child: Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 12, 8),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.people_outline, color: Colors.white, size: 20),
-                        const SizedBox(width: 10),
-                        Text('Select Patient', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w700)),
-                        const Spacer(),
-                        IconButton(
-                          onPressed: _loadPatients,
-                          icon: const Icon(Icons.refresh, color: Colors.white70),
-                          tooltip: 'Refresh',
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // search box (search by name only)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    child: Container(
-                      decoration: BoxDecoration(color: Colors.white12, borderRadius: BorderRadius.circular(8)),
-                      child: TextField(
-                        controller: _searchCtrl,
-                        style: const TextStyle(color: Colors.white),
-                        decoration: const InputDecoration(
-                          prefixIcon: Icon(Icons.search, color: Colors.white70),
-                          hintText: 'Search by name',
-                          hintStyle: TextStyle(color: Colors.white70),
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(vertical: 12),
-                        ),
-                        textInputAction: TextInputAction.search,
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  Expanded(
-                    child: _isLoading
-                        ? const Center(child: CircularProgressIndicator(color: Colors.white))
-                        : _filtered.isEmpty
-                        ? Center(child: Text('No patients', style: GoogleFonts.inter(color: Colors.white70)))
-                        : Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      child: Scrollbar(
-                        thumbVisibility: true,
-                        child: ListView.separated(
-                          itemCount: _filtered.length,
-                          separatorBuilder: (_, __) => const SizedBox(height: 8),
-                          itemBuilder: (context, i) => _buildPatientTile(_filtered[i]),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            ],
           ),
+          child: Row(
+            children: [
+              // LEFT: patient list (gradient blue)
+              Expanded(
+                flex: 3,
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        AppColors.primary,
+                        AppColors.primary600,
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: const BorderRadius.horizontal(left: Radius.circular(20)),
+                  ),
+                  child: Column(
+                    children: [
+                      // Header with icon
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.08),
+                          borderRadius: const BorderRadius.only(
+                            topLeft: Radius.circular(20),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(Iconsax.user_octagon, color: Colors.white, size: 22),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                'Select Patient',
+                                style: GoogleFonts.poppins(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 18,
+                                ),
+                              ),
+                            ),
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.15),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: IconButton(
+                                onPressed: _loadPatients,
+                                icon: const Icon(Iconsax.refresh, color: Colors.white),
+                                tooltip: 'Refresh patients',
+                                iconSize: 20,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
 
-          // RIGHT: form (white)
+                      // Search box
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.2),
+                              width: 1.5,
+                            ),
+                          ),
+                          child: TextField(
+                            controller: _searchCtrl,
+                            style: GoogleFonts.inter(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            decoration: InputDecoration(
+                              prefixIcon: const Icon(Iconsax.search_normal_1, color: Colors.white, size: 20),
+                              hintText: 'Search by patient name...',
+                              hintStyle: GoogleFonts.inter(
+                                color: Colors.white.withOpacity(0.6),
+                                fontSize: 14,
+                              ),
+                              border: InputBorder.none,
+                              contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                            ),
+                            textInputAction: TextInputAction.search,
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 4),
+
+                      // Patient count indicator
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Row(
+                          children: [
+                            Text(
+                              '${_filtered.length} patient${_filtered.length != 1 ? 's' : ''}',
+                              style: GoogleFonts.inter(
+                                color: Colors.white.withOpacity(0.8),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 8),
+
+                      // Patient list
+                      Expanded(
+                        child: _isLoading
+                            ? Center(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 3,
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      'Loading patients...',
+                                      style: GoogleFonts.inter(
+                                        color: Colors.white.withOpacity(0.8),
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            : _filtered.isEmpty
+                                ? Center(
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Iconsax.user_search,
+                                          color: Colors.white.withOpacity(0.5),
+                                          size: 48,
+                                        ),
+                                        const SizedBox(height: 12),
+                                        Text(
+                                          'No patients found',
+                                          style: GoogleFonts.inter(
+                                            color: Colors.white.withOpacity(0.8),
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          _searchCtrl.text.isNotEmpty
+                                              ? 'Try a different search'
+                                              : 'Add patients to get started',
+                                          style: GoogleFonts.inter(
+                                            color: Colors.white.withOpacity(0.6),
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  )
+                                : Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                                    child: Scrollbar(
+                                      thumbVisibility: true,
+                                      radius: const Radius.circular(8),
+                                      child: ListView.builder(
+                                        padding: const EdgeInsets.only(bottom: 16, right: 4),
+                                        itemCount: _filtered.length,
+                                        itemBuilder: (context, i) => _buildPatientTile(_filtered[i]),
+                                      ),
+                                    ),
+                                  ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+          // RIGHT: appointment form
           Expanded(
             flex: 5,
             child: Container(
-              color: AppColors.cardBackground,
-              padding: const EdgeInsets.all(22),
+              padding: const EdgeInsets.all(28),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.horizontal(right: Radius.circular(20)),
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // header
+                  // Header section
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          AppColors.primary.withOpacity(0.08),
+                          AppColors.primary.withOpacity(0.03),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: AppColors.primary.withOpacity(0.15),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [AppColors.primary, AppColors.primary600],
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.primary.withOpacity(0.3),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(Iconsax.calendar_add5, color: Colors.white, size: 24),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'New Appointment',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.kTextPrimary,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                _selectedPatient == null
+                                    ? 'Select a patient to continue'
+                                    : 'Creating for ${_selectedPatient!.name}',
+                                style: GoogleFonts.inter(
+                                  fontSize: 13,
+                                  color: AppColors.kTextSecondary,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (_selectedPatient != null)
+                          Container(
+                            width: 50,
+                            height: 50,
+                            decoration: BoxDecoration(
+                              color: AppColors.grey100,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: AppColors.primary.withOpacity(0.3),
+                                width: 2,
+                              ),
+                            ),
+                            child: ClipOval(
+                              child: Image.asset(
+                                _genderAsset(_selectedPatient!.gender),
+                                fit: BoxFit.cover,
+                                width: 50,
+                                height: 50,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // Date & Time section
+                  Text(
+                    'Schedule',
+                    style: GoogleFonts.poppins(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.kTextPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
                   Row(
                     children: [
                       Expanded(
-                        child: Text(
-                          _selectedPatient == null ? 'Add Appointment' : 'Add Appointment for ${_selectedPatient!.name}',
-                          style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w800, color: AppColors.kTextPrimary),
-                        ),
-                      ),
-                      if (_selectedPatient != null) ...[
-                        // right-header avatar (fills circle)
-                        Container(
-                          width: 44,
-                          height: 44,
-                          decoration: const BoxDecoration(color: AppColors.grey200, shape: BoxShape.circle),
-                          child: ClipOval(
-                            child: Image.asset(
-                              _genderAsset(_selectedPatient!.gender),
-                              fit: BoxFit.cover, // fills and zooms correctly
-                              width: 44,
-                              height: 44,
+                        child: TextFormField(
+                          readOnly: true,
+                          controller: TextEditingController(text: _formatDateShort(_selectedDate)),
+                          onTap: _pickDate,
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.kTextPrimary,
+                          ),
+                          decoration: InputDecoration(
+                            labelText: 'Date *',
+                            labelStyle: GoogleFonts.inter(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.kTextSecondary,
+                            ),
+                            prefixIcon: const Icon(Iconsax.calendar_1, size: 20),
+                            suffixIcon: IconButton(
+                              icon: const Icon(Iconsax.arrow_down_1, size: 18),
+                              onPressed: _pickDate,
+                            ),
+                            filled: true,
+                            fillColor: AppColors.grey50,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: AppColors.grey200, width: 1.5),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: AppColors.grey200, width: 1.5),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: AppColors.primary, width: 2),
                             ),
                           ),
                         ),
-                        const SizedBox(width: 10),
-                        Text(_selectedPatient!.name ?? '-', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
-                      ],
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: TextFormField(
+                          readOnly: true,
+                          controller: TextEditingController(text: _formatTimeShort(_selectedTime)),
+                          onTap: _pickTime,
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.kTextPrimary,
+                          ),
+                          decoration: InputDecoration(
+                            labelText: 'Time *',
+                            labelStyle: GoogleFonts.inter(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.kTextSecondary,
+                            ),
+                            prefixIcon: const Icon(Iconsax.clock, size: 20),
+                            suffixIcon: IconButton(
+                              icon: const Icon(Iconsax.arrow_down_1, size: 18),
+                              onPressed: _pickTime,
+                            ),
+                            filled: true,
+                            fillColor: AppColors.grey50,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: AppColors.grey200, width: 1.5),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: AppColors.grey200, width: 1.5),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: AppColors.primary, width: 2),
+                            ),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
 
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 20),
 
-                  // date + time
-                  Row(children: [
-                    Expanded(
-                      child: TextFormField(
-                        readOnly: true,
-                        controller: TextEditingController(text: _formatDateShort(_selectedDate)),
-                        onTap: _pickDate,
-                        decoration: InputDecoration(
-                          labelText: 'Date *',
-                          suffixIcon: IconButton(icon: const Icon(Icons.calendar_today_outlined), onPressed: _pickDate),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.grey300)),
-                        ),
-                      ),
+                  // Reason/Complaint
+                  Text(
+                    'Appointment Details',
+                    style: GoogleFonts.poppins(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.kTextPrimary,
                     ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: TextFormField(
-                        readOnly: true,
-                        controller: TextEditingController(text: _formatTimeShort(_selectedTime)),
-                        onTap: _pickTime,
-                        decoration: InputDecoration(
-                          labelText: 'Time *',
-                          suffixIcon: IconButton(icon: const Icon(Icons.access_time), onPressed: _pickTime),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.grey300)),
-                        ),
-                      ),
-                    ),
-                  ]),
-
-                  const SizedBox(height: 14),
-
+                  ),
+                  const SizedBox(height: 12),
                   TextFormField(
                     controller: _reasonCtrl,
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.kTextPrimary,
+                    ),
                     decoration: InputDecoration(
-                      labelText: 'Reason / Complaint *',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.grey300)),
+                      labelText: 'Reason / Chief Complaint *',
+                      labelStyle: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.kTextSecondary,
+                      ),
+                      hintText: 'e.g., Fever, Headache, Check-up',
+                      hintStyle: GoogleFonts.inter(
+                        fontSize: 13,
+                        color: AppColors.kTextSecondary.withOpacity(0.6),
+                      ),
+                      prefixIcon: const Icon(Iconsax.note_text, size: 20),
+                      filled: true,
+                      fillColor: AppColors.grey50,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: AppColors.grey200, width: 1.5),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: AppColors.grey200, width: 1.5),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: AppColors.primary, width: 2),
+                      ),
                     ),
                   ),
 
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 16),
 
+                  // Clinical Notes
                   TextFormField(
                     controller: _noteCtrl,
                     maxLines: 4,
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.kTextPrimary,
+                    ),
                     decoration: InputDecoration(
-                      labelText: 'Clinical Notes (optional)',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.grey300)),
+                      labelText: 'Clinical Notes (Optional)',
+                      labelStyle: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.kTextSecondary,
+                      ),
+                      hintText: 'Additional notes or observations...',
+                      hintStyle: GoogleFonts.inter(
+                        fontSize: 13,
+                        color: AppColors.kTextSecondary.withOpacity(0.6),
+                      ),
+                      alignLabelWithHint: true,
+                      prefixIcon: const Padding(
+                        padding: EdgeInsets.only(bottom: 60),
+                        child: Icon(Iconsax.document_text, size: 20),
+                      ),
+                      filled: true,
+                      fillColor: AppColors.grey50,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: AppColors.grey200, width: 1.5),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: AppColors.grey200, width: 1.5),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: AppColors.primary, width: 2),
+                      ),
                     ),
                   ),
 
                   const Spacer(),
 
-                  Row(mainAxisAlignment: MainAxisAlignment.end, children: [
-                    OutlinedButton(
-                      onPressed: () => Navigator.pop(context, false),
-                      style: OutlinedButton.styleFrom(side: const BorderSide(color: AppColors.grey300)),
-                      child: Text('Cancel', style: GoogleFonts.inter(color: AppColors.grey700)),
+                  // Action buttons
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppColors.grey50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.grey200, width: 1.5),
                     ),
-                    const SizedBox(width: 12),
-                    ElevatedButton.icon(
-                      onPressed: _submit,
-                    // no explicit color here
-                      label: Text('Save Appointment', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary600,
-                        foregroundColor: Colors.white, // <- ensures icon & text are white
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        OutlinedButton.icon(
+                          onPressed: _isSaving ? null : () => Navigator.pop(context, false),
+                          icon: const Icon(Iconsax.close_circle, size: 18),
+                          label: Text(
+                            'Cancel',
+                            style: GoogleFonts.inter(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.kTextSecondary,
+                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                            side: BorderSide(color: AppColors.grey300, width: 1.5),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        ElevatedButton.icon(
+                          onPressed: _isSaving ? null : _submit,
+                          icon: _isSaving
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Icon(Iconsax.tick_circle5, size: 20),
+                          label: Text(
+                            _isSaving ? 'Saving...' : 'Save Appointment',
+                            style: GoogleFonts.inter(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            elevation: 0,
+                            shadowColor: AppColors.primary.withOpacity(0.3),
+                          ),
+                        ),
+                      ],
                     ),
-                  ]),
+                  ),
                 ],
               ),
             ),
           ),
         ],
+      ),
+        ),
       ),
     );
   }

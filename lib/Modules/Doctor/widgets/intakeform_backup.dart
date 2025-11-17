@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:iconsax/iconsax.dart';
 import '../../../Models/dashboardmodels.dart';
 import '../../../Models/Patients.dart';
 import '../../../Services/Authservices.dart';
@@ -167,10 +166,9 @@ class _IntakeFormBodyState extends State<IntakeFormBody> {
   final TextEditingController _weightCtrl = TextEditingController();
   final TextEditingController _bmiCtrl = TextEditingController();
   final TextEditingController _spo2Ctrl = TextEditingController();
-  final GlobalKey<EnhancedPharmacyTableState> _pharmacyTableKey = GlobalKey<EnhancedPharmacyTableState>();
 
-  List<Map<String, dynamic>> _pharmacyRows = [];
-  List<Map<String, String>> _pathologyRows = [];
+  final List<Map<String, String>> _pharmacyRows = [];
+  final List<Map<String, String>> _pathologyRows = [];
 
   bool _isSaving = false;
 
@@ -243,85 +241,6 @@ class _IntakeFormBodyState extends State<IntakeFormBody> {
     // Prevent double submission
     if (_isSaving) return;
 
-    // Check stock warnings if pharmacy items exist
-    if (_pharmacyRows.isNotEmpty && _pharmacyTableKey.currentState != null) {
-      final warnings = _pharmacyTableKey.currentState!.getStockWarnings();
-      if (warnings.isNotEmpty) {
-        final shouldContinue = await showDialog<bool>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: Row(
-              children: [
-                Icon(Iconsax.warning_2, color: AppColors.kWarning, size: 28),
-                const SizedBox(width: 12),
-                const Text('Stock Warning'),
-              ],
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'The following medicines have stock issues:',
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                ...warnings.map((w) => Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(
-                        w['type'] == 'OUT_OF_STOCK' ? Iconsax.close_circle : Iconsax.warning_2,
-                        size: 16,
-                        color: w['type'] == 'OUT_OF_STOCK' ? AppColors.kDanger : AppColors.kWarning,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          w['message'],
-                          style: GoogleFonts.inter(fontSize: 13),
-                        ),
-                      ),
-                    ],
-                  ),
-                )).toList(),
-                const SizedBox(height: 12),
-                Text(
-                  'Do you want to continue anyway?',
-                  style: GoogleFonts.inter(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.kTextSecondary,
-                  ),
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(false),
-                child: const Text('Cancel'),
-              ),
-              ElevatedButton(
-                onPressed: () => Navigator.of(ctx).pop(true),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.kWarning,
-                ),
-                child: const Text('Continue Anyway'),
-              ),
-            ],
-          ),
-        );
-        
-        if (shouldContinue != true) {
-          return; // User cancelled
-        }
-      }
-    }
-
     setState(() => _isSaving = true);
 
     final appt = widget.appt;
@@ -370,58 +289,12 @@ class _IntakeFormBodyState extends State<IntakeFormBody> {
 
       if (!mounted) return;
       
-      // If there are pharmacy items, create prescription and reduce stock
-      if (_pharmacyRows.isNotEmpty) {
-        try {
-          final prescriptionPayload = {
-            'patientId': pid,
-            'patientName': appt.patientName,
-            'appointmentId': appt.id,
-            'intakeId': result['_id'],
-            'items': _pharmacyRows.map((row) {
-              final quantity = row['quantity'] ?? '1';
-              final price = row['price'] ?? '0';
-              print('💊 Row data: ${row['Medicine']} | Qty: $quantity | Price: $price');
-              return {
-                'medicineId': row['medicineId'],
-                'Medicine': row['Medicine'] ?? '',
-                'Dosage': row['Dosage'] ?? '',
-                'Frequency': row['Frequency'] ?? '',
-                'Notes': row['Notes'] ?? '',
-                'quantity': quantity,
-                'price': price,
-              };
-            }).toList(),
-            'paid': false,
-            'paymentMethod': 'Cash',
-          };
-
-          print('📝 Creating prescription with ${prescriptionPayload['items']?.length ?? 0} items...');
-          final prescriptionResult = await AuthService.instance.post(
-            '/api/pharmacy/prescriptions/create-from-intake',
-            prescriptionPayload,
-          );
-          
-          if (prescriptionResult != null) {
-            final total = prescriptionResult['total'] ?? 0.0;
-            final reductions = prescriptionResult['stockReductions'] ?? [];
-            print('✅ Prescription created! Total: ₹$total');
-            print('📦 Stock reduced from ${reductions.length} batch(es)');
-          }
-        } catch (e) {
-          print('⚠️ Warning: Failed to create prescription: $e');
-          // Don't fail the entire save if prescription creation fails
-        }
-      }
-      
       // Show success message
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(_pharmacyRows.isEmpty 
-              ? '✅ Intake saved successfully' 
-              : '✅ Intake saved & prescription created with stock reduction'),
+        const SnackBar(
+          content: Text('✅ Intake saved successfully'),
           backgroundColor: Colors.green,
-          duration: const Duration(seconds: 3),
+          duration: Duration(seconds: 2),
         ),
       );
 
@@ -530,13 +403,36 @@ class _IntakeFormBodyState extends State<IntakeFormBody> {
               _SectionCard(
                 icon: Icons.local_pharmacy_outlined,
                 title: 'Pharmacy',
-                description: 'Prescribe and manage medications with auto-calculation.',
-                editorBuilder: (_) => EnhancedPharmacyTable(
-                  key: _pharmacyTableKey,
-                  pharmacyRows: _pharmacyRows,
-                  onRowsChanged: (newRows) {
-                    setState(() => _pharmacyRows = newRows);
-                  },
+                description: 'Prescribe and manage medications.',
+                editorBuilder: (_) => Column(
+                  children: [
+                    CustomEditableTable(
+                      rows: _pharmacyRows,
+                      columns: const ['Medicine', 'Dosage', 'Frequency', 'Notes'],
+                      onDelete: (i) => setState(() => _pharmacyRows.removeAt(i)),
+                    ),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          setState(() {
+                            _pharmacyRows.add({
+                              'Medicine': '',
+                              'Dosage': '',
+                              'Frequency': '',
+                              'Notes': '',
+                            });
+                          });
+                        },
+                        icon: const Icon(Icons.add),
+                        label: const Text('Add Medicine'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.buttonBg,
+                          foregroundColor: AppColors.white,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
 

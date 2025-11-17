@@ -77,6 +77,42 @@ class Patient {
       doctor = map['doctorName'].toString();
     }
 
+    // Extract condition from multiple possible sources
+    String condition = '';
+    if (map['condition'] != null && map['condition'].toString().trim().isNotEmpty) {
+      condition = map['condition'].toString().trim();
+    } else if (map['medicalHistory'] is List && (map['medicalHistory'] as List).isNotEmpty) {
+      final history = map['medicalHistory'] as List;
+      if (history.length == 1) {
+        condition = history.first.toString();
+      } else {
+        condition = '${history.first} +${history.length - 1}';
+      }
+    } else if (map['metadata'] is Map) {
+      final meta = map['metadata'] as Map;
+      if (meta['medicalHistory'] is List && (meta['medicalHistory'] as List).isNotEmpty) {
+        final history = meta['medicalHistory'] as List;
+        if (history.length == 1) {
+          condition = history.first.toString();
+        } else {
+          condition = '${history.first} +${history.length - 1}';
+        }
+      } else if (meta['condition'] != null && meta['condition'].toString().trim().isNotEmpty) {
+        condition = meta['condition'].toString().trim();
+      }
+    }
+    
+    // Fallback to notes if still empty
+    if (condition.isEmpty && map['notes'] != null && map['notes'].toString().trim().isNotEmpty) {
+      final notes = map['notes'].toString().trim();
+      condition = notes.length > 30 ? '${notes.substring(0, 30)}...' : notes;
+    }
+    
+    // Final fallback
+    if (condition.isEmpty) {
+      condition = 'N/A';
+    }
+
     return Patient(
       id: (map['_id'] ?? map['id'] ?? map['patientId'] ?? '').toString(),
       name: name,
@@ -86,7 +122,7 @@ class Patient {
       gender: (map['gender'] ?? '').toString(),
       lastVisit: lastVisit,
       doctor: doctor,
-      condition: (map['condition'] ?? '').toString(),
+      condition: condition,
       reason: (map['reason'] ?? '').toString(),
     );
   }
@@ -102,15 +138,31 @@ class Patient {
     // get doctor display string safely
     final docStr = patientDisplayDoctorFromDetails(d);
 
+    // Extract condition from medical history (take first item or join multiple)
+    String condition = '';
+    if (d.medicalHistory.isNotEmpty) {
+      // If there's only one condition, show it; otherwise show first with count
+      if (d.medicalHistory.length == 1) {
+        condition = d.medicalHistory.first;
+      } else {
+        condition = '${d.medicalHistory.first} +${d.medicalHistory.length - 1}';
+      }
+    } else if (d.notes.isNotEmpty) {
+      // Fallback to notes if no medical history
+      condition = d.notes.length > 30 ? '${d.notes.substring(0, 30)}...' : d.notes;
+    } else {
+      condition = 'N/A';
+    }
+
     return Patient(
       id: d.patientId,
       name: name.isNotEmpty ? name : 'Unknown',
       age: d.age,
       // PatientDetails.gender is a String in your model
       gender: d.gender.isNotEmpty ? d.gender : 'Other',
-      lastVisit: d.lastVisitDate ?? '',
+      lastVisit: d.lastVisitDate.isNotEmpty ? d.lastVisitDate : '',
       doctor: docStr,
-      condition: '',
+      condition: condition,
       reason: '',
     );
   }

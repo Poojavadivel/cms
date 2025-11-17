@@ -1009,6 +1009,8 @@ class AuthService {
         throw ApiException('Medicine id is required for update');
       }
 
+      debugPrint('📤 Updating medicine $id with payload: $payload');
+
       return await _withAuth<bool>((token) async {
         final response = await _apiHandler.put(
           ApiEndpoints.updatePharmacyMedicine(id).url,
@@ -1016,7 +1018,10 @@ class AuthService {
           body: payload,
         );
 
+        debugPrint('📥 Update response: $response');
+
         if (response is Map && (response['success'] == true)) {
+          debugPrint('✅ Update successful (success=true)');
           return true;
         }
 
@@ -1024,9 +1029,12 @@ class AuthService {
             ? (response['medicine'] ?? response['data'])
             : response;
 
-        return data != null;
+        final success = data != null;
+        debugPrint('✅ Update result: $success');
+        return success;
       });
     } catch (e) {
+      debugPrint('❌ Update error: $e');
       rethrow;
     }
   }

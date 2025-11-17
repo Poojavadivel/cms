@@ -49,26 +49,61 @@ class _PharmacistMedicinesPageEnterpriseState extends State<PharmacistMedicinesP
     });
 
     try {
-      final data = await _authService.get(PharmacyEndpoints.getMedicines());
+      print('🔄 [Pharmacist Enterprise] Loading medicines...');
+      final medicines = await _authService.fetchMedicines(limit: 100);
+      print('✅ [Pharmacist Enterprise] Received ${medicines.length} medicines');
       
-      if (data != null) {
-        final List<dynamic> medicineList = data['medicines'] ?? data;
-        if (mounted) {
-          setState(() {
-            _medicines = List<Map<String, dynamic>>.from(medicineList.map((e) => Map<String, dynamic>.from(e)));
-            _filteredMedicines = List.from(_medicines);
-            _isLoading = false;
-          });
+      // Normalize the data to ensure consistent field names
+      final normalizedMedicines = medicines.map((med) {
+        try {
+          final stock = _toInt(med['availableQty'] ?? med['stock'] ?? med['quantity'] ?? 0);
+          return {
+            '_id': med['_id'] ?? '',
+            'name': med['name'] ?? 'Unknown',
+            'sku': med['sku'] ?? '',
+            'category': med['category'] ?? '',
+            'manufacturer': med['manufacturer'] ?? '',
+            'status': med['status'] ?? 'In Stock',
+            'form': med['form'] ?? 'Tablet',
+            'strength': med['strength'] ?? '',
+            'unit': med['unit'] ?? 'pcs',
+            'reorderLevel': _toInt(med['reorderLevel'] ?? 20),
+            'stock': stock, // Keep 'stock' for backward compatibility
+            'availableQty': stock, // Also set 'availableQty'
+            'quantity': stock, // Also set 'quantity'
+          };
+        } catch (e) {
+          print('⚠️ [Pharmacist Enterprise] Error normalizing medicine: $e');
+          print('Medicine data: $med');
+          rethrow;
         }
-      }
-    } catch (e) {
+      }).toList();
+      
       if (mounted) {
         setState(() {
-          _errorMessage = 'Failed to load medicines: $e';
+          _medicines = normalizedMedicines;
+          _filteredMedicines = List.from(_medicines);
+          _isLoading = false;
+        });
+      }
+    } catch (e, stackTrace) {
+      print('❌ [Pharmacist Enterprise] Error loading medicines: $e');
+      print('Stack trace: $stackTrace');
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Failed to load medicines: ${e.toString()}';
           _isLoading = false;
         });
       }
     }
+  }
+
+  int _toInt(dynamic value) {
+    if (value == null) return 0;
+    if (value is int) return value;
+    if (value is String) return int.tryParse(value) ?? 0;
+    if (value is double) return value.toInt();
+    return 0;
   }
 
   void _filterMedicines() {
@@ -76,18 +111,22 @@ class _PharmacistMedicinesPageEnterpriseState extends State<PharmacistMedicinesP
     setState(() {
       _filteredMedicines = _medicines.where((med) {
         final name = (med['name'] ?? '').toString().toLowerCase();
+        final sku = (med['sku'] ?? '').toString().toLowerCase();
         final category = (med['category'] ?? '').toString().toLowerCase();
         final manufacturer = (med['manufacturer'] ?? '').toString().toLowerCase();
         
         final matchesSearch = query.isEmpty || 
           name.contains(query) || 
+          sku.contains(query) ||
           category.contains(query) ||
           manufacturer.contains(query);
         
-        final stock = med['stock'] ?? med['quantity'] ?? 0;
+        final stock = _toInt(med['availableQty'] ?? med['stock'] ?? med['quantity'] ?? 0);
+        final reorderLevel = _toInt(med['reorderLevel'] ?? 20);
+        
         final matchesStatus = _filterStatus == 'All' ||
-          (_filterStatus == 'In Stock' && stock > 20) ||
-          (_filterStatus == 'Low Stock' && stock > 0 && stock <= 20) ||
+          (_filterStatus == 'In Stock' && stock > reorderLevel) ||
+          (_filterStatus == 'Low Stock' && stock > 0 && stock <= reorderLevel) ||
           (_filterStatus == 'Out of Stock' && stock <= 0);
         
         return matchesSearch && matchesStatus;
@@ -443,14 +482,14 @@ class _PharmacistMedicinesPageEnterpriseState extends State<PharmacistMedicinesP
     );
   }
 
-  Widget _buildStockBadge(int stock) {
+  Widget _buildStockBadge(int stock, {int reorderLevel = 20}) {
     Color color;
     IconData icon;
     
     if (stock <= 0) {
       color = AppColors.kDanger;
       icon = Iconsax.close_circle;
-    } else if (stock <= 20) {
+    } else if (stock <= reorderLevel) {
       color = AppColors.kWarning;
       icon = Iconsax.warning_2;
     } else {
@@ -724,7 +763,8 @@ class _PharmacistMedicinesPageEnterpriseState extends State<PharmacistMedicinesP
               itemCount: medicines.length,
               itemBuilder: (context, index) {
                 final med = medicines[index];
-                final stock = med['stock'] ?? med['quantity'] ?? 0;
+                final stock = _toInt(med['availableQty'] ?? med['stock'] ?? med['quantity'] ?? 0);
+                final reorderLevel = _toInt(med['reorderLevel'] ?? 20);
                 final expiryDate = med['expiryDate'] != null ? DateTime.tryParse(med['expiryDate']) : null;
                 final isExpiringSoon = expiryDate != null && expiryDate.difference(DateTime.now()).inDays < 30;
                 
@@ -771,7 +811,7 @@ class _PharmacistMedicinesPageEnterpriseState extends State<PharmacistMedicinesP
                       ),
                       Expanded(
                         flex: 2,
-                        child: _buildStockBadge(stock),
+                        child: _buildStockBadge(stock, reorderLevel: reorderLevel),
                       ),
                       Expanded(
                         flex: 1,

@@ -178,6 +178,9 @@ class PharmacyEndpoints {
   static String updateMedicine(String id) => '$_base/medicines/$id';
   static String deleteMedicine(String id) => '$_base/medicines/$id';
   
+  static String getPendingPrescriptions() => '$_base/pending-prescriptions';
+  static String dispensePrescription(String intakeId) => '$_base/prescriptions/$intakeId/dispense';
+  
   static String getPrescriptions({String? patientId}) => 
       patientId != null 
           ? '$_base/prescriptions?patientId=$patientId' 
