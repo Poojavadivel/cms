@@ -160,7 +160,7 @@ router.get('/', auth, async (req, res) => {
   try {
     const userId = req.user.id;
     const role = req.user.role;
-    const { doctorId: doctorQuery } = req.query;
+    const { doctorId: doctorQuery, patientId, hasFollowUp } = req.query;
 
     let query = {};
     if (role === 'admin' || role === 'superadmin') {
@@ -168,11 +168,23 @@ router.get('/', auth, async (req, res) => {
     } else if (role === 'doctor') {
       query.doctorId = userId;
     }
+    
+    // Filter by patientId if provided
+    if (patientId) {
+      query.patientId = patientId;
+    }
+    
+    // Filter by follow-up if requested
+    if (hasFollowUp === 'true') {
+      query['followUp.isRequired'] = true;
+    }
+    
     console.log("🔎 Appointment query:", query);
 
     const appointments = await Appointment.find(query)
       .populate('patientId', 'firstName lastName phone email bloodGroup metadata dateOfBirth')
       .populate('doctorId', 'firstName lastName email')
+      .sort({ startAt: -1 }) // Sort by date, newest first
       .lean();
 
     console.log("✅ Found appointments:", appointments.length);
@@ -327,6 +339,23 @@ router.put('/:id', auth, async (req, res) => {
       metadata: data.metadata ?? appointment.metadata,
     };
 
+    // Handle follow-up data from intake form
+    if (data.followUp && typeof data.followUp === 'object') {
+      updateObj.followUp = {
+        ...appointment.followUp,
+        ...data.followUp,
+      };
+      
+      // If follow-up is required, set the flag
+      if (data.followUp.isRequired) {
+        updateObj.followUp.isFollowUp = false; // This is the original appointment
+        // Convert recommendedDate string to Date if provided
+        if (data.followUp.recommendedDate) {
+          updateObj.followUp.recommendedDate = new Date(data.followUp.recommendedDate);
+        }
+      }
+    }
+
     if ((role === 'admin' || role === 'superadmin') && data.doctorId) {
       updateObj.doctorId = data.doctorId;
     }
@@ -343,6 +372,214 @@ router.put('/:id', auth, async (req, res) => {
   } catch (err) {
     console.error('💥 FULL UPDATE error:', err);
     res.status(500).json({ success: false, message: 'Failed to update appointment', errorCode: 5005 });
+  }
+});
+
+// -----------------------------
+// CREATE Follow-Up Appointment
+// -----------------------------
+router.post('/:id/follow-up', auth, async (req, res) => {
+  console.log("📥 CREATE follow-up appointment for:", req.params.id, "body:", req.body);
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+    const role = req.user.role;
+    const { followUpDate, followUpReason, appointmentType, location, notes } = req.body;
+
+    // Validate follow-up date
+    if (!followUpDate) {
+      return res.status(400).json({
+        success: false,
+        message: 'Follow-up date is required',
+        errorCode: 1008,
+      });
+    }
+
+    // Find the original appointment
+    const originalAppointment = await Appointment.findById(id).lean();
+    if (!originalAppointment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Original appointment not found',
+        errorCode: 1009,
+      });
+    }
+
+    // Check authorization
+    if (role === 'doctor' && originalAppointment.doctorId !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to create follow-up for this appointment',
+        errorCode: 1010,
+      });
+    }
+
+    // Create follow-up appointment
+    const followUpAppointment = new Appointment({
+      patientId: originalAppointment.patientId,
+      doctorId: originalAppointment.doctorId,
+      appointmentType: appointmentType || 'Follow-Up',
+      startAt: new Date(followUpDate),
+      location: location || originalAppointment.location,
+      status: 'Scheduled',
+      notes: notes || '',
+      isFollowUp: true,
+      previousAppointmentId: id,
+      followUpReason: followUpReason || '',
+      bookingSource: 'web',
+    });
+
+    await followUpAppointment.save();
+
+    // Update original appointment to mark it has follow-up
+    await Appointment.findByIdAndUpdate(id, {
+      hasFollowUp: true,
+      nextFollowUpId: followUpAppointment._id,
+      followUpDate: new Date(followUpDate),
+    });
+
+    // Populate patient and doctor details for response
+    const populated = await Appointment.findById(followUpAppointment._id)
+      .populate('patientId', 'firstName lastName phone dateOfBirth gender')
+      .populate('doctorId', 'firstName lastName email')
+      .lean();
+
+    const normalized = normalizeAppointments([populated])[0];
+
+    console.log("✅ Follow-up appointment created successfully:", followUpAppointment._id);
+
+    res.status(201).json({
+      success: true,
+      message: 'Follow-up appointment created successfully',
+      appointment: normalized,
+      followUpId: followUpAppointment._id,
+    });
+  } catch (err) {
+    console.error('💥 Follow-up creation error:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create follow-up appointment',
+      errorCode: 5006,
+    });
+  }
+});
+
+// -----------------------------
+// GET Follow-Up History for Patient
+// -----------------------------
+router.get('/patient/:patientId/follow-ups', auth, async (req, res) => {
+  console.log("📥 GET follow-up history for patient:", req.params.patientId);
+  try {
+    const { patientId } = req.params;
+    const userId = req.user.id;
+    const role = req.user.role;
+
+    // Find all appointments for this patient
+    let query = { patientId, isFollowUp: true };
+    
+    // If doctor, only show their own follow-ups
+    if (role === 'doctor') {
+      query.doctorId = userId;
+    }
+
+    const followUps = await Appointment.find(query)
+      .populate('patientId', 'firstName lastName phone dateOfBirth gender')
+      .populate('doctorId', 'firstName lastName email')
+      .populate('previousAppointmentId', 'startAt appointmentType status')
+      .sort({ startAt: -1 })
+      .lean();
+
+    const normalized = normalizeAppointments(followUps);
+
+    console.log(`✅ Found ${followUps.length} follow-up appointments`);
+
+    res.status(200).json({
+      success: true,
+      followUps: normalized,
+      count: followUps.length,
+    });
+  } catch (err) {
+    console.error('💥 Follow-up history error:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch follow-up history',
+      errorCode: 5007,
+    });
+  }
+});
+
+// -----------------------------
+// GET Follow-Up Chain for Appointment
+// -----------------------------
+router.get('/:id/follow-up-chain', auth, async (req, res) => {
+  console.log("📥 GET follow-up chain for appointment:", req.params.id);
+  try {
+    const { id } = req.params;
+
+    const appointment = await Appointment.findById(id).lean();
+    if (!appointment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Appointment not found',
+        errorCode: 1009,
+      });
+    }
+
+    const chain = [];
+
+    // Get previous appointments (go backwards)
+    let currentId = appointment.previousAppointmentId;
+    while (currentId) {
+      const prev = await Appointment.findById(currentId)
+        .populate('patientId', 'firstName lastName phone')
+        .populate('doctorId', 'firstName lastName email')
+        .lean();
+      if (prev) {
+        chain.unshift(prev);
+        currentId = prev.previousAppointmentId;
+      } else {
+        break;
+      }
+    }
+
+    // Add current appointment
+    const current = await Appointment.findById(id)
+      .populate('patientId', 'firstName lastName phone')
+      .populate('doctorId', 'firstName lastName email')
+      .lean();
+    chain.push(current);
+
+    // Get next appointments (go forwards)
+    currentId = appointment.nextFollowUpId;
+    while (currentId) {
+      const next = await Appointment.findById(currentId)
+        .populate('patientId', 'firstName lastName phone')
+        .populate('doctorId', 'firstName lastName email')
+        .lean();
+      if (next) {
+        chain.push(next);
+        currentId = next.nextFollowUpId;
+      } else {
+        break;
+      }
+    }
+
+    const normalized = normalizeAppointments(chain);
+
+    console.log(`✅ Found ${chain.length} appointments in chain`);
+
+    res.status(200).json({
+      success: true,
+      chain: normalized,
+      count: chain.length,
+    });
+  } catch (err) {
+    console.error('💥 Follow-up chain error:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch follow-up chain',
+      errorCode: 5008,
+    });
   }
 });
 

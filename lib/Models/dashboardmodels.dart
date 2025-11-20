@@ -35,6 +35,10 @@ class DashboardAppointments {
   // New fields for patient code and blood group
   final String? bloodGroup;
   final String? patientCode;
+  
+  // Follow-up tracking fields
+  final String? appointmentId;
+  final Map<String, dynamic>? metadata;
 
   DashboardAppointments({
     required this.id,
@@ -68,6 +72,8 @@ class DashboardAppointments {
     this.history = const {},
     this.bloodGroup,
     this.patientCode,
+    this.appointmentId,
+    this.metadata,
   });
 
   /// ✅ Create from JSON safely
@@ -206,6 +212,8 @@ class DashboardAppointments {
           : {},
       bloodGroup: bloodGroup,
       patientCode: patientCode,
+      appointmentId: json['_id'] ?? json['appointmentId'],
+      metadata: json['followUp'] != null ? {'followUp': json['followUp']} : null,
     );
   }
 

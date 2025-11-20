@@ -448,7 +448,7 @@ router.post('/:id/intake', auth, async (req, res) => {
       }
     }
 
-    // Update appointment vitals if appointmentId provided
+    // Update appointment vitals and followUp data if appointmentId provided
     let updatedAppointment = null;
     if (intakePayload.appointmentId) {
       try {
@@ -461,6 +461,43 @@ router.post('/:id/intake', auth, async (req, res) => {
             console.warn('INTAKE: skipping appointment vitals update; not owner and not admin');
           } else {
             appt.vitals = Object.assign({}, appt.vitals || {}, intakePayload.triage?.vitals || {});
+            
+            // Update followUp data if provided
+            if (data.followUp) {
+              console.log('INTAKE POST: updating followUp data for appointment');
+              appt.followUp = appt.followUp || {};
+              
+              // Basic follow-up info
+              if (data.followUp.isRequired !== undefined) appt.followUp.isRequired = data.followUp.isRequired;
+              if (data.followUp.priority) appt.followUp.priority = data.followUp.priority;
+              if (data.followUp.recommendedDate) appt.followUp.recommendedDate = new Date(data.followUp.recommendedDate);
+              if (data.followUp.reason) appt.followUp.reason = data.followUp.reason;
+              if (data.followUp.instructions) appt.followUp.instructions = data.followUp.instructions;
+              if (data.followUp.diagnosis) appt.followUp.diagnosis = data.followUp.diagnosis;
+              if (data.followUp.treatmentPlan) appt.followUp.treatmentPlan = data.followUp.treatmentPlan;
+              
+              // Lab tests
+              if (Array.isArray(data.followUp.labTests)) {
+                appt.followUp.labTests = data.followUp.labTests;
+              }
+              
+              // Imaging
+              if (Array.isArray(data.followUp.imaging)) {
+                appt.followUp.imaging = data.followUp.imaging;
+              }
+              
+              // Procedures
+              if (Array.isArray(data.followUp.procedures)) {
+                appt.followUp.procedures = data.followUp.procedures;
+              }
+              
+              // Medication
+              if (data.followUp.prescriptionReview !== undefined) appt.followUp.prescriptionReview = data.followUp.prescriptionReview;
+              if (data.followUp.medicationCompliance) appt.followUp.medicationCompliance = data.followUp.medicationCompliance;
+              
+              console.log('INTAKE POST: ✅ followUp data updated');
+            }
+            
             appt.updatedAt = new Date();
             await appt.save();
             updatedAppointment = await Appointment.findById(appt._id)

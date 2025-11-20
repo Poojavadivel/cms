@@ -20,6 +20,67 @@ const AppointmentSchema = new Schema({
   vitals: { type: Schema.Types.Mixed, default: {} },
   notes: { type: String, default: '' },
   metadata: { type: Schema.Types.Mixed, default: {} },
+  
+  // Enhanced Follow-up Management System (Medical Software Standard)
+  followUp: {
+    isFollowUp: { type: Boolean, default: false, index: true },
+    isRequired: { type: Boolean, default: false }, // Doctor marked as requiring follow-up
+    reason: { type: String, default: '' }, // Why follow-up is needed
+    instructions: { type: String, default: '' }, // Patient instructions
+    priority: { type: String, enum: ['Routine', 'Important', 'Urgent', 'Critical'], default: 'Routine' },
+    recommendedDate: { type: Date, default: null }, // Suggested follow-up date
+    scheduledDate: { type: Date, default: null }, // Actual scheduled date
+    reminderSent: { type: Boolean, default: false },
+    reminderDate: { type: Date, default: null },
+    completedDate: { type: Date, default: null },
+    
+    // Medical tracking
+    diagnosis: { type: String, default: '' }, // Diagnosis requiring follow-up
+    treatmentPlan: { type: String, default: '' }, // Treatment being monitored
+    
+    // Tests and Procedures
+    labTests: [{
+      testName: String,
+      ordered: { type: Boolean, default: false },
+      orderedDate: Date,
+      completed: { type: Boolean, default: false },
+      completedDate: Date,
+      results: String,
+      resultStatus: { type: String, enum: ['Pending', 'Normal', 'Abnormal', 'Critical'], default: 'Pending' }
+    }],
+    
+    imaging: [{
+      imagingType: String, // X-Ray, CT, MRI, Ultrasound, etc.
+      ordered: { type: Boolean, default: false },
+      orderedDate: Date,
+      completed: { type: Boolean, default: false },
+      completedDate: Date,
+      findings: String,
+      findingsStatus: { type: String, enum: ['Pending', 'Normal', 'Abnormal', 'Critical'], default: 'Pending' }
+    }],
+    
+    procedures: [{
+      procedureName: String,
+      scheduled: { type: Boolean, default: false },
+      scheduledDate: Date,
+      completed: { type: Boolean, default: false },
+      completedDate: Date,
+      notes: String
+    }],
+    
+    // Medication management
+    prescriptionReview: { type: Boolean, default: false }, // Review medications
+    medicationCompliance: { type: String, enum: ['Good', 'Fair', 'Poor', 'Unknown'], default: 'Unknown' },
+    
+    // Appointment chain
+    previousAppointmentId: { type: String, ref: 'Appointment', default: null },
+    nextAppointmentId: { type: String, ref: 'Appointment', default: null },
+    
+    // Outcome tracking
+    outcome: { type: String, enum: ['Improved', 'Stable', 'Worsened', 'Resolved', 'Pending'], default: 'Pending' },
+    outcomeNotes: { type: String, default: '' }
+  },
+  
   // Telegram-specific fields
   telegramUserId: { type: String, index: true },
   telegramChatId: { type: String, index: true },

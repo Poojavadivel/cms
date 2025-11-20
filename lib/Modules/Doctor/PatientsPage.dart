@@ -8,6 +8,7 @@ import '../../Models/Patients.dart';
 import '../../Services/Authservices.dart';
 import '../../Utils/Colors.dart';
 import 'widgets/doctor_appointment_preview.dart';
+import 'widgets/patient_followup_popup.dart';
 
 /// Enterprise-Grade Patients Page - EXACT UI MATCH to Appointments Table
 class PatientsScreen extends StatefulWidget {
@@ -1007,6 +1008,13 @@ class _PatientsDataView extends StatelessWidget {
                       tooltip: 'View',
                       onPressed: () => onShowPatientDetails(patient),
                     ),
+                    const SizedBox(width: 8),
+                    _buildIconButton(
+                      icon: Iconsax.calendar_tick,
+                      color: AppColors.kSuccess,
+                      tooltip: 'View Follow-Ups',
+                      onPressed: () => _navigateToFollowUps(context, patient),
+                    ),
                   ],
                 ),
               ),
@@ -1141,6 +1149,14 @@ class _PatientsDataView extends StatelessWidget {
     } catch (e) {
       return date;
     }
+  }
+
+  void _navigateToFollowUps(BuildContext context, PatientDetails patient) {
+    PatientFollowUpPopup.show(
+      context: context,
+      patientId: patient.patientId,
+      patientName: patient.name,
+    );
   }
 }
 

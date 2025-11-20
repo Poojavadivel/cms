@@ -152,6 +152,16 @@ const TEST_INTENTS = {
     keywords: ['prescription', 'rx', 'medication', 'medicine', 'drug', 'tablet', 'capsule', 'syrup', 'dosage', 'prescribed'],
     fields: ['Medicine Name', 'Dosage', 'Frequency', 'Duration', 'Instructions', 'Doctor Name', 'Prescription Date'],
     category: 'Prescription'
+  },
+  MEDICAL_HISTORY: {
+    keywords: ['medical history', 'patient history', 'past medical', 'previous illness', 'chronic condition', 'surgical history', 'family history', 'allergies', 'immunization', 'vaccination', 'previous hospitalization', 'medical record', 'health record', 'previous treatment', 'past diagnosis', 'patient record', 'clinical history', 'medical background'],
+    fields: ['Medical History', 'Diagnosis', 'Allergies', 'Chronic Conditions', 'Surgical History', 'Family History', 'Current Medications', 'Immunizations'],
+    category: 'Medical History'
+  },
+  DISCHARGE: {
+    keywords: ['discharge', 'discharge summary', 'discharge slip', 'hospital discharge', 'discharge note', 'discharge report', 'final diagnosis', 'discharge instructions', 'discharge medication', 'discharge advice', 'hospital stay summary', 'discharge certificate', 'discharge card', 'discharge letter'],
+    fields: ['Admission Date', 'Discharge Date', 'Final Diagnosis', 'Treatment Given', 'Discharge Instructions', 'Follow-up Date', 'Discharge Medications'],
+    category: 'Discharge Summary'
   }
 };
 

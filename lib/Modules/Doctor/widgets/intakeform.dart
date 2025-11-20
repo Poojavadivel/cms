@@ -27,7 +27,7 @@ Future<void> showIntakeFormDialog(
     builder: (ctx) {
       final size = MediaQuery.of(ctx).size;
       final maxW = size.width.clamp(1060, 1350).toDouble();
-      final maxH = size.height.clamp(520, 860).toDouble();
+      final maxH = size.height * 0.9; // Use 90% of screen height instead of fixed max
 
       return Theme(
         data: _intakeTheme(ctx),
@@ -39,27 +39,30 @@ Future<void> showIntakeFormDialog(
             child: Stack(
               clipBehavior: Clip.none,
               children: [
-                Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(22),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(.08),
-                        blurRadius: 26,
-                        offset: const Offset(0, 14),
-                      ),
-                    ],
-                  ),
-                  child: ConstrainedBox(
-                    constraints:
-                    BoxConstraints(maxWidth: maxW, maxHeight: maxH),
-                    child: ClipRRect(
+                MouseRegion(
+                  cursor: SystemMouseCursors.basic,
+                  child: Container(
+                    decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(22),
-                      child: Material(
-                        color: AppColors.white,
-                        child: Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: IntakeFormBody(appt: appt),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(.08),
+                          blurRadius: 26,
+                          offset: const Offset(0, 14),
+                        ),
+                      ],
+                    ),
+                    child: ConstrainedBox(
+                      constraints:
+                      BoxConstraints(maxWidth: maxW, maxHeight: maxH),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(22),
+                        child: Material(
+                          color: AppColors.white,
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: IntakeFormBody(appt: appt),
+                          ),
                         ),
                       ),
                     ),
@@ -134,9 +137,9 @@ PatientDetails _convertApptToPatient(DashboardAppointments appt) {
     pincode: '',
     dateOfBirth: appt.dob,
     bloodGroup: appt.bloodGroup ?? 'O+',
-    height: appt.height.toString(),
-    weight: appt.weight.toString(),
-    bmi: appt.bmi.toString(),
+    height: appt.height?.toString() ?? '',
+    weight: appt.weight?.toString() ?? '',
+    bmi: appt.bmi?.toString() ?? '',
     oxygen: '',
     lastVisitDate: appt.date,
     notes: appt.currentNotes ?? '',
@@ -171,6 +174,7 @@ class _IntakeFormBodyState extends State<IntakeFormBody> {
 
   List<Map<String, dynamic>> _pharmacyRows = [];
   List<Map<String, String>> _pathologyRows = [];
+  Map<String, dynamic> _followUpData = {};
 
   bool _isSaving = false;
 
@@ -339,6 +343,7 @@ class _IntakeFormBodyState extends State<IntakeFormBody> {
     final payload = {
       'patientId': pid,
       'patientName': appt.patientName,
+      'appointmentId': appt.id, // ✨ CRITICAL: Include appointment ID so follow-up data is saved to appointment
       'vitals': {
         'heightCm': _heightCtrl.text.trim(),
         'height_cm': _heightCtrl.text.trim(), // backward compatibility
@@ -359,11 +364,19 @@ class _IntakeFormBodyState extends State<IntakeFormBody> {
         'Notes': r['Notes'] ?? '',
       }).toList(),
       'pathology': _pathologyRows.map((r) => Map.of(r)).toList(),
+      'followUp': _followUpData, // Include follow-up planning data
       'updatedAt': DateTime.now().toIso8601String(),
     };
 
     // Debug: Log what we're sending
     print('💾 [INTAKE SAVE] Sending vitals: ${payload['vitals']}');
+    print('💾 [INTAKE SAVE] Appointment ID: ${appt.id}');
+    print('💾 [INTAKE SAVE] Follow-Up Data: ${_followUpData.keys.toList()}');
+    if (_followUpData['isRequired'] == true) {
+      print('💾 [INTAKE SAVE] ✅ Follow-up IS required - will be saved to appointment');
+    } else {
+      print('💾 [INTAKE SAVE] ⚠️ Follow-up NOT required - will not show in follow-up list');
+    }
 
     try {
       final result = await AuthService.instance.addIntake(payload, patientId: pid);
@@ -456,12 +469,19 @@ class _IntakeFormBodyState extends State<IntakeFormBody> {
         PatientProfileHeaderCard(patient: patientDetails),
         const SizedBox(height: 12),
         Expanded(
-          child: ListView(
-            children: [
+          child: SingleChildScrollView(
+            key: const ValueKey('intakeFormScroll'),
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            physics: const BouncingScrollPhysics(),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
               _SectionCard(
+                key: const ValueKey('medical_notes_section'),
                 icon: Icons.note_alt_outlined,
                 title: 'Medical Notes',
                 description: 'Overview, vitals, and notes history.',
+                initiallyExpanded: false,
                 editorBuilder: (_) => Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -528,29 +548,47 @@ class _IntakeFormBodyState extends State<IntakeFormBody> {
 
               /// Pharmacy
               _SectionCard(
+                key: const ValueKey('pharmacy_section'),
                 icon: Icons.local_pharmacy_outlined,
                 title: 'Pharmacy',
                 description: 'Prescribe and manage medications with auto-calculation.',
+                initiallyExpanded: false,
                 editorBuilder: (_) => EnhancedPharmacyTable(
                   key: _pharmacyTableKey,
                   pharmacyRows: _pharmacyRows,
                   onRowsChanged: (newRows) {
-                    setState(() => _pharmacyRows = newRows);
+                    if (mounted) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (mounted) {
+                          setState(() => _pharmacyRows = newRows);
+                        }
+                      });
+                    }
                   },
                 ),
               ),
 
               /// Pathology
               _SectionCard(
+                key: const ValueKey('pathology_section'),
                 icon: Icons.biotech_outlined,
                 title: 'Pathology',
                 description: 'Order and track lab investigations.',
+                initiallyExpanded: false,
                 editorBuilder: (_) => Column(
                   children: [
                     CustomEditableTable(
                       rows: _pathologyRows,
                       columns: const ['Test Name', 'Category', 'Priority', 'Notes'],
-                      onDelete: (i) => setState(() => _pathologyRows.removeAt(i)),
+                      onDelete: (i) {
+                        if (mounted) {
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            if (mounted) {
+                              setState(() => _pathologyRows.removeAt(i));
+                            }
+                          });
+                        }
+                      },
                     ),
                     Align(
                       alignment: Alignment.centerRight,
@@ -576,8 +614,25 @@ class _IntakeFormBodyState extends State<IntakeFormBody> {
                   ],
                 ),
               ),
+
+              /// Follow-Up Planning Section
+              _FollowUpPlanningSection(
+                key: const ValueKey('followup_section'),
+                pathologyRows: _pathologyRows,
+                onFollowUpDataChanged: (data) {
+                  if (mounted) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (mounted) {
+                        setState(() => _followUpData = data);
+                      }
+                    });
+                  }
+                },
+              ),
+
               const SizedBox(height: 90),
-            ],
+              ],
+            ),
           ),
         ),
 
@@ -649,6 +704,7 @@ class _SectionCard extends StatefulWidget {
   final String title;
   final String description;
   final Widget Function(void Function(List<String>) saveCallback) editorBuilder;
+  final bool initiallyExpanded;
 
   const _SectionCard({
     super.key,
@@ -656,6 +712,7 @@ class _SectionCard extends StatefulWidget {
     required this.title,
     required this.description,
     required this.editorBuilder,
+    this.initiallyExpanded = true,
   });
 
   @override
@@ -663,7 +720,13 @@ class _SectionCard extends StatefulWidget {
 }
 
 class _SectionCardState extends State<_SectionCard> {
-  bool open = false;
+  late bool open;
+  
+  @override
+  void initState() {
+    super.initState();
+    open = widget.initiallyExpanded; // Use initiallyExpanded parameter
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -676,6 +739,7 @@ class _SectionCardState extends State<_SectionCard> {
         side: BorderSide(color: AppColors.grey200.withOpacity(0.6)),
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           ListTile(
             leading: Icon(widget.icon, color: AppColors.primary),
@@ -687,7 +751,15 @@ class _SectionCardState extends State<_SectionCard> {
               open ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
               color: AppColors.primary600,
             ),
-            onTap: () => setState(() => open = !open),
+            onTap: () {
+              if (mounted) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted) {
+                    setState(() => open = !open);
+                  }
+                });
+              }
+            },
           ),
           if (open)
             Padding(
@@ -741,6 +813,9 @@ class CustomEditableTable extends StatelessWidget {
   Widget build(BuildContext context) {
     // computed widths
     final actionColWidth = 84.0;
+
+    // Safety check - ensure no null rows
+    final safeRows = rows.where((row) => row != null).toList();
 
     return Container(
       decoration: BoxDecoration(
@@ -798,7 +873,7 @@ class CustomEditableTable extends StatelessWidget {
           Divider(height: 1, color: AppColors.grey200),
 
           // Rows
-          if (rows.isEmpty)
+          if (safeRows.isEmpty)
             Padding(
               padding: const EdgeInsets.all(20),
               child: Row(
@@ -817,10 +892,11 @@ class CustomEditableTable extends StatelessWidget {
             )
           else
             Column(
-              children: List.generate(rows.length, (i) {
+              children: List.generate(safeRows.length, (i) {
                 final even = i.isEven;
-                final row = rows[i];
+                final row = safeRows[i];
                 return Container(
+                  key: ValueKey('row_$i'),
                   color: even ? AppColors.white : AppColors.rowAlternate.withOpacity(0.6),
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   child: Row(
@@ -833,7 +909,8 @@ class CustomEditableTable extends StatelessWidget {
                             child: ConstrainedBox(
                               constraints: const BoxConstraints(minHeight: 40),
                               child: TextFormField(
-                                initialValue: row[col] ?? '',
+                                key: ValueKey('field_${i}_$col'),
+                                initialValue: row[col]?.toString() ?? '',
                                 onChanged: (v) => row[col] = v,
                                 style: GoogleFonts.inter(fontSize: 13, color: AppColors.kTextPrimary),
                                 decoration: InputDecoration(
@@ -893,6 +970,604 @@ class CustomEditableTable extends StatelessWidget {
   }
 }
 
+
+/// ============== Follow-Up Planning Section ==============
+class _FollowUpPlanningSection extends StatefulWidget {
+  final Function(Map<String, dynamic>) onFollowUpDataChanged;
+  final List<Map<String, String>> pathologyRows;
+  
+  const _FollowUpPlanningSection({
+    super.key, 
+    required this.onFollowUpDataChanged,
+    required this.pathologyRows,
+  });
+
+  @override
+  State<_FollowUpPlanningSection> createState() => _FollowUpPlanningSectionState();
+}
+
+class _FollowUpPlanningSectionState extends State<_FollowUpPlanningSection> {
+  bool _followUpRequired = false;
+  String _priority = 'Routine';
+  DateTime? _recommendedDate;
+  final TextEditingController _reasonCtrl = TextEditingController();
+  final TextEditingController _instructionsCtrl = TextEditingController();
+  final TextEditingController _diagnosisCtrl = TextEditingController();
+  final TextEditingController _treatmentPlanCtrl = TextEditingController();
+  
+  // Lab tests
+  List<Map<String, dynamic>> _labTests = [];
+  
+  // Imaging
+  List<Map<String, dynamic>> _imaging = [];
+  
+  // Procedures
+  List<Map<String, dynamic>> _procedures = [];
+  
+  bool _prescriptionReview = false;
+  String _medicationCompliance = 'Unknown';
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _updateParent();
+      }
+    });
+  }
+  
+  void _autoFillLabTestsFromPathology() {
+    // Auto-fill lab tests from pathology section when follow-up is enabled
+    if (widget.pathologyRows.isNotEmpty && _labTests.isEmpty) {
+      setState(() {
+        _labTests = widget.pathologyRows.map((pathTest) {
+          return {
+            'testName': pathTest['Test Name'] ?? '',
+            'ordered': false,
+            'orderedDate': null,
+            'completed': false,
+            'completedDate': null,
+            'results': '',
+            'resultStatus': 'Pending',
+          };
+        }).toList();
+        _updateParent();
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _reasonCtrl.dispose();
+    _instructionsCtrl.dispose();
+    _diagnosisCtrl.dispose();
+    _treatmentPlanCtrl.dispose();
+    super.dispose();
+  }
+
+  void _updateParent() {
+    widget.onFollowUpDataChanged({
+      'isRequired': _followUpRequired,
+      'priority': _priority,
+      'recommendedDate': _recommendedDate?.toIso8601String(),
+      'reason': _reasonCtrl.text,
+      'instructions': _instructionsCtrl.text,
+      'diagnosis': _diagnosisCtrl.text,
+      'treatmentPlan': _treatmentPlanCtrl.text,
+      'labTests': _labTests,
+      'imaging': _imaging,
+      'procedures': _procedures,
+      'prescriptionReview': _prescriptionReview,
+      'medicationCompliance': _medicationCompliance,
+    });
+  }
+
+  Future<void> _selectDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _recommendedDate ?? DateTime.now().add(const Duration(days: 7)),
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+    if (picked != null) {
+      setState(() {
+        _recommendedDate = picked;
+        _updateParent();
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _SectionCard(
+      icon: Iconsax.calendar_tick,
+      title: 'Follow-Up Planning',
+      description: 'Plan next appointment, tests, and monitoring',
+      initiallyExpanded: false, // Initially closed
+      editorBuilder: (_) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Follow-up Required Toggle
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: _followUpRequired ? AppColors.primary.withOpacity(0.08) : AppColors.grey50,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: _followUpRequired ? AppColors.primary : AppColors.grey200,
+                width: 1.5,
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Iconsax.calendar_tick,
+                  color: _followUpRequired ? AppColors.primary : AppColors.kTextSecondary,
+                  size: 24,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Follow-Up Required',
+                        style: GoogleFonts.poppins(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.kTextPrimary,
+                        ),
+                      ),
+                      Text(
+                        'Enable to plan follow-up appointment and tests',
+                        style: GoogleFonts.roboto(
+                          fontSize: 12,
+                          color: AppColors.kTextSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Switch(
+                  value: _followUpRequired,
+                  onChanged: (value) {
+                    setState(() {
+                      _followUpRequired = value;
+                      if (value) {
+                        // Auto-fill lab tests from pathology when enabled
+                        _autoFillLabTestsFromPathology();
+                      }
+                      _updateParent();
+                    });
+                  },
+                  activeColor: AppColors.primary,
+                ),
+              ],
+            ),
+          ),
+
+          if (_followUpRequired) ...[
+            const SizedBox(height: 20),
+
+            // Priority Selection
+            Text(
+              'Priority Level',
+              style: GoogleFonts.poppins(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.kTextPrimary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              children: ['Routine', 'Important', 'Urgent', 'Critical'].map((priority) {
+                final isSelected = _priority == priority;
+                Color getColor() {
+                  switch (priority) {
+                    case 'Routine': return AppColors.kInfo;
+                    case 'Important': return AppColors.kWarning;
+                    case 'Urgent': return AppColors.accentPink;
+                    case 'Critical': return AppColors.kDanger;
+                    default: return AppColors.kInfo;
+                  }
+                }
+                return FilterChip(
+                  selected: isSelected,
+                  label: Text(priority),
+                  onSelected: (selected) {
+                    setState(() {
+                      _priority = priority;
+                      _updateParent();
+                    });
+                  },
+                  selectedColor: getColor().withOpacity(0.2),
+                  checkmarkColor: getColor(),
+                  labelStyle: GoogleFonts.roboto(
+                    fontSize: 13,
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                    color: isSelected ? getColor() : AppColors.kTextSecondary,
+                  ),
+                );
+              }).toList(),
+            ),
+
+            const SizedBox(height: 20),
+
+            // Recommended Follow-Up Date
+            Text(
+              'Recommended Follow-Up Date',
+              style: GoogleFonts.poppins(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.kTextPrimary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            InkWell(
+              onTap: _selectDate,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                decoration: BoxDecoration(
+                  border: Border.all(color: AppColors.grey200, width: 1.5),
+                  borderRadius: BorderRadius.circular(10),
+                  color: Colors.white,
+                ),
+                child: Row(
+                  children: [
+                    Icon(Iconsax.calendar_1, color: AppColors.primary, size: 20),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        _recommendedDate != null
+                            ? 'In ${_recommendedDate!.difference(DateTime.now()).inDays} days (${_recommendedDate!.day}/${_recommendedDate!.month}/${_recommendedDate!.year})'
+                            : 'Select date',
+                        style: GoogleFonts.roboto(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: _recommendedDate != null
+                              ? AppColors.kTextPrimary
+                              : AppColors.kTextSecondary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // Quick date buttons
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                {'label': '1 Week', 'days': 7},
+                {'label': '2 Weeks', 'days': 14},
+                {'label': '1 Month', 'days': 30},
+                {'label': '3 Months', 'days': 90},
+              ].map((option) {
+                return OutlinedButton(
+                  onPressed: () {
+                    setState(() {
+                      _recommendedDate = DateTime.now().add(Duration(days: option['days'] as int));
+                      _updateParent();
+                    });
+                  },
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    side: BorderSide(color: AppColors.primary.withOpacity(0.5)),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  ),
+                  child: Text(option['label'] as String),
+                );
+              }).toList(),
+            ),
+
+            const SizedBox(height: 20),
+
+            // Reason
+            TextField(
+              controller: _reasonCtrl,
+              maxLines: 2,
+              decoration: InputDecoration(
+                labelText: 'Follow-Up Reason *',
+                hintText: 'e.g., Monitor treatment response, review lab results',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              onChanged: (_) => _updateParent(),
+            ),
+
+            const SizedBox(height: 16),
+
+            // Patient Instructions
+            TextField(
+              controller: _instructionsCtrl,
+              maxLines: 2,
+              decoration: InputDecoration(
+                labelText: 'Patient Instructions',
+                hintText: 'e.g., Continue medication, avoid strenuous activity',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              onChanged: (_) => _updateParent(),
+            ),
+
+            const SizedBox(height: 16),
+
+            // Diagnosis
+            TextField(
+              controller: _diagnosisCtrl,
+              decoration: InputDecoration(
+                labelText: 'Diagnosis/Condition',
+                hintText: 'Primary diagnosis requiring follow-up',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              onChanged: (_) => _updateParent(),
+            ),
+
+            const SizedBox(height: 16),
+
+            // Treatment Plan
+            TextField(
+              controller: _treatmentPlanCtrl,
+              maxLines: 2,
+              decoration: InputDecoration(
+                labelText: 'Treatment Plan',
+                hintText: 'Current treatment being monitored',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              onChanged: (_) => _updateParent(),
+            ),
+
+            const SizedBox(height: 24),
+
+            // Lab Tests Section
+            _buildTestSection(
+              title: 'Lab Tests to Order',
+              icon: Iconsax.health,
+              items: _labTests,
+              onAdd: () {
+                setState(() {
+                  _labTests.add({
+                    'testName': '',
+                    'ordered': false,
+                    'completed': false,
+                  });
+                  _updateParent();
+                });
+              },
+              onRemove: (index) {
+                setState(() {
+                  _labTests.removeAt(index);
+                  _updateParent();
+                });
+              },
+              onEdit: (index, key, value) {
+                setState(() {
+                  _labTests[index][key] = value;
+                  _updateParent();
+                });
+              },
+            ),
+
+            const SizedBox(height: 20),
+
+            // Imaging Section
+            _buildTestSection(
+              title: 'Imaging/Radiology',
+              icon: Iconsax.scan,
+              items: _imaging,
+              onAdd: () {
+                setState(() {
+                  _imaging.add({
+                    'imagingType': '',
+                    'ordered': false,
+                    'completed': false,
+                  });
+                  _updateParent();
+                });
+              },
+              onRemove: (index) {
+                setState(() {
+                  _imaging.removeAt(index);
+                  _updateParent();
+                });
+              },
+              onEdit: (index, key, value) {
+                setState(() {
+                  _imaging[index][key] = value;
+                  _updateParent();
+                });
+              },
+            ),
+
+            const SizedBox(height: 20),
+
+            // Procedures Section
+            _buildTestSection(
+              title: 'Procedures to Schedule',
+              icon: Iconsax.clipboard_tick,
+              items: _procedures,
+              onAdd: () {
+                setState(() {
+                  _procedures.add({
+                    'procedureName': '',
+                    'scheduled': false,
+                    'completed': false,
+                  });
+                  _updateParent();
+                });
+              },
+              onRemove: (index) {
+                setState(() {
+                  _procedures.removeAt(index);
+                  _updateParent();
+                });
+              },
+              onEdit: (index, key, value) {
+                setState(() {
+                  _procedures[index][key] = value;
+                  _updateParent();
+                });
+              },
+            ),
+
+            const SizedBox(height: 20),
+
+            // Medication Review
+            CheckboxListTile(
+              value: _prescriptionReview,
+              onChanged: (value) {
+                setState(() {
+                  _prescriptionReview = value ?? false;
+                  _updateParent();
+                });
+              },
+              title: Text(
+                'Prescription Review Required',
+                style: GoogleFonts.roboto(fontSize: 14, fontWeight: FontWeight.w500),
+              ),
+              subtitle: Text(
+                'Review and adjust medications at follow-up',
+                style: GoogleFonts.roboto(fontSize: 12, color: AppColors.kTextSecondary),
+              ),
+              controlAffinity: ListTileControlAffinity.leading,
+            ),
+
+            const SizedBox(height: 12),
+
+            // Medication Compliance
+            Text(
+              'Medication Compliance Assessment',
+              style: GoogleFonts.poppins(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.kTextPrimary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              children: ['Good', 'Fair', 'Poor', 'Unknown'].map((compliance) {
+                final isSelected = _medicationCompliance == compliance;
+                return ChoiceChip(
+                  label: Text(compliance),
+                  selected: isSelected,
+                  onSelected: (selected) {
+                    setState(() {
+                      _medicationCompliance = compliance;
+                      _updateParent();
+                    });
+                  },
+                  selectedColor: AppColors.primary.withOpacity(0.2),
+                  labelStyle: GoogleFonts.roboto(
+                    fontSize: 13,
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                    color: isSelected ? AppColors.primary : AppColors.kTextSecondary,
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTestSection({
+    required String title,
+    required IconData icon,
+    required List<Map<String, dynamic>> items,
+    required VoidCallback onAdd,
+    required Function(int) onRemove,
+    required Function(int, String, dynamic) onEdit,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, size: 20, color: AppColors.primary),
+            const SizedBox(width: 8),
+            Text(
+              title,
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: AppColors.kTextPrimary,
+              ),
+            ),
+            const Spacer(),
+            IconButton(
+              onPressed: onAdd,
+              icon: Icon(Icons.add_circle, color: AppColors.primary),
+              tooltip: 'Add',
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        if (items.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.grey50,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AppColors.grey200),
+            ),
+            child: Center(
+              child: Text(
+                'No items added',
+                style: GoogleFonts.roboto(
+                  fontSize: 13,
+                  color: AppColors.kTextSecondary,
+                ),
+              ),
+            ),
+          )
+        else
+          ...List.generate(items.length, (index) {
+            final item = items[index];
+            if (item == null) return const SizedBox.shrink();
+            final nameKey = item.containsKey('testName') ? 'testName' : 
+                           item.containsKey('imagingType') ? 'imagingType' : 'procedureName';
+            return Container(
+              key: ValueKey('test_item_$index'),
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.grey200),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      key: ValueKey('${nameKey}_$index'),
+                      initialValue: item[nameKey]?.toString() ?? '',
+                      decoration: InputDecoration(
+                        hintText: 'Enter name...',
+                        border: InputBorder.none,
+                        isDense: true,
+                      ),
+                      onChanged: (value) => onEdit(index, nameKey, value),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => onRemove(index),
+                    icon: Icon(Icons.delete, color: AppColors.kDanger, size: 20),
+                    tooltip: 'Remove',
+                  ),
+                ],
+              ),
+            );
+          }),
+      ],
+    );
+  }
+}
 
 /// ============== Profile Header ==============
 

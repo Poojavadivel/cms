@@ -9,6 +9,7 @@ import '../../Models/Patients.dart';
 import '../../Models/dashboardmodels.dart';
 import '../../Services/Authservices.dart';
 import 'widgets/doctor_appointment_preview.dart';
+import 'widgets/follow_up_calendar_popup.dart';
 
 /// ENTERPRISE-GRADE SCHEDULE CALENDAR
 /// Professional medical theme matching dashboard
@@ -448,24 +449,33 @@ class _EnterpriseScheduleScreenState extends State<EnterpriseScheduleScreen> {
 
   Future<void> _showAppointmentPreview(DashboardAppointments appointment) async {
     try {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const Center(
-          child: CircularProgressIndicator(color: Color(0xFF1E40AF)),
-        ),
-      );
+      // Check if this appointment has follow-up details
+      final hasFollowUp = appointment.metadata?['followUp']?['isRequired'] == true;
       
-      final patientDetails = await AuthService.instance.fetchPatientById(appointment.patientId);
-      
-      if (mounted) Navigator.of(context).pop();
-      
-      if (mounted) {
-        await DoctorAppointmentPreview.show(
-          context,
-          patientDetails,
-          showBillingTab: false,
+      if (hasFollowUp) {
+        // Show follow-up calendar popup
+        await _showFollowUpPopup(appointment);
+      } else {
+        // Show regular appointment preview
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => const Center(
+            child: CircularProgressIndicator(color: Color(0xFF1E40AF)),
+          ),
         );
+        
+        final patientDetails = await AuthService.instance.fetchPatientById(appointment.patientId);
+        
+        if (mounted) Navigator.of(context).pop();
+        
+        if (mounted) {
+          await DoctorAppointmentPreview.show(
+            context,
+            patientDetails,
+            showBillingTab: false,
+          );
+        }
       }
     } catch (e) {
       if (mounted) Navigator.of(context).pop();
@@ -473,12 +483,46 @@ class _EnterpriseScheduleScreenState extends State<EnterpriseScheduleScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error loading patient: ${e.toString()}'),
+            content: Text('Error loading appointment: ${e.toString()}'),
             backgroundColor: Colors.red,
           ),
         );
       }
       debugPrint('❌ Error showing appointment preview: $e');
+    }
+  }
+  
+  Future<void> _showFollowUpPopup(DashboardAppointments appointment) async {
+    try {
+      // Fetch full appointment details with follow-up data
+      final response = await AuthService.instance.get('/appointments/${appointment.appointmentId}');
+      
+      if (response != null && response['appointment'] != null) {
+        await FollowUpCalendarPopup.show(
+          context: context,
+          appointmentData: response['appointment'],
+          onScheduleAppointment: () {
+            Navigator.of(context).pop();
+            // TODO: Navigate to appointment scheduling
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Appointment scheduling will be implemented'),
+                backgroundColor: Color(0xFF1E40AF),
+              ),
+            );
+          },
+        );
+      }
+    } catch (e) {
+      debugPrint('❌ Error showing follow-up popup: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error loading follow-up details: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -553,6 +597,20 @@ class _AppointmentCard extends StatelessWidget {
         return const Color(0xFF94A3B8);
     }
   }
+  
+  Color _getPriorityColor(String priority) {
+    switch (priority) {
+      case 'Critical':
+        return const Color(0xFFDC2626);
+      case 'Urgent':
+        return const Color(0xFFEA580C);
+      case 'Important':
+        return const Color(0xFFF59E0B);
+      case 'Routine':
+      default:
+        return const Color(0xFF059669);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -613,22 +671,65 @@ class _AppointmentCard extends StatelessWidget {
                   ],
                 ),
               ),
-              // Status Badge
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: statusColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: statusColor.withOpacity(0.3)),
-                ),
-                child: Text(
-                  appointment.status,
-                  style: GoogleFonts.inter(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: statusColor,
+              // Follow-Up Badge (if applicable) + Status Badge
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  // Follow-Up Badge
+                  if (appointment.metadata?['followUp']?['isRequired'] == true)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            _getPriorityColor(appointment.metadata?['followUp']?['priority'] ?? 'Routine'),
+                            _getPriorityColor(appointment.metadata?['followUp']?['priority'] ?? 'Routine').withOpacity(0.8),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: _getPriorityColor(appointment.metadata?['followUp']?['priority'] ?? 'Routine').withOpacity(0.3),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Iconsax.notification_bing, size: 12, color: Colors.white),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Follow-Up',
+                            style: GoogleFonts.inter(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  // Status Badge
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: statusColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: statusColor.withOpacity(0.3)),
+                    ),
+                    child: Text(
+                      appointment.status,
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: statusColor,
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
             ],
           ),
