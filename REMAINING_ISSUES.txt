@@ -1,0 +1,133 @@
+=== REMAINING CRITICAL ISSUES ===
+
+1. MANUAL Y POSITIONING (27 instances)
+   Lines: 207, 237, 250, 260, 263, 271, 300, 323, 413, 449, 459, 465, 468, 476, 486, 492, 495, 503, 513, 519, 522, 542, 551, 559, 565, 582, 854
+   Problem: Still using doc.y += fixed numbers
+   Impact: Spacing breaks if content changes
+
+2. TEXT WITHOUT HEIGHT CALCULATION
+   Line 267-271: Prescription count text
+   Line 296-300: Medical reports count text  
+   Line 318-323: Patient notes text (NO HEIGHT CALC)
+   Line 562-565: "No appointment history" text
+   Line 577-582: Clinical notes text (NO HEIGHT CALC)
+   Line 851-854: "No appointments" text
+   Impact: Text can overflow, spacing wrong
+
+3. ALERT BOX STILL HAS TWO IMPLEMENTATIONS
+   enterprisePdfGenerator.js has TWO different addAlertBox functions:
+   - One at line ~510 (with IMPORTANT prefix)
+   - One at line ~something else (simple version)
+   Problem: Inconsistent behavior, confusing
+
+4. TABLE ROW HEIGHT FIXED AT 24px
+   Line 364: rowHeight = 24
+   Problem: If cell text wraps, overflows
+   No multi-line cell support
+
+5. LAB TEST/IMAGING SPACING HARDCODED
+   Line 459: doc.y += 14 (arbitrary)
+   Line 465: doc.y += 12 (arbitrary)
+   Line 486: doc.y += 14 (arbitrary)
+   Line 492: doc.y += 12 (arbitrary)
+   Problem: Magic numbers, not based on content
+
+6. SECTION HEADER TEXT CENTERING WRONG
+   Line 289: textY = startY + (barHeight - fontSize) / 2
+   Problem: Doesn't account for font metrics
+   Text not truly centered vertically
+
+7. INFO ROW STILL CALCULATES HEIGHT WRONG
+   Line 324-329: Uses heightOfString
+   Problem: heightOfString != actual rendered height
+   Can cause misalignment
+
+8. NO CONSISTENT LEFT MARGIN
+   Different elements use different X positions:
+   - margins.page.left
+   - margins.page.left + 6
+   - margins.page.left + 10
+   - margins.page.left + 12
+   Not aligned
+
+9. CLINICAL NOTES DUPLICATED
+   Lines 304-324: Clinical notes section
+   Lines 568-583: Clinical notes section AGAIN
+   Same content rendered twice!
+
+10. STATS CARDS TEXT ALIGNMENT
+    Line 494: Value centered in card
+    Line 499: Label centered in card
+    But card padding inconsistent
+    Not truly centered
+
+11. PAGE BREAK DOESN'T VALIDATE FIT
+    Line 587-593: checkPageBreak
+    Adds page but doesn't check if content actually fits after
+    Can still overflow
+
+12. FOOTER GENERATION
+    Uses bufferedPageRange but doesn't verify pages
+    Might add footers to empty pages
+
+13. DIVIDER LINE WIDTH
+    Line 565: lineWidth(0.5)
+    Too thin, might not print properly
+
+14. NO GRID SYSTEM
+    Spacing values: 2, 4, 6, 8, 10, 12, 14, 15, 20
+    Random, not multiple of base unit
+    Should use 4px or 8px grid
+
+15. FONT SIZE CHANGES WITHOUT BASELINE ADJUSTMENT
+    Text changes from fonts.body to fonts.small
+    No baseline correction
+    Can cause jagged appearance
+
+=== CRITICAL BUGS ===
+
+BUG 1: Clinical notes rendered TWICE
+Line 305 AND line 569
+Same patient.notes displayed twice in report
+
+BUG 2: alertBox has padding calculation error
+Line 535: textWidth = boxWidth - padding * 2 - 6
+Line 550: textX = boxLeft + 10 + 6
+Padding doesn't match! 10+6=16, but calc uses padding*2=24
+
+BUG 3: Table doesn't handle wrapped text
+Fixed rowHeight = 24
+If cell text > width, overflows row
+
+BUG 4: Stats cards use wrong fontSize reference
+Line 494: fontSize 20 (hardcoded)
+Should use this.fonts.heading1 or similar
+
+BUG 5: heightOfString vs actual render mismatch
+Multiple places calculate height but rendering differs
+lineGap, font metrics not accounted
+
+=== WHAT MUST BE FIXED ===
+
+PRIORITY 1 (BREAKING):
+- Remove duplicate clinical notes section
+- Fix alert box padding mismatch  
+- Replace all doc.y += with calculated heights
+
+PRIORITY 2 (LAYOUT):
+- Standardize left margins
+- Implement 8px grid system
+- Fix text height calculations
+
+PRIORITY 3 (POLISH):
+- Table multi-line cell support
+- Proper vertical centering
+- Consistent font sizing
+
+=== ROOT CAUSE ===
+
+No layout engine.
+Every element does its own thing.
+No shared positioning logic.
+No validation that content fits.
+Manual spacing everywhere.

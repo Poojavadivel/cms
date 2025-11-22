@@ -26,6 +26,7 @@ class GenericDataTable extends StatefulWidget {
   final void Function(int index)? onView;
   final void Function(int index)? onEdit;
   final void Function(int index)? onDelete;
+  final void Function(int index)? onDownload;
 
   // Optional: callback for refresh button
   final VoidCallback? onRefresh;
@@ -48,6 +49,7 @@ class GenericDataTable extends StatefulWidget {
     this.onView,
     this.onEdit,
     this.onDelete,
+    this.onDownload,
     this.hideHorizontalScrollbar = false,
     this.onRefresh,
   });
@@ -107,6 +109,7 @@ class _GenericDataTableState extends State<GenericDataTable> {
                   onView: widget.onView,
                   onEdit: widget.onEdit,
                   onDelete: widget.onDelete,
+                  onDownload: widget.onDownload,
                   hideHorizontalScrollbar: widget.hideHorizontalScrollbar,
                   hoveredRowIndex: _hoveredRowIndex,
                   onRowHover: (index) => setState(() => _hoveredRowIndex = index),
@@ -502,6 +505,7 @@ class _EnterpriseTableDataView extends StatelessWidget {
   final void Function(int index)? onView;
   final void Function(int index)? onEdit;
   final void Function(int index)? onDelete;
+  final void Function(int index)? onDownload;
 
   const _EnterpriseTableDataView({
     required this.headers,
@@ -509,12 +513,13 @@ class _EnterpriseTableDataView extends StatelessWidget {
     this.onView,
     this.onEdit,
     this.onDelete,
+    this.onDownload,
     this.hideHorizontalScrollbar = false,
     required this.hoveredRowIndex,
     required this.onRowHover,
   });
 
-  bool get _hasActions => onView != null || onEdit != null || onDelete != null;
+  bool get _hasActions => onView != null || onEdit != null || onDelete != null || onDownload != null;
 
   @override
   Widget build(BuildContext context) {
@@ -617,6 +622,15 @@ class _EnterpriseTableDataView extends StatelessWidget {
                                   child: Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
+                                      if (onDownload != null)
+                                        _ActionButton(
+                                          icon: Iconsax.document_download,
+                                          color: const Color(0xFF10B981),
+                                          tooltip: 'Download Report',
+                                          onPressed: () => onDownload!(index),
+                                        ),
+                                      if (onDownload != null && (onView != null || onEdit != null || onDelete != null)) 
+                                        const SizedBox(width: 8),
                                       if (onView != null)
                                         _ActionButton(
                                           icon: Iconsax.eye,

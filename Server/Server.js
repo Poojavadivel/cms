@@ -37,11 +37,13 @@ app.use('/api/doctors', require('./routes/doctors'));
 app.use('/api/pharmacy', require('./routes/pharmacy'));
 app.use('/api/pathology', require('./routes/pathology')); // New: Pathology routes
 app.use('/api/bot', require('./routes/bot'));
-app.use('/api/telegram', require('./routes/telegram'));
+// app.use('/api/telegram', require('./routes/telegram'));
 app.use('/api/intake', require('./routes/intake'));
 app.use('/api/scanner-enterprise', require('./routes/scanner-enterprise')); // Legacy: Enterprise scanner with intent detection
 app.use('/api/card', require('./routes/card')); // New: Profile card data endpoint
 app.use('/api/payroll', require('./routes/payroll')); // New: Payroll management routes
+app.use('/api/reports', require('./routes/enterpriseReports')); // Old: PDFKit reports (has layout issues)
+app.use('/api/reports-proper', require('./routes/properReports')); // New: PDFMake reports (FIXED)
 // --- Health / Root Endpoint ---
 
 
@@ -200,6 +202,58 @@ const createInitialPathologist = async () => {
 
 
 /**
+ * Syncs doctors from User collection to Staff collection
+ */
+const syncDoctorsToStaff = async () => {
+  try {
+    const { User, Staff } = require('./Models');
+    
+    // Find all doctors in User collection
+    const doctors = await User.find({ role: 'doctor' }).lean();
+    
+    if (doctors.length === 0) {
+      console.log('ℹ️  No doctors found in User collection to sync.');
+      return;
+    }
+
+    let synced = 0;
+    for (const doctor of doctors) {
+      // Check if staff record already exists with this email
+      const existingStaff = await Staff.findOne({ email: doctor.email }).lean();
+      
+      if (!existingStaff) {
+        // Create new staff record for this doctor
+        const staffData = {
+          name: doctor.firstName && doctor.lastName 
+            ? `${doctor.firstName} ${doctor.lastName}`.trim()
+            : doctor.firstName || 'Doctor',
+          email: doctor.email,
+          contact: doctor.phone || '',
+          roles: ['doctor'],
+          designation: doctor.metadata?.specialization || 'Doctor',
+          department: doctor.metadata?.department || 'Medical',
+          status: doctor.is_active ? 'Available' : 'Off Duty',
+          metadata: {
+            userId: doctor._id,
+            syncedAt: new Date().toISOString()
+          }
+        };
+        
+        await Staff.create(staffData);
+        synced++;
+        console.log(`✓ Synced doctor to Staff: ${staffData.name} (${doctor.email})`);
+      }
+    }
+    
+    if (synced > 0) {
+      console.log(`🔄 Synced ${synced} doctor(s) to Staff collection.`);
+    }
+  } catch (error) {
+    console.error('Error syncing doctors to staff:', error);
+  }
+};
+
+/**
  * Main startup function.
  * Connects to MongoDB, optionally runs migrations/seeds, creates initial admin user, and starts Express.
  */
@@ -215,7 +269,10 @@ const startServer = async () => {
     await createInitialPathologist();
     console.log('👑 Initial admin user check completed.');
 
-    // 3. Start the Express server
+    // 3. Sync doctors from User to Staff collection
+    await syncDoctorsToStaff();
+
+    // 4. Start the Express server
     app.listen(PORT, () => {
       console.log(`🌍 Server is listening on port ${PORT}`);
     });

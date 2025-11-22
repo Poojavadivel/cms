@@ -10,6 +10,7 @@ import 'Widgets/generic_data_table.dart';
 
 // New imports (adjust paths if needed)
 import '../../Services/Authservices.dart';
+import '../../Services/ReportService.dart';
 import 'Widgets/enterprise_patient_form.dart'; // New enterprise form
 
 // ---------------------------------------------------------------------
@@ -229,9 +230,11 @@ class _PatientsScreenState extends State<PatientsScreen> {
   // Keep the raw PatientDetails objects keyed by patientId for preview/edit usage:
   final Map<String, PatientDetails> _detailsById = {};
   bool _isLoading = true;
+  bool _isDownloading = false;
   String _searchQuery = '';
   int _currentPage = 0;
   String _doctorFilter = 'All';
+  final ReportService _reportService = ReportService();
 
   @override
   void initState() {
@@ -402,6 +405,50 @@ class _PatientsScreenState extends State<PatientsScreen> {
     }
   }
 
+  // Download patient report
+  Future<void> _onDownloadReport(int index, List<Patient> paginatedPatients) async {
+    if (index < 0 || index >= paginatedPatients.length) return;
+    
+    final patient = paginatedPatients[index];
+    
+    setState(() => _isDownloading = true);
+    
+    try {
+      final result = await _reportService.downloadPatientReport(patient.id);
+      
+      if (mounted) {
+        if (result['success'] == true) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result['message'] ?? 'Report downloaded successfully'),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result['message'] ?? 'Failed to download report'),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isDownloading = false);
+    }
+  }
+
   // Method to get the filtered list of patients
   List<Patient> _getFilteredPatients() {
     final q = _searchQuery.trim().toLowerCase();
@@ -517,10 +564,11 @@ class _PatientsScreenState extends State<PatientsScreen> {
             itemsPerPage: 10,
             onPreviousPage: _prevPage,
             onNextPage: _nextPage,
-            isLoading: _isLoading,
+            isLoading: _isLoading || _isDownloading,
             onAddPressed: _onAddPressed,
             filters: [_buildDoctorFilter()],
             hideHorizontalScrollbar: true,
+            onDownload: (i) => _onDownloadReport(i, paginatedPatients),
             onView: (i) => _onView(i, paginatedPatients),
             onEdit: (i) => _onEdit(i, paginatedPatients),
             onDelete: (i) => _onDelete(i, paginatedPatients),

@@ -33,6 +33,7 @@ dependencies:
   http_parser: ^4.0.2
   open_filex: ^4.5.0
   image_picker: ^1.1.2
+  pdf: ^3.11.3
 
 dev_dependencies:
   flutter_test:

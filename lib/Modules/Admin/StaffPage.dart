@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 // Adjust these imports to your project structure
 import '../../Models/staff.dart';
 import '../../Services/Authservices.dart';
+import '../../Services/ReportService.dart';
 import '../../Utils/Colors.dart';
 import 'Widgets/Staffview.dart';
 import 'Widgets/generic_data_table.dart';
@@ -24,9 +25,11 @@ class StaffScreen extends StatefulWidget {
 class _StaffScreenState extends State<StaffScreen> {
   List<Staff> _allStaff = [];
   bool _isLoading = true;
+  bool _isDownloading = false;
   String _searchQuery = '';
   int _currentPage = 0;
   String _departmentFilter = 'All';
+  final ReportService _reportService = ReportService();
 
   @override
   void initState() {
@@ -286,6 +289,62 @@ class _StaffScreenState extends State<StaffScreen> {
     }
   }
 
+  // ---------------- Download Report (for all staff) ----------------
+  Future<void> _onDownloadReport(int index, List<Staff> list) async {
+    if (index < 0 || index >= list.length) return;
+    
+    final staffMember = list[index];
+    
+    // Check if staff has 'doctor' role for specialized report
+    final isDoctor = staffMember.roles.any((role) => role.toLowerCase() == 'doctor') ||
+                     staffMember.designation.toLowerCase().contains('doctor');
+    
+    setState(() => _isDownloading = true);
+    
+    try {
+      Map<String, dynamic> result;
+      
+      if (isDoctor) {
+        // Generate doctor-specific report with appointments and patients
+        result = await _reportService.downloadDoctorReport(staffMember.id);
+      } else {
+        // Generate general staff report
+        result = await _reportService.downloadStaffReport(staffMember.id);
+      }
+      
+      if (mounted) {
+        if (result['success'] == true) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result['message'] ?? 'Report downloaded successfully'),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result['message'] ?? 'Failed to download report'),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isDownloading = false);
+    }
+  }
+
   // ---------------- View (simple) ----------------
   Future<void> _onView(int index, List<Staff> list) async {
     final staffMember = list[index];
@@ -438,10 +497,11 @@ class _StaffScreenState extends State<StaffScreen> {
             itemsPerPage: 10,
             onPreviousPage: _prevPage,
             onNextPage: _nextPage,
-            isLoading: _isLoading,
+            isLoading: _isLoading || _isDownloading,
             onAddPressed: _onAddPressed,
             filters: [_buildDepartmentFilter()],
             hideHorizontalScrollbar: true,
+            onDownload: (i) => _onDownloadReport(i, paginatedStaff),
             onView: (i) => _onView(i, paginatedStaff),
             onEdit: (i) => _onEdit(i, paginatedStaff),
             onDelete: (i) => _onDelete(i, paginatedStaff),

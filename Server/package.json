@@ -13,6 +13,8 @@
     "multer": "^2.0.2",
     "node-telegram-bot-api": "^0.66.0",
     "pdf-parse": "^2.2.13",
+    "pdfkit": "^0.17.2",
+    "pdfmake": "^0.2.20",
     "pg": "^8.16.3",
     "sequelize": "^1.2.1",
     "sharp": "^0.34.4",
