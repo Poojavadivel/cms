@@ -21,7 +21,7 @@
 class ApiConfig {
   // Environment-based base URLs
   static const String _devBaseUrl = 'http://localhost:3000';
-  static const String _stagingBaseUrl = 'http://10.165.36.132:3000';
+  static const String _stagingBaseUrl = 'http://10.230.173.132:3000';
   static const String _prodBaseUrl = 'https://api.karurgastro.com'; // TODO: Update with production URL
   
   // Current environment (change as needed)

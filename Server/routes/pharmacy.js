@@ -818,26 +818,59 @@ router.get('/pending-prescriptions', auth, async (req, res) => {
     const limit = Math.min(200, Math.max(1, parseInt(req.query.limit || '50', 10)));
     const skip = page * limit;
 
-    // Find intakes that have pharmacy records created (pharmacyId exists)
+    // Find intakes that have pharmacy items to dispense (pharmacyItems exists in meta)
+    // AND either don't have pharmacyId OR show all for pharmacist review
     const intakes = await Intake.find({
-      'meta.pharmacyId': { $exists: true } // Has pharmacy record created from intake
+      $or: [
+        { 'meta.pharmacyItems': { $exists: true, $ne: [] } }, // Has pharmacy items in meta
+        { 'meta.pharmacyId': { $exists: true } } // Or already has pharmacy record (for review)
+      ]
     })
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(limit)
     .lean();
 
-    const total = await Intake.countDocuments({ 'meta.pharmacyId': { $exists: true } });
+    const total = await Intake.countDocuments({
+      $or: [
+        { 'meta.pharmacyItems': { $exists: true, $ne: [] } },
+        { 'meta.pharmacyId': { $exists: true } }
+      ]
+    });
 
     // Fetch the pharmacy records to get medicine details
     const prescriptions = [];
     for (const intake of intakes) {
       try {
         const pharmacyId = intake.meta?.pharmacyId;
-        if (!pharmacyId) continue;
+        let pharmacyItems = [];
+        let total = 0;
+        let paid = false;
+        let notes = intake.notes || '';
 
-        const pharmacyRecord = await PharmacyRecord.findById(String(pharmacyId)).lean();
-        if (!pharmacyRecord) continue;
+        // If already has pharmacy record (dispensed), get from there
+        if (pharmacyId) {
+          const pharmacyRecord = await PharmacyRecord.findById(String(pharmacyId)).lean();
+          if (pharmacyRecord) {
+            pharmacyItems = pharmacyRecord.items || [];
+            total = pharmacyRecord.total || 0;
+            paid = pharmacyRecord.paid || false;
+            notes = intake.notes || pharmacyRecord.notes || '';
+          }
+        } 
+        // Otherwise, get from intake meta (pending dispense)
+        else if (intake.meta?.pharmacyItems) {
+          pharmacyItems = intake.meta.pharmacyItems;
+          // Calculate total from items
+          pharmacyItems.forEach(item => {
+            const qty = item.quantity || 0;
+            const price = item.unitPrice || item.price || 0;
+            total += qty * price;
+          });
+        }
+
+        // Skip if no items found
+        if (pharmacyItems.length === 0) continue;
 
         prescriptions.push({
           _id: intake._id,
@@ -846,12 +879,13 @@ router.get('/pending-prescriptions', auth, async (req, res) => {
           patientPhone: intake.patientSnapshot?.phone,
           doctorId: intake.doctorId,
           appointmentId: intake.appointmentId,
-          pharmacyItems: pharmacyRecord.items || [],
+          pharmacyItems: pharmacyItems,
           createdAt: intake.createdAt,
-          notes: intake.notes || pharmacyRecord.notes || '',
-          pharmacyId: pharmacyRecord._id,
-          paid: pharmacyRecord.paid || false,
-          total: pharmacyRecord.total || 0
+          notes: notes,
+          pharmacyId: pharmacyId || null,
+          paid: paid,
+          total: total,
+          dispensed: !!pharmacyId // Add flag to indicate if already dispensed
         });
       } catch (err) {
         console.warn('Error processing intake:', intake._id, err.message);
@@ -859,6 +893,10 @@ router.get('/pending-prescriptions', auth, async (req, res) => {
     }
 
     console.log(`📦 [PENDING PRESCRIPTIONS] returning ${prescriptions.length} prescriptions`);
+    // Debug: log dispensed status
+    prescriptions.forEach(p => {
+      console.log(`  - ${p.patientName}: dispensed=${p.dispensed}, pharmacyId=${p.pharmacyId}`);
+    });
     return res.status(200).json({ 
       success: true, 
       prescriptions, 
@@ -1001,6 +1039,17 @@ router.post('/prescriptions/:intakeId/dispense', auth, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Intake not found', errorCode: 6209 });
     }
 
+    // Check if already dispensed
+    if (intake.meta?.pharmacyId) {
+      console.log('⚠️ [DISPENSE PRESCRIPTION] Already dispensed:', intake.meta.pharmacyId);
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Prescription already dispensed', 
+        errorCode: 6211,
+        pharmacyId: intake.meta.pharmacyId 
+      });
+    }
+
     // Create pharmacy record if items provided
     const data = req.body || {};
     const items = Array.isArray(data.items) ? data.items : [];
@@ -1049,10 +1098,200 @@ router.post('/prescriptions/:intakeId/dispense', auth, async (req, res) => {
     await intake.save();
 
     console.log('✅ [DISPENSE PRESCRIPTION] Created pharmacy record:', pharmacyRecord._id);
+    console.log('✅ [DISPENSE PRESCRIPTION] Updated intake meta.pharmacyId:', intake.meta.pharmacyId);
+    console.log('✅ [DISPENSE PRESCRIPTION] Intake ID:', intake._id);
     return res.status(201).json({ success: true, record: pharmacyRecord });
   } catch (err) {
     console.error('💥 [DISPENSE PRESCRIPTION] Error:', err);
     return res.status(500).json({ success: false, message: 'Failed to dispense prescription', errorCode: 6513 });
+  }
+});
+
+// GET prescription PDF
+router.get('/prescriptions/:intakeId/pdf', auth, async (req, res) => {
+  try {
+    console.log('📄 [PRESCRIPTION PDF] intakeId:', req.params.intakeId, 'by user:', req.user?.id);
+
+    const { Intake } = require('../Models');
+    if (!Intake) {
+      return res.status(500).json({ success: false, message: 'Intake model not available', errorCode: 7001 });
+    }
+
+    const intake = await Intake.findById(req.params.intakeId).lean();
+    if (!intake) {
+      console.log('⚠️ [PRESCRIPTION PDF] Intake not found:', req.params.intakeId);
+      return res.status(404).json({ success: false, message: 'Prescription not found', errorCode: 6515 });
+    }
+
+    // Get pharmacy items from either pharmacyRecord or intake meta
+    let items = [];
+    let total = 0;
+    const pharmacyId = intake.meta?.pharmacyId;
+
+    // If dispensed, get from pharmacy record
+    if (pharmacyId) {
+      const pharmacyRecord = await PharmacyRecord.findById(String(pharmacyId)).lean();
+      if (pharmacyRecord) {
+        items = pharmacyRecord.items || [];
+        total = pharmacyRecord.total || 0;
+      }
+    }
+
+    // If not dispensed yet or pharmacy record not found, try getting from intake meta
+    if (items.length === 0 && intake.meta?.pharmacyItems) {
+      console.log('📝 [PRESCRIPTION PDF] Getting items from intake meta (not yet dispensed)');
+      items = intake.meta.pharmacyItems;
+      // Calculate total from items
+      items.forEach(item => {
+        const qty = item.quantity || 0;
+        const price = item.unitPrice || item.price || 0;
+        total += qty * price;
+      });
+    }
+
+    if (items.length === 0) {
+      console.log('⚠️ [PRESCRIPTION PDF] No pharmacy items found:', req.params.intakeId);
+      return res.status(404).json({ success: false, message: 'No medicines in prescription', errorCode: 6518 });
+    }
+
+    // Generate PDF
+    const PDFDocument = require('pdfkit');
+    const doc = new PDFDocument({ 
+      size: 'A4',
+      margins: { top: 50, bottom: 50, left: 50, right: 50 }
+    });
+
+    const patientName = `${intake.patientSnapshot?.firstName || ''} ${intake.patientSnapshot?.lastName || ''}`.trim() || 'Unknown Patient';
+    const filename = `Prescription_${patientName.replace(/\s+/g, '_')}_${Date.now()}.pdf`;
+    
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    
+    doc.pipe(res);
+
+    // Header
+    doc.fontSize(24).font('Helvetica-Bold').fillColor('#2563eb')
+       .text('PRESCRIPTION', { align: 'center' });
+    doc.moveDown(0.5);
+    
+    doc.fontSize(10).fillColor('#6b7280').font('Helvetica')
+       .text('Karur Gastro Hospital', { align: 'center' });
+    doc.moveDown(1.5);
+
+    // Divider
+    doc.moveTo(50, doc.y).lineTo(545, doc.y).stroke('#e5e7eb');
+    doc.moveDown(1);
+
+    // Patient Information
+    doc.fontSize(14).fillColor('#1f2937').font('Helvetica-Bold')
+       .text('Patient Information', 50, doc.y);
+    doc.moveDown(0.5);
+
+    const patientInfoY = doc.y;
+    doc.fontSize(10).fillColor('#374151').font('Helvetica')
+       .text(`Name: ${patientName}`, 50, patientInfoY)
+       .text(`Phone: ${intake.patientSnapshot?.phone || 'N/A'}`, 50, patientInfoY + 15)
+       .text(`Patient ID: ${intake.patientId || 'N/A'}`, 50, patientInfoY + 30);
+
+    doc.text(`Date: ${new Date(intake.createdAt).toLocaleDateString()}`, 350, patientInfoY)
+       .text(`Time: ${new Date(intake.createdAt).toLocaleTimeString()}`, 350, patientInfoY + 15);
+
+    doc.moveDown(3);
+
+    // Divider
+    doc.moveTo(50, doc.y).lineTo(545, doc.y).stroke('#e5e7eb');
+    doc.moveDown(1);
+
+    // Prescribed Medicines
+    doc.fontSize(14).fillColor('#1f2937').font('Helvetica-Bold')
+       .text('Prescribed Medicines', 50, doc.y);
+    doc.moveDown(0.5);
+
+    // Table header
+    const tableTop = doc.y;
+    doc.fontSize(10).fillColor('#ffffff').font('Helvetica-Bold');
+    doc.rect(50, tableTop, 495, 25).fill('#2563eb');
+    
+    doc.fillColor('#ffffff')
+       .text('#', 60, tableTop + 8, { width: 30 })
+       .text('Medicine', 95, tableTop + 8, { width: 180 })
+       .text('Dosage', 280, tableTop + 8, { width: 80 })
+       .text('Frequency', 365, tableTop + 8, { width: 80 })
+       .text('Qty', 450, tableTop + 8, { width: 40, align: 'center' });
+
+    let yPosition = tableTop + 30;
+
+    items.forEach((item, index) => {
+      // Check if we need a new page
+      if (yPosition > 700) {
+        doc.addPage();
+        yPosition = 50;
+      }
+
+      // Alternating row colors
+      if (index % 2 === 0) {
+        doc.rect(50, yPosition - 5, 495, 25).fill('#f9fafb');
+      }
+
+      doc.fontSize(9).fillColor('#374151').font('Helvetica')
+         .text(`${index + 1}`, 60, yPosition, { width: 30 })
+         .text(item.Medicine || item.name || 'N/A', 95, yPosition, { width: 180 })
+         .text(item.Dosage || item.dosage || 'N/A', 280, yPosition, { width: 80 })
+         .text(item.Frequency || item.frequency || 'N/A', 365, yPosition, { width: 80 })
+         .text(String(item.quantity || 0), 450, yPosition, { width: 40, align: 'center' });
+
+      yPosition += 25;
+
+      // Add notes if present
+      const notes = item.Notes || item.notes;
+      if (notes) {
+        doc.fontSize(8).fillColor('#6b7280').font('Helvetica-Oblique')
+           .text(`Note: ${notes}`, 95, yPosition - 20, { width: 395 });
+        yPosition += 5;
+      }
+    });
+
+    doc.moveDown(2);
+
+    // Clinical Notes
+    if (intake.complaints && intake.complaints.length > 0) {
+      doc.moveTo(50, doc.y).lineTo(545, doc.y).stroke('#e5e7eb');
+      doc.moveDown(1);
+
+      doc.fontSize(14).fillColor('#1f2937').font('Helvetica-Bold')
+         .text('Clinical Notes', 50, doc.y);
+      doc.moveDown(0.5);
+
+      doc.fontSize(10).fillColor('#374151').font('Helvetica')
+         .text(intake.complaints.join(', '), 50, doc.y, { width: 495, align: 'justify' });
+      doc.moveDown(1);
+    }
+
+    // Footer
+    doc.moveDown(2);
+    doc.moveTo(50, doc.y).lineTo(545, doc.y).stroke('#e5e7eb');
+    doc.moveDown(1);
+
+    doc.fontSize(8).fillColor('#6b7280').font('Helvetica')
+       .text('This is a computer-generated prescription. Please follow the dosage and frequency as prescribed.', 
+             { align: 'center' })
+       .moveDown(0.3)
+       .text('For any queries, please contact the hospital.', { align: 'center' });
+
+    // Total
+    if (total > 0) {
+      doc.moveDown(1);
+      doc.fontSize(12).fillColor('#1f2937').font('Helvetica-Bold')
+         .text(`Total Amount: ₹${total.toFixed(2)}`, { align: 'right' });
+    }
+
+    doc.end();
+    console.log('✅ [PRESCRIPTION PDF] Generated successfully for intake:', req.params.intakeId);
+  } catch (err) {
+    console.error('❌ [PRESCRIPTION PDF] Error:', err);
+    if (!res.headersSent) {
+      return res.status(500).json({ success: false, message: 'Failed to generate prescription PDF', errorCode: 6518 });
+    }
   }
 });
 

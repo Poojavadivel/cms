@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../Utils/Colors.dart';
 import '../../Services/Authservices.dart';
 import '../../Services/api_constants.dart';
+import '../../Services/ReportService.dart';
 
 enum PrescriptionFilter { all, today, week, month }
 enum PrescriptionSort { newest, oldest, patientName }
@@ -75,6 +76,11 @@ class _PharmacistPrescriptionsPageState extends State<PharmacistPrescriptionsPag
       
       if (response != null && response is Map) {
         final prescriptions = response['prescriptions'] as List? ?? [];
+        print('📦 [DEBUG] Loaded ${prescriptions.length} prescriptions');
+        // Debug: Print dispensed status
+        for (var p in prescriptions) {
+          print('  - ${p['patientName']}: dispensed=${p['dispensed']}, pharmacyId=${p['pharmacyId']}');
+        }
         setState(() {
           _allPrescriptions = prescriptions.cast<Map<String, dynamic>>();
           _calculateStatistics();
@@ -608,6 +614,7 @@ class _PharmacistPrescriptionsPageState extends State<PharmacistPrescriptionsPag
       itemBuilder: (context, index) {
         final prescription = _filteredPrescriptions[index];
         return _EnhancedPrescriptionCard(
+          key: ValueKey('${prescription['_id']}_${prescription['dispensed']}_$index'),
           prescription: prescription,
           onDispensed: _loadPrescriptions,
           viewMode: _viewMode,
@@ -629,6 +636,7 @@ class _PharmacistPrescriptionsPageState extends State<PharmacistPrescriptionsPag
       itemBuilder: (context, index) {
         final prescription = _filteredPrescriptions[index];
         return _EnhancedPrescriptionCard(
+          key: ValueKey('${prescription['_id']}_${prescription['dispensed']}_$index'),
           prescription: prescription,
           onDispensed: _loadPrescriptions,
           viewMode: _viewMode,
@@ -841,6 +849,7 @@ class _EnhancedPrescriptionCard extends StatefulWidget {
   final ViewMode viewMode;
 
   const _EnhancedPrescriptionCard({
+    super.key,
     required this.prescription,
     required this.onDispensed,
     required this.viewMode,
@@ -1033,21 +1042,52 @@ class _EnhancedPrescriptionCardState extends State<_EnhancedPrescriptionCard> wi
                               ),
                             ),
                           const SizedBox(height: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: paid ? AppColors.kSuccess : AppColors.kWarning,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              paid ? 'PAID' : 'PENDING',
-                              style: GoogleFonts.inter(
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.white,
-                                letterSpacing: 0.5,
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (widget.prescription['dispensed'] == true)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.kSuccess,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.check_circle, size: 12, color: AppColors.white),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'DISPENSED',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.bold,
+                                          color: AppColors.white,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              if (widget.prescription['dispensed'] == true)
+                                const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: paid ? AppColors.kSuccess : AppColors.kWarning,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  paid ? 'PAID' : 'PENDING',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.white,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
                               ),
-                            ),
+                            ],
                           ),
                         ],
                       ),
@@ -1237,26 +1277,43 @@ class _EnhancedPrescriptionCardState extends State<_EnhancedPrescriptionCard> wi
                 const SizedBox(width: 12),
                 Expanded(
                   flex: 2,
-                  child: ElevatedButton.icon(
-                    onPressed: _isProcessing ? null : () => _showDispenseDialog(context),
-                    icon: _isProcessing
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                          )
-                        : const Icon(Icons.check_circle_rounded),
-                    label: Text(_isProcessing ? 'Processing...' : 'Dispense Now'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: AppColors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                  ),
+                  child: widget.prescription['dispensed'] == true
+                      ? ElevatedButton.icon(
+                          onPressed: null,
+                          icon: const Icon(Icons.check_circle_rounded),
+                          label: const Text('Already Dispensed'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.kSuccess,
+                            foregroundColor: AppColors.white,
+                            disabledBackgroundColor: AppColors.kSuccess.withOpacity(0.7),
+                            disabledForegroundColor: AppColors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                        )
+                      : ElevatedButton.icon(
+                          onPressed: _isProcessing ? null : () => _showDispenseDialog(context),
+                          icon: _isProcessing
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                )
+                              : const Icon(Icons.check_circle_rounded),
+                          label: Text(_isProcessing ? 'Processing...' : 'Dispense Now'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: AppColors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                        ),
                 ),
               ],
             ),
@@ -1376,18 +1433,32 @@ class _EnhancedPrescriptionCardState extends State<_EnhancedPrescriptionCard> wi
               const SizedBox(height: 12),
               SizedBox(
                 width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () => _showDispenseDialog(context),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: AppColors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: const Text('Dispense'),
-                ),
+                child: widget.prescription['dispensed'] == true
+                    ? ElevatedButton(
+                        onPressed: null,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.kSuccess,
+                          disabledBackgroundColor: AppColors.kSuccess.withOpacity(0.7),
+                          disabledForegroundColor: AppColors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: const Text('Dispensed'),
+                      )
+                    : ElevatedButton(
+                        onPressed: () => _showDispenseDialog(context),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: AppColors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: const Text('Dispense'),
+                      ),
               ),
             ],
           ),
@@ -1555,7 +1626,16 @@ class _EnhancedPrescriptionCardState extends State<_EnhancedPrescriptionCard> wi
         );
       }
 
+      // Wait a moment for backend to process, then reload
+      await Future.delayed(const Duration(milliseconds: 500));
+      
+      // Reload the list and close any open dialogs
       widget.onDispensed();
+      
+      // Close the card/dialog after successful dispense
+      if (context.mounted) {
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      }
     } catch (e) {
       setState(() => _isProcessing = false);
       
@@ -1773,23 +1853,108 @@ class _EnhancedMedicineRow extends StatelessWidget {
 }
 
 // Prescription Details Dialog
-class _PrescriptionDetailsDialog extends StatelessWidget {
+class _PrescriptionDetailsDialog extends StatefulWidget {
   final Map<String, dynamic> prescription;
 
   const _PrescriptionDetailsDialog({required this.prescription});
 
   @override
+  State<_PrescriptionDetailsDialog> createState() => _PrescriptionDetailsDialogState();
+}
+
+class _PrescriptionDetailsDialogState extends State<_PrescriptionDetailsDialog> {
+  bool _isDownloading = false;
+  final ReportService _reportService = ReportService();
+
+  Future<void> _downloadPrescription() async {
+    setState(() => _isDownloading = true);
+    
+    try {
+      final prescriptionId = widget.prescription['_id'];
+      final patientName = widget.prescription['patientName'] ?? 'Unknown';
+      
+      if (prescriptionId == null) {
+        throw Exception('Prescription ID not found');
+      }
+
+      final result = await _reportService.downloadPrescription(
+        prescriptionId,
+        patientName,
+      );
+
+      if (mounted) {
+        if (result['success'] == true) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  Icon(Icons.check_circle_rounded, color: AppColors.white),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(result['message'] ?? 'Prescription downloaded successfully'),
+                  ),
+                ],
+              ),
+              backgroundColor: AppColors.kSuccess,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  Icon(Icons.error_rounded, color: AppColors.white),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(result['message'] ?? 'Failed to download prescription'),
+                  ),
+                ],
+              ),
+              backgroundColor: AppColors.kDanger,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.error_rounded, color: AppColors.white),
+                const SizedBox(width: 12),
+                Expanded(child: Text('Error: $e')),
+              ],
+            ),
+            backgroundColor: AppColors.kDanger,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isDownloading = false);
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final patientName = prescription['patientName'] ?? 'Unknown Patient';
-    final patientPhone = prescription['patientPhone'] ?? '';
-    final patientId = prescription['patientId'] ?? '';
-    final createdAt = prescription['createdAt'] != null
-        ? DateTime.tryParse(prescription['createdAt'])
+    final patientName = widget.prescription['patientName'] ?? 'Unknown Patient';
+    final patientPhone = widget.prescription['patientPhone'] ?? '';
+    final patientId = widget.prescription['patientId'] ?? '';
+    final createdAt = widget.prescription['createdAt'] != null
+        ? DateTime.tryParse(widget.prescription['createdAt'])
         : null;
-    final notes = prescription['notes'] ?? '';
-    final pharmacyItems = prescription['pharmacyItems'] as List? ?? [];
-    final total = prescription['total'] ?? 0;
-    final paid = prescription['paid'] ?? false;
+    final notes = widget.prescription['notes'] ?? '';
+    final pharmacyItems = widget.prescription['pharmacyItems'] as List? ?? [];
+    final total = widget.prescription['total'] ?? 0;
+    final paid = widget.prescription['paid'] ?? false;
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -1979,15 +2144,15 @@ class _PrescriptionDetailsDialog extends StatelessWidget {
                 children: [
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: () {
-                        // Print functionality
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Print feature - Coming soon')),
-                        );
-                      },
-                      icon: const Icon(Icons.print_rounded),
-                      label: const Text('Print'),
+                      onPressed: _isDownloading ? null : _downloadPrescription,
+                      icon: _isDownloading
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.download_rounded),
+                      label: Text(_isDownloading ? 'Downloading...' : 'Download'),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
