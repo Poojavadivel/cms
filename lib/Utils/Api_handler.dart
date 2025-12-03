@@ -1,10 +1,12 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
+import 'package:dio/dio.dart' as dio;
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart'; // for MediaType (multipart)
 import 'package:path/path.dart' as p;          // optional helper for filenames
 import '../Services/api_constants.dart';
+import 'dio_client.dart';
 
 /// A custom exception class to handle API-specific errors.
 class ApiException implements Exception {
@@ -15,98 +17,92 @@ class ApiException implements Exception {
   String toString() => message;
 }
 
-/// ApiHandler: A singleton class to manage all network requests.
+/// ApiHandler: A singleton class to manage all network requests using Dio for speed.
+/// Maintains backward compatibility with existing http-based code.
 class ApiHandler {
   // --- Singleton Setup ---
   ApiHandler._privateConstructor();
   static final ApiHandler _instance = ApiHandler._privateConstructor();
   static ApiHandler get instance => _instance;
+  
+  // Use Dio for faster requests
+  final DioClient _dioClient = DioClient.instance;
 
-  // --- Core Methods ---
+  // --- Core Methods (Now powered by Dio for speed) ---
 
   /// Performs a GET request (JSON).
   Future<dynamic> get(String endpoint, {String? token}) async {
     try {
-      final response = await http.get(
-        Uri.parse('${ApiConstants.baseUrl}$endpoint'),
-        headers: _getHeaders(token),
+      final response = await _dioClient.get(
+        endpoint,
+        options: token != null ? dio.Options(headers: {'x-auth-token': token}) : null,
       );
-      return _handleResponse(response);
-    } on SocketException {
-      throw ApiException('No Internet connection');
+      return _handleDioResponse(response);
     } catch (e) {
-      throw ApiException('An unexpected error occurred: $e');
+      throw _convertToDioException(e);
     }
   }
 
   /// Performs a POST request (JSON).
   Future<dynamic> post(String endpoint, {Map<String, dynamic>? body, String? token}) async {
     try {
-      final response = await http.post(
-        Uri.parse('${ApiConstants.baseUrl}$endpoint'),
-        headers: _getHeaders(token),
-        body: body != null ? json.encode(body) : null,
+      final response = await _dioClient.post(
+        endpoint,
+        data: body,
+        options: token != null ? dio.Options(headers: {'x-auth-token': token}) : null,
       );
-      return _handleResponse(response);
-    } on SocketException {
-      throw ApiException('No Internet connection');
+      return _handleDioResponse(response);
     } catch (e) {
-      throw ApiException('An unexpected error occurred: $e');
+      throw _convertToDioException(e);
     }
   }
 
   /// Performs a PUT request (JSON).
   Future<dynamic> put(String endpoint, {Map<String, dynamic>? body, String? token}) async {
     try {
-      final response = await http.put(
-        Uri.parse('${ApiConstants.baseUrl}$endpoint'),
-        headers: _getHeaders(token),
-        body: body != null ? json.encode(body) : null,
+      final response = await _dioClient.put(
+        endpoint,
+        data: body,
+        options: token != null ? dio.Options(headers: {'x-auth-token': token}) : null,
       );
-      return _handleResponse(response);
-    } on SocketException {
-      throw ApiException('No Internet connection');
+      return _handleDioResponse(response);
     } catch (e) {
-      throw ApiException('An unexpected error occurred: $e');
+      throw _convertToDioException(e);
     }
   }
 
   /// Performs a DELETE request (JSON).
   Future<dynamic> delete(String endpoint, {String? token}) async {
     try {
-      final response = await http.delete(
-        Uri.parse('${ApiConstants.baseUrl}$endpoint'),
-        headers: _getHeaders(token),
+      final response = await _dioClient.delete(
+        endpoint,
+        options: token != null ? dio.Options(headers: {'x-auth-token': token}) : null,
       );
-      return _handleResponse(response);
-    } on SocketException {
-      throw ApiException('No Internet connection');
+      return _handleDioResponse(response);
     } catch (e) {
-      throw ApiException('An unexpected error occurred: $e');
+      throw _convertToDioException(e);
     }
   }
 
   /// Performs a PATCH request (JSON).
   Future<dynamic> patch(String endpoint, {Map<String, dynamic>? body, String? token}) async {
     try {
-      final response = await http.patch(
-        Uri.parse('${ApiConstants.baseUrl}$endpoint'),
-        headers: _getHeaders(token),
-        body: body != null ? json.encode(body) : null,
+      final response = await _dioClient.patch(
+        endpoint,
+        data: body,
+        options: token != null ? dio.Options(headers: {'x-auth-token': token}) : null,
       );
-      return _handleResponse(response);
-    } on SocketException {
-      throw ApiException('No Internet connection');
+      return _handleDioResponse(response);
     } catch (e) {
-      throw ApiException('An unexpected error occurred: $e');
+      throw _convertToDioException(e);
     }
   }
 
-  // ============ NEW ============
+  // ============ FILE UPLOAD (Using Dio for speed) ============
 
   /// Multipart POST (for /scanner/upload).
   /// - `filesField` should be "files" (backend expects upload.array('files', 10))
-  /// - `files` is a list of http.MultipartFile
+  /// - `files` is a list of http.MultipartFile (converted internally to Dio)
   /// - Optional `fields` for extra form fields
   Future<dynamic> postMultipart(
       String endpoint, {
@@ -116,38 +112,27 @@ class ApiHandler {
         String? token,
       }) async {
     try {
-      final uri = Uri.parse('${ApiConstants.baseUrl}$endpoint');
-      final request = http.MultipartRequest('POST', uri);
-
-      // IMPORTANT: don't set Content-Type here; MultipartRequest sets boundary.
-      if (token != null && token.isNotEmpty) {
-        request.headers['x-auth-token'] = token;
-      }
-
-      // Add text fields (if any)
-      if (fields != null && fields.isNotEmpty) {
-        request.fields.addAll(fields);
-      }
-
-      // Add files
-      // (The field name is the same for each file — that's correct for arrays)
-      for (final f in files) {
-        request.files.add(http.MultipartFile(
-          filesField,            // "files"
-          f.finalize(),          // stream
-          f.length,
+      // Convert http.MultipartFile to Dio MultipartFile
+      final dioFiles = await Future.wait(files.map((f) async {
+        final bytes = await f.finalize().toBytes();
+        return dio.MultipartFile.fromBytes(
+          bytes,
           filename: f.filename,
-          contentType: f.contentType,
-        ));
-      }
+          contentType: f.contentType != null 
+            ? dio.DioMediaType(f.contentType!.mimeType, f.contentType!.subtype)
+            : null,
+        );
+      }));
 
-      final streamed = await request.send();
-      final response = await http.Response.fromStream(streamed);
-      return _handleResponse(response);
-    } on SocketException {
-      throw ApiException('No Internet connection');
+      final response = await _dioClient.uploadFiles(
+        endpoint,
+        files: dioFiles,
+        fieldName: filesField,
+        data: fields,
+      );
+      return _handleDioResponse(response);
     } catch (e) {
-      throw ApiException('An unexpected error occurred: $e');
+      throw _convertToDioException(e);
     }
   }
 
@@ -155,32 +140,26 @@ class ApiHandler {
   /// Returns Uint8List; caller decides how to display/save.
   Future<Uint8List> getBytes(String endpoint, {String? token}) async {
     try {
-      final response = await http.get(
-        Uri.parse('${ApiConstants.baseUrl}$endpoint'),
-        headers: _getBinaryHeaders(token),
+      final response = await _dioClient.get(
+        endpoint,
+        options: dio.Options(
+          responseType: dio.ResponseType.bytes,
+          headers: token != null ? {'x-auth-token': token} : null,
+        ),
       );
 
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        return response.bodyBytes;
+      if (response.statusCode! >= 200 && response.statusCode! < 300) {
+        if (response.data is Uint8List) {
+          return response.data as Uint8List;
+        } else if (response.data is List<int>) {
+          return Uint8List.fromList(response.data as List<int>);
+        }
+        throw ApiException('Unexpected response type for binary data');
       }
 
-      // Try parse error JSON if possible
-      try {
-        final body = response.body.isNotEmpty ? json.decode(response.body) : null;
-        final errorCode = (body is Map) ? body['errorCode'] as int? : null;
-        if (errorCode != null) {
-          throw ApiException(ApiErrors.getMessage(errorCode));
-        } else {
-          throw ApiException((body is Map ? body['message'] : null) ??
-              'Unexpected status code: ${response.statusCode}');
-        }
-      } catch (_) {
-        throw ApiException('Unexpected status code: ${response.statusCode}');
-      }
-    } on SocketException {
-      throw ApiException('No Internet connection');
+      throw ApiException('Failed to fetch binary data: ${response.statusCode}');
     } catch (e) {
-      throw ApiException('An unexpected error occurred: $e');
+      throw _convertToDioException(e);
     }
   }
 
@@ -266,5 +245,56 @@ class ApiHandler {
     if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
     if (lower.endsWith('.png')) return 'image/png';
     return null;
+  }
+
+  // --- Dio Response Handling ---
+  
+  dynamic _handleDioResponse(dio.Response response) {
+    final statusCode = response.statusCode ?? 0;
+
+    if (statusCode >= 200 && statusCode < 300) {
+      return response.data ?? {};
+    }
+
+    // Handle error responses
+    final responseBody = response.data;
+    if (responseBody is Map) {
+      final errorCode = responseBody['errorCode'] as int?;
+      if (errorCode != null) {
+        throw ApiException(ApiErrors.getMessage(errorCode));
+      }
+      final errorMsg = responseBody['error'] ?? responseBody['message'] ?? responseBody['msg'];
+      if (errorMsg != null) {
+        throw ApiException(errorMsg.toString());
+      }
+    }
+
+    throw ApiException('Request failed with status: $statusCode');
+  }
+
+  ApiException _convertToDioException(dynamic error) {
+    if (error is ApiException) return error;
+    
+    if (error is dio.DioException) {
+      switch (error.type) {
+        case dio.DioExceptionType.connectionTimeout:
+        case dio.DioExceptionType.sendTimeout:
+        case dio.DioExceptionType.receiveTimeout:
+          return ApiException('Connection timeout. Please check your internet.');
+        case dio.DioExceptionType.connectionError:
+          return ApiException('No Internet connection');
+        case dio.DioExceptionType.badResponse:
+          final data = error.response?.data;
+          if (data is Map) {
+            final msg = data['error'] ?? data['message'] ?? data['msg'];
+            if (msg != null) return ApiException(msg.toString());
+          }
+          return ApiException('Request failed: ${error.response?.statusCode}');
+        default:
+          return ApiException('An unexpected error occurred: ${error.message}');
+      }
+    }
+    
+    return ApiException('An unexpected error occurred: $error');
   }
 }

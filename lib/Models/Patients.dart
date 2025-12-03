@@ -306,11 +306,33 @@ class PatientDetails {
       })(),
       doctor: parsedDoctor,
       doctorName: parsedDoctorName,
-      medicalHistory:
-      (metadata['medicalHistory'] as List?)?.map((e) => e.toString()).toList() ?? 
-      (map['medicalHistory'] as List?)?.map((e) => e.toString()).toList() ?? [],
-      allergies:
-      (map['allergies'] as List?)?.map((e) => e.toString()).toList() ?? [],
+      medicalHistory: (() {
+        // Handle medicalHistory - can be List (old format) or Map (new format)
+        try {
+          if (metadata['medicalHistory'] is List) {
+            return (metadata['medicalHistory'] as List).map((e) => e.toString()).toList();
+          } else if (metadata['medicalHistory'] is Map) {
+            // New format - extract current conditions as simple list
+            final mh = metadata['medicalHistory'] as Map;
+            final conditions = mh['currentConditions'];
+            if (conditions is List) {
+              return conditions.map((e) => e.toString()).toList();
+            }
+            return <String>[];
+          } else if (map['medicalHistory'] is List) {
+            return (map['medicalHistory'] as List).map((e) => e.toString()).toList();
+          }
+        } catch (_) {}
+        return <String>[];
+      })(),
+      allergies: (() {
+        try {
+          if (map['allergies'] is List) {
+            return (map['allergies'] as List).map((e) => e.toString()).toList();
+          }
+        } catch (_) {}
+        return <String>[];
+      })(),
       notes: map['notes']?.toString() ?? '',
       isSelected: map['isSelected'] == true,
       patientCode: extractedPatientCode,
