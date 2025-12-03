@@ -6,7 +6,7 @@ const Patient = require('../Models/Patient');
 const User = require('../Models/User');
 const Staff = require('../Models/Staff');
 const Appointment = require('../Models/Appointment');
-const auth = require('../middleware/auth');
+const auth = require('../Middleware/Auth');
 const properPdfGen = require('../utils/properPdfGenerator');
 
 // Patient Medical Report
