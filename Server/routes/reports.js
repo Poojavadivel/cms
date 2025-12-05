@@ -9,6 +9,7 @@ const pdfGenerator = require('../utils/pdfGenerator');
 // -------------------------
 // PATIENT REPORT
 // -------------------------
+
 router.get('/patient/:patientId', auth, async (req, res) => {
   try {
     const { patientId } = req.params;
