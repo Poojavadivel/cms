@@ -240,11 +240,144 @@ pm2 start Server.js --name karur-hms
 ## 📄 License
 Proprietary - All rights reserved by Karur Gastro Foundation
 
-## 🤝 Contributing
-This is a private repository. Contact the administrator for access.
+## 🤝 Contributing & Branch Workflow
+
+This project follows industry-standard Git workflow practices with feature branches for each module.
+
+### Development Branches
+
+We maintain separate feature branches for modular development:
+
+- `feature/admin-module` - Admin dashboard and management features
+- `feature/doctor-module` - Doctor-specific functionality
+- `feature/pathologist-module` - Pathology lab features
+- `feature/pharmacist-module` - Pharmacy management
+- `feature/common-module` - Shared components and utilities
+
+### How to Clone and Work with Feature Branches
+
+#### 1. Clone the Repository
+```bash
+# Clone from test environment
+git clone https://github.com/movicloudlabs-ai-testenv/HMS-DEV.git
+cd HMS-DEV
+```
+
+#### 2. Checkout a Feature Branch
+```bash
+# List all branches
+git branch -a
+
+# Checkout specific feature branch
+git checkout feature/admin-module
+# OR
+git checkout feature/doctor-module
+# OR
+git checkout feature/pathologist-module
+# OR
+git checkout feature/pharmacist-module
+# OR
+git checkout feature/common-module
+```
+
+#### 3. Create Your Working Branch
+```bash
+# Create a new branch from feature branch
+git checkout -b feature/admin-module-your-feature-name
+
+# Example:
+git checkout -b feature/admin-module-add-analytics
+git checkout -b feature/doctor-module-prescription-fix
+```
+
+#### 4. Make Changes and Commit
+```bash
+# Stage your changes
+git add .
+
+# Commit with descriptive message
+git commit -m "feat(admin): add real-time analytics dashboard"
+
+# Commit message format:
+# feat(module): description - New feature
+# fix(module): description - Bug fix
+# docs(module): description - Documentation
+# refactor(module): description - Code refactoring
+# test(module): description - Adding tests
+```
+
+#### 5. Push Your Changes
+```bash
+# Push to test environment
+git push origin feature/admin-module-your-feature-name
+```
+
+#### 6. Create Pull Request
+1. Go to: https://github.com/movicloudlabs-ai-testenv/HMS-DEV
+2. Click "Pull Requests" → "New Pull Request"
+3. Base: `feature/[module-name]` ← Compare: `feature/[module-name]-your-feature`
+4. Fill in PR template with description and testing notes
+5. Request review from team lead
+
+#### 7. Merge to Main Branch (After Approval)
+
+**Option A: Via Pull Request (Recommended)**
+```bash
+# After feature branch is complete and tested
+# Create PR from feature branch to main
+# Base: main ← Compare: feature/admin-module
+```
+
+**Option B: Manual Merge (Team Lead Only)**
+```bash
+# Switch to main
+git checkout main
+
+# Pull latest changes
+git pull origin main
+
+# Merge feature branch
+git merge feature/admin-module --no-ff
+
+# Push to main
+git push origin main
+
+# Push to production remote
+git push test main
+```
+
+### Best Practices
+
+1. **Never commit directly to main** - Always use feature branches
+2. **Keep branches updated** - Regularly sync with main
+   ```bash
+   git checkout feature/admin-module
+   git pull origin main
+   ```
+3. **Write meaningful commits** - Use conventional commit format
+4. **Test before pushing** - Run tests and build locally
+5. **Small, focused PRs** - Keep changes manageable and reviewable
+6. **Code review required** - All PRs need approval before merge
+7. **Delete merged branches** - Clean up after successful merge
+   ```bash
+   git branch -d feature/admin-module-your-feature
+   git push origin --delete feature/admin-module-your-feature
+   ```
+
+### Branch Protection Rules
+
+- **main branch**: Protected, requires PR and review
+- **feature branches**: Open for team development
+- **CI/CD**: Automated tests run on all PRs
+
+### Getting Help
+
+- Check branch-specific CONTRIBUTING.md in each feature branch
+- Contact module lead for branch-specific questions
+- Review closed PRs for examples
 
 ---
 
-**Last Updated:** November 17, 2025  
+**Last Updated:** December 5, 2025  
 **Version:** 2.0.0  
 **Build:** Production Ready
