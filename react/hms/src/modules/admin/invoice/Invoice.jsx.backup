@@ -1,0 +1,244 @@
+import React, { useState, useEffect } from 'react';
+import { authService } from '../../../services/authService';
+import GenericDataTable from '../../../components/GenericDataTable';
+import InvoiceForm from './components/InvoiceForm';
+import InvoiceView from './components/InvoiceView';
+import './Invoice.css';
+
+const Invoice = () => {
+  const [invoices, setInvoices] = useState([]);
+  const [filteredInvoices, setFilteredInvoices] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(0);
+  const [statusFilter, setStatusFilter] = useState('All');
+  const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [showForm, setShowForm] = useState(false);
+  const [showView, setShowView] = useState(false);
+
+  const itemsPerPage = 25;
+
+  useEffect(() => {
+    fetchInvoices();
+  }, []);
+
+  useEffect(() => {
+    filterInvoices();
+  }, [invoices, searchQuery, statusFilter]);
+
+  const fetchInvoices = async () => {
+    setIsLoading(true);
+    try {
+      const response = await authService.get('/invoices');
+      const invoicesData = response.data || response;
+      const invoicesList = Array.isArray(invoicesData) ? invoicesData : [];
+      
+      const mappedInvoices = invoicesList.map(inv => ({
+        id: inv._id || inv.id,
+        invoiceNumber: inv.invoiceNumber || inv.invoiceCode || '',
+        patientName: inv.patientName || inv.patient?.name || '',
+        patientId: inv.patientId || inv.patient?._id || '',
+        date: inv.date || inv.createdAt || '',
+        amount: parseFloat(inv.totalAmount || inv.amount || 0),
+        paidAmount: parseFloat(inv.paidAmount || 0),
+        status: inv.status || 'Pending',
+        paymentMethod: inv.paymentMethod || '',
+        rawData: inv
+      }));
+
+      setInvoices(mappedInvoices);
+    } catch (error) {
+      console.error('Failed to fetch invoices:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const filterInvoices = () => {
+    const q = searchQuery.toLowerCase().trim();
+    let filtered = invoices;
+
+    if (q) {
+      filtered = filtered.filter(inv =>
+        inv.invoiceNumber.toLowerCase().includes(q) ||
+        inv.patientName.toLowerCase().includes(q) ||
+        inv.patientId.toLowerCase().includes(q)
+      );
+    }
+
+    if (statusFilter !== 'All') {
+      filtered = filtered.filter(inv => inv.status === statusFilter);
+    }
+
+    setFilteredInvoices(filtered);
+    setCurrentPage(0);
+  };
+
+  const handleSearchChange = (value) => {
+    setSearchQuery(value);
+  };
+
+  const handleAddInvoice = () => {
+    setSelectedInvoice(null);
+    setShowForm(true);
+  };
+
+  const handleEditInvoice = (invoice) => {
+    setSelectedInvoice(invoice.rawData);
+    setShowForm(true);
+  };
+
+  const handleViewInvoice = (invoice) => {
+    setSelectedInvoice(invoice.rawData);
+    setShowView(true);
+  };
+
+  const handleDeleteInvoice = async (invoice) => {
+    if (!window.confirm(`Are you sure you want to delete invoice ${invoice.invoiceNumber}?`)) return;
+    
+    try {
+      await authService.delete(`/invoices/${invoice.id}`);
+      await fetchInvoices();
+      alert('Invoice deleted successfully');
+    } catch (error) {
+      console.error('Failed to delete invoice:', error);
+      alert('Failed to delete invoice');
+    }
+  };
+
+  const handleFormClose = (shouldRefresh) => {
+    setShowForm(false);
+    setSelectedInvoice(null);
+    if (shouldRefresh) {
+      fetchInvoices();
+    }
+  };
+
+  const handleViewClose = () => {
+    setShowView(false);
+    setSelectedInvoice(null);
+  };
+
+  const handlePrintInvoice = (invoice) => {
+    // Open invoice in new window for printing
+    window.open(`/print/invoice/${invoice.id}`, '_blank');
+  };
+
+  const columns = [
+    { key: 'invoiceNumber', label: 'Invoice #', sortable: true },
+    { key: 'patientName', label: 'Patient', sortable: true },
+    { key: 'date', label: 'Date', sortable: true },
+    { key: 'amount', label: 'Amount', sortable: true, format: (val) => `₹${val.toFixed(2)}` },
+    { key: 'paidAmount', label: 'Paid', sortable: true, format: (val) => `₹${val.toFixed(2)}` },
+    { key: 'status', label: 'Status', sortable: true },
+    { key: 'paymentMethod', label: 'Payment Method', sortable: true },
+  ];
+
+  const uniqueStatuses = ['All', 'Pending', 'Partially Paid', 'Paid', 'Overdue'];
+
+  const calculateSummary = () => {
+    const totalAmount = filteredInvoices.reduce((sum, inv) => sum + inv.amount, 0);
+    const totalPaid = filteredInvoices.reduce((sum, inv) => sum + inv.paidAmount, 0);
+    const totalPending = totalAmount - totalPaid;
+
+    return { totalAmount, totalPaid, totalPending };
+  };
+
+  const summary = calculateSummary();
+
+  return (
+    <div className="invoice-page">
+      <div className="page-header">
+        <div className="header-content">
+          <div className="header-text">
+            <h1 className="page-title">
+              <span className="icon">🧾</span>
+              Invoice Management
+            </h1>
+            <p className="page-subtitle">Manage patient invoices and billing</p>
+          </div>
+          <button className="btn-primary" onClick={handleAddInvoice}>
+            <span className="icon">➕</span>
+            Create Invoice
+          </button>
+        </div>
+      </div>
+
+      <div className="summary-cards">
+        <div className="summary-card">
+          <div className="summary-label">Total Amount</div>
+          <div className="summary-value">₹{summary.totalAmount.toFixed(2)}</div>
+        </div>
+        <div className="summary-card success">
+          <div className="summary-label">Total Paid</div>
+          <div className="summary-value">₹{summary.totalPaid.toFixed(2)}</div>
+        </div>
+        <div className="summary-card warning">
+          <div className="summary-label">Total Pending</div>
+          <div className="summary-value">₹{summary.totalPending.toFixed(2)}</div>
+        </div>
+      </div>
+
+      <div className="filter-section">
+        <div className="search-box">
+          <input
+            type="text"
+            placeholder="Search invoices..."
+            value={searchQuery}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            className="search-input"
+          />
+        </div>
+        <div className="filter-group">
+          <label>Status:</label>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="filter-select"
+          >
+            {uniqueStatuses.map(status => (
+              <option key={status} value={status}>{status}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <GenericDataTable
+        columns={columns}
+        data={filteredInvoices}
+        isLoading={isLoading}
+        currentPage={currentPage}
+        itemsPerPage={itemsPerPage}
+        onPageChange={setCurrentPage}
+        onView={handleViewInvoice}
+        onEdit={handleEditInvoice}
+        onDelete={handleDeleteInvoice}
+        customActions={(invoice) => (
+          <button
+            className="action-btn print-btn"
+            onClick={() => handlePrintInvoice(invoice)}
+            title="Print Invoice"
+          >
+            🖨️
+          </button>
+        )}
+      />
+
+      {showForm && (
+        <InvoiceForm
+          invoice={selectedInvoice}
+          onClose={handleFormClose}
+        />
+      )}
+
+      {showView && selectedInvoice && (
+        <InvoiceView
+          invoice={selectedInvoice}
+          onClose={handleViewClose}
+        />
+      )}
+    </div>
+  );
+};
+
+export default Invoice;

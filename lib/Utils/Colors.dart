@@ -91,6 +91,55 @@ class AppColors {
     end: Alignment.bottomRight,
   );
 
+  // ---------------------------------------------------------------------------
+  // 🎨 GLASSMORPHISM DESIGN SYSTEM
+  // ---------------------------------------------------------------------------
+  
+  // Background gradients (mesh style)
+  static const Gradient glassBgGradient = LinearGradient(
+    colors: [
+      Color(0xFFE3F2FD), // light blue 50
+      Color(0xFFF3E5F5), // light purple 50
+      Color(0xFFE1F5FE), // light cyan 50
+    ],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    stops: [0.0, 0.5, 1.0],
+  );
+
+  // Alternative warm gradient
+  static const Gradient glassBgWarm = LinearGradient(
+    colors: [
+      Color(0xFFFFF3E0), // orange 50
+      Color(0xFFFCE4EC), // pink 50
+      Color(0xFFF3E5F5), // purple 50
+    ],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  // Cool professional gradient
+  static const Gradient glassBgCool = LinearGradient(
+    colors: [
+      Color(0xFFE8EAF6), // indigo 50
+      Color(0xFFE1F5FE), // cyan 50
+      Color(0xFFE0F2F1), // teal 50
+    ],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  // Glass card colors (semi-transparent with white tint)
+  static const Color glassCard = Color(0xCCFFFFFF); // 80% white
+  static const Color glassCardLight = Color(0xE6FFFFFF); // 90% white
+  static const Color glassCardDark = Color(0xB3FFFFFF); // 70% white
+  
+  // Glass border
+  static const Color glassBorder = Color(0x33FFFFFF); // 20% white
+  
+  // Glass shadow colors
+  static const Color glassShadow = Color(0x1A000000); // subtle shadow
+
   // Small list of greys to pick from for deterministic painters / captcha
   static const List<Color> captchaGreyVariants = [
     grey300,

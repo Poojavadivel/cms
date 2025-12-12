@@ -1,4 +1,6 @@
 // lib/screens/patients/patients_screen.dart
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -550,28 +552,33 @@ class _PatientsScreenState extends State<PatientsScreen> {
     }).toList();
 
     return Scaffold(
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
-          child: GenericDataTable(
-            title: "Patients",
-            headers: headers,
-            rows: rows,
-            searchQuery: _searchQuery,
-            onSearchChanged: _onSearchChanged,
-            currentPage: _currentPage,
-            totalItems: filtered.length,
-            itemsPerPage: 10,
-            onPreviousPage: _prevPage,
-            onNextPage: _nextPage,
-            isLoading: _isLoading || _isDownloading,
-            onAddPressed: _onAddPressed,
-            filters: [_buildDoctorFilter()],
-            hideHorizontalScrollbar: true,
-            onDownload: (i) => _onDownloadReport(i, paginatedPatients),
-            onView: (i) => _onView(i, paginatedPatients),
-            onEdit: (i) => _onEdit(i, paginatedPatients),
-            onDelete: (i) => _onDelete(i, paginatedPatients),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: AppColors.glassBgCool,
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
+            child: GenericDataTable(
+              title: "Patients",
+              headers: headers,
+              rows: rows,
+              searchQuery: _searchQuery,
+              onSearchChanged: _onSearchChanged,
+              currentPage: _currentPage,
+              totalItems: filtered.length,
+              itemsPerPage: 10,
+              onPreviousPage: _prevPage,
+              onNextPage: _nextPage,
+              isLoading: _isLoading || _isDownloading,
+              onAddPressed: _onAddPressed,
+              filters: [_buildDoctorFilter()],
+              hideHorizontalScrollbar: true,
+              onDownload: (i) => _onDownloadReport(i, paginatedPatients),
+              onView: (i) => _onView(i, paginatedPatients),
+              onEdit: (i) => _onEdit(i, paginatedPatients),
+              onDelete: (i) => _onDelete(i, paginatedPatients),
+            ),
           ),
         ),
       ),

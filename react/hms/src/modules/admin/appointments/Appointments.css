@@ -1,0 +1,551 @@
+/* --- ENTERPRISE DESIGN SYSTEM (Compact) --- */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/* Loading spinner animation */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+:root {
+  /* 1. BRAND COLORS */
+  --primary: #2663FF;
+  --primary-hover: #1e54e4;
+  --secondary: #28C76F;
+  --accent-yellow: #F4B400;
+  --accent-red: #FF5A5F;
+  --neutral-gray: #9CA3AF;
+
+  /* 2. SURFACES */
+  --bg-page: #F7F9FC;
+  --bg-card: #FFFFFF;
+  --bg-input: #F1F3F7;
+  --bg-hover-row: #EEF3FF;
+
+  /* 3. TYPOGRAPHY COLORS */
+  --text-title: #1E293B;
+  --text-body: #334155;
+  --text-muted: #64748B;
+
+  /* 4. SHADOWS (Tighter) */
+  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.04);
+  --shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-active: 0 0 0 2px rgba(38, 99, 255, 0.2);
+
+  /* 5. SPACING (Compact 4px/8px Grid) */
+  --space-05: 4px;
+  --space-1: 8px;
+  --space-2: 12px;
+  /* Was 16 */
+  --space-3: 16px;
+  /* Was 24 */
+  --space-4: 24px;
+  /* Was 32 */
+
+  /* 6. RADIUS */
+  --radius-btn: 8px;
+  --radius-card: 12px;
+  --radius-search: 12px;
+  --radius-pill: 20px;
+}
+
+body {
+  background-color: var(--bg-page);
+  color: var(--text-body);
+  font-family: 'Inter', -apple-system, sans-serif;
+  margin: 0;
+  overflow: hidden;
+  /* CRITICAL: Prevent body scroll */
+}
+
+.dashboard-container {
+  max-width: 100%;
+  padding: 16px 24px;
+  /* Reduced padding */
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  overflow: hidden;
+  /* CRITICAL: Container handles frame */
+}
+
+/* --- HEADER --- */
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  /* Center align for compactness */
+  margin-bottom: var(--space-3);
+  flex-shrink: 0;
+  /* Don't shrink header */
+}
+
+.main-title {
+  font-size: 22px;
+  /* Smaller title */
+  font-weight: 700;
+  color: var(--text-title);
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.main-subtitle {
+  font-size: 13px;
+  color: var(--neutral-gray);
+  margin: 2px 0 0 0;
+}
+
+.btn-new-appointment {
+  height: 36px;
+  /* Compact Button */
+  padding: 0 16px;
+  background-color: var(--primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius-btn);
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(38, 99, 255, 0.2);
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-new-appointment:hover {
+  transform: translateY(-1px);
+  background-color: var(--primary-hover);
+}
+
+/* --- SEARCH & FILTER (Compact) --- */
+.filter-bar-container {
+  background: var(--bg-card);
+  border-radius: var(--radius-search);
+  padding: 12px 20px;
+  /* Increased padding */
+  box-shadow: var(--shadow-card);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  /* Added gap between search and filters */
+  margin-bottom: var(--space-3);
+  flex-shrink: 0;
+  min-height: 60px;
+  /* Increased height */
+}
+
+.search-wrapper {
+  position: relative;
+  flex: 1;
+  max-width: 600px;
+  /* Extended from 380px to 600px */
+}
+
+.search-icon-lg {
+  position: absolute;
+  left: 16px;
+  /* Moved slightly right */
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--neutral-gray);
+  width: 18px;
+  /* Slightly larger icon */
+  height: 18px;
+}
+
+.search-input-lg {
+  width: 100%;
+  padding: 12px 16px 12px 44px;
+  /* Increased padding for better feel */
+  background: var(--bg-input);
+  border: 1px solid #E2E8F0;
+  /* Added border */
+  border-radius: 10px;
+  /* Slightly more rounded */
+  font-size: 14px;
+  /* Larger text */
+  color: var(--text-title);
+  transition: all 0.2s ease;
+}
+
+.search-input-lg::placeholder {
+  color: #94A3B8;
+  /* Softer placeholder color */
+}
+
+.search-input-lg:focus {
+  outline: none;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(38, 99, 255, 0.1);
+  /* Stronger focus ring */
+  border-color: var(--primary);
+  transform: translateY(-1px);
+  /* Subtle lift effect */
+}
+
+.filter-right-group {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  /* Increased gap */
+  flex-shrink: 0;
+}
+
+.tabs-wrapper {
+  display: flex;
+  gap: 6px;
+  /* Increased gap between tabs */
+  background: #F8FAFC;
+  /* Light background for tab container */
+  padding: 4px;
+  border-radius: 10px;
+  /* Rounded container */
+}
+
+.tab-btn {
+  padding: 8px 16px;
+  /* Larger clickable area */
+  border-radius: 8px;
+  /* More rounded */
+  border: none;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-body);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  /* Prevent text wrapping */
+}
+
+.tab-btn:hover {
+  background: rgba(38, 99, 255, 0.08);
+  /* Stronger hover effect */
+  color: var(--primary);
+}
+
+.tab-btn.active {
+  background: var(--primary);
+  color: white;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(38, 99, 255, 0.25);
+  /* Stronger shadow */
+  transform: translateY(-1px);
+  /* Subtle lift */
+}
+
+.btn-filter-date {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  /* Increased gap */
+  padding: 8px 16px;
+  /* Larger padding */
+  background: white;
+  border: 1.5px solid #E2E8F0;
+  /* Thicker border */
+  border-radius: 10px;
+  /* More rounded */
+  font-size: 13px;
+  /* Slightly larger text */
+  font-weight: 600;
+  color: var(--text-body);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-filter-date:hover {
+  background: #F8FAFC;
+  border-color: var(--primary);
+  color: var(--primary);
+  transform: translateY(-1px);
+  /* Subtle lift effect */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+/* --- MAIN TABLE (Compact) --- */
+.table-card {
+  background: var(--bg-card);
+  border-radius: var(--radius-card);
+  padding: 0;
+  /* Remove padding for edge-to-edge feel inside card */
+  box-shadow: var(--shadow-card);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  /* Contain scroll */
+  min-height: 0;
+  /* Flexbox scroll fix */
+}
+
+.modern-table-wrapper {
+  flex: 1;
+  overflow: auto;
+  padding: 0;
+}
+
+.modern-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.modern-table thead th {
+  text-align: left;
+  padding: 12px 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #64748B;
+  border-bottom: 1px solid #E2E8F0;
+  background: #F8FAFC;
+  /* Slight contrast header */
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.modern-table tbody tr {
+  height: 56px;
+  /* COMPACT ROW HEIGHT (Was 72) */
+  border-bottom: 1px solid #F1F5F9;
+  transition: background 0.1s;
+}
+
+.modern-table tbody tr:hover {
+  background-color: #F8FAFC;
+}
+
+.modern-table tbody td {
+  padding: 0 20px;
+  vertical-align: middle;
+  font-size: 13px;
+  /* Smaller text */
+  color: var(--text-title);
+}
+
+/* Columns */
+.cell-patient {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Patient Avatar Image - matches Flutter */
+.patient-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  /* Circular avatar */
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.gender-icon-box {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #E2E8F0;
+  color: var(--text-muted);
+}
+
+.gender-icon-box svg {
+  width: 14px;
+  height: 14px;
+}
+
+.info-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.info-group .primary {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-title);
+  line-height: 1.4;
+}
+
+.info-group .secondary {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--neutral-gray);
+}
+
+.cell-doctor {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Increased gap */
+
+.doc-avatar-sm {
+  width: 32px;
+  height: 32px;
+  /* Standardize size */
+  border-radius: 50%;
+  border: 1px solid #E2E8F0;
+  background: white;
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  /* Subtle pop */
+}
+
+.doc-avatar-sm svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Status Chips */
+.status-pill {
+  height: 22px;
+  /* Compact Pill */
+  border-radius: 12px;
+  padding: 0 10px;
+  font-size: 11px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.status-pill.confirmed {
+  background: rgba(40, 199, 111, 0.12);
+  color: #28C76F;
+}
+
+.status-pill.pending {
+  background: rgba(244, 180, 0, 0.12);
+  color: #F4B400;
+}
+
+.status-pill.cancelled {
+  background: #F3F4F6;
+  color: #6B7280;
+}
+
+/* New status colors */
+.status-pill.scheduled {
+  background: rgba(59, 130, 246, 0.12);
+  /* Blue */
+  color: #3B82F6;
+}
+
+.status-pill.rescheduled {
+  background: rgba(168, 85, 247, 0.12);
+  /* Purple */
+  color: #A855F7;
+}
+
+.status-pill.completed {
+  background: rgba(34, 197, 94, 0.12);
+  /* Green */
+  color: #22C55E;
+}
+
+.status-pill.no-show {
+  background: rgba(239, 68, 68, 0.12);
+  /* Red */
+  color: #EF4444;
+}
+
+/* Actions */
+.action-buttons-group {
+  display: flex;
+  gap: 6px;
+}
+
+.btn-action {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  transition: all 0.2s;
+}
+
+.btn-action:hover {
+  background: #F1F5F9;
+  color: var(--primary);
+}
+
+.btn-action.intake:hover {
+  background: rgba(14, 165, 233, 0.1);
+  color: #0EA5E9;
+}
+
+.btn-action.edit:hover {
+  background: rgba(5, 150, 105, 0.1);
+  color: #059669;
+}
+
+.btn-action.view:hover {
+  background: rgba(107, 114, 128, 0.1);
+  color: #6B7280;
+}
+
+.btn-action.delete:hover {
+  background: rgba(220, 38, 38, 0.1);
+  color: #DC2626;
+}
+
+/* Pagination */
+.pagination-footer {
+  padding: 10px 20px;
+  border-top: 1px solid #E2E8F0;
+  display: flex;
+  justify-content: flex-start;
+  /* Move to left corner */
+  gap: 12px;
+  align-items: center;
+  background: white;
+  flex-shrink: 0;
+}
+
+.page-arrow-circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  /* Square-ish for compact */
+  border: 1px solid #E2E8F0;
+  background: white;
+  color: var(--text-body);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.page-arrow-circle:hover:not(:disabled) {
+  background: #F8FAFC;
+  border-color: #CBD5E1;
+}
+
+.page-indicator-box {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+/* Patient name clickable */
+.patient-name-clickable:hover {
+  color: var(--primary);
+  text-decoration: underline;
+  transition: all 0.2s ease;
+}

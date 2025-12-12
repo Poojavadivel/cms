@@ -1,0 +1,183 @@
+import React, { useState, useEffect } from 'react';
+import { useApp } from '../../../provider';
+import {
+  BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
+} from 'recharts';
+import './Dashboard.css';
+
+const AdminDashboard = () => {
+  const { user } = useApp();
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [revenueTab, setRevenueTab] = useState(0);
+  const [selectedDay, setSelectedDay] = useState(new Date());
+  const [selectedAppointmentFilter, setSelectedAppointmentFilter] = useState('All');
+  const [selectedReportFilter, setSelectedReportFilter] = useState('All');
+  const [focusedMonth, setFocusedMonth] = useState(new Date());
+
+  useEffect(() => {
+    loadDashboardData();
+  }, []);
+
+  const loadDashboardData = async () => {
+    setLoading(true);
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    setData({
+      invoice: 1287,
+      patients: 965,
+      appointments: 128,
+      beds: 315,
+    });
+    setLoading(false);
+  };
+
+  const patientOverviewData = [
+    { day: '4 Jul', Child: 95, Adult: 80, Elderly: 50 },
+    { day: '5 Jul', Child: 101, Adult: 85, Elderly: 54 },
+    { day: '6 Jul', Child: 107, Adult: 90, Elderly: 58 },
+    { day: '7 Jul', Child: 113, Adult: 95, Elderly: 62 },
+    { day: '8 Jul', Child: 119, Adult: 100, Elderly: 66 },
+    { day: '9 Jul', Child: 125, Adult: 105, Elderly: 70 },
+    { day: '10 Jul', Child: 131, Adult: 110, Elderly: 74 },
+    { day: '11 Jul', Child: 137, Adult: 115, Elderly: 78 },
+  ];
+
+  const revenueData = [
+    { day: 'Sun', current: 800, previous: 600 },
+    { day: 'Mon', current: 1200, previous: 700 },
+    { day: 'Tue', current: 1000, previous: 900 },
+    { day: 'Wed', current: 1495, previous: 1000 },
+    { day: 'Thu', current: 1100, previous: 950 },
+    { day: 'Fri', current: 1200, previous: 970 },
+    { day: 'Sat', current: 1150, previous: 930 },
+  ];
+
+  const upcomingAppointments = [
+    { name: "Arthur Morgan", doctor: "Dr. John", time: "10:00 AM - 10:30 AM", status: "Confirmed" },
+    { name: "Regina Mills", doctor: "Dr. Joel", time: "10:30 AM - 11:00 AM", status: "Confirmed" },
+    { name: "David Warner", doctor: "Dr. John", time: "11:00 AM - 11:30 AM", status: "Pending" },
+    { name: "Joseph King", doctor: "Dr. John", time: "11:30 AM - 12:00 PM", status: "Confirmed" },
+    { name: "Lokesh", doctor: "Dr. John", time: "12:00 PM - 12:30 PM", status: "Cancelled" },
+    { name: "Kanagaraj", doctor: "Dr. John", time: "12:30 PM - 01:00 PM", status: "Confirmed" },
+    { name: "Priya", doctor: "Dr. Olivia", time: "01:00 PM - 01:30 PM", status: "Confirmed" },
+    { name: "Suresh K", doctor: "Dr. Petra", time: "01:30 PM - 02:00 PM", status: "Pending" },
+    { name: "Anita", doctor: "Dr. Ameena", time: "02:00 PM - 02:30 PM", status: "Confirmed" },
+    { name: "Ravi", doctor: "Dr. Damian", time: "02:30 PM - 03:00 PM", status: "Confirmed" },
+  ];
+
+  const reports = [
+    { icon: "🧹", title: "Room Cleaning Needed", time: "1 min ago", tag: "Cleaning" },
+    { icon: "🔧", title: "Equipment Maintenance", time: "3 min ago", tag: "Equipment" },
+    { icon: "💊", title: "Medication Restock", time: "5 min ago", tag: "Medication" },
+    { icon: "❄️", title: "HVAC System Issue", time: "1 hour ago", tag: "HVAC" },
+    { icon: "🚚", title: "Patient Transport Required", time: "Yesterday", tag: "Transport" },
+    { icon: "🧹", title: "Ward Sanitization Overdue", time: "2 hours ago", tag: "Cleaning" },
+    { icon: "🔧", title: "X-Ray Calibration", time: "3 hours ago", tag: "Equipment" },
+    { icon: "💊", title: "Vaccine Stock Low", time: "4 hours ago", tag: "Medication" },
+    { icon: "❄️", title: "Ventilation Check", time: "5 hours ago", tag: "HVAC" },
+    { icon: "🚚", title: "Wheelchair Request", time: "Yesterday", tag: "Transport" },
+  ];
+
+  const events = {
+    [new Date().toDateString()]: [
+      { title: "Morning Staff Meeting", time: "08:00 - 09:00", color: "#14b8a6" },
+      { title: "Patient Consultation - General Medicine", time: "10:00 - 12:00", color: "#3b82f6" },
+      { title: "Surgery - Orthopedics", time: "13:00 - 15:00", color: "#ef4444" },
+      { title: "Training Session", time: "16:00 - 17:00", color: "#a855f7" },
+    ],
+  };
+
+  const getEventsForDay = (day) => {
+    return events[day.toDateString()] || [];
+  };
+
+  const filteredAppointments = selectedAppointmentFilter === 'All'
+    ? upcomingAppointments
+    : upcomingAppointments.filter(a => a.status === selectedAppointmentFilter);
+
+  const filteredReports = selectedReportFilter === 'All'
+    ? reports
+    : reports.filter(r => r.tag === selectedReportFilter);
+
+  if (loading) {
+    return (
+      <div className="dashboard-loading">
+        <div className="spinner"></div>
+        <p>Loading dashboard...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="admin-dashboard">
+      {/* Header */}
+      <div className="dashboard-header">
+        <h1 className="dashboard-title">Dashboard</h1>
+        <div className="avatar">
+          <img src="https://placehold.co/100x100/EFEFEF/A9A9A9?text=Admin" alt="Admin" />
+        </div>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="stats-grid">
+        <div className="stat-card">
+          <div className="stat-icon" style={{ backgroundColor: 'rgba(59, 130, 246, 0.15)', borderColor: 'rgba(59, 130, 246, 0.3)' }}>
+            <span style={{ color: '#3b82f6' }}>📄</span>
+          </div>
+          <div className="stat-content">
+            <p className="stat-label">Total Invoice</p>
+            <h3 className="stat-value">{data.invoice}</h3>
+            <p className="stat-subtitle">56 more than yesterday</p>
+          </div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-icon" style={{ backgroundColor: 'rgba(34, 197, 94, 0.15)', borderColor: 'rgba(34, 197, 94, 0.3)' }}>
+            <span style={{ color: '#22c55e' }}>👥</span>
+          </div>
+          <div className="stat-content">
+            <p className="stat-label">Total Patients</p>
+            <h3 className="stat-value">{data.patients}</h3>
+            <p className="stat-subtitle">45 more than yesterday</p>
+          </div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-icon" style={{ backgroundColor: 'rgba(239, 68, 68, 0.15)', borderColor: 'rgba(239, 68, 68, 0.3)' }}>
+            <span style={{ color: '#ef4444' }}>📅</span>
+          </div>
+          <div className="stat-content">
+            <p className="stat-label">Appointments</p>
+            <h3 className="stat-value">{data.appointments}</h3>
+            <p className="stat-subtitle">18 less than yesterday</p>
+          </div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-icon" style={{ backgroundColor: 'rgba(59, 130, 246, 0.15)', borderColor: 'rgba(59, 130, 246, 0.3)' }}>
+            <span style={{ color: '#3b82f6' }}>🛏️</span>
+          </div>
+          <div className="stat-content">
+            <p className="stat-label">Bedroom</p>
+            <h3 className="stat-value">{data.beds}</h3>
+            <p className="stat-subtitle">56 more than yesterday</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="dashboard-content">
+        <div className="charts-section">
+          <ChartWidget />
+        </div>
+        <div className="activity-section">
+          <RecentActivity activities={activity} />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default AdminDashboard;

@@ -182,7 +182,7 @@ router.get('/', auth, async (req, res) => {
     console.log("🔎 Appointment query:", query);
 
     const appointments = await Appointment.find(query)
-      .populate('patientId', 'firstName lastName phone email bloodGroup metadata dateOfBirth')
+      .populate('patientId', 'firstName lastName phone email bloodGroup metadata dateOfBirth gender')
       .populate('doctorId', 'firstName lastName email')
       .sort({ startAt: -1 }) // Sort by date, newest first
       .lean();
@@ -208,7 +208,7 @@ router.get('/:id', auth, async (req, res) => {
     const role = req.user.role;
 
     let appointment = await Appointment.findById(req.params.id)
-      .populate('patientId', 'firstName lastName phone email')
+      .populate('patientId', 'firstName lastName phone email gender bloodGroup metadata dateOfBirth')
       .populate('doctorId', 'firstName lastName email')
       .lean();
 

@@ -1,0 +1,392 @@
+/**
+ * Pharmacy Management Component
+ * Manages medicine inventory, batches, and analytics
+ * Features: Medicine Inventory, Batch Management, Analytics
+ */
+
+import React, { useState, useEffect, useCallback } from 'react';
+import { MdChevronLeft, MdChevronRight, MdSearch, MdRefresh, MdAdd, MdEdit, MdDelete } from 'react-icons/md';
+import pharmacyService from '../../../services/pharmacyService';
+import { authService } from '../../../services';
+import './Pharmacy.css';
+
+// Custom SVG Icons
+const Icons = {
+  Pill: () => (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M10.5 20.5 10 21a2 2 0 0 1-2.828 0L3.343 17.172a2 2 0 0 1 0-2.829l.5-.5"></path>
+      <path d="M14.5 3.5 15 3a2 2 0 0 1 2.828 0l3.829 3.828a2 2 0 0 1 0 2.829l-.5.5"></path>
+      <path d="m15 9-6 6"></path>
+    </svg>
+  ),
+  Eye: () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+      <circle cx="12" cy="12" r="3"></circle>
+    </svg>
+  ),
+  Edit: () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+    </svg>
+  ),
+  Delete: () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="3 6 5 6 21 6"></polyline>
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+    </svg>
+  ),
+  Download: () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+      <polyline points="7 10 12 15 17 10"></polyline>
+      <line x1="12" y1="15" x2="12" y2="3"></line>
+    </svg>
+  ),
+  Plus: () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="12" y1="5" x2="12" y2="19"></line>
+      <line x1="5" y1="12" x2="19" y2="12"></line>
+    </svg>
+  )
+};
+
+const Pharmacy = () => {
+  const [medicines, setMedicines] = useState([]);
+  const [filteredMedicines, setFilteredMedicines] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(0);
+  const [categoryFilter, setCategoryFilter] = useState('All');
+  const [stockFilter, setStockFilter] = useState('All');
+  const [expiryFilter, setExpiryFilter] = useState('All');
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  
+  const itemsPerPage = 10;
+
+  const fetchMedicines = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const data = await pharmacyService.fetchMedicines();
+      setMedicines(data);
+      setFilteredMedicines(data);
+    } catch (error) {
+      console.error('Failed to fetch medicines:', error);
+      setMedicines([]);
+      setFilteredMedicines([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchMedicines();
+  }, [fetchMedicines]);
+
+  useEffect(() => {
+    let result = medicines;
+
+    if (categoryFilter !== 'All') {
+      result = result.filter(med => med.category === categoryFilter);
+    }
+
+    if (stockFilter !== 'All') {
+      result = result.filter(med => med.stockStatus === stockFilter);
+    }
+
+    if (expiryFilter !== 'All') {
+      const today = new Date();
+      result = result.filter(med => {
+        const expiryDate = new Date(med.expiryDate);
+        const daysUntilExpiry = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
+        
+        switch (expiryFilter) {
+          case 'Expired': return daysUntilExpiry < 0;
+          case 'Expiring Soon': return daysUntilExpiry >= 0 && daysUntilExpiry <= 30;
+          case 'Valid': return daysUntilExpiry > 30;
+          default: return true;
+        }
+      });
+    }
+
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(med =>
+        med.name?.toLowerCase().includes(query) ||
+        med.category?.toLowerCase().includes(query) ||
+        med.manufacturer?.toLowerCase().includes(query) ||
+        med.batchNumber?.toLowerCase().includes(query)
+      );
+    }
+
+    setFilteredMedicines(result);
+    setCurrentPage(0);
+  }, [medicines, categoryFilter, stockFilter, expiryFilter, searchQuery]);
+
+  const uniqueCategories = ['All', ...new Set(
+    medicines
+      .map(med => med.category)
+      .filter(cat => cat && cat.trim())
+  )];
+
+  const totalPages = Math.ceil(filteredMedicines.length / itemsPerPage);
+  const startIndex = currentPage * itemsPerPage;
+  const endIndex = Math.min(startIndex + itemsPerPage, filteredMedicines.length);
+  const paginatedMedicines = filteredMedicines.slice(startIndex, endIndex);
+
+  const clearAllFilters = () => {
+    setSearchQuery('');
+    setCategoryFilter('All');
+    setStockFilter('All');
+    setExpiryFilter('All');
+    setShowAdvancedFilters(false);
+  };
+
+  const hasActiveFilters = searchQuery || categoryFilter !== 'All' || stockFilter !== 'All' || expiryFilter !== 'All';
+
+  const handleSearchChange = (e) => {
+    setSearchQuery(e.target.value);
+  };
+
+  const handlePreviousPage = () => {
+    if (currentPage > 0) {
+      setCurrentPage(prev => prev - 1);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages - 1) {
+      setCurrentPage(prev => prev + 1);
+    }
+  };
+
+  const handleAdd = () => {
+    console.log('Add new medicine');
+  };
+
+  const handleView = (medicine) => {
+    console.log('View medicine:', medicine);
+  };
+
+  const handleEdit = (medicine) => {
+    console.log('Edit medicine:', medicine);
+  };
+
+  const handleDelete = async (medicine) => {
+    if (window.confirm(`Are you sure you want to delete ${medicine.name}?`)) {
+      try {
+        await pharmacyService.deleteMedicine(medicine.id);
+        await fetchMedicines();
+        alert('Medicine deleted successfully');
+      } catch (error) {
+        console.error('Failed to delete medicine:', error);
+        alert('Failed to delete medicine');
+      }
+    }
+  };
+
+  const handleAddStock = (medicine) => {
+    console.log('Add stock for:', medicine);
+    alert(`Add stock feature for ${medicine.name} - Coming soon!`);
+  };
+
+  const handleDownload = async (medicine) => {
+    try {
+      setIsDownloading(true);
+      await pharmacyService.downloadMedicineReport(medicine.id);
+      alert(`Downloading report for ${medicine.name}`);
+    } catch (error) {
+      console.error('Failed to download report:', error);
+      alert('Failed to download report');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return '';
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-GB');
+    } catch (error) {
+      return dateString;
+    }
+  };
+
+  const getStockStatusClass = (status) => {
+    switch(status?.toLowerCase()) {
+      case 'in stock': return 'status-in-stock';
+      case 'low stock': return 'status-low-stock';
+      case 'out of stock': return 'status-out-stock';
+      default: return 'status-in-stock';
+    }
+  };
+
+  const getExpiryStatus = (expiryDate) => {
+    if (!expiryDate) return null;
+    const today = new Date();
+    const expiry = new Date(expiryDate);
+    const daysUntilExpiry = Math.ceil((expiry - today) / (1000 * 60 * 60 * 24));
+    
+    if (daysUntilExpiry < 0) return 'expired';
+    if (daysUntilExpiry <= 30) return 'expiring-soon';
+    return 'valid';
+  };
+
+  return (
+    <div className="dashboard-container">
+      <div className="dashboard-header">
+        <div className="header-content">
+          <h1 className="main-title">Pharmacy Inventory</h1>
+          <p className="main-subtitle">Manage medicine stock, expiry dates, and inventory.</p>
+        </div>
+        <button className="btn-new-appointment" onClick={handleAdd}>
+          <span>+</span> Add New Medicine
+        </button>
+      </div>
+
+      <div className="filter-bar-container">
+        <div className="search-wrapper">
+          <span className="search-icon-lg"><MdSearch size={18} /></span>
+          <input
+            type="text"
+            placeholder="Search by medicine name, category, manufacturer, or batch..."
+            className="search-input-lg"
+            value={searchQuery}
+            onChange={handleSearchChange}
+          />
+        </div>
+
+        <div className="filter-right-group">
+          <div className="tabs-wrapper">
+            <button className={`tab-btn ${stockFilter === 'All' ? 'active' : ''}`} onClick={() => setStockFilter('All')}>All</button>
+            <button className={`tab-btn ${stockFilter === 'In Stock' ? 'active' : ''}`} onClick={() => setStockFilter('In Stock')}>In Stock</button>
+            <button className={`tab-btn ${stockFilter === 'Low Stock' ? 'active' : ''}`} onClick={() => setStockFilter('Low Stock')}>Low Stock</button>
+            <button className={`tab-btn ${stockFilter === 'Out of Stock' ? 'active' : ''}`} onClick={() => setStockFilter('Out of Stock')}>Out of Stock</button>
+          </div>
+          <button className="btn-filter-date" onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}>
+            More Filters <span style={{ fontSize: '11px', marginLeft: '2px' }}>▼</span>
+          </button>
+        </div>
+      </div>
+
+      {showAdvancedFilters && (
+        <div className="filter-bar-container" style={{ marginTop: '12px' }}>
+          <div className="filter-right-group" style={{ flex: 1, justifyContent: 'flex-start', gap: '16px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '200px' }}>
+              <label style={{ fontSize: '12px', fontWeight: 600, color: '#64748B' }}>Category</label>
+              <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} style={{ padding: '8px 12px', border: '1.5px solid #E2E8F0', borderRadius: '8px', fontSize: '13px' }}>
+                {uniqueCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+              </select>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '200px' }}>
+              <label style={{ fontSize: '12px', fontWeight: 600, color: '#64748B' }}>Expiry Status</label>
+              <select value={expiryFilter} onChange={(e) => setExpiryFilter(e.target.value)} style={{ padding: '8px 12px', border: '1.5px solid #E2E8F0', borderRadius: '8px', fontSize: '13px' }}>
+                <option value="All">All</option>
+                <option value="Valid">Valid</option>
+                <option value="Expiring Soon">Expiring Soon (30 days)</option>
+                <option value="Expired">Expired</option>
+              </select>
+            </div>
+            {hasActiveFilters && (
+              <button onClick={clearAllFilters} style={{ alignSelf: 'flex-end', padding: '8px 16px', background: '#FEF2F2', border: '1.5px solid #FECACA', borderRadius: '8px', fontSize: '13px', fontWeight: 600, color: '#EF4444', cursor: 'pointer' }}>
+                Clear Filters
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      <div className="table-card">
+        <div className="modern-table-wrapper">
+          <table className="modern-table">
+            <thead>
+              <tr>
+                <th style={{ width: '25%' }}>Medicine</th>
+                <th style={{ width: '12%' }}>Category</th>
+                <th style={{ width: '10%' }}>Stock</th>
+                <th style={{ width: '12%' }}>Batch No.</th>
+                <th style={{ width: '12%' }}>Expiry Date</th>
+                <th style={{ width: '10%' }}>Price</th>
+                <th style={{ width: '12%' }}>Status</th>
+                <th style={{ width: '17%' }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {paginatedMedicines.map((medicine, index) => {
+                const expiryStatus = getExpiryStatus(medicine.expiryDate);
+                return (
+                  <tr key={medicine.id || index}>
+                    <td className="cell-patient">
+                      <div className="doc-avatar-sm" style={{ background: 'rgba(99, 102, 241, 0.12)' }}>
+                        <Icons.Pill />
+                      </div>
+                      <div className="info-group">
+                        <span className="primary">{medicine.name}</span>
+                        <span className="secondary">{medicine.manufacturer}</span>
+                      </div>
+                    </td>
+                    <td><div className="info-group"><span className="primary">{medicine.category}</span></div></td>
+                    <td><div className="info-group"><span className="primary" style={{ fontWeight: 600 }}>{medicine.quantity} {medicine.unit || 'units'}</span></div></td>
+                    <td><div className="info-group"><span className="secondary">{medicine.batchNumber}</span></div></td>
+                    <td>
+                      <div className="info-group">
+                        <span className={`primary ${expiryStatus === 'expired' ? 'text-red' : expiryStatus === 'expiring-soon' ? 'text-yellow' : ''}`}>
+                          {formatDate(medicine.expiryDate)}
+                        </span>
+                        {expiryStatus === 'expired' && <span className="secondary text-red">Expired</span>}
+                        {expiryStatus === 'expiring-soon' && <span className="secondary text-yellow">Expiring Soon</span>}
+                      </div>
+                    </td>
+                    <td><div className="info-group"><span className="primary">₹{medicine.price}</span></div></td>
+                    <td><span className={`status-pill ${getStockStatusClass(medicine.stockStatus)}`}>{medicine.stockStatus}</span></td>
+                    <td>
+                      <div className="action-buttons-group">
+                        <button className="btn-action view" title="View" onClick={() => handleView(medicine)}><Icons.Eye /></button>
+                        <button className="btn-action edit" title="Edit" onClick={() => handleEdit(medicine)}><Icons.Edit /></button>
+                        <button className="btn-action add-stock" title="Add Stock" onClick={() => handleAddStock(medicine)}><Icons.Plus /></button>
+                        <button className="btn-action delete" title="Delete" onClick={() => handleDelete(medicine)}><Icons.Delete /></button>
+                        <button className="btn-action download" title="Download" onClick={() => handleDownload(medicine)} disabled={isDownloading}><Icons.Download /></button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+              {isLoading && (
+                <tr>
+                  <td colSpan="8" style={{ textAlign: 'center', padding: '48px', color: '#9CA3AF' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                      <div style={{ width: '32px', height: '32px', border: '3px solid #e5e7eb', borderTopColor: '#3b82f6', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }}></div>
+                      <span>Loading medicines...</span>
+                    </div>
+                  </td>
+                </tr>
+              )}
+              {!isLoading && paginatedMedicines.length === 0 && (
+                <tr>
+                  <td colSpan="8" style={{ textAlign: 'center', padding: '48px', color: '#9CA3AF' }}>
+                    No medicines found matching your criteria.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="pagination-footer">
+          <button className="page-arrow-circle leading" disabled={currentPage === 0} onClick={handlePreviousPage}>
+            <MdChevronLeft size={20} />
+          </button>
+          <div className="page-indicator-box">Page {currentPage + 1} of {totalPages || 1}</div>
+          <button className="page-arrow-circle trailing" disabled={currentPage >= totalPages - 1 || totalPages === 0} onClick={handleNextPage}>
+            <MdChevronRight size={20} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Pharmacy;

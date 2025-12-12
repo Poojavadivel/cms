@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:iconsax/iconsax.dart';
@@ -73,31 +75,39 @@ class _GenericDataTableState extends State<GenericDataTable> {
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: AppColors.cardBackground,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.08),
-                blurRadius: 20,
-                offset: const Offset(0, 8),
-                spreadRadius: 0,
-              )
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Controls
-              _EnterpriseTableControls(
-                title: widget.title,
-                searchQuery: widget.searchQuery,
-                onSearchChanged: widget.onSearchChanged,
-                onAddPressed: widget.onAddPressed,
-                onRefresh: widget.onRefresh,
-                filters: widget.filters,
+        ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: AppColors.glassCard,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: AppColors.glassBorder,
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.glassShadow,
+                    blurRadius: 24,
+                    offset: const Offset(0, 10),
+                    spreadRadius: 0,
+                  )
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Controls
+                  _EnterpriseTableControls(
+                    title: widget.title,
+                    searchQuery: widget.searchQuery,
+                    onSearchChanged: widget.onSearchChanged,
+                    onAddPressed: widget.onAddPressed,
+                    onRefresh: widget.onRefresh,
+                    filters: widget.filters,
               ),
               const SizedBox(height: 16),
 
@@ -135,15 +145,21 @@ class _GenericDataTableState extends State<GenericDataTable> {
             ],
           ),
         ),
+          ),
+        ),
 
         // Premium Loading Overlay
         if (widget.isLoading)
           Positioned.fill(
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.98),
-                borderRadius: BorderRadius.circular(16),
-              ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.glassCardLight.withOpacity(0.95),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
               child: Column(
                 children: [
                   Expanded(
@@ -190,6 +206,8 @@ class _GenericDataTableState extends State<GenericDataTable> {
                     ),
                   ),
                 ],
+              ),
+                ),
               ),
             ),
           ),
@@ -436,28 +454,36 @@ class _EnterpriseTableControls extends StatelessWidget {
             SizedBox(
               width: 240,
               height: 48,
-              child: TextField(
-                onChanged: onSearchChanged,
-                decoration: InputDecoration(
-                  hintText: 'Search $title...',
-                  hintStyle: GoogleFonts.inter(
-                    fontSize: 14,
-                    color: const Color(0xFF9CA3AF),
-                  ),
-                  prefixIcon: const Icon(Icons.search, size: 20),
-                  isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 17),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: const BorderSide(color: AppColors.searchBorder),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: const BorderSide(color: AppColors.searchBorder),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: const BorderSide(color: AppColors.primary, width: 2),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                  child: TextField(
+                    onChanged: onSearchChanged,
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: Colors.white.withOpacity(0.12),
+                      hintText: 'Search $title...',
+                      hintStyle: GoogleFonts.inter(
+                        fontSize: 14,
+                        color: const Color(0xFF9CA3AF),
+                      ),
+                      prefixIcon: const Icon(Icons.search, size: 20),
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 17),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide(color: AppColors.glassBorder.withOpacity(0.5)),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide(color: AppColors.glassBorder.withOpacity(0.5)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(color: AppColors.primary, width: 2),
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -528,29 +554,49 @@ class _EnterpriseTableDataView extends StatelessWidget {
       allHeaders.add('Actions');
     }
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.searchBorder),
-      ),
-      child: Column(
-        children: [
-          // Header Row
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  const Color(0xFFF9FAFB),
-                  const Color(0xFFF3F4F6),
-                ],
-              ),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(14),
-                topRight: Radius.circular(14),
-              ),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppColors.glassCardLight.withOpacity(0.15),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: AppColors.glassBorder,
+              width: 1.5,
             ),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.glassShadow.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              // Header Row
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.primary.withOpacity(0.15),
+                      AppColors.primary.withOpacity(0.20),
+                    ],
+                  ),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(16),
+                    topRight: Radius.circular(16),
+                  ),
+                  border: Border(
+                    bottom: BorderSide(
+                      color: AppColors.primary.withOpacity(0.25),
+                      width: 1.5,
+                    ),
+                  ),
+                ),
             child: Row(
               children: [
                 for (int i = 0; i < allHeaders.length; i++)
@@ -574,45 +620,80 @@ class _EnterpriseTableDataView extends StatelessWidget {
 
           // Table Body
           Expanded(
-            child: rows.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Iconsax.document_text, size: 64, color: AppColors.grey300),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No data available',
-                          style: GoogleFonts.inter(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.kTextSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.all(8),
-                    itemCount: rows.length,
-                    itemBuilder: (context, index) {
-                      return MouseRegion(
-                        onEnter: (_) => onRowHover(index),
-                        onExit: (_) => onRowHover(-1),
-                        child: Container(
-                          margin: const EdgeInsets.symmetric(vertical: 4),
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                          decoration: BoxDecoration(
-                            color: hoveredRowIndex == index
-                                ? AppColors.primary.withOpacity(0.05)
-                                : (index.isEven ? Colors.white : const Color(0xFFFAFAFA)),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: hoveredRowIndex == index
-                                  ? AppColors.primary.withOpacity(0.2)
-                                  : Colors.transparent,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.transparent,
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(16),
+                  bottomRight: Radius.circular(16),
+                ),
+              ),
+              child: rows.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Iconsax.document_text, size: 64, color: AppColors.grey300),
+                          const SizedBox(height: 16),
+                          Text(
+                            'No data available',
+                            style: GoogleFonts.inter(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.kTextSecondary,
                             ),
                           ),
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(8),
+                      itemCount: rows.length,
+                      itemBuilder: (context, index) {
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: MouseRegion(
+                          onEnter: (_) => onRowHover(index),
+                          onExit: (_) => onRowHover(-1),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: BackdropFilter(
+                              filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                                decoration: BoxDecoration(
+                                gradient: hoveredRowIndex == index
+                                    ? LinearGradient(
+                                        colors: [
+                                          AppColors.primary.withOpacity(0.08),
+                                          AppColors.primary.withOpacity(0.12),
+                                        ],
+                                        begin: Alignment.centerLeft,
+                                        end: Alignment.centerRight,
+                                      )
+                                    : LinearGradient(
+                                        colors: [
+                                          Colors.white.withOpacity(0.08),
+                                          Colors.white.withOpacity(0.05),
+                                        ],
+                                      ),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: hoveredRowIndex == index
+                                      ? AppColors.primary.withOpacity(0.3)
+                                      : AppColors.glassBorder.withOpacity(0.5),
+                                  width: 1,
+                                ),
+                                boxShadow: hoveredRowIndex == index
+                                    ? [
+                                        BoxShadow(
+                                          color: AppColors.primary.withOpacity(0.1),
+                                          blurRadius: 8,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ]
+                                    : null,
+                              ),
                           child: Row(
                             children: [
                               for (int i = 0; i < rows[index].length; i++)
@@ -658,13 +739,19 @@ class _EnterpriseTableDataView extends StatelessWidget {
                                   ),
                                 ),
                             ],
-                          ),
-                        ),
-                      );
+                          ), // Row
+                        ), // Container
+                      ), // BackdropFilter
+                    ), // ClipRRect
+                  ), // MouseRegion
+                ); // Padding
                     },
                   ),
+            ),
           ),
         ],
+          ),
+        ),
       ),
     );
   }
@@ -758,23 +845,27 @@ class _EnhancedPaginationControls extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 10),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: AppColors.grey200,
-                    width: 1.5,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.primary.withOpacity(0.05),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: AppColors.glassBorder,
+                        width: 1.5,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.glassShadow,
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<int>(
                     value: itemsPerPage,
@@ -794,6 +885,8 @@ class _EnhancedPaginationControls extends StatelessWidget {
                     onChanged: (value) {
                       if (value != null) onPageSizeChanged(value);
                     },
+                  ),
+                ),
                   ),
                 ),
               ),
