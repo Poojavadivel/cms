@@ -1,4 +1,110 @@
-# Getting Started with Create React App
+# HMS - Hospital Management System (React Frontend)
+
+A modern, responsive Hospital Management System built with React, designed for seamless patient care management, appointment scheduling, staff management, and more.
+
+## 🚀 Quick Start
+
+```bash
+# Install dependencies
+npm install
+
+# Start development server
+npm start
+
+# Build for production
+npm run build
+```
+
+**Login Credentials:**
+- Email: `banu@karurgastro.com`
+- Backend: `https://hms-dev.onrender.com/api`
+
+## 📚 Documentation
+
+Comprehensive documentation is available in the [`docs/`](docs/) folder:
+
+- [📖 Documentation Index](docs/README.md) - Complete documentation guide
+- [🚀 Deployment Guide](docs/README.md#deployment-guide) - Deploy to Render.com
+- [🔧 API Configuration](docs/API_FIX_COMPLETE.md) - Backend integration
+- [🐛 Troubleshooting](docs/STAFF_DEBUG_GUIDE.md) - Debug guides
+- [📝 File Organization](docs/FILE_CLEANUP_ANALYSIS.md) - Project structure
+
+## 🏗️ Project Structure
+
+```
+hms/
+├── src/                  # Source code
+│   ├── components/       # Reusable components
+│   ├── modules/          # Feature modules
+│   ├── services/         # API services
+│   ├── models/           # Data models
+│   ├── routes/           # Routing configuration
+│   └── provider/         # Context providers
+├── public/               # Static assets
+├── docs/                 # Documentation
+├── scripts/              # Utility scripts
+├── build/                # Production build (generated)
+└── node_modules/         # Dependencies
+```
+
+## 🛠️ Utility Scripts
+
+Located in the `scripts/` folder:
+
+```bash
+# Clear React cache
+scripts\CLEAR_CACHE.bat
+
+# Start app with pre-flight checks
+scripts\START_FIXED_APP.bat
+
+# Verify API configuration
+scripts\VERIFY_API_CONFIG.bat
+
+# Test backend connectivity
+node scripts/test-backend.js
+```
+
+## 📦 Features
+
+- ✅ Patient Management
+- ✅ Appointment Scheduling
+- ✅ Staff Management with Active/Inactive Filters
+- ✅ Pharmacy & Medicine Management
+- ✅ Pathology Lab Reports
+- ✅ Invoice & Billing System
+- ✅ Doctor Dashboard
+- ✅ Real-time Updates
+- ✅ Responsive Design
+- ✅ Role-based Access Control
+
+## 🔧 Environment Variables
+
+Create a `.env` file in the root directory:
+
+```env
+REACT_APP_API_URL=https://hms-dev.onrender.com/api
+REACT_APP_NAME=HMS - Hospital Management System
+REACT_APP_VERSION=1.0.0
+```
+
+See [`.env.example`](.env.example) for all available variables.
+
+## 🚢 Deployment
+
+### Deploy to Render.com
+
+This project includes a [`render.yaml`](render.yaml) configuration for automated deployment:
+
+1. Push code to GitHub
+2. Connect repository to Render
+3. Render auto-detects configuration and deploys
+
+For manual deployment instructions, see [Deployment Guide](docs/README.md#deployment-guide).
+
+---
+
+## 🧰 Available Scripts (Create React App)
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 

@@ -146,6 +146,24 @@ const Staff = () => {
     fetchStaff();
   }, [fetchStaff]);
 
+  // Helper: Check if staff is active based on status
+  const isStaffActive = (status) => {
+    if (!status) return false;
+    const normalizedStatus = status.toLowerCase().trim();
+    // Active statuses
+    const activeStatuses = ['active', 'available', 'on duty', 'working', 'present'];
+    return activeStatuses.some(s => normalizedStatus.includes(s));
+  };
+
+  // Helper: Check if staff is inactive based on status
+  const isStaffInactive = (status) => {
+    if (!status) return true; // No status means inactive
+    const normalizedStatus = status.toLowerCase().trim();
+    // Inactive statuses
+    const inactiveStatuses = ['inactive', 'off duty', 'on leave', 'absent', 'suspended', 'terminated'];
+    return inactiveStatuses.some(s => normalizedStatus.includes(s));
+  };
+
   // Apply filters (matches Flutter's _getFilteredStaff)
   useEffect(() => {
     let result = allStaff;
@@ -155,9 +173,16 @@ const Staff = () => {
       result = result.filter(s => s.department === departmentFilter);
     }
 
-    // Apply status filter
+    // Apply status filter with intelligent matching
     if (statusFilter !== 'All') {
-      result = result.filter(s => s.status === statusFilter);
+      if (statusFilter === 'Active') {
+        result = result.filter(s => isStaffActive(s.status));
+      } else if (statusFilter === 'Inactive') {
+        result = result.filter(s => isStaffInactive(s.status));
+      } else {
+        // Exact match for custom status values
+        result = result.filter(s => s.status === statusFilter);
+      }
     }
 
     // Apply search filter (comprehensive like Flutter)
@@ -183,6 +208,22 @@ const Staff = () => {
       .map(s => s.department)
       .filter(dept => dept && dept.trim())
   )];
+
+  // Calculate counts for status filter tabs
+  const activeCount = allStaff.filter(s => isStaffActive(s.status)).length;
+  const inactiveCount = allStaff.filter(s => isStaffInactive(s.status)).length;
+  const totalCount = allStaff.length;
+
+  // Debug logging when filters change
+  useEffect(() => {
+    console.log('🔍 [STAFF FILTER DEBUG]');
+    console.log('Total Staff:', totalCount);
+    console.log('Active Count:', activeCount);
+    console.log('Inactive Count:', inactiveCount);
+    console.log('Current Filter:', statusFilter);
+    console.log('Filtered Results:', filteredStaff.length);
+    console.log('Sample Status Values:', allStaff.slice(0, 5).map(s => ({ name: s.name, status: s.status })));
+  }, [statusFilter, filteredStaff.length, totalCount, activeCount, inactiveCount, allStaff]);
 
   // Pagination
   const totalPages = Math.ceil(filteredStaff.length / itemsPerPage);
@@ -338,7 +379,7 @@ const Staff = () => {
         showNotification('Staff created successfully', 'success');
       } else {
         // Update existing staff
-        const updated = await staffService.updateStaff(formData);
+        await staffService.updateStaff(formData);
 
         // Optimistic update (Flutter pattern)
         setAllStaff(prev => {
@@ -398,16 +439,6 @@ const Staff = () => {
     setShowForm(true);
   };
 
-  // Helper: Format date
-  const formatDate = (dateString) => {
-    if (!dateString) return '';
-    try {
-      return new Date(dateString).toLocaleDateString('en-GB');
-    } catch {
-      return dateString;
-    }
-  };
-
   // Helper: Get status badge class (matches Flutter)
   const getStatusClass = (status) => {
     const statusLower = status?.toLowerCase() || '';
@@ -452,18 +483,6 @@ const Staff = () => {
     return boyIcon;
   };
 
-  // Helper: Get initials
-  const getInitials = (name) => {
-    if (!name) return '?';
-    return name.trim()
-      .split(/\s+/)
-      .filter(p => p)
-      .map(p => p[0])
-      .slice(0, 2)
-      .join('')
-      .toUpperCase();
-  };
-
   return (
     <div className="dashboard-container">
       {/* Header */}
@@ -496,19 +515,19 @@ const Staff = () => {
               className={`tab-btn ${statusFilter === 'All' ? 'active' : ''}`}
               onClick={() => setStatusFilter('All')}
             >
-              All
+              All ({totalCount})
             </button>
             <button
               className={`tab-btn ${statusFilter === 'Active' ? 'active' : ''}`}
               onClick={() => setStatusFilter('Active')}
             >
-              Active
+              Active ({activeCount})
             </button>
             <button
               className={`tab-btn ${statusFilter === 'Inactive' ? 'active' : ''}`}
               onClick={() => setStatusFilter('Inactive')}
             >
-              Inactive
+              Inactive ({inactiveCount})
             </button>
           </div>
           <button
@@ -602,9 +621,7 @@ const Staff = () => {
                     {/* DEPARTMENT */}
                     <td>
                       <div className="cell-doctor">
-                        <div className="doc-avatar-sm">
-                          <Icons.Badge />
-                        </div>
+                        {/* Icon Removed as per request */}
                         <span className="font-medium">{staff.department || '-'}</span>
                       </div>
                     </td>

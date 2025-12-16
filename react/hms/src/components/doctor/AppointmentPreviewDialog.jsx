@@ -1,1016 +1,392 @@
 /**
  * AppointmentPreviewDialog.jsx
- * React implementation of Flutter's DoctorAppointmentPreview
- * Shows patient profile with tabs: Profile, Medical History, Prescription, Lab Result, Billings
+ * Premium Enterprise Dashboard 2025
+ * Features: Fixed Header, Split Layout, Asset Integration, Real Data, Viewport Corner Floating Action
  */
 
 import React, { useState, useEffect } from 'react';
-import { 
-  MdClose, MdPlace, MdContactPhone, MdVerifiedUser, 
-  MdContentCopy, MdMap, MdPerson, MdHistory, 
-  MdMedication, MdBiotech, MdPayment 
+import {
+    MdClose, MdPerson, MdHistory, MdMedicalServices,
+    MdDescription, MdScience, MdPayment, MdHeight,
+    MdMonitorWeight, MdScale, MdMonitorHeart,
+    MdPhone, MdEmail, MdLocationOn, MdWarning, MdEditNote, MdContentCopy,
+    MdSecurity, MdWork
 } from 'react-icons/md';
-import PatientProfileHeaderCard from './PatientProfileHeaderCard';
+
+// Asset Imports
+import boyIcon from '../../assets/boyicon.png';
+import girlIcon from '../../assets/girlicon.png';
+
 import patientsService from '../../services/patientsService';
 import { fetchPrescriptions, fetchLabReports, fetchMedicalHistory } from '../../services/prescriptionService';
 import './AppointmentPreviewDialog.css';
 
 const AppointmentPreviewDialog = ({ patient, isOpen, onClose, showBillingTab = true }) => {
-  const [activeTab, setActiveTab] = useState('profile');
-  const [currentPatient, setCurrentPatient] = useState(patient);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+    const [activeTab, setActiveTab] = useState('profile');
+    const [currentPatient, setCurrentPatient] = useState(patient);
 
-  useEffect(() => {
-    if (isOpen && patient) {
-      console.log('🔍 [AppointmentPreviewDialog] Received patient data:', patient);
-      console.log('📋 [AppointmentPreviewDialog] Patient fields:', {
-        patientId: patient.patientId,
-        name: patient.name,
-        houseNo: patient.houseNo,
-        street: patient.street,
-        city: patient.city,
-        state: patient.state,
-        pincode: patient.pincode,
-        emergencyContactName: patient.emergencyContactName,
-        emergencyContactPhone: patient.emergencyContactPhone,
-        insuranceNumber: patient.insuranceNumber,
-        expiryDate: patient.expiryDate,
-      });
-      setCurrentPatient(patient);
-      refreshPatientData();
-    }
-  }, [isOpen, patient]);
+    const f = (val, suffix = '') => (val || val === 0 ? `${val}${suffix}` : '—');
 
-  const refreshPatientData = async () => {
-    if (isRefreshing || !patient?.patientId) return;
+    const getAvatarSrc = (p) => {
+        if (p?.avatar) return p.avatar;
+        const gender = p?.gender?.toLowerCase() || '';
+        if (gender.startsWith('f') || gender.includes('girl')) return girlIcon;
+        return boyIcon;
+    };
 
-    setIsRefreshing(true);
-    try {
-      console.log('🔄 [APPOINTMENT PREVIEW] Refreshing patient data for:', patient.patientId);
-      console.log('📋 [APPOINTMENT PREVIEW] Patient object:', patient);
-      
-      // Try to fetch fresh data (will work if patientId is UUID)
-      const freshData = await patientsService.fetchPatientById(patient.patientId);
-      setCurrentPatient(freshData);
-      console.log('✅ [APPOINTMENT PREVIEW] Patient data refreshed successfully');
-    } catch (error) {
-      console.warn('⚠️ [APPOINTMENT PREVIEW] Failed to refresh patient data, using provided data:', error);
-      // Just use the patient data we already have
-      setCurrentPatient(patient);
-    } finally {
-      setIsRefreshing(false);
-    }
-  };
+    useEffect(() => {
+        if (isOpen && patient) {
+            setCurrentPatient(patient);
+            refreshPatientData();
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isOpen, patient]);
 
-  const handleEdit = () => {
-    console.log('📝 [APPOINTMENT PREVIEW] Edit clicked for patient:', currentPatient?.patientId);
-    // TODO: Open edit patient dialog
-  };
+    const refreshPatientData = async () => {
+        if (!patient?.patientId) return;
+        try {
+            const freshData = await patientsService.fetchPatientById(patient.patientId);
+            setCurrentPatient(freshData);
+        } catch (error) { /* silent */ }
+    };
 
-  if (!isOpen || !currentPatient) return null;
+    if (!isOpen || !currentPatient) return null;
 
-  return (
-    <div className="appointment-preview-overlay" onClick={onClose}>
-      <div 
-        className="appointment-preview-dialog" 
-        onClick={e => e.stopPropagation()}
-      >
-        {/* Floating Close Button */}
-        <button className="appointment-preview-close" onClick={onClose}>
-          <MdClose size={20} />
-        </button>
+    const navItems = [
+        { id: 'profile', label: 'Overview', icon: <MdPerson /> },
+        { id: 'history', label: 'Medical History', icon: <MdHistory /> },
+        { id: 'prescriptions', label: 'Prescriptions', icon: <MdDescription /> },
+        { id: 'lab', label: 'Lab Results', icon: <MdScience /> },
+        ...(showBillingTab ? [{ id: 'billing', label: 'Billing', icon: <MdPayment /> }] : [])
+    ];
 
-        {/* Content */}
-        <div className="appointment-preview-content">
-          {/* Patient Header */}
-          <div className="appointment-preview-header">
-            <PatientProfileHeaderCard 
-              patient={currentPatient} 
-              onEdit={handleEdit}
-            />
-          </div>
+    return (
+        <div className="appointment-preview-overlay" onClick={onClose}>
 
-          {/* Tabs Container */}
-          <div className="appointment-preview-body">
-            {/* Tab Bar */}
-            <div className="appointment-tabs">
-              <button
-                className={`appointment-tab ${activeTab === 'profile' ? 'active' : ''}`}
-                onClick={() => setActiveTab('profile')}
-              >
-                Profile
-              </button>
-              <button
-                className={`appointment-tab ${activeTab === 'history' ? 'active' : ''}`}
-                onClick={() => setActiveTab('history')}
-              >
-                Medical History
-              </button>
-              <button
-                className={`appointment-tab ${activeTab === 'prescription' ? 'active' : ''}`}
-                onClick={() => setActiveTab('prescription')}
-              >
-                Prescription
-              </button>
-              <button
-                className={`appointment-tab ${activeTab === 'lab' ? 'active' : ''}`}
-                onClick={() => setActiveTab('lab')}
-              >
-                Lab Result
-              </button>
-              {showBillingTab && (
-                <button
-                  className={`appointment-tab ${activeTab === 'billing' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('billing')}
-                >
-                  Billings
-                </button>
-              )}
+            {/* --- FLOATING CLOSE BUTTON (OUTSIDE DIALOG) --- */}
+            <button className="btn-close-floating" onClick={onClose} title="Close Dialog">
+                <MdClose size={28} />
+            </button>
+
+            {/* --- DIALOG CONTENT --- */}
+            <div className="appointment-preview-dialog" onClick={e => e.stopPropagation()}>
+
+                {/* --- FIXED TOP HEADER --- */}
+                <div className="pd-header">
+                    {/* Identity */}
+                    <div className="pd-identity">
+                        <img
+                            src={getAvatarSrc(currentPatient)}
+                            alt="Profile"
+                            className="pd-avatar-img"
+                            onError={(e) => { e.target.src = boyIcon; }}
+                        />
+                        <div className="pd-info">
+                            <h1>{currentPatient.name || currentPatient.clientName || 'Unknown Patient'}</h1>
+
+                            {/* Row 1: Patient ID */}
+                            <div className="pd-chips-row">
+                                <span className="pd-pill id">{currentPatient.patientId || 'NO ID'}</span>
+                            </div>
+
+                            {/* Row 2: Demographics */}
+                            <div className="pd-chips-row">
+                                <span className="pd-pill">{currentPatient.gender || 'Unknown'}</span>
+                                <span className="pd-pill">{currentPatient.age ? `${currentPatient.age} Yrs` : 'Age N/A'}</span>
+                                <span className="pd-pill">{currentPatient.bloodGroup || 'Blood N/A'}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Vitals Grid */}
+                    <div className="pd-vitals-container">
+                        <VitalCard type="height" icon={<MdHeight />} label="Height" value={f(currentPatient.height, ' cm')} />
+                        <VitalCard type="weight" icon={<MdMonitorWeight />} label="Weight" value={f(currentPatient.weight, ' kg')} />
+                        <VitalCard type="bmi" icon={<MdScale />} label="BMI" value={f(currentPatient.bmi)} />
+                        <VitalCard type="spo2" icon={<MdMonitorHeart />} label="SpO₂" value={f(currentPatient.oxygen, '%')} />
+                    </div>
+                </div>
+
+                {/* --- BODY CONTAINER --- */}
+                <div className="pd-body-container">
+
+                    {/* SIDEBAR */}
+                    <div className="pd-sidebar">
+                        <div className="pd-sidebar-header">
+                            <span className="pd-sidebar-title">PATIENT MENU</span>
+                        </div>
+                        <div className="pd-nav-menu">
+                            {navItems.map(item => (
+                                <div
+                                    key={item.id}
+                                    className={`pd-nav-item ${activeTab === item.id ? 'active' : ''}`}
+                                    onClick={() => setActiveTab(item.id)}
+                                >
+                                    {item.icon}
+                                    <span>{item.label}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* MAIN CONTENT Area */}
+                    <div className="pd-main">
+                        <div className="pd-scroll-area">
+                            {activeTab === 'profile' && <OverviewTab patient={currentPatient} />}
+                            {activeTab === 'history' && <MedicalHistoryTab patient={currentPatient} />}
+                            {activeTab === 'prescriptions' && <PrescriptionTab patient={currentPatient} />}
+                            {activeTab === 'lab' && <LabResultsTab patient={currentPatient} />}
+                            {activeTab === 'billing' && <BillingTab />}
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// --- SUB COMPONENTS ---
+const VitalCard = ({ type, icon, label, value }) => (
+    <div className={`pd-vital-card ${type}`}>
+        <div className="pd-vital-icon">{icon}</div>
+        <div className="pd-vital-content">
+            <span className="pd-vital-value">{value}</span>
+            <span className="pd-vital-label">{label}</span>
+        </div>
+    </div>
+);
+
+// 1. OVERVIEW TAB - Enterprise Bento Grid (3-Column)
+const OverviewTab = ({ patient }) => (
+    <div className="animate-in h-full flex flex-col">
+        <div className="pd-section-title">
+            <MdPerson /> Personal Information
+        </div>
+
+        <div className="pd-bento-grid-3">
+
+            {/* COL 1: Contact Information */}
+            <div className="pd-bento-col">
+                <h3 className="pd-bento-title">Contact Details</h3>
+                <div className="pd-bento-list">
+                    <BentoItem icon={<MdPhone />} label="Phone Number" value={patient.phone || patient.phoneNumber} color="blue" copyable />
+                    <BentoItem icon={<MdEmail />} label="Email Address" value={patient.email} color="indigo" copyable />
+                    <BentoItem icon={<MdLocationOn />} label="Residential Address" value={[patient.houseNo, patient.street, patient.city, patient.state, patient.pincode].filter(Boolean).join(', ')} color="emerald" />
+                </div>
             </div>
 
-            {/* Tab Content */}
-            <div className="appointment-tab-content">
-              {activeTab === 'profile' && <OverviewTab patient={currentPatient} />}
-              {activeTab === 'history' && <MedicalHistoryTab patient={currentPatient} />}
-              {activeTab === 'prescription' && <PrescriptionTab patient={currentPatient} />}
-              {activeTab === 'lab' && <LabResultsTab patient={currentPatient} />}
-              {activeTab === 'billing' && showBillingTab && <BillingsTab />}
+            {/* COL 2: Administrative & Social */}
+            <div className="pd-bento-col">
+                <h3 className="pd-bento-title">Administrative</h3>
+                <div className="pd-bento-list">
+                    <BentoItem
+                        icon={<MdSecurity />}
+                        label="Insurance Provider"
+                        value={patient.insuranceProvider || 'Private Pay'}
+                        color="rose"
+                    />
+                    <BentoItem
+                        icon={<MdDescription />}
+                        label="Policy Number"
+                        value={patient.insuranceNumber || 'N/A'}
+                        color="rose"
+                        copyable
+                    />
+                    <BentoItem
+                        icon={<MdWork />}
+                        label="Occupation"
+                        value={patient.occupation || 'Not Specified'}
+                        color="slate"
+                    />
+                    <BentoItem
+                        icon={<MdPerson />}
+                        label="Marital Status"
+                        value={patient.maritalStatus || 'Single'}
+                        color="slate"
+                    />
+                </div>
             </div>
-          </div>
+
+            {/* COL 3: Clinical Context */}
+            <div className="pd-bento-col clinical-col">
+
+                {/* Emergency Card */}
+                <div className="pd-bento-subcard emergency">
+                    <div className="pd-subcard-header">
+                        <div className="pd-icon-box rose"><MdWarning /></div>
+                        <div>
+                            <span className="pd-subcard-label">Emergency</span>
+                            <div className="pd-subcard-value">{patient.emergencyContactName || 'None'}</div>
+                        </div>
+                    </div>
+                    {patient.emergencyContactPhone && <div className="pd-subcard-meta">{patient.emergencyContactPhone}</div>}
+                </div>
+
+                {/* Allergies Card */}
+                <div className="pd-bento-subcard allergies">
+                    <div className="pd-subcard-header">
+                        <div className="pd-icon-box orange"><MdMedicalServices /></div>
+                        <span className="pd-subcard-label">Allergies</span>
+                    </div>
+                    <div className="pd-tags-cloud">
+                        {patient.allergies?.length ? patient.allergies.map((a, i) => (
+                            <span key={i} className="pd-tag alert">{a}</span>
+                        )) : <span className="pd-empty-text">No Known Allergies</span>}
+                    </div>
+                </div>
+
+                {/* Notes Preview */}
+                <div className="pd-bento-subcard notes">
+                    <div className="pd-subcard-header">
+                        <div className="pd-icon-box slate"><MdEditNote /></div>
+                        <span className="pd-subcard-label">Notes</span>
+                    </div>
+                    <div className="pd-notes-content line-clamp-3">
+                        {patient.notes || 'No notes available.'}
+                    </div>
+                </div>
+
+            </div>
         </div>
-      </div>
     </div>
-  );
-};
+);
 
-// ============ OVERVIEW TAB ============
-const OverviewTab = ({ patient }) => {
-  const isMissing = (val) => {
-    if (!val) return true;
-    const str = String(val).trim().toLowerCase();
-    return str === '' || str === '—' || str === '-' || str === 'na' || str === 'n/a' || str === 'null' || str === 'none';
-  };
-
-  const handleCopyAddress = () => {
-    const addressParts = [
-      patient.houseNo,
-      patient.street,
-      patient.city,
-      patient.state,
-      patient.pincode,
-      patient.country || 'India'
-    ].filter(p => p && p.trim());
-    
-    const fullAddress = addressParts.join(', ');
-    navigator.clipboard.writeText(fullAddress);
-    alert('Address copied to clipboard!');
-  };
-
-  const handleOpenMaps = () => {
-    const addressParts = [
-      patient.houseNo,
-      patient.street,
-      patient.city,
-      patient.state,
-      patient.pincode,
-      patient.country || 'India'
-    ].filter(p => p && p.trim());
-    
-    const fullAddress = addressParts.join(', ');
-    const url = `https://maps.google.com/?q=${encodeURIComponent(fullAddress)}`;
-    window.open(url, '_blank');
-  };
-
-  return (
-    <div className="overview-tab-content">
-      {/* Address Card */}
-      <div className="info-section-card">
-        <div className="card-header">
-          <div className="card-icon-badge">
-            <MdPlace />
-          </div>
-          <h3 className="card-title">Address</h3>
+const BentoItem = ({ icon, label, value, color, copyable }) => (
+    <div className="pd-bento-item">
+        <div className={`pd-icon-box ${color}`}>{icon}</div>
+        <div className="pd-item-content">
+            <span className="pd-item-label">{label}</span>
+            <div className="pd-item-value-row">
+                <span className="pd-item-value">{value || 'N/A'}</span>
+                {copyable && value && (
+                    <button className="pd-copy-btn" title="Copy">
+                        <MdContentCopy size={12} />
+                    </button>
+                )}
+            </div>
         </div>
-        <div className="card-body">
-          <InfoRow label="House No" value={patient.houseNo || 'Not Provided'} />
-          <InfoRow label="Street" value={patient.street || 'Not Provided'} />
-          <InfoRow label="City" value={patient.city || 'Not Provided'} />
-          <InfoRow label="State" value={patient.state || 'Not Provided'} />
-          <InfoRow label="Pincode" value={patient.pincode || 'Not Provided'} />
-          <InfoRow label="Country" value={patient.country || 'India'} />
-          
-          <div className="card-actions">
-            <button className="action-chip" onClick={handleCopyAddress}>
-              <MdContentCopy size={16} />
-              Copy
-            </button>
-            <button className="action-chip" onClick={handleOpenMaps}>
-              <MdMap size={16} />
-              Open in Maps
-            </button>
-            <span className="date-tag">Updated: Recently</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Emergency Contact Card */}
-      <div className="info-section-card">
-        <div className="card-header">
-          <div className="card-icon-badge">
-            <MdContactPhone />
-          </div>
-          <h3 className="card-title">Emergency Contact</h3>
-        </div>
-        <div className="card-body">
-          <InfoRow 
-            label="Name" 
-            value={isMissing(patient.emergencyContactName) ? 'No contact on file' : patient.emergencyContactName} 
-          />
-          <InfoRow 
-            label="Phone" 
-            value={isMissing(patient.emergencyContactPhone) ? 'No phone on file' : patient.emergencyContactPhone} 
-          />
-          
-          <div className="card-actions">
-            <span className="date-tag">Last Updated: Recently</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Insurance Card */}
-      <div className="info-section-card">
-        <div className="card-header">
-          <div className="card-icon-badge">
-            <MdVerifiedUser />
-          </div>
-          <h3 className="card-title">Insurance</h3>
-        </div>
-        <div className="card-body">
-          <InfoRow 
-            label="Policy Number" 
-            value={isMissing(patient.insuranceNumber) ? 'No insurance on file' : patient.insuranceNumber} 
-          />
-          <InfoRow 
-            label="Expiry Date" 
-            value={isMissing(patient.expiryDate) ? 'No expiry date' : patient.expiryDate} 
-          />
-          
-          <div className="card-actions">
-            <span className="date-tag">Verified: Recently</span>
-          </div>
-        </div>
-      </div>
     </div>
-  );
-};
+);
 
-const InfoRow = ({ label, value }) => {
-  const displayValue = (!value || value.trim() === '' || value === '—') ? 'Not Provided' : value;
-  
-  return (
-    <div className="info-row">
-      <span className="info-label">{label.toUpperCase()}</span>
-      <span className="info-value" style={{ color: displayValue === 'Not Provided' ? '#9ca3af' : '#0b1324' }}>
-        {displayValue}
-      </span>
-    </div>
-  );
-};
-
-// ============ MEDICAL HISTORY TAB ============
+// 2. MEDICAL HISTORY TAB
 const MedicalHistoryTab = ({ patient }) => {
-  const [history, setHistory] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('All');
-  const [currentPage, setCurrentPage] = useState(0);
-  const itemsPerPage = 10;
+    const [history, setHistory] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    loadMedicalHistory();
-  }, [patient?.patientId]);
+    useEffect(() => {
+        if (patient?.patientId) {
+            fetchMedicalHistory(patient.patientId, 100, 0)
+                .then(setHistory).catch(console.error).finally(() => setIsLoading(false));
+        }
+    }, [patient]);
 
-  const loadMedicalHistory = async () => {
-    if (!patient?.patientId) return;
+    if (isLoading) return <div className="pd-empty-state">Loading History...</div>;
+    if (!history.length) return <div className="pd-empty-state">No Medical History Found</div>;
 
-    try {
-      setIsLoading(true);
-      setError(null);
-      console.log('📋 [MEDICAL HISTORY] Fetching for patient:', patient.patientId);
-      
-      const data = await fetchMedicalHistory(patient.patientId, 100, 0);
-      setHistory(data);
-      console.log('📦 [MEDICAL HISTORY] Received', data.length, 'records');
-    } catch (err) {
-      console.error('❌ [MEDICAL HISTORY] Error:', err);
-      setError(err.message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const extractTitle = (record) => {
-    return record.title || record.diagnosis || record.condition || 'Medical Record';
-  };
-
-  const extractDate = (record) => {
-    try {
-      const date = record.reportDate || record.uploadDate || record.date || record.createdAt;
-      if (!date) return '—';
-      return new Date(date).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
-    } catch {
-      return '—';
-    }
-  };
-
-  const extractCategory = (record) => {
-    return record.category || record.type || 'General';
-  };
-
-  const extractNotes = (record) => {
-    const extractedData = record.extractedData;
-    if (extractedData?.medicalHistory) {
-      // Handle if medicalHistory is a string
-      if (typeof extractedData.medicalHistory === 'string') {
-        const text = extractedData.medicalHistory;
-        return text.length > 100 ? text.substring(0, 100) + '...' : text;
-      }
-      // Handle if medicalHistory is an object with notes
-      if (typeof extractedData.medicalHistory === 'object') {
-        const text = extractedData.medicalHistory.notes || JSON.stringify(extractedData.medicalHistory);
-        return text.length > 100 ? text.substring(0, 100) + '...' : text;
-      }
-    }
-    
-    const notes = record.notes || record.description;
-    if (notes) {
-      if (typeof notes === 'string') {
-        return notes.length > 100 ? notes.substring(0, 100) + '...' : notes;
-      }
-      // Handle if notes is an object
-      if (typeof notes === 'object') {
-        const text = JSON.stringify(notes);
-        return text.length > 100 ? text.substring(0, 100) + '...' : text;
-      }
-    }
-    
-    return '—';
-  };
-
-  const applyFilters = () => {
-    return history.filter(record => {
-      const category = extractCategory(record);
-      const matchesCategory = categoryFilter === 'All' || category.toLowerCase() === categoryFilter.toLowerCase();
-      
-      if (!searchQuery.trim()) return matchesCategory;
-
-      const searchLower = searchQuery.toLowerCase();
-      const title = extractTitle(record).toLowerCase();
-      const notes = extractNotes(record).toLowerCase();
-      const date = extractDate(record).toLowerCase();
-      
-      return matchesCategory && (title.includes(searchLower) || notes.includes(searchLower) || date.includes(searchLower));
-    });
-  };
-
-  const filtered = applyFilters();
-  const startIndex = currentPage * itemsPerPage;
-  const endIndex = Math.min(startIndex + itemsPerPage, filtered.length);
-  const pageData = filtered.slice(startIndex, endIndex);
-  const totalPages = Math.ceil(filtered.length / itemsPerPage);
-
-  if (isLoading) {
     return (
-      <div className="tab-loading">
-        <div className="loading-spinner"></div>
-        <p>Loading medical history...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="tab-error">
-        <p className="error-message">Failed to load medical history</p>
-        <button onClick={loadMedicalHistory} className="retry-button">Retry</button>
-      </div>
-    );
-  }
-
-  if (history.length === 0) {
-    return (
-      <div className="tab-empty">
-        <MdHistory size={64} />
-        <h3>No medical history found</h3>
-        <p>Medical history records will appear here once uploaded</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="data-table-container">
-      <div className="table-header">
-        <h3 className="table-title">Medical History</h3>
-        <div className="table-controls">
-          <input
-            type="text"
-            placeholder="Search..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="table-search"
-          />
-          <select
-            value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
-            className="table-filter"
-          >
-            <option value="All">All</option>
-            <option value="General">General</option>
-            <option value="Chronic">Chronic</option>
-            <option value="Acute">Acute</option>
-          </select>
+        <div className="animate-in">
+            <div className="pd-section-title"><MdHistory /> Medical History Timeline</div>
+            <div className="pd-table-container">
+                <table className="pd-table">
+                    <thead>
+                        <tr><th>Condition / Title</th><th>Date Recorded</th><th>Category</th><th width="40%">Notes</th></tr>
+                    </thead>
+                    <tbody>
+                        {history.map((item, i) => (
+                            <tr key={i}>
+                                <td><strong>{item.title || item.condition || 'Medical Record'}</strong></td>
+                                <td>{new Date(item.date || item.createdAt).toLocaleDateString()}</td>
+                                <td><span style={{ padding: '4px 8px', background: '#f1f5f9', color: '#475569', borderRadius: '4px', fontSize: '12px', fontWeight: '600' }}>{item.category || item.type || 'General'}</span></td>
+                                <td style={{ color: '#64748b' }}>{item.description || item.notes || '—'}</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
         </div>
-      </div>
-
-      <div className="table-wrapper">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Title</th>
-              <th>Date</th>
-              <th>Category</th>
-              <th>Notes</th>
-              <th>Document</th>
-            </tr>
-          </thead>
-          <tbody>
-            {pageData.map((record, index) => (
-              <tr key={index}>
-                <td>{extractTitle(record)}</td>
-                <td>{extractDate(record)}</td>
-                <td>{extractCategory(record)}</td>
-                <td>{extractNotes(record)}</td>
-                <td>
-                  {record.pdfId ? (
-                    <button className="view-doc-btn">View</button>
-                  ) : (
-                    '—'
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {totalPages > 1 && (
-        <div className="table-pagination">
-          <button
-            onClick={() => setCurrentPage(Math.max(0, currentPage - 1))}
-            disabled={currentPage === 0}
-            className="pagination-btn"
-          >
-            Previous
-          </button>
-          <span className="pagination-info">
-            Page {currentPage + 1} of {totalPages}
-          </span>
-          <button
-            onClick={() => setCurrentPage(Math.min(totalPages - 1, currentPage + 1))}
-            disabled={currentPage >= totalPages - 1}
-            className="pagination-btn"
-          >
-            Next
-          </button>
-        </div>
-      )}
-    </div>
-  );
+    );
 };
 
-// ============ PRESCRIPTION TAB ============
+// 3. PRESCRIPTIONS TAB
 const PrescriptionTab = ({ patient }) => {
-  const [prescriptions, setPrescriptions] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('All');
-  const [currentPage, setCurrentPage] = useState(0);
-  const itemsPerPage = 10;
+    const [prescriptions, setPrescriptions] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    loadPrescriptions();
-  }, [patient?.patientId]);
+    useEffect(() => {
+        if (patient?.patientId) {
+            fetchPrescriptions(patient.patientId, 100, 0)
+                .then(setPrescriptions).catch(console.error).finally(() => setIsLoading(false));
+        }
+    }, [patient]);
 
-  const loadPrescriptions = async () => {
-    if (!patient?.patientId) return;
+    if (isLoading) return <div className="pd-empty-state">Loading Prescriptions...</div>;
+    if (!prescriptions.length) return <div className="pd-empty-state">No Prescriptions Found</div>;
 
-    try {
-      setIsLoading(true);
-      setError(null);
-      console.log('💊 [PRESCRIPTIONS] Fetching for patient:', patient.patientId);
-      
-      const data = await fetchPrescriptions(patient.patientId, 100, 0);
-      setPrescriptions(data);
-      console.log('📦 [PRESCRIPTIONS] Received', data.length, 'prescriptions');
-    } catch (err) {
-      console.error('❌ [PRESCRIPTIONS] Error:', err);
-      setError(err.message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const extractMedicineName = (medicine) => {
-    return medicine.testName || medicine.name || medicine.medicineName || medicine.medicine || 'Unknown Medicine';
-  };
-
-  const extractDosage = (medicine) => {
-    return medicine.value || medicine.dosage || medicine.dose || '—';
-  };
-
-  const extractFrequency = (medicine) => {
-    return medicine.normalRange || medicine.frequency || medicine.freq || '—';
-  };
-
-  const extractDuration = (medicine) => {
-    return medicine.flag || medicine.duration || '—';
-  };
-
-  const extractInstructions = (medicine) => {
-    return medicine.notes || medicine.instructions || '—';
-  };
-
-  const extractDate = (prescription) => {
-    try {
-      const date = prescription.prescriptionDate || prescription.uploadDate || prescription.date || prescription.createdAt;
-      if (!date) return '—';
-      return new Date(date).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
-    } catch {
-      return '—';
-    }
-  };
-
-  // Flatten prescriptions to show each medicine as a row
-  const flattenedData = prescriptions.flatMap(prescription => {
-    const results = prescription.results;
-    const prescriptionDate = extractDate(prescription);
-    const pdfId = prescription.pdfId;
-    
-    if (results && Array.isArray(results) && results.length > 0) {
-      return results.map(medicine => ({
-        ...medicine,
-        prescriptionDate,
-        pdfId,
-        originalPrescription: prescription
-      }));
-    }
-    return [];
-  });
-
-  const applyFilters = () => {
-    return flattenedData.filter(item => {
-      if (!searchQuery.trim()) return true;
-
-      const searchLower = searchQuery.toLowerCase();
-      const medicineName = extractMedicineName(item).toLowerCase();
-      const dosage = extractDosage(item).toLowerCase();
-      const frequency = extractFrequency(item).toLowerCase();
-      
-      return medicineName.includes(searchLower) || dosage.includes(searchLower) || frequency.includes(searchLower);
-    });
-  };
-
-  const filtered = applyFilters();
-  const startIndex = currentPage * itemsPerPage;
-  const endIndex = Math.min(startIndex + itemsPerPage, filtered.length);
-  const pageData = filtered.slice(startIndex, endIndex);
-  const totalPages = Math.ceil(filtered.length / itemsPerPage);
-
-  if (isLoading) {
     return (
-      <div className="tab-loading">
-        <div className="loading-spinner"></div>
-        <p>Loading prescriptions...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="tab-error">
-        <p className="error-message">Failed to load prescriptions</p>
-        <button onClick={loadPrescriptions} className="retry-button">Retry</button>
-      </div>
-    );
-  }
-
-  if (flattenedData.length === 0) {
-    return (
-      <div className="tab-empty">
-        <MdMedication size={64} />
-        <h3>No prescriptions found</h3>
-        <p>Prescription records will appear here once uploaded</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="data-table-container">
-      <div className="table-header">
-        <h3 className="table-title">Prescriptions</h3>
-        <div className="table-controls">
-          <input
-            type="text"
-            placeholder="Search..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="table-search"
-          />
+        <div className="animate-in">
+            <div className="pd-section-title"><MdDescription /> Active Prescriptions</div>
+            <div className="pd-table-container">
+                <table className="pd-table">
+                    <thead>
+                        <tr><th>Date</th><th>Prescription Details</th><th>Action</th></tr>
+                    </thead>
+                    <tbody>
+                        {prescriptions.map((p, i) => (
+                            <tr key={i}>
+                                <td>{new Date(p.createdAt || p.date).toLocaleDateString()}</td>
+                                <td>{p.notes || `Prescription ID: ${p.id || 'N/A'}`}</td>
+                                <td>{p.pdfId ? <button className="text-blue-600 font-bold hover:underline">View PDF</button> : '—'}</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
         </div>
-      </div>
-
-      <div className="table-wrapper">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Medicine</th>
-              <th>Dosage</th>
-              <th>Frequency</th>
-              <th>Duration</th>
-              <th>Instructions</th>
-              <th>Date</th>
-              <th>Document</th>
-            </tr>
-          </thead>
-          <tbody>
-            {pageData.map((item, index) => (
-              <tr key={index}>
-                <td>{extractMedicineName(item)}</td>
-                <td>{extractDosage(item)}</td>
-                <td>{extractFrequency(item)}</td>
-                <td>{extractDuration(item)}</td>
-                <td>{extractInstructions(item)}</td>
-                <td>{item.prescriptionDate}</td>
-                <td>
-                  {item.pdfId ? (
-                    <button className="view-doc-btn">View</button>
-                  ) : (
-                    '—'
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {totalPages > 1 && (
-        <div className="table-pagination">
-          <button
-            onClick={() => setCurrentPage(Math.max(0, currentPage - 1))}
-            disabled={currentPage === 0}
-            className="pagination-btn"
-          >
-            Previous
-          </button>
-          <span className="pagination-info">
-            Page {currentPage + 1} of {totalPages}
-          </span>
-          <button
-            onClick={() => setCurrentPage(Math.min(totalPages - 1, currentPage + 1))}
-            disabled={currentPage >= totalPages - 1}
-            className="pagination-btn"
-          >
-            Next
-          </button>
-        </div>
-      )}
-    </div>
-  );
+    );
 };
 
-// ============ LAB RESULTS TAB ============
+// 4. LAB RESULTS TAB
 const LabResultsTab = ({ patient }) => {
-  const [labReports, setLabReports] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('All');
-  const [currentPage, setCurrentPage] = useState(0);
-  const itemsPerPage = 10;
+    const [reports, setReports] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    loadLabReports();
-  }, [patient?.patientId]);
+    useEffect(() => {
+        if (patient?.patientId) {
+            fetchLabReports(patient.patientId, 100, 0)
+                .then(setReports).catch(console.error).finally(() => setIsLoading(false));
+        }
+    }, [patient]);
 
-  const loadLabReports = async () => {
-    if (!patient?.patientId) return;
+    if (isLoading) return <div className="pd-empty-state">Loading Reports...</div>;
+    if (!reports.length) return <div className="pd-empty-state">No Lab Reports Found</div>;
 
-    try {
-      setIsLoading(true);
-      setError(null);
-      console.log('🔬 [LAB RESULTS] Fetching for patient:', patient.patientId);
-      
-      const data = await fetchLabReports(patient.patientId, 100, 0);
-      setLabReports(data);
-      console.log('📦 [LAB RESULTS] Received', data.length, 'reports');
-    } catch (err) {
-      console.error('❌ [LAB RESULTS] Error:', err);
-      setError(err.message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const extractTestName = (report) => {
-    return report.testType || report.testName || report.name || 'Lab Test';
-  };
-
-  const extractValue = (report) => {
-    const resultsCount = report.resultsCount;
-    if (resultsCount && resultsCount > 0) {
-      return `${resultsCount} parameters`;
-    }
-    
-    const results = report.results;
-    if (!results) return '—';
-    
-    if (Array.isArray(results)) {
-      return results.length === 0 ? 'Pending' : `${results.length} parameters`;
-    }
-    
-    return '—';
-  };
-
-  const extractDate = (report) => {
-    try {
-      const date = report.reportDate || report.uploadDate || report.date || report.createdAt;
-      if (!date) return '—';
-      return new Date(date).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
-    } catch {
-      return '—';
-    }
-  };
-
-  const getStatus = (report) => {
-    const resultsCount = report.resultsCount;
-    if (resultsCount && resultsCount > 0) return 'Completed';
-    
-    const results = report.results;
-    if (!results || (Array.isArray(results) && results.length === 0)) return 'Pending';
-    
-    return 'Completed';
-  };
-
-  const applyFilters = () => {
-    return labReports.filter(report => {
-      const status = getStatus(report);
-      const matchesStatus = statusFilter === 'All' || status.toLowerCase() === statusFilter.toLowerCase();
-      
-      if (!searchQuery.trim()) return matchesStatus;
-
-      const searchLower = searchQuery.toLowerCase();
-      const testName = extractTestName(report).toLowerCase();
-      const value = extractValue(report).toLowerCase();
-      const date = extractDate(report).toLowerCase();
-      
-      return matchesStatus && (testName.includes(searchLower) || value.includes(searchLower) || date.includes(searchLower));
-    });
-  };
-
-  const filtered = applyFilters();
-  const startIndex = currentPage * itemsPerPage;
-  const endIndex = Math.min(startIndex + itemsPerPage, filtered.length);
-  const pageData = filtered.slice(startIndex, endIndex);
-  const totalPages = Math.ceil(filtered.length / itemsPerPage);
-
-  if (isLoading) {
     return (
-      <div className="tab-loading">
-        <div className="loading-spinner"></div>
-        <p>Loading lab reports...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="tab-error">
-        <p className="error-message">Failed to load lab reports</p>
-        <button onClick={loadLabReports} className="retry-button">Retry</button>
-      </div>
-    );
-  }
-
-  if (labReports.length === 0) {
-    return (
-      <div className="tab-empty">
-        <MdBiotech size={64} />
-        <h3>No lab reports found</h3>
-        <p>Lab results will appear here once tests are uploaded</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="data-table-container">
-      <div className="table-header">
-        <h3 className="table-title">Lab Results</h3>
-        <div className="table-controls">
-          <input
-            type="text"
-            placeholder="Search..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="table-search"
-          />
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="table-filter"
-          >
-            <option value="All">All</option>
-            <option value="Normal">Normal</option>
-            <option value="Abnormal">Abnormal</option>
-            <option value="Pending">Pending</option>
-          </select>
+        <div className="animate-in">
+            <div className="pd-section-title"><MdScience /> Lab Results</div>
+            <div className="pd-table-container">
+                <table className="pd-table">
+                    <thead><tr><th>Test Name</th><th>Date</th><th>Status</th></tr></thead>
+                    <tbody>
+                        {reports.map((r, i) => (
+                            <tr key={i}>
+                                <td><strong>{r.testName || r.name}</strong></td>
+                                <td>{new Date(r.createdAt || r.date).toLocaleDateString()}</td>
+                                <td><span style={{ padding: '4px 10px', background: '#dcfce7', color: '#166534', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold' }}>Completed</span></td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
         </div>
-      </div>
-
-      <div className="table-wrapper">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Test Name</th>
-              <th>Result</th>
-              <th>Date</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {pageData.map((report, index) => {
-              const status = getStatus(report);
-              return (
-                <tr key={index}>
-                  <td>{extractTestName(report)}</td>
-                  <td>{extractValue(report)}</td>
-                  <td>{extractDate(report)}</td>
-                  <td>
-                    <span className={`status-badge status-${status.toLowerCase()}`}>
-                      {status}
-                    </span>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-
-      {totalPages > 1 && (
-        <div className="table-pagination">
-          <button
-            onClick={() => setCurrentPage(Math.max(0, currentPage - 1))}
-            disabled={currentPage === 0}
-            className="pagination-btn"
-          >
-            Previous
-          </button>
-          <span className="pagination-info">
-            Page {currentPage + 1} of {totalPages}
-          </span>
-          <button
-            onClick={() => setCurrentPage(Math.min(totalPages - 1, currentPage + 1))}
-            disabled={currentPage >= totalPages - 1}
-            className="pagination-btn"
-          >
-            Next
-          </button>
-        </div>
-      )}
-    </div>
-  );
+    );
 };
 
-// ============ BILLINGS TAB ============
-const BillingsTab = () => {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('All');
-  const [currentPage, setCurrentPage] = useState(0);
-  const itemsPerPage = 10;
-
-  // Sample billing data
-  const billingData = Array.from({ length: 12 }, (_, i) => ({
-    invoice: `INV-${1000 + i}`,
-    date: `2025-08-${String(10 + i).padStart(2, '0')}`,
-    amount: `${500 + i * 20}`,
-    method: i % 2 === 0 ? 'Credit Card' : 'Cash',
-    due: `2025-09-${String(10 + i).padStart(2, '0')}`,
-    status: i % 3 === 0 ? 'Unpaid' : 'Paid',
-    comment: `Billing for visit ${i + 1}`
-  }));
-
-  const applyFilters = () => {
-    return billingData.filter(item => {
-      const matchesStatus = statusFilter === 'All' || item.status.toLowerCase() === statusFilter.toLowerCase();
-      
-      if (!searchQuery.trim()) return matchesStatus;
-
-      const searchLower = searchQuery.toLowerCase();
-      const searchStr = Object.values(item).join(' ').toLowerCase();
-      
-      return matchesStatus && searchStr.includes(searchLower);
-    });
-  };
-
-  const filtered = applyFilters();
-  const startIndex = currentPage * itemsPerPage;
-  const endIndex = Math.min(startIndex + itemsPerPage, filtered.length);
-  const pageData = filtered.slice(startIndex, endIndex);
-  const totalPages = Math.ceil(filtered.length / itemsPerPage);
-
-  return (
-    <div className="data-table-container">
-      <div className="table-header">
-        <h3 className="table-title">Billings</h3>
-        <div className="table-controls">
-          <input
-            type="text"
-            placeholder="Search..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="table-search"
-          />
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="table-filter"
-          >
-            <option value="All">All</option>
-            <option value="Paid">Paid</option>
-            <option value="Unpaid">Unpaid</option>
-          </select>
-        </div>
-      </div>
-
-      <div className="table-wrapper">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Invoice</th>
-              <th>Date</th>
-              <th>Amount</th>
-              <th>Method</th>
-              <th>Due Date</th>
-              <th>Comment</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {pageData.map((item, index) => (
-              <tr key={index}>
-                <td>{item.invoice}</td>
-                <td>{item.date}</td>
-                <td>₹{item.amount}</td>
-                <td>{item.method}</td>
-                <td>{item.due}</td>
-                <td>{item.comment}</td>
-                <td>
-                  <span className={`status-badge status-${item.status.toLowerCase()}`}>
-                    {item.status}
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {totalPages > 1 && (
-        <div className="table-pagination">
-          <button
-            onClick={() => setCurrentPage(Math.max(0, currentPage - 1))}
-            disabled={currentPage === 0}
-            className="pagination-btn"
-          >
-            Previous
-          </button>
-          <span className="pagination-info">
-            Page {currentPage + 1} of {totalPages}
-          </span>
-          <button
-            onClick={() => setCurrentPage(Math.min(totalPages - 1, currentPage + 1))}
-            disabled={currentPage >= totalPages - 1}
-            className="pagination-btn"
-          >
-            Next
-          </button>
-        </div>
-      )}
+const BillingTab = () => (
+    <div className="pd-empty-state">
+        <MdPayment size={64} style={{ opacity: 0.2, marginBottom: '16px' }} />
+        <h3>No Invoices Generated</h3>
     </div>
-  );
-};
+);
 
 export default AppointmentPreviewDialog;

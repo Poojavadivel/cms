@@ -204,9 +204,6 @@ const Patients = () => {
 
   // Age range options
   const ageRanges = ['All', '0-18', '19-35', '36-50', '51-65', '65+'];
-  
-  // Gender options
-  const genderOptions = ['All', 'Male', 'Female', 'Other'];
 
   // Clear all filters
   const clearAllFilters = () => {

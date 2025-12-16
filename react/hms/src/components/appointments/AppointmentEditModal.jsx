@@ -1,16 +1,19 @@
 /**
  * AppointmentEditModal.jsx
- * 95% screen edit modal matching Flutter's EditAppointmentForm
+ * Neo-Pro Standard Edition
+ * Matching StaffFormEnterprise Design System
  */
 
 import React, { useState, useEffect } from 'react';
-import { MdClose, MdPerson, MdCalendarToday, MdLocationOn, MdNotes, MdDelete } from 'react-icons/md';
+import { MdClose, MdSave, MdDelete } from 'react-icons/md';
 import './AppointmentEditModal.css';
 import appointmentsService from '../../services/appointmentsService';
 
 const AppointmentEditModal = ({ isOpen, onClose, appointmentId, onSuccess }) => {
-  const [isLoading, setIsLoading] = useState(true);
+  // eslint-disable-next-line no-unused-vars
+  const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  // eslint-disable-next-line no-unused-vars
   const [error, setError] = useState('');
 
   const [formData, setFormData] = useState({
@@ -35,6 +38,7 @@ const AppointmentEditModal = ({ isOpen, onClose, appointmentId, onSuccess }) => 
     spo2: ''
   });
 
+  // Fetch Data on Open
   useEffect(() => {
     if (isOpen && appointmentId) {
       fetchAppointment();
@@ -47,13 +51,13 @@ const AppointmentEditModal = ({ isOpen, onClose, appointmentId, onSuccess }) => 
     setError('');
     try {
       const data = await appointmentsService.fetchAppointmentById(appointmentId);
-      
+
       // Handle nested patient object
       let clientName = data.clientName || '';
       let patientIdValue = data.patientId || '';
       let phoneNumber = data.phoneNumber || '';
       let gender = data.metadata?.gender || data.gender || 'Male';
-      
+
       if (data.patientId && typeof data.patientId === 'object') {
         const patient = data.patientId;
         clientName = `${patient.firstName || ''} ${patient.lastName || ''}`.trim();
@@ -61,7 +65,7 @@ const AppointmentEditModal = ({ isOpen, onClose, appointmentId, onSuccess }) => 
         patientIdValue = patient.metadata?.patientCode || patient._id || '';
         if (patient.gender) gender = patient.gender;
       }
-      
+
       setFormData({
         clientName: clientName,
         patientId: String(patientIdValue),
@@ -108,9 +112,9 @@ const AppointmentEditModal = ({ isOpen, onClose, appointmentId, onSuccess }) => 
           gender: formData.gender
         }
       };
-      
+
       await appointmentsService.updateAppointment(appointmentId, updateData);
-      
+
       if (onSuccess) await onSuccess();
       onClose();
     } catch (err) {
@@ -136,302 +140,117 @@ const AppointmentEditModal = ({ isOpen, onClose, appointmentId, onSuccess }) => 
     }
   };
 
+  // Safe Render Check: Hooks are called above, so now we can return null safely
   if (!isOpen) return null;
 
   return (
     <div className="appointment-edit-overlay">
       <div className="appointment-edit-container">
-        {/* Close Button */}
-        <button className="appointment-edit-close" onClick={onClose} disabled={isSaving}>
-          <MdClose size={24} />
-        </button>
 
-        {/* Header */}
-        <div className="appointment-edit-header">
-          <h2>Edit Appointment</h2>
-          <p>Update appointment information and vitals</p>
+        {/* NEO HEADER */}
+        <div className="neo-header">
+          <div className="neo-title-group">
+            <h2>Edit Appointment</h2>
+            <p>ID: {formData.patientId || 'NEW'}</p>
+          </div>
+          <button className="neo-close-btn" onClick={onClose} disabled={isSaving}>
+            <MdClose size={20} />
+          </button>
         </div>
 
-        {/* Content */}
-        {isLoading ? (
-          <div className="edit-loading">
-            <div className="spinner"></div>
-            <p>Loading appointment...</p>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="appointment-edit-form">
-            {error && <div className="error-banner">{error}</div>}
+        {/* NEO BODY */}
+        <div className="neo-body">
+          <form onSubmit={handleSubmit} id="editForm">
+            <div className="neo-form-grid">
 
-            <div className="form-scroll-container">
-              {/* Patient Information */}
-              <div className="form-section">
-                <h3><MdPerson /> Patient Information</h3>
-                <div className="form-row">
-                  <div className="form-field">
-                    <label>Patient Name *</label>
-                    <input
-                      type="text"
-                      name="clientName"
-                      value={formData.clientName}
-                      onChange={handleChange}
-                      required
-                      disabled={isSaving}
-                    />
-                  </div>
-                  <div className="form-field">
-                    <label>Patient ID</label>
-                    <input
-                      type="text"
-                      name="patientId"
-                      value={formData.patientId}
-                      onChange={handleChange}
-                      disabled={isSaving}
-                    />
-                  </div>
-                </div>
-
-                <div className="form-row">
-                  <div className="form-field">
-                    <label>Phone Number</label>
-                    <input
-                      type="tel"
-                      name="phoneNumber"
-                      value={formData.phoneNumber}
-                      onChange={handleChange}
-                      disabled={isSaving}
-                    />
-                  </div>
-                  <div className="form-field">
-                    <label>Gender</label>
-                    <select name="gender" value={formData.gender} onChange={handleChange} disabled={isSaving}>
-                      <option value="Male">Male</option>
-                      <option value="Female">Female</option>
-                      <option value="Other">Other</option>
-                    </select>
-                  </div>
+              {/* Patient Info */}
+              <div className="neo-input-group">
+                <div className="neo-input-box">
+                  <label className="neo-input-label">Patient Name</label>
+                  <input className="neo-input" name="clientName" value={formData.clientName} onChange={handleChange} required disabled={isSaving} />
                 </div>
               </div>
 
-              {/* Appointment Details */}
-              <div className="form-section">
-                <h3><MdCalendarToday /> Appointment Details</h3>
-                <div className="form-row">
-                  <div className="form-field">
-                    <label>Date *</label>
-                    <input
-                      type="date"
-                      name="date"
-                      value={formData.date}
-                      onChange={handleChange}
-                      required
-                      disabled={isSaving}
-                    />
-                  </div>
-                  <div className="form-field">
-                    <label>Time *</label>
-                    <input
-                      type="time"
-                      name="time"
-                      value={formData.time}
-                      onChange={handleChange}
-                      required
-                      disabled={isSaving}
-                    />
-                  </div>
-                </div>
-
-                <div className="form-row">
-                  <div className="form-field">
-                    <label>Type</label>
-                    <select name="appointmentType" value={formData.appointmentType} onChange={handleChange} disabled={isSaving}>
-                      <option value="">Select Type</option>
-                      <option value="Consultation">Consultation</option>
-                      <option value="Follow-up">Follow-up</option>
-                      <option value="Emergency">Emergency</option>
-                      <option value="Routine">Routine</option>
-                    </select>
-                  </div>
-                  <div className="form-field">
-                    <label>Duration (minutes)</label>
-                    <input
-                      type="number"
-                      name="durationMinutes"
-                      value={formData.durationMinutes}
-                      onChange={handleChange}
-                      min="5"
-                      step="5"
-                      disabled={isSaving}
-                    />
-                  </div>
-                </div>
-
-                <div className="form-row">
-                  <div className="form-field">
-                    <label>Mode</label>
-                    <select name="mode" value={formData.mode} onChange={handleChange} disabled={isSaving}>
-                      <option value="In-clinic">In-clinic</option>
-                      <option value="Telemedicine">Telemedicine</option>
-                      <option value="Home Visit">Home Visit</option>
-                    </select>
-                  </div>
-                  <div className="form-field">
-                    <label>Priority</label>
-                    <select name="priority" value={formData.priority} onChange={handleChange} disabled={isSaving}>
-                      <option value="Normal">Normal</option>
-                      <option value="Important">Important</option>
-                      <option value="Urgent">Urgent</option>
-                      <option value="Critical">Critical</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="form-row">
-                  <div className="form-field">
-                    <label>Status</label>
-                    <select name="status" value={formData.status} onChange={handleChange} disabled={isSaving}>
-                      <option value="Scheduled">Scheduled</option>
-                      <option value="Confirmed">Confirmed</option>
-                      <option value="In-Progress">In-Progress</option>
-                      <option value="Completed">Completed</option>
-                      <option value="Cancelled">Cancelled</option>
-                      <option value="Pending">Pending</option>
-                    </select>
-                  </div>
-                  <div className="form-field">
-                    <label><MdLocationOn style={{ verticalAlign: 'middle' }} /> Location</label>
-                    <input
-                      type="text"
-                      name="location"
-                      value={formData.location}
-                      onChange={handleChange}
-                      disabled={isSaving}
-                    />
-                  </div>
+              <div className="neo-input-group">
+                <div className="neo-input-box">
+                  <label className="neo-input-label">Contact Number</label>
+                  <input className="neo-input" name="phoneNumber" value={formData.phoneNumber} onChange={handleChange} disabled={isSaving} />
                 </div>
               </div>
 
-              {/* Clinical Information */}
-              <div className="form-section">
-                <h3><MdNotes /> Clinical Information</h3>
-                <div className="form-field">
-                  <label>Chief Complaint</label>
-                  <textarea
-                    name="chiefComplaint"
-                    value={formData.chiefComplaint}
-                    onChange={handleChange}
-                    rows="3"
-                    disabled={isSaving}
-                  />
-                </div>
-                <div className="form-field">
-                  <label>Notes</label>
-                  <textarea
-                    name="notes"
-                    value={formData.notes}
-                    onChange={handleChange}
-                    rows="3"
-                    disabled={isSaving}
-                  />
+              {/* Date & Time */}
+              <div className="neo-input-group">
+                <div className="neo-input-box">
+                  <label className="neo-input-label">Appointment Date</label>
+                  <input type="date" className="neo-input" name="date" value={formData.date} onChange={handleChange} required disabled={isSaving} />
                 </div>
               </div>
 
-              {/* Vitals */}
-              <div className="form-section">
-                <h3>📊 Vitals (Optional)</h3>
-                <div className="form-row">
-                  <div className="form-field">
-                    <label>Height (cm)</label>
-                    <input
-                      type="number"
-                      name="heightCm"
-                      value={formData.heightCm}
-                      onChange={handleChange}
-                      disabled={isSaving}
-                      step="0.1"
-                    />
-                  </div>
-                  <div className="form-field">
-                    <label>Weight (kg)</label>
-                    <input
-                      type="number"
-                      name="weightKg"
-                      value={formData.weightKg}
-                      onChange={handleChange}
-                      disabled={isSaving}
-                      step="0.1"
-                    />
-                  </div>
-                </div>
-
-                <div className="form-row">
-                  <div className="form-field">
-                    <label>Blood Pressure</label>
-                    <input
-                      type="text"
-                      name="bp"
-                      value={formData.bp}
-                      onChange={handleChange}
-                      placeholder="120/80"
-                      disabled={isSaving}
-                    />
-                  </div>
-                  <div className="form-field">
-                    <label>Heart Rate (bpm)</label>
-                    <input
-                      type="number"
-                      name="heartRate"
-                      value={formData.heartRate}
-                      onChange={handleChange}
-                      disabled={isSaving}
-                    />
-                  </div>
-                  <div className="form-field">
-                    <label>SpO2 (%)</label>
-                    <input
-                      type="number"
-                      name="spo2"
-                      value={formData.spo2}
-                      onChange={handleChange}
-                      min="0"
-                      max="100"
-                      disabled={isSaving}
-                    />
-                  </div>
+              <div className="neo-input-group">
+                <div className="neo-input-box">
+                  <label className="neo-input-label">Time</label>
+                  <input type="time" className="neo-input" name="time" value={formData.time} onChange={handleChange} required disabled={isSaving} />
                 </div>
               </div>
-            </div>
 
-            {/* Footer Actions */}
-            <div className="appointment-edit-footer">
-              <button
-                type="button"
-                className="btn-delete"
-                onClick={handleDelete}
-                disabled={isSaving}
-              >
-                <MdDelete />
-                <span>Delete</span>
-              </button>
-              <div className="right-buttons">
-                <button
-                  type="button"
-                  className="btn-cancel"
-                  onClick={onClose}
-                  disabled={isSaving}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="btn-save"
-                  disabled={isSaving}
-                >
-                  {isSaving ? 'Saving...' : 'Save Changes'}
-                </button>
+              {/* Status & Type */}
+              <div className="neo-input-group">
+                <div className="neo-input-box">
+                  <label className="neo-input-label">Type</label>
+                  <select className="neo-input" name="appointmentType" value={formData.appointmentType} onChange={handleChange} disabled={isSaving}>
+                    <option value="">Select Type</option>
+                    <option value="Consultation">Consultation</option>
+                    <option value="Follow-up">Follow-up</option>
+                    <option value="Emergency">Emergency</option>
+                  </select>
+                </div>
               </div>
+
+              <div className="neo-input-group">
+                <div className="neo-input-box">
+                  <label className="neo-input-label">Status</label>
+                  <select className="neo-input" name="status" value={formData.status} onChange={handleChange} disabled={isSaving}>
+                    <option value="Scheduled">Scheduled</option>
+                    <option value="Confirmed">Confirmed</option>
+                    <option value="Cancelled">Cancelled</option>
+                    <option value="Completed">Completed</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Notes - Full Width */}
+              <div className="neo-input-group neo-full-width">
+                <div className="neo-input-box">
+                  <label className="neo-input-label">Chief Complaint / Notes</label>
+                  <textarea className="neo-input" rows="3" name="chiefComplaint" value={formData.chiefComplaint} onChange={handleChange} disabled={isSaving} placeholder="Reason for visit..." />
+                </div>
+              </div>
+
+              <div className="neo-input-group neo-full-width">
+                <div className="neo-input-box">
+                  <label className="neo-input-label">Doctor's Internal Notes</label>
+                  <textarea className="neo-input" rows="2" name="notes" value={formData.notes} onChange={handleChange} disabled={isSaving} placeholder="Private notes..." />
+                </div>
+              </div>
+
             </div>
           </form>
-        )}
+        </div>
+
+        {/* NEO FOOTER */}
+        <div className="neo-footer">
+          <button type="button" className="neo-btn-danger" onClick={handleDelete} disabled={isSaving}>
+            <MdDelete size={16} /> Delete
+          </button>
+
+          <div className="neo-actions-right" style={{ display: 'flex', gap: '12px' }}>
+            <button type="button" className="neo-btn-secondary" onClick={onClose} disabled={isSaving}>Cancel</button>
+            <button type="submit" form="editForm" className="neo-btn-primary" disabled={isSaving}>
+              {isSaving ? 'Saving...' : 'Save Changes'} <MdSave size={16} style={{ marginLeft: '4px' }} />
+            </button>
+          </div>
+        </div>
+
       </div>
     </div>
   );

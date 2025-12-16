@@ -43,13 +43,11 @@ const Invoice = () => {
   const [invoices, setInvoices] = useState([]);
   const [filteredInvoices, setFilteredInvoices] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isDownloading, setIsDownloading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(0);
   const [statusFilter, setStatusFilter] = useState('All');
   const [paymentMethodFilter, setPaymentMethodFilter] = useState('All');
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
-  const [actionMenuOpen, setActionMenuOpen] = useState(null);
   
   const itemsPerPage = 10;
 
@@ -190,36 +188,6 @@ const Invoice = () => {
   const handleEdit = (invoice) => {
     console.log('Edit invoice:', invoice);
     alert(`Edit Invoice: ${invoice.invoiceNumber}`);
-  };
-
-  const handleDownload = async (invoice) => {
-    try {
-      setIsDownloading(true);
-      await invoiceService.downloadInvoice(invoice.id, invoice.invoiceNumber);
-      alert(`Invoice ${invoice.invoiceNumber} downloaded successfully!`);
-    } catch (error) {
-      console.error('Failed to download invoice:', error);
-      alert('Failed to download invoice: ' + error.message);
-    } finally {
-      setIsDownloading(false);
-    }
-  };
-
-  const handleDelete = async (invoice) => {
-    if (!window.confirm(`Are you sure you want to delete invoice ${invoice.invoiceNumber}?`)) {
-      return;
-    }
-
-    try {
-      setIsLoading(true);
-      await invoiceService.deleteInvoice(invoice.id);
-      await fetchInvoices();
-      alert('Invoice deleted successfully!');
-    } catch (error) {
-      console.error('Failed to delete invoice:', error);
-      alert('Failed to delete invoice: ' + error.message);
-      setIsLoading(false);
-    }
   };
 
   // Pagination

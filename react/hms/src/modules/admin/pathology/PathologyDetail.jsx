@@ -18,6 +18,7 @@ const PathologyDetail = ({ reportId, report, onClose }) => {
     if (!report && reportId) {
       loadReport();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reportId, report]);
 
   // Prevent body scroll when modal is open

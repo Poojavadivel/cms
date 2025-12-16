@@ -45,13 +45,11 @@ const Pathology = () => {
   const [reports, setReports] = useState([]);
   const [filteredReports, setFilteredReports] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isDownloading, setIsDownloading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(0);
   const [statusFilter, setStatusFilter] = useState('All');
   const [testTypeFilter, setTestTypeFilter] = useState('All');
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
-  const [actionMenuOpen, setActionMenuOpen] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [editingReport, setEditingReport] = useState(null);
   const [showDetail, setShowDetail] = useState(false);
@@ -135,7 +133,6 @@ const Pathology = () => {
   const handleEditReport = (report) => {
     setEditingReport(report);
     setShowForm(true);
-    setActionMenuOpen(null);
   };
 
   // Handle form submit
@@ -178,7 +175,6 @@ const Pathology = () => {
         alert('Failed to delete report: ' + error.message);
       }
     }
-    setActionMenuOpen(null);
   };
 
   // Status badge component
@@ -227,19 +223,6 @@ const Pathology = () => {
   const handleCloseDetail = () => {
     setShowDetail(false);
     setSelectedReport(null);
-  };
-
-  const handleDownload = async (report) => {
-    try {
-      setIsDownloading(true);
-      await pathologyService.downloadReport(report.id, report.reportId);
-      alert(`Report ${report.reportId} downloaded successfully!`);
-    } catch (error) {
-      console.error('Failed to download report:', error);
-      alert('Failed to download report: ' + error.message);
-    } finally {
-      setIsDownloading(false);
-    }
   };
 
   // Pagination

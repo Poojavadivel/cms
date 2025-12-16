@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { FiX, FiUser, FiFileText, FiCalendar, FiUpload, FiSave, FiArrowRight, FiCheck } from 'react-icons/fi';
+import { FiX, FiUser, FiUpload, FiSave, FiArrowRight, FiCheck } from 'react-icons/fi';
 import { MdOutlineScience, MdOutlineNoteAlt } from 'react-icons/md';
 
 const PathologyFormEnterprise = ({ initial, onSubmit, onCancel }) => {

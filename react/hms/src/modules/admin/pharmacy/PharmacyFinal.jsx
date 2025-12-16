@@ -63,11 +63,13 @@ const PharmacyFinal = () => {
   // Fetch data on mount
   useEffect(() => {
     fetchData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Filter medicines when search or filter changes
   useEffect(() => {
     filterMedicines();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery, statusFilter, medicines]);
 
   const fetchData = useCallback(async () => {

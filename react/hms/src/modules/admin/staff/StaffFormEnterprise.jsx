@@ -5,9 +5,9 @@
 
 import React, { useState, useEffect } from 'react';
 import {
-  FiUser, FiMail, FiPhone, FiMapPin, FiCalendar,
+  FiUser, FiCalendar,
   FiBriefcase, FiUpload, FiCheck, FiX, FiAlertCircle,
-  FiSave, FiArrowRight, FiArrowLeft
+  FiArrowRight
 } from 'react-icons/fi';
 
 const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {

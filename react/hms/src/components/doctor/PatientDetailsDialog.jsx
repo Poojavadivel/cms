@@ -1,241 +1,204 @@
 /**
  * PatientDetailsDialog.jsx
- * Premium Enterprise View for Patient Details
- * Matching StaffDetailEnterprise design system
+ * Premium Dashboard Layout 2025
+ * Sidebar Nav + Persistent Premium Header
  */
 
 import React, { useState } from 'react';
 import {
-    MdClose, MdEdit, MdEmail, MdPhone, MdLocationOn,
-    MdMedicalServices, MdHistory, MdPayment, MdWarning,
-    MdPerson, MdEventNote
+    MdClose, MdPerson, MdHistory, MdMedicalServices,
+    MdDescription, MdScience, MdPayment, MdHeight,
+    MdMonitorWeight, MdScale, MdMonitorHeart
 } from 'react-icons/md';
 import './PatientDetailsDialog.css';
 
 const PatientDetailsDialog = ({ patient, isOpen, onClose, showBillingTab = false }) => {
-    const [activeTab, setActiveTab] = useState('overview');
+    const [activeTab, setActiveTab] = useState('profile');
 
     if (!isOpen || !patient) return null;
 
-    // Helper: Format Date
-    const formatDate = (dateString) => {
-        if (!dateString) return 'N/A';
-        try {
-            return new Date(dateString).toLocaleDateString('en-US', {
-                year: 'numeric', month: 'long', day: 'numeric'
-            });
-        } catch {
-            return dateString;
-        }
-    };
+    // Helpers
+    const f = (val, suffix = '') => (val || val === 0 ? `${val}${suffix}` : '—');
+    const getGenderIcon = (g) => (g?.toLowerCase()?.startsWith('f') ? '👩' : '👨');
 
-    // Helper: Get Gender Icon
-    const getGenderIcon = (gender) => {
-        const g = (gender || '').toLowerCase();
-        return g === 'female' || g === 'f' ? '👩' : '👨';
-    };
+    // Navigation Items
+    const navItems = [
+        { id: 'profile', label: 'Profile Overview', icon: <MdPerson /> },
+        { id: 'history', label: 'Medical History', icon: <MdHistory /> },
+        { id: 'prescriptions', label: 'Prescriptions', icon: <MdDescription /> },
+        { id: 'lab', label: 'Lab Results', icon: <MdScience /> },
+        ...(showBillingTab ? [{ id: 'billing', label: 'Billing & Invoices', icon: <MdPayment /> }] : [])
+    ];
 
     return (
         <div className="patient-modal-overlay" onClick={onClose}>
             <div className="patient-modal-content" onClick={e => e.stopPropagation()}>
 
-                {/* Floating Close Button */}
-                <button className="btn-close-floating" onClick={onClose}>
-                    <MdClose size={20} />
-                </button>
-
-                {/* HEADER SECTION */}
-                <div className="patient-header">
-                    <div className="patient-avatar-box">
-                        {patient.avatar ? (
-                            <img src={patient.avatar} alt="Patient" className="patient-avatar-lg" />
-                        ) : (
-                            <div className="patient-avatar-placeholder">
-                                {getGenderIcon(patient.gender)}
-                            </div>
-                        )}
+                {/* SIDEBAR */}
+                <div className="pd-sidebar">
+                    <div className="pd-sidebar-header">
+                        <span className="pd-sidebar-title">PATIENT MENU</span>
                     </div>
-
-                    <div className="header-info-group">
-                        <h1 className="patient-name-lg">
-                            {patient.name || patient.clientName || 'Unknown Patient'}
-                        </h1>
-                        <div className="patient-meta-row">
-                            <span className="patient-id-badge">
-                                {patient.patientId || 'NO-ID'}
-                            </span>
-                            <span>•</span>
-                            <span>{patient.gender || 'Unknown Gender'}</span>
-                            <span>•</span>
-                            <span>{patient.age ? `${patient.age} Years` : 'Age N/A'}</span>
-                        </div>
-                    </div>
-
-                    <div className="header-actions">
-                        {patient.email && (
-                            <button
-                                className="btn-header-action secondary"
-                                onClick={() => window.location.href = `mailto:${patient.email}`}
+                    <div className="pd-nav-menu">
+                        {navItems.map(item => (
+                            <div
+                                key={item.id}
+                                className={`pd-nav-item ${activeTab === item.id ? 'active' : ''}`}
+                                onClick={() => setActiveTab(item.id)}
                             >
-                                <MdEmail size={18} />
-                                <span>Email</span>
-                            </button>
-                        )}
-                        <button className="btn-header-action primary">
-                            <MdEdit size={18} />
-                            <span>Edit Profile</span>
-                        </button>
+                                {item.icon}
+                                <span>{item.label}</span>
+                            </div>
+                        ))}
                     </div>
                 </div>
 
-                {/* BODY SECTION */}
-                <div className="patient-body">
-                    {/* Sidebar Navigation */}
-                    <div className="patient-sidebar">
-                        <div
-                            className={`nav-tab ${activeTab === 'overview' ? 'active' : ''}`}
-                            onClick={() => setActiveTab('overview')}
-                        >
-                            <MdPerson size={18} /> Overview
-                        </div>
-                        <div
-                            className={`nav-tab ${activeTab === 'history' ? 'active' : ''}`}
-                            onClick={() => setActiveTab('history')}
-                        >
-                            <MdHistory size={18} /> Medical History
-                        </div>
-                        {showBillingTab && (
-                            <div
-                                className={`nav-tab ${activeTab === 'billing' ? 'active' : ''}`}
-                                onClick={() => setActiveTab('billing')}
-                            >
-                                <MdPayment size={18} /> Billing
+                {/* MAIN CONTENT */}
+                <div className="pd-main">
+
+                    {/* Close Button */}
+                    <button className="btn-close-abs" onClick={onClose}>
+                        <MdClose size={20} />
+                    </button>
+
+                    {/* PERSISTENT HEADER (Identity + Vitals) */}
+                    <div className="pd-header">
+                        <div className="pd-identity">
+                            {patient.avatar ? (
+                                <img src={patient.avatar} alt="Avatar" className="pd-avatar-img" />
+                            ) : (
+                                <div className="pd-avatar-img" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '40px', background: '#eff6ff' }}>
+                                    {getGenderIcon(patient.gender)}
+                                </div>
+                            )}
+                            <div className="pd-info">
+                                <h1>{patient.name || patient.clientName || 'Unknown'}</h1>
+                                <div className="pd-chips">
+                                    <span className="pd-pill id">{patient.patientId || 'NO-ID'}</span>
+                                    <span className="pd-pill">{patient.gender || 'Gen'}</span>
+                                    <span className="pd-pill">{patient.age ? `${patient.age} Yrs` : 'Age'}</span>
+                                    <span className="pd-pill">{patient.bloodGroup || 'Blood'}</span>
+                                </div>
                             </div>
-                        )}
+                        </div>
+
+                        {/* Vitals Grid */}
+                        <div className="pd-vitals-container">
+                            <VitalCard icon={<MdHeight />} label="Height" value={f(patient.height, ' cm')} />
+                            <VitalCard icon={<MdMonitorWeight />} label="Weight" value={f(patient.weight, ' kg')} />
+                            <VitalCard icon={<MdScale />} label="BMI" value={f(patient.bmi)} />
+                            <VitalCard icon={<MdMonitorHeart />} label="SpO₂" value={f(patient.oxygen, '%')} />
+                        </div>
                     </div>
 
-                    {/* Content Area */}
-                    <div className="patient-content-area animate-fade-in">
+                    {/* SCROLLABLE TAB CONTENT */}
+                    <div className="pd-scroll-area">
 
-                        {/* OVERVIEW TAB */}
-                        {activeTab === 'overview' && (
-                            <div className="detail-grid">
-
-                                {/* Contact Info Card */}
-                                <div className="info-card">
-                                    <div className="card-header">
-                                        <MdPhone className="card-icon" />
-                                        <span className="card-title">Contact Information</span>
-                                    </div>
-                                    <div className="data-row">
-                                        <div className="info-row">
-                                            <span className="label">Phone Number</span>
-                                            <span className="value">{patient.phone || patient.phoneNumber || 'N/A'}</span>
-                                        </div>
-                                        <div className="info-row">
-                                            <span className="label">Email Address</span>
-                                            <span className="value">{patient.email || 'N/A'}</span>
-                                        </div>
-                                        <div className="info-row" style={{ marginTop: '8px' }}>
-                                            <span className="label">Address</span>
-                                            <span className="value" style={{ maxWidth: '60%' }}>
-                                                {[
-                                                    patient.houseNo, patient.street, patient.city,
-                                                    patient.state, patient.pincode
-                                                ].filter(Boolean).join(', ') || 'No address provided'}
-                                            </span>
-                                        </div>
-                                    </div>
+                        {/* PROFILE TAB */}
+                        {activeTab === 'profile' && (
+                            <div className="animate-in">
+                                <div className="pd-section-title">
+                                    <MdPerson className="text-blue-600" /> Personal Information
                                 </div>
-
-                                {/* Vitals / Emergency Card */}
-                                <div className="info-card">
-                                    <div className="card-header">
-                                        <MdMedicalServices className="card-icon" />
-                                        <span className="card-title">Medical Profile</span>
+                                <div className="pd-grid-2">
+                                    <div className="pd-card">
+                                        <h3 className="text-sm font-bold text-slate-800 mb-4 uppercase tracking-wide">Contact Details</h3>
+                                        <div className="pd-field-group">
+                                            <label className="pd-label">Phone Number</label>
+                                            <div className="pd-value">{patient.phone || patient.phoneNumber || 'N/A'}</div>
+                                        </div>
+                                        <div className="pd-field-group">
+                                            <label className="pd-label">Email Address</label>
+                                            <div className="pd-value">{patient.email || 'N/A'}</div>
+                                        </div>
+                                        <div className="pd-field-group">
+                                            <label className="pd-label">Residential Address</label>
+                                            <div className="pd-value">
+                                                {[patient.houseNo, patient.street, patient.city, patient.state].filter(Boolean).join(', ') || 'N/A'}
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div className="data-row">
-                                        <div className="info-row">
-                                            <span className="label">Blood Group</span>
-                                            <span className="value">{patient.bloodGroup || 'N/A'}</span>
+
+                                    <div className="pd-card">
+                                        <h3 className="text-sm font-bold text-slate-800 mb-4 uppercase tracking-wide">Emergency & Allergies</h3>
+                                        <div className="pd-field-group">
+                                            <label className="pd-label">Emergency Contact</label>
+                                            <div className="pd-value">{patient.emergencyContactName || 'N/A'}</div>
+                                            <div className="text-xs text-slate-500 mt-1">{patient.emergencyContactPhone}</div>
                                         </div>
-                                        <div className="info-row">
-                                            <span className="label">Allergies</span>
-                                            <span className="value" style={{ color: patient.allergies?.length ? '#ef4444' : 'inherit' }}>
-                                                {patient.allergies?.length ? patient.allergies.join(', ') : 'None Known'}
-                                            </span>
-                                        </div>
-                                        <div className="info-row" style={{ marginTop: '12px' }}>
-                                            <span className="label">Emergency Contact</span>
-                                            <span className="value">
-                                                {patient.emergencyContactName || 'N/A'}
-                                                {patient.emergencyContactPhone && (
-                                                    <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 500 }}>
-                                                        {patient.emergencyContactPhone}
+                                        <div className="pd-field-group">
+                                            <label className="pd-label">Allergies</label>
+                                            <div className="pd-value">
+                                                {patient.allergies?.length ? (
+                                                    <div className="flex gap-2 flex-wrap mt-1">
+                                                        {patient.allergies.map((a, i) => (
+                                                            <span key={i} className="px-2 py-1 bg-red-50 text-red-600 rounded text-xs font-bold border border-red-100">
+                                                                {a}
+                                                            </span>
+                                                        ))}
                                                     </div>
-                                                )}
-                                            </span>
+                                                ) : 'No Known Allergies'}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
 
-                                {/* Notes Card - Full Width */}
                                 {patient.notes && (
-                                    <div className="info-card" style={{ gridColumn: '1 / -1' }}>
-                                        <div className="card-header">
-                                            <MdEventNote className="card-icon" />
-                                            <span className="card-title">Clinical Notes</span>
-                                        </div>
-                                        <p className="text-notes">
-                                            {patient.notes}
-                                        </p>
+                                    <div className="pd-card" style={{ marginTop: '24px' }}>
+                                        <h3 className="text-sm font-bold text-slate-800 mb-2 uppercase tracking-wide">Clinical Notes</h3>
+                                        <p className="text-slate-600 leading-relaxed text-sm">{patient.notes}</p>
                                     </div>
                                 )}
                             </div>
                         )}
 
-                        {/* HISTORY TAB */}
+                        {/* MEDICAL HISTORY TAB */}
                         {activeTab === 'history' && (
-                            <div className="animate-fade-in">
-                                {patient.medicalHistory && patient.medicalHistory.length > 0 ? (
-                                    <div className="detail-grid">
-                                        <div className="info-card" style={{ gridColumn: '1 / -1' }}>
-                                            <div className="card-header">
-                                                <MdHistory className="card-icon" />
-                                                <span className="card-title">Medical History Timeline</span>
+                            <div className="animate-in">
+                                <div className="pd-section-title">
+                                    <MdHistory className="text-blue-600" /> Medical History Timeline
+                                </div>
+                                {patient.medicalHistory?.length > 0 ? (
+                                    <div>
+                                        {patient.medicalHistory.map((item, i) => (
+                                            <div key={i} className="pd-history-item">
+                                                {item}
                                             </div>
-                                            <div className="chip-container" style={{ flexDirection: 'column', gap: '12px' }}>
-                                                {patient.medicalHistory.map((item, index) => (
-                                                    <div key={index} style={{
-                                                        padding: '12px',
-                                                        background: '#f8fafc',
-                                                        borderRadius: '8px',
-                                                        borderLeft: '4px solid #3b82f6'
-                                                    }}>
-                                                        <span style={{ fontWeight: 600, color: '#334155' }}>
-                                                            {item}
-                                                        </span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
+                                        ))}
                                     </div>
                                 ) : (
-                                    <div className="empty-tab-state">
-                                        <MdHistory size={48} />
-                                        <h3>No Medical History</h3>
-                                        <p>No history records found for this patient.</p>
-                                    </div>
+                                    <EmptyState title="No Medical History" />
                                 )}
+                            </div>
+                        )}
+
+                        {/* PRESCRIPTIONS TAB */}
+                        {activeTab === 'prescriptions' && (
+                            <div className="animate-in">
+                                <div className="pd-section-title">
+                                    <MdDescription className="text-blue-600" /> Active Prescriptions
+                                </div>
+                                <EmptyState title="No Active Prescriptions" subtitle="Prescriptions issued by doctors will appear here." />
+                            </div>
+                        )}
+
+                        {/* LAB TAB */}
+                        {activeTab === 'lab' && (
+                            <div className="animate-in">
+                                <div className="pd-section-title">
+                                    <MdScience className="text-blue-600" /> Lab Reports
+                                </div>
+                                <EmptyState title="No Lab Results" subtitle="Pathology and imaging reports will be listed here." />
                             </div>
                         )}
 
                         {/* BILLING TAB */}
                         {activeTab === 'billing' && (
-                            <div className="empty-tab-state animate-fade-in">
-                                <MdPayment size={48} />
-                                <h3>Billing Information</h3>
-                                <p>Invoices and payment history section coming soon.</p>
+                            <div className="animate-in">
+                                <div className="pd-section-title">
+                                    <MdPayment className="text-blue-600" /> Billing & Payments
+                                </div>
+                                <EmptyState title="No Invoices Found" />
                             </div>
                         )}
 
@@ -245,5 +208,24 @@ const PatientDetailsDialog = ({ patient, isOpen, onClose, showBillingTab = false
         </div>
     );
 };
+
+// Sub-components
+const VitalCard = ({ icon, label, value }) => (
+    <div className="pd-vital-card">
+        <div className="pd-vital-icon">{icon}</div>
+        <span className="pd-vital-value">{value}</span>
+        <span className="pd-vital-label">{label}</span>
+    </div>
+);
+
+const EmptyState = ({ title, subtitle }) => (
+    <div className="flex flex-col items-center justify-center py-12 text-center">
+        <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4 text-slate-300">
+            <MdMedicalServices size={32} />
+        </div>
+        <h3 className="text-slate-600 font-bold text-lg mb-1">{title}</h3>
+        <p className="text-slate-400 text-sm max-w-xs">{subtitle || 'No data available for this section yet.'}</p>
+    </div>
+);
 
 export default PatientDetailsDialog;
