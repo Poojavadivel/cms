@@ -1,4 +1,4 @@
-/* Pharmacy Management - Using Patients.css style */
+/* Pharmacy Management - Matching Patients.css exactly */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 @keyframes spin {
@@ -6,30 +6,42 @@
 }
 
 :root {
+  /* BRAND COLORS */
   --primary: #2663FF;
   --primary-hover: #1e54e4;
   --secondary: #28C76F;
   --accent-yellow: #F4B400;
   --accent-red: #FF5A5F;
   --neutral-gray: #9CA3AF;
-  
+
+  /* SURFACES */
   --bg-page: #F7F9FC;
   --bg-card: #FFFFFF;
   --bg-input: #F1F3F7;
   --bg-hover-row: #EEF3FF;
-  
+
+  /* TYPOGRAPHY COLORS */
   --text-title: #1E293B;
   --text-body: #334155;
   --text-muted: #64748B;
-  
+
+  /* SHADOWS */
   --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.04);
   --shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.08);
-  
+  --shadow-active: 0 0 0 2px rgba(38, 99, 255, 0.2);
+
+  /* SPACING */
+  --space-05: 4px;
+  --space-1: 8px;
+  --space-2: 12px;
   --space-3: 16px;
   --space-4: 24px;
-  
+
+  /* RADIUS */
   --radius-btn: 8px;
   --radius-card: 12px;
+  --radius-search: 12px;
+  --radius-pill: 20px;
 }
 
 /* Main Container - Match Patients.css */
@@ -133,10 +145,16 @@
   outline: none;
 }
 
+.search-input-lg::placeholder {
+  color: #94A3B8;
+}
+
 .search-input-lg:focus {
+  outline: none;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(38, 99, 255, 0.1);
   border-color: var(--primary);
-  box-shadow: var(--shadow-active);
-  background: var(--bg-card);
+  transform: translateY(-1px);
 }
 
 .filter-right-group {
@@ -147,52 +165,60 @@
 
 .tabs-wrapper {
   display: flex;
-  gap: 4px;
-  background: var(--bg-input);
+  gap: 6px;
+  background: #F8FAFC;
   padding: 4px;
   border-radius: 10px;
 }
 
 .tab-btn {
   padding: 8px 16px;
-  background: transparent;
-  border: none;
   border-radius: 8px;
+  border: none;
+  background: transparent;
   font-size: 13px;
-  font-weight: 600;
-  color: var(--text-muted);
+  font-weight: 500;
+  color: var(--text-body);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
+  white-space: nowrap;
 }
 
 .tab-btn:hover {
-  color: var(--text-body);
+  background: rgba(38, 99, 255, 0.08);
+  color: var(--primary);
 }
 
 .tab-btn.active {
-  background: var(--bg-card);
-  color: var(--primary);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  background: var(--primary);
+  color: white;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(38, 99, 255, 0.25);
+  transform: translateY(-1px);
 }
 
 .btn-filter-date {
-  padding: 8px 14px;
-  background: var(--bg-input);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: white;
   border: 1.5px solid #E2E8F0;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 13px;
   font-weight: 600;
   color: var(--text-body);
   cursor: pointer;
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  transition: all 0.2s ease;
+  white-space: nowrap;
 }
 
 .btn-filter-date:hover {
+  background: #F8FAFC;
   border-color: var(--primary);
   color: var(--primary);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 /* Table Card - Match Patients.css exactly */
@@ -252,39 +278,49 @@
 }
 
 .modern-table tbody tr {
-  border-bottom: 1px solid #E2E8F0;
-  transition: background 0.15s ease;
+  height: 56px;
+  border-bottom: 1px solid #F1F5F9;
+  transition: background 0.1s;
 }
 
 .modern-table tbody tr:hover {
-  background: var(--bg-hover-row);
+  background-color: #F8FAFC;
 }
 
 .modern-table tbody td {
-  padding: 16px 20px;
-  font-size: 14px;
-  color: var(--text-body);
+  padding: 0 20px;
+  vertical-align: middle;
+  font-size: 13px;
+  color: var(--text-title);
 }
 
 .info-group {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 0;
 }
 
 .info-group .primary {
+  font-size: 13px;
   font-weight: 600;
   color: var(--text-title);
-  font-size: 14px;
+  line-height: 1.4;
 }
 
 .info-group .secondary {
-  font-size: 12px;
+  font-size: 11px;
+  font-weight: 400;
   color: var(--neutral-gray);
 }
 
 .font-semibold {
   font-weight: 600;
+  color: var(--text-title);
+}
+
+.font-medium {
+  font-weight: 500;
+  font-size: 13px;
   color: var(--text-title);
 }
 
@@ -376,76 +412,82 @@
   color: #FF5A5F;
 }
 
-/* Action Buttons */
+/* Actions */
 .action-buttons-group {
   display: flex;
-  gap: 8px;
-  align-items: center;
-  justify-content: center;
+  gap: 6px;
 }
 
 .btn-action {
-  width: 32px;
-  height: 32px;
-  padding: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: transparent;
-  border: 1px solid #E2E8F0;
-  border-radius: 6px;
-  cursor: pointer;
   transition: all 0.2s;
-  color: var(--neutral-gray);
 }
 
-.btn-action:hover {
-  background: #F8FAFC;
+/* Edit - Green */
+.btn-action.edit svg {
+  stroke: #10B981;
 }
 
 .btn-action.edit:hover {
-  border-color: var(--primary);
-  color: var(--primary);
-  background: rgba(38, 99, 255, 0.05);
+  background: #D1FAE5;
+}
+
+.btn-action.edit:hover svg {
+  stroke: #059669;
+}
+
+/* Delete - Red */
+.btn-action.delete svg {
+  stroke: #EF4444;
 }
 
 .btn-action.delete:hover {
-  border-color: var(--accent-red);
-  color: var(--accent-red);
-  background: rgba(255, 90, 95, 0.05);
+  background: #FEE2E2;
 }
 
-/* Pagination - Fixed at bottom of table-card */
+.btn-action.delete:hover svg {
+  stroke: #DC2626;
+}
+
+/* Pagination */
 .pagination-footer {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 16px;
-  padding: 16px 20px;
-  background: #F8FAFC;
+  padding: 10px 20px;
   border-top: 1px solid #E2E8F0;
+  display: flex;
+  justify-content: flex-start;
+  gap: 12px;
+  align-items: center;
+  background: white;
   flex-shrink: 0;
 }
 
 .page-arrow-circle {
-  width: 36px;
-  height: 36px;
-  padding: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid #E2E8F0;
+  background: white;
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: white;
-  border: 1px solid #E2E8F0;
-  border-radius: 50%;
-  cursor: pointer;
+  color: var(--text-title);
   transition: all 0.2s;
-  color: var(--text-body);
 }
 
 .page-arrow-circle:hover:not(:disabled) {
   border-color: var(--primary);
+  background: #EEF3FF;
   color: var(--primary);
-  background: rgba(38, 99, 255, 0.05);
+  transform: scale(1.05);
 }
 
 .page-arrow-circle:disabled {
@@ -454,13 +496,10 @@
 }
 
 .page-indicator-box {
-  padding: 8px 16px;
-  background: white;
-  border: 1px solid #E2E8F0;
-  border-radius: var(--radius-btn);
   font-size: 13px;
-  font-weight: 600;
-  color: var(--text-body);
+  font-weight: 500;
+  color: var(--text-title);
+  padding: 0 8px;
 }
 
 

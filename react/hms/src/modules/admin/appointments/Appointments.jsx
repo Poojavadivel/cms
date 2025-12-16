@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+// import { useNavigate } from 'react-router-dom'; // Reserved for future navigation
 import './Appointments.css';
 import appointmentsService from '../../../services/appointmentsService';
+import patientsService from '../../../services/patientsService';
 import AppointmentViewModal from '../../../components/appointments/AppointmentViewModal';
 import AppointmentEditModal from '../../../components/appointments/AppointmentEditModal';
 import AppointmentIntakeModal from '../../../components/appointments/AppointmentIntakeModal';
+import AppointmentPreviewDialog from '../../../components/doctor/AppointmentPreviewDialog';
 
 // --- MOCK DATA (KEPT FOR FALLBACK) ---
 const MOCK_APPOINTMENTS = [
@@ -413,11 +415,12 @@ const transformAppointment = (apt, index) => {
     reason = String(apt.notes).trim();
   }
   
-  // Ensure ALL fields are primitive types
+  // Store both display ID and actual patient object for lookup
   return {
     id: String(apt._id || apt.id || index),
     patientName: patientFullName || 'Unknown',
-    patientId: patientCode || patientIdStr || `PT-${index}`,
+    patientId: patientCode || patientIdStr || `PT-${index}`, // Display code
+    patientIdObj: apt.patientId, // CRITICAL: Store original patient object with _id
     doctor: doctorName || 'Not Assigned',
     doctorInitials: getDoctorInitials(doctorName),
     doctorColor: getDoctorColor(index),
@@ -433,7 +436,7 @@ const transformAppointment = (apt, index) => {
 // --- MAIN PAGE ---
 
 const Appointments = () => {
-  const navigate = useNavigate();
+  // const navigate = useNavigate(); // Reserved for future navigation
   const [activeTab, setActiveTab] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [allAppointments, setAllAppointments] = useState([]);
@@ -447,6 +450,10 @@ const Appointments = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showIntakeModal, setShowIntakeModal] = useState(false);
   const [selectedAppointmentId, setSelectedAppointmentId] = useState(null);
+  
+  // Patient dialog states
+  const [selectedPatient, setSelectedPatient] = useState(null);
+  const [showPatientDialog, setShowPatientDialog] = useState(false);
 
   // Fetch appointments from API on mount
   useEffect(() => {
@@ -538,19 +545,94 @@ const Appointments = () => {
     setShowIntakeModal(true);
   };
   
-  // Handle patient name click - navigate to patient page
-  const handlePatientClick = (patientId) => {
-    if (patientId) {
-      setShowViewModal(false);
-      navigate(`/doctor/patients/${patientId}`);
+  // Handle patient name click - open patient details dialog
+  const handlePatientNameClick = async (appointment) => {
+    try {
+      console.log('🔍 [handlePatientNameClick] Full appointment data:', appointment);
+      
+      // Extract patient UUID (_id) from appointment - NOT patientCode!
+      let patientUUID = null;
+      
+      // Try to get from the original appointment data stored in the transform
+      const originalApt = allAppointments.find(a => a.id === appointment.id);
+      console.log('📦 [handlePatientNameClick] Original appointment:', originalApt);
+      
+      if (originalApt && originalApt.patientIdObj) {
+        patientUUID = originalApt.patientIdObj._id;
+        console.log('✅ Found patient UUID from patientIdObj:', patientUUID);
+      }
+      
+      if (!patientUUID) {
+        console.error('❌ Could not extract patient UUID from appointment');
+        console.error('Available appointment data:', appointment);
+        alert('Unable to load patient details. Patient ID not found.');
+        return;
+      }
+      
+      console.log('🔄 Fetching patient by UUID:', patientUUID);
+      
+      // Fetch full patient details using UUID
+      const fullPatient = await patientsService.fetchPatientById(patientUUID);
+      console.log('✅ Fetched full patient:', fullPatient);
+      
+      // Enrich patient data with info from appointment if available
+      if (originalApt && originalApt.patientIdObj && originalApt.patientIdObj.metadata) {
+        const appointmentMetadata = originalApt.patientIdObj.metadata;
+        console.log('📦 Enriching with appointment metadata:', appointmentMetadata);
+        
+        // Add emergency contacts from appointment metadata if not in patient record
+        if (!fullPatient.emergencyContactName && appointmentMetadata.emergencyContactName) {
+          fullPatient.emergencyContactName = appointmentMetadata.emergencyContactName;
+          fullPatient.emergencyContactPhone = appointmentMetadata.emergencyContactPhone;
+          console.log('✅ Added emergency contact:', fullPatient.emergencyContactName);
+        }
+        
+        // Add insurance from appointment metadata if not in patient record
+        if (!fullPatient.insuranceNumber && appointmentMetadata.insurance) {
+          fullPatient.insuranceNumber = appointmentMetadata.insurance.policyNumber;
+          fullPatient.expiryDate = appointmentMetadata.insurance.validUntil;
+          console.log('✅ Added insurance:', fullPatient.insuranceNumber);
+        }
+        
+        // Add medical history from appointment metadata - ENSURE it's always an array
+        if (appointmentMetadata.medicalHistory) {
+          if (Array.isArray(appointmentMetadata.medicalHistory)) {
+            // Already an array
+            fullPatient.medicalHistory = appointmentMetadata.medicalHistory;
+            console.log('✅ Added medical history (array):', fullPatient.medicalHistory);
+          } else if (typeof appointmentMetadata.medicalHistory === 'object' && appointmentMetadata.medicalHistory.currentConditions) {
+            // Extract currentConditions array from object
+            fullPatient.medicalHistory = Array.isArray(appointmentMetadata.medicalHistory.currentConditions)
+              ? appointmentMetadata.medicalHistory.currentConditions
+              : [];
+            console.log('✅ Added medical history (from currentConditions):', fullPatient.medicalHistory);
+          }
+        }
+        
+        // Ensure medicalHistory is always an array
+        if (!Array.isArray(fullPatient.medicalHistory)) {
+          console.warn('⚠️ medicalHistory is not an array, converting:', fullPatient.medicalHistory);
+          fullPatient.medicalHistory = [];
+        }
+      }
+      
+      setSelectedPatient(fullPatient);
+      setShowPatientDialog(true);
+    } catch (error) {
+      console.error('❌ Error fetching patient details:', error);
+      alert('Failed to load patient details: ' + error.message);
     }
+  };
+
+  const handleClosePatientDialog = () => {
+    setShowPatientDialog(false);
+    setSelectedPatient(null);
   };
 
   // Handle delete appointment
   const handleDelete = async (appointment) => {
     const confirmed = window.confirm(`Delete appointment for ${appointment.patientName}?`);
     if (!confirmed) return;
-
     try {
       setIsLoading(true);
       await appointmentsService.deleteAppointment(appointment.id);
@@ -612,8 +694,12 @@ const Appointments = () => {
                 
                 return (
                 <tr key={apt.id}>
-                  {/* PATIENT COLUMN */}
-                  <td className="cell-patient">
+                  {/* PATIENT COLUMN - Clickable */}
+                  <td 
+                    className="cell-patient clickable" 
+                    onClick={() => handlePatientNameClick(apt)}
+                    style={{ cursor: 'pointer' }}
+                  >
                     <img 
                       src={avatarSrc} 
                       alt={apt.gender}
@@ -628,11 +714,7 @@ const Appointments = () => {
                       {apt.gender === 'Female' ? <Icons.Female /> : <Icons.Male />}
                     </div>
                     <div className="info-group">
-                      <span 
-                        className="primary patient-name-clickable" 
-                        onClick={() => handlePatientClick(apt.patientId)}
-                        style={{ cursor: 'pointer' }}
-                      >
+                      <span className="primary patient-name-clickable">
                         {apt.patientName}
                       </span>
                       <span className="secondary">{apt.patientId}</span>
@@ -742,7 +824,6 @@ const Appointments = () => {
           setSelectedAppointmentId(appointment._id || appointment.id);
           setShowEditModal(true);
         }}
-        onPatientClick={handlePatientClick}
       />
 
       <AppointmentEditModal
@@ -757,6 +838,14 @@ const Appointments = () => {
         onClose={() => setShowIntakeModal(false)}
         appointmentId={selectedAppointmentId}
         onSuccess={refreshAppointments}
+      />
+
+      {/* Appointment Preview Dialog - Matches Flutter DoctorAppointmentPreview */}
+      <AppointmentPreviewDialog
+        patient={selectedPatient}
+        isOpen={showPatientDialog}
+        onClose={handleClosePatientDialog}
+        showBillingTab={false}
       />
     </div>
   );

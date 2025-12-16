@@ -41,14 +41,13 @@ const AdminInvoice = lazy(() => import('../modules/admin/invoice/Invoice'));
 const AdminPathology = lazy(() => import('../modules/admin/pathology/Pathology'));
 // const AdminPayroll = lazy(() => import('../modules/admin/payroll/Payroll'));
 const AdminSettings = lazy(() => import('../modules/admin/settings/Settings'));
-// const AdminReports = lazy(() => import('../modules/admin/reports/Reports'));
 
-// Doctor module pages
-const DoctorDashboard = lazy(() => import('../pages/doctor/Dashboard'));
-const DoctorPatients = lazy(() => import('../pages/doctor/Patients'));
-const DoctorAppointments = lazy(() => import('../pages/doctor/Appointments'));
-const DoctorSchedule = lazy(() => import('../pages/doctor/Schedule'));
-const DoctorSettings = lazy(() => import('../pages/doctor/Settings'));
+// Doctor module pages (from modules folder)
+const DoctorDashboard = lazy(() => import('../modules/doctor/dashboard/Dashboard'));
+const DoctorPatients = lazy(() => import('../modules/doctor/patients/Patients'));
+const DoctorAppointments = lazy(() => import('../modules/doctor/appointments/Appointments'));
+const DoctorSchedule = lazy(() => import('../modules/doctor/schedule/Schedule'));
+const DoctorSettings = lazy(() => import('../modules/doctor/settings/Settings'));
 
 // Pharmacist module pages (TODO: Implement these pages)
 // const PharmacyInventory = lazy(() => import('../pages/pharmacist/Inventory'));

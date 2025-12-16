@@ -124,6 +124,9 @@ export class PatientDetails {
   }
 
   static fromJSON(json) {
+    // Debug: Log incoming data structure
+    console.log('🔍 [PatientDetails.fromJSON] Raw data:', JSON.stringify(json, null, 2));
+    
     const first = json.firstName?.toString() || '';
     const last = json.lastName?.toString() || '';
     const fullName = json.name?.toString() || `${first} ${last}`.trim();
@@ -167,6 +170,9 @@ export class PatientDetails {
 
     const metadata = json.metadata && typeof json.metadata === 'object' ? json.metadata : {};
     const addressObj = json.address && typeof json.address === 'object' ? json.address : {};
+    
+    console.log('📦 [PatientDetails] Extracted metadata:', metadata);
+    console.log('📦 [PatientDetails] Extracted addressObj:', addressObj);
 
     let extractedAge = 0;
     if (typeof json.age === 'number') {

@@ -1,12 +1,28 @@
 /**
- * Staff Management Component
- * Manages hospital staff members, roles, and departments
+ * Staff Management Component - Complete Implementation
+ * Matches Flutter's StaffPage functionality exactly
+ * Restored with Download Option
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { MdChevronLeft, MdChevronRight, MdSearch } from 'react-icons/md';
 import staffService from '../../../services/staffService';
+import { Staff as StaffModel } from '../../../models/Staff';
+import StaffFormEnterprise from './StaffFormEnterprise';
+import StaffDetailEnterprise from './StaffDetailEnterprise';
 import './Staff.css';
+import adminFemaleIcon from '../../../assets/admin-femaleicon.png';
+import adminMaleIcon from '../../../assets/admin-maleicon.png';
+import doctorFemaleIcon from '../../../assets/doctor-femaleicon.png';
+import doctorMaleIcon from '../../../assets/doctor-male icon.png';
+import labFemaleIcon from '../../../assets/labfemaleicon.png';
+import labMaleIcon from '../../../assets/labmaleicon.png';
+import nurseFemaleIcon from '../../../assets/nursefemaleicon.png';
+import nurseMaleIcon from '../../../assets/nursemaleicon.png';
+
+// Also keep fallbacks just in case
+import boyIcon from '../../../assets/boyicon.png';
+import girlIcon from '../../../assets/girlicon.png';
 
 // Custom SVG Icons (matching Appointments)
 const Icons = {
@@ -46,30 +62,81 @@ const Icons = {
 
 const Staff = () => {
   // State management
-  const [staff, setStaff] = useState([]);
+  const [allStaff, setAllStaff] = useState([]);
   const [filteredStaff, setFilteredStaff] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDownloading, setIsDownloading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(0);
   const [departmentFilter, setDepartmentFilter] = useState('All');
-  const [roleFilter, setRoleFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
-  
+
+  // Modal states
+  const [showForm, setShowForm] = useState(false);
+  const [showDetail, setShowDetail] = useState(false);
+  const [selectedStaff, setSelectedStaff] = useState(null);
+  const [formMode, setFormMode] = useState('create'); // 'create' or 'edit'
+
+  // Toast/Notification state
+  const [notification, setNotification] = useState(null);
+
   const itemsPerPage = 10;
 
+  // Helper: Deduplicate staff by ID (matches Flutter)
+  const dedupeById = (input) => {
+    const seen = new Set();
+    const output = [];
+    for (const s of input) {
+      const key = s.id || `tmp-${s.hashCode}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        output.push(s);
+      }
+    }
+    return output;
+  };
+
+  // Helper: Get staff code with fallback logic (matches Flutter)
+  const getStaffCode = (staff) => {
+    // 1. Try patientFacingId
+    if (staff.patientFacingId && staff.patientFacingId.trim()) {
+      return staff.patientFacingId.trim();
+    }
+
+    // 2. Try notes
+    if (staff.notes) {
+      const code = staff.notes.staffCode || staff.notes.staff_code ||
+        staff.notes.code || staff.notes.patientFacingId;
+      if (code && code.trim()) return code.trim();
+    }
+
+    // 3. Try tags starting with STF-
+    if (staff.tags && staff.tags.length > 0) {
+      const codeTag = staff.tags.find(t => t.startsWith('STF-') || t.startsWith('STF'));
+      if (codeTag) return codeTag;
+    }
+
+    return '-';
+  };
+
+  // Show notification
+  const showNotification = (message, type = 'success') => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), 3000);
+  };
+
   // Fetch staff from API
-  const fetchStaff = useCallback(async () => {
+  const fetchStaff = useCallback(async (forceRefresh = false) => {
     try {
       setIsLoading(true);
-      const data = await staffService.fetchStaff();
-      setStaff(data);
-      setFilteredStaff(data);
+      const data = await staffService.fetchStaffs(forceRefresh);
+      const unique = dedupeById(data);
+      setAllStaff(unique);
     } catch (error) {
       console.error('Failed to fetch staff:', error);
-      setStaff([]);
-      setFilteredStaff([]);
+      showNotification('Failed to fetch staff: ' + error.message, 'error');
+      setAllStaff([]);
     } finally {
       setIsLoading(false);
     }
@@ -79,53 +146,42 @@ const Staff = () => {
     fetchStaff();
   }, [fetchStaff]);
 
-  // Apply filters
+  // Apply filters (matches Flutter's _getFilteredStaff)
   useEffect(() => {
-    let result = staff;
+    let result = allStaff;
 
     // Apply department filter
     if (departmentFilter !== 'All') {
-      result = result.filter(member => member.department === departmentFilter);
-    }
-
-    // Apply role filter
-    if (roleFilter !== 'All') {
-      result = result.filter(member => member.role === roleFilter);
+      result = result.filter(s => s.department === departmentFilter);
     }
 
     // Apply status filter
     if (statusFilter !== 'All') {
-      result = result.filter(member => member.status === statusFilter);
+      result = result.filter(s => s.status === statusFilter);
     }
 
-    // Apply search filter
+    // Apply search filter (comprehensive like Flutter)
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      result = result.filter(member =>
-        member.name?.toLowerCase().includes(query) ||
-        member.employeeId?.toLowerCase().includes(query) ||
-        member.department?.toLowerCase().includes(query) ||
-        member.role?.toLowerCase().includes(query) ||
-        member.email?.toLowerCase().includes(query) ||
-        member.phone?.toLowerCase().includes(query)
+      result = result.filter(s =>
+        s.name?.toLowerCase().includes(query) ||
+        s.id?.toLowerCase().includes(query) ||
+        s.department?.toLowerCase().includes(query) ||
+        s.designation?.toLowerCase().includes(query) ||
+        s.contact?.toLowerCase().includes(query) ||
+        getStaffCode(s).toLowerCase().includes(query)
       );
     }
 
-    setFilteredStaff(result);
+    setFilteredStaff(dedupeById(result));
     setCurrentPage(0);
-  }, [staff, departmentFilter, roleFilter, statusFilter, searchQuery]);
+  }, [allStaff, departmentFilter, statusFilter, searchQuery]);
 
   // Get unique values for filters
   const uniqueDepartments = ['All', ...new Set(
-    staff
-      .map(member => member.department)
+    allStaff
+      .map(s => s.department)
       .filter(dept => dept && dept.trim())
-  )];
-
-  const uniqueRoles = ['All', ...new Set(
-    staff
-      .map(member => member.role)
-      .filter(role => role && role.trim())
   )];
 
   // Pagination
@@ -137,87 +193,275 @@ const Staff = () => {
   const clearAllFilters = () => {
     setSearchQuery('');
     setDepartmentFilter('All');
-    setRoleFilter('All');
     setStatusFilter('All');
     setShowAdvancedFilters(false);
   };
 
-  const hasActiveFilters = searchQuery || departmentFilter !== 'All' || roleFilter !== 'All' || statusFilter !== 'All';
+  const hasActiveFilters = searchQuery || departmentFilter !== 'All' || statusFilter !== 'All';
 
   const handleSearchChange = (e) => {
     setSearchQuery(e.target.value);
   };
 
   const handlePreviousPage = () => {
-    if (currentPage > 0) {
-      setCurrentPage(prev => prev - 1);
-    }
+    if (currentPage > 0) setCurrentPage(prev => prev - 1);
   };
 
   const handleNextPage = () => {
-    if (currentPage < totalPages - 1) {
-      setCurrentPage(prev => prev + 1);
-    }
+    if (currentPage < totalPages - 1) setCurrentPage(prev => prev + 1);
   };
 
-  // Action handlers
+  // Action handlers (matches Flutter exactly)
   const handleAdd = () => {
-    console.log('Add new staff member');
+    setFormMode('create');
+    setSelectedStaff(null);
+    setShowForm(true);
   };
 
-  const handleView = (member) => {
-    console.log('View staff:', member);
-  };
-
-  const handleEdit = (member) => {
-    console.log('Edit staff:', member);
-  };
-
-  const handleDelete = async (member) => {
-    if (window.confirm(`Are you sure you want to delete ${member.name}?`)) {
-      try {
-        await staffService.deleteStaff(member.id);
-        await fetchStaff();
-        alert('Staff member deleted successfully');
-      } catch (error) {
-        console.error('Failed to delete staff:', error);
-        alert('Failed to delete staff member');
-      }
+  const handleView = async (staff, index) => {
+    try {
+      setSelectedStaff(staff);
+      setShowDetail(true);
+    } catch (error) {
+      console.error('Failed to open details:', error);
+      showNotification('Failed to open details: ' + error.message, 'error');
     }
   };
 
-  const handleDownload = async (member) => {
+  const handleEdit = async (staff, index) => {
+    setFormMode('edit');
+    setSelectedStaff(staff);
+    setShowForm(true);
+  };
+
+  const handleDelete = async (staff, index) => {
+    const confirmed = window.confirm(`Delete ${staff.name}?`);
+    if (!confirmed) return;
+
+    // Optimistic delete (Flutter pattern)
+    const removedIndex = allStaff.findIndex(s => s.id === staff.id);
+    let removed = null;
+    if (removedIndex !== -1) {
+      removed = allStaff[removedIndex];
+      setAllStaff(prev => prev.filter(s => s.id !== staff.id));
+    }
+
+    setIsLoading(true);
     try {
-      setIsDownloading(true);
-      await staffService.downloadStaffReport(member.id);
-      alert(`Downloading report for ${member.name}`);
+      const ok = await staffService.deleteStaff(staff.id);
+      if (ok) {
+        showNotification(`Deleted ${staff.name}`, 'success');
+        // Adjust pagination if needed
+        if (currentPage * itemsPerPage >= filteredStaff.length - 1 && currentPage > 0) {
+          setCurrentPage(0);
+        }
+      } else {
+        // Revert on failure
+        if (removed) {
+          setAllStaff(prev => {
+            const copy = [...prev];
+            copy.splice(removedIndex, 0, removed);
+            return copy;
+          });
+        }
+        showNotification('Delete failed', 'error');
+      }
     } catch (error) {
-      console.error('Failed to download report:', error);
-      alert('Failed to download report');
+      console.error('Delete error:', error);
+      // Revert on error
+      if (removed) {
+        setAllStaff(prev => {
+          const copy = [...prev];
+          copy.splice(removedIndex, 0, removed);
+          return copy;
+        });
+      }
+      showNotification(`Delete failed: ${error.message}`, 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDownload = async (staff, index) => {
+    if (isDownloading) return;
+
+    // Check if staff has doctor role (Flutter pattern)
+    const isDoctor = staff.roles?.some(role => role.toLowerCase() === 'doctor') ||
+      staff.designation?.toLowerCase().includes('doctor');
+
+    setIsDownloading(true);
+    try {
+      let result;
+      if (isDoctor) {
+        result = await staffService.downloadDoctorReport(staff.id);
+      } else {
+        result = await staffService.downloadStaffReport(staff.id);
+      }
+
+      if (result.success) {
+        showNotification(result.message || 'Report downloaded successfully', 'success');
+      } else {
+        showNotification(result.message || 'Failed to download report', 'error');
+      }
+    } catch (error) {
+      console.error('Download error:', error);
+      showNotification(`Error: ${error.message}`, 'error');
     } finally {
       setIsDownloading(false);
     }
   };
 
-  // Format date
+  // Form submission handlers
+  const handleFormSubmit = async (formData) => {
+    try {
+      if (formMode === 'create') {
+        // Create new staff
+        const created = await staffService.createStaff(formData);
+
+        // Optimistic insert (Flutter pattern)
+        setAllStaff(prev => {
+          const idx = prev.findIndex(s => s.id === created.id);
+          if (idx === -1) {
+            return [created, ...prev];
+          } else {
+            const copy = [...prev];
+            copy[idx] = created;
+            return copy;
+          }
+        });
+
+        // If temp id, refresh from server
+        if (created.id?.startsWith('temp-')) {
+          await fetchStaff(true);
+        }
+
+        showNotification('Staff created successfully', 'success');
+      } else {
+        // Update existing staff
+        const updated = await staffService.updateStaff(formData);
+
+        // Optimistic update (Flutter pattern)
+        setAllStaff(prev => {
+          const idx = prev.findIndex(s => s.id === formData.id || s.id === formData._id);
+          if (idx !== -1) {
+            const copy = [...prev];
+            copy[idx] = formData instanceof StaffModel ? formData : StaffModel.fromJSON(formData);
+            return copy;
+          }
+          return prev;
+        });
+
+        // Fetch authoritative data if not temp
+        if (formData.id && !formData.id.startsWith('temp-')) {
+          try {
+            const fresh = await staffService.fetchStaffById(formData.id);
+            setAllStaff(prev => {
+              const idx = prev.findIndex(s => s.id === fresh.id);
+              if (idx !== -1) {
+                const copy = [...prev];
+                copy[idx] = fresh;
+                return copy;
+              }
+              return prev;
+            });
+          } catch (e) {
+            console.log('Could not fetch fresh data:', e);
+          }
+        }
+
+        showNotification('Staff updated successfully', 'success');
+      }
+      setShowForm(false);
+      setSelectedStaff(null);
+    } catch (error) {
+      console.error('Form submission error:', error);
+      showNotification(`Failed: ${error.message}`, 'error');
+      // Revert on error
+      await fetchStaff(true);
+    }
+  };
+
+  const handleFormCancel = () => {
+    setShowForm(false);
+    setSelectedStaff(null);
+  };
+
+  const handleDetailClose = () => {
+    setShowDetail(false);
+    setSelectedStaff(null);
+  };
+
+  const handleDetailUpdate = (staff) => {
+    setShowDetail(false);
+    setFormMode('edit');
+    setSelectedStaff(staff);
+    setShowForm(true);
+  };
+
+  // Helper: Format date
   const formatDate = (dateString) => {
     if (!dateString) return '';
     try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString('en-GB'); // dd/mm/yyyy
-    } catch (error) {
+      return new Date(dateString).toLocaleDateString('en-GB');
+    } catch {
       return dateString;
     }
   };
 
-  // Get status badge class
+  // Helper: Get status badge class (matches Flutter)
   const getStatusClass = (status) => {
-    switch(status?.toLowerCase()) {
-      case 'active': return 'status-active';
-      case 'inactive': return 'status-inactive';
-      case 'on leave': return 'status-on-leave';
-      default: return 'status-inactive';
+    const statusLower = status?.toLowerCase() || '';
+    if (statusLower === 'available') return 'status-available';
+    if (statusLower === 'on leave') return 'status-on-leave';
+    if (statusLower === 'busy') return 'status-busy';
+    return 'status-off-duty';
+  };
+
+  // Helper: Get avatar source with fallback (matches Flutter)
+  const getAvatarSrc = (staff) => {
+    if (staff.avatarUrl) return staff.avatarUrl;
+
+    const lowerDesignation = staff.designation?.toLowerCase() || '';
+    const lowerDepartment = staff.department?.toLowerCase() || '';
+    const gender = staff.gender?.toLowerCase() || '';
+    const isFemale = gender === 'female' || gender === 'f' || gender === 'girl';
+
+    // 1. Doctor
+    if (lowerDesignation.includes('doctor') || lowerDesignation.includes('physician') || lowerDesignation.includes('surgeon')) {
+      return isFemale ? doctorFemaleIcon : doctorMaleIcon;
     }
+
+    // 2. Nurse
+    if (lowerDesignation.includes('nurse') || lowerDesignation.includes('nursing')) {
+      return isFemale ? nurseFemaleIcon : nurseMaleIcon;
+    }
+
+    // 3. Lab / Technician
+    if (lowerDesignation.includes('lab') || lowerDesignation.includes('technician') || lowerDepartment.includes('laboratory') || lowerDepartment.includes('pathology')) {
+      return isFemale ? labFemaleIcon : labMaleIcon;
+    }
+
+    // 4. Admin / Reception
+    if (lowerDesignation.includes('admin') || lowerDesignation.includes('reception') || lowerDesignation.includes('manager') || lowerDesignation.includes('clerk')) {
+      return isFemale ? adminFemaleIcon : adminMaleIcon;
+    }
+
+    // Default Fallback
+    if (isFemale) return girlIcon;
+
+    return boyIcon;
+  };
+
+  // Helper: Get initials
+  const getInitials = (name) => {
+    if (!name) return '?';
+    return name.trim()
+      .split(/\s+/)
+      .filter(p => p)
+      .map(p => p[0])
+      .slice(0, 2)
+      .join('')
+      .toUpperCase();
   };
 
   return (
@@ -267,7 +511,7 @@ const Staff = () => {
               Inactive
             </button>
           </div>
-          <button 
+          <button
             className="btn-filter-date"
             onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
           >
@@ -292,18 +536,6 @@ const Staff = () => {
                 ))}
               </select>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '200px' }}>
-              <label style={{ fontSize: '12px', fontWeight: 600, color: '#64748B' }}>Role</label>
-              <select
-                value={roleFilter}
-                onChange={(e) => setRoleFilter(e.target.value)}
-                style={{ padding: '8px 12px', border: '1.5px solid #E2E8F0', borderRadius: '8px', fontSize: '13px' }}
-              >
-                {uniqueRoles.map(role => (
-                  <option key={role} value={role}>{role}</option>
-                ))}
-              </select>
-            </div>
             {hasActiveFilters && (
               <button
                 onClick={clearAllFilters}
@@ -322,38 +554,48 @@ const Staff = () => {
           <table className="modern-table">
             <thead>
               <tr>
-                <th style={{ width: '25%' }}>Staff Member</th>
-                <th style={{ width: '15%' }}>Role</th>
-                <th style={{ width: '15%' }}>Department</th>
-                <th style={{ width: '15%' }}>Contact</th>
-                <th style={{ width: '15%' }}>Join Date</th>
+                <th style={{ width: '16%' }}>Staff Code</th>
+                <th style={{ width: '18%' }}>Staff Name</th>
+                <th style={{ width: '14%' }}>Designation</th>
+                <th style={{ width: '14%' }}>Department</th>
+                <th style={{ width: '14%' }}>Contact</th>
                 <th style={{ width: '10%' }}>Status</th>
-                <th style={{ width: '15%' }}>Actions</th>
+                <th style={{ width: '14%' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {paginatedStaff.map((member, index) => {
-                const avatarSrc = '/boyicon.png'; // Can be updated based on gender
+              {paginatedStaff.map((staff, index) => {
+                const avatarSrc = getAvatarSrc(staff);
+                const staffCode = getStaffCode(staff);
 
                 return (
-                  <tr key={member.id || index}>
-                    {/* STAFF MEMBER COLUMN */}
+                  <tr key={staff.id || index}>
+                    {/* STAFF CODE COLUMN (with avatar) */}
                     <td className="cell-patient">
-                      <img 
-                        src={avatarSrc} 
-                        alt={member.name}
+                      <img
+                        src={avatarSrc}
+                        alt={staff.name}
                         className="patient-avatar"
+                        onError={(e) => {
+                          e.target.src = '/boyicon.png';
+                        }}
                       />
                       <div className="info-group">
-                        <span className="primary">{member.name}</span>
-                        <span className="secondary">{member.employeeId || `EMP${member.id}`}</span>
+                        <span className="primary">{staffCode}</span>
                       </div>
                     </td>
 
-                    {/* ROLE */}
+                    {/* STAFF NAME */}
                     <td>
                       <div className="info-group">
-                        <span className="primary">{member.role}</span>
+                        <span className="primary">{staff.name || '-'}</span>
+                      </div>
+                    </td>
+
+                    {/* DESIGNATION */}
+                    <td>
+                      <div className="info-group">
+                        <span className="primary">{staff.designation || '-'}</span>
                       </div>
                     </td>
 
@@ -363,45 +605,42 @@ const Staff = () => {
                         <div className="doc-avatar-sm">
                           <Icons.Badge />
                         </div>
-                        <span className="font-medium">{member.department}</span>
+                        <span className="font-medium">{staff.department || '-'}</span>
                       </div>
                     </td>
 
                     {/* CONTACT */}
                     <td>
                       <div className="info-group">
-                        <span className="primary">{member.phone || 'N/A'}</span>
-                        <span className="secondary">{member.email || 'N/A'}</span>
-                      </div>
-                    </td>
-
-                    {/* JOIN DATE */}
-                    <td>
-                      <div className="info-group">
-                        <span className="primary">{formatDate(member.joinDate)}</span>
+                        <span className="primary">{staff.contact || '-'}</span>
                       </div>
                     </td>
 
                     {/* STATUS */}
                     <td>
-                      <span className={`status-pill ${getStatusClass(member.status)}`}>
-                        {member.status || 'Active'}
+                      <span className={`status-pill ${getStatusClass(staff.status)}`}>
+                        {staff.status || 'Off Duty'}
                       </span>
                     </td>
 
                     {/* ACTIONS */}
                     <td>
                       <div className="action-buttons-group">
-                        <button className="btn-action view" title="View" onClick={() => handleView(member)}>
+                        <button className="btn-action view" title="View" onClick={() => handleView(staff, index)}>
                           <Icons.Eye />
                         </button>
-                        <button className="btn-action edit" title="Edit" onClick={() => handleEdit(member)}>
+                        <button className="btn-action edit" title="Edit" onClick={() => handleEdit(staff, index)}>
                           <Icons.Edit />
                         </button>
-                        <button className="btn-action delete" title="Delete" onClick={() => handleDelete(member)}>
+                        <button className="btn-action delete" title="Delete" onClick={() => handleDelete(staff, index)}>
                           <Icons.Delete />
                         </button>
-                        <button className="btn-action download" title="Download" onClick={() => handleDownload(member)} disabled={isDownloading}>
+                        <button
+                          className="btn-action download"
+                          title="Download Report"
+                          onClick={() => handleDownload(staff, index)}
+                          disabled={isDownloading}
+                        >
                           <Icons.Download />
                         </button>
                       </div>
@@ -453,6 +692,31 @@ const Staff = () => {
           </button>
         </div>
       </div>
+
+      {/* Modals */}
+      {showForm && (
+        <StaffFormEnterprise
+          initial={selectedStaff}
+          onSubmit={handleFormSubmit}
+          onCancel={handleFormCancel}
+        />
+      )}
+
+      {showDetail && selectedStaff && (
+        <StaffDetailEnterprise
+          staffId={selectedStaff.id}
+          initial={selectedStaff}
+          onClose={handleDetailClose}
+          onUpdate={handleDetailUpdate}
+        />
+      )}
+
+      {/* Notification Toast */}
+      {notification && (
+        <div className={`notification-toast ${notification.type}`}>
+          {notification.message}
+        </div>
+      )}
     </div>
   );
 };

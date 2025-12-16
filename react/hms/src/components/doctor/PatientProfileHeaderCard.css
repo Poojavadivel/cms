@@ -1,0 +1,384 @@
+/**
+ * PatientProfileHeaderCard.css
+ * Exact styling from Flutter's PatientProfileHeaderCard
+ */
+
+.patient-profile-header-card {
+  border-radius: 16px;
+  background: #F9FAFB;
+  padding: 0;
+  margin-bottom: 12px;
+}
+
+.patient-profile-header-card.loading {
+  height: 150px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #F9FAFB;
+}
+
+.patient-card-container {
+  position: relative;
+  background: #FFFFFF;
+  border-radius: 16px;
+  border: 1px solid #F3F4F6;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.04);
+}
+
+.patient-card-content {
+  display: flex;
+  align-items: flex-start;
+  padding: 16px;
+  gap: 16px;
+}
+
+/* Avatar + Identity Section */
+.patient-identity-section {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+  min-width: 0;
+}
+
+.patient-avatar-container {
+  width: 128px;
+  height: 128px;
+  border-radius: 14px;
+  border: 1px solid #F3F4F6;
+  background: #FFFFFF;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.025);
+  overflow: hidden;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.patient-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.patient-avatar-fallback {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #EEF2FF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36px;
+  font-weight: 800;
+  color: #4338CA;
+}
+
+.patient-identity-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.patient-name-title {
+  font-size: 24px;
+  font-weight: 800;
+  color: #0F172A;
+  margin: 0;
+  line-height: 1.05;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Patient Code Badge */
+.patient-code-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: linear-gradient(135deg, rgba(67, 56, 202, 0.15), rgba(67, 56, 202, 0.05));
+  border: 1.5px solid rgba(67, 56, 202, 0.3);
+  border-radius: 12px;
+  width: fit-content;
+}
+
+.patient-code-badge svg {
+  font-size: 16px;
+  color: #4338CA;
+}
+
+.patient-code-badge span {
+  font-size: 14px;
+  font-weight: 800;
+  color: #4338CA;
+  letter-spacing: 0.5px;
+}
+
+/* Basic Info Pills */
+.patient-basic-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.info-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.info-pill.gender {
+  background: rgba(99, 102, 241, 0.1);
+  color: #4338CA;
+  border: 1px solid rgba(99, 102, 241, 0.2);
+}
+
+.info-pill.age {
+  background: rgba(16, 185, 129, 0.1);
+  color: #059669;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.info-pill.blood-group {
+  background: rgba(239, 68, 68, 0.1);
+  color: #DC2626;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+/* Vitals Section */
+.patient-vitals-section {
+  flex: 1;
+  max-width: 420px;
+  min-width: 320px;
+}
+
+.patient-vitals-section .vitals-grid {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  grid-template-rows: auto auto !important;
+  gap: 24px !important;
+  column-gap: 24px !important;
+  row-gap: 20px !important;
+  flex-direction: unset !important;
+}
+
+.vital-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.vital-box:hover {
+  transform: translateX(4px);
+}
+
+.vital-icon-container {
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(99, 102, 241, 0.06));
+  border-radius: 10px;
+  border: 1px solid rgba(99, 102, 241, 0.15);
+  flex-shrink: 0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.vital-box:hover .vital-icon-container {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.18), rgba(99, 102, 241, 0.10));
+  border-color: rgba(99, 102, 241, 0.25);
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.15);
+}
+
+.vital-icon {
+  font-size: 18px;
+  line-height: 1;
+  color: #4338CA;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vital-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.vital-value {
+  font-family: 'Lexend', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  font-size: 16px;
+  font-weight: 800;
+  color: #0F172A;
+  line-height: 1.0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  letter-spacing: -0.01em;
+}
+
+.vital-label {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748B;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Edit Button */
+.patient-edit-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: rgba(99, 102, 241, 0.1);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: #4338CA;
+}
+
+.patient-edit-btn:hover {
+  background: rgba(99, 102, 241, 0.2);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+}
+
+.patient-edit-btn svg {
+  font-size: 20px;
+}
+
+/* Loading Spinner */
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #E5E7EB;
+  border-top-color: #4338CA;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Premium Animation */
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.vital-box {
+  animation: slideInUp 0.4s ease-out;
+  animation-fill-mode: both;
+}
+
+.vital-box:nth-child(1) {
+  animation-delay: 0.05s;
+}
+
+.vital-box:nth-child(2) {
+  animation-delay: 0.1s;
+}
+
+.vital-box:nth-child(3) {
+  animation-delay: 0.15s;
+}
+
+.vital-box:nth-child(4) {
+  animation-delay: 0.2s;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .patient-card-content {
+    flex-wrap: wrap;
+  }
+
+  .patient-vitals-section {
+    width: 100%;
+    max-width: none;
+    min-width: auto;
+  }
+  
+  .patient-vitals-section .vitals-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 16px !important;
+    column-gap: 20px !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .patient-avatar-container {
+    width: 96px;
+    height: 96px;
+  }
+
+  .patient-name-title {
+    font-size: 20px;
+  }
+
+  .patient-identity-section {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .patient-vitals-section .vitals-grid {
+    grid-template-columns: 1fr 1fr !important;
+    grid-template-rows: auto auto !important;
+    gap: 14px !important;
+    column-gap: 16px !important;
+  }
+
+  .patient-edit-btn {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .vital-icon-container {
+    width: 30px;
+    height: 30px;
+  }
+  
+  .vital-icon {
+    font-size: 16px;
+  }
+  
+  .vital-value {
+    font-size: 14px;
+  }
+  
+  .vital-label {
+    font-size: 11px;
+  }
+}

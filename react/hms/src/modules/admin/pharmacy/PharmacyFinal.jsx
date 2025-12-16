@@ -8,6 +8,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { MdChevronLeft, MdChevronRight, MdSearch, MdLocalPharmacy, MdAdd, MdRefresh } from 'react-icons/md';
 import authService from '../../../services/authService';
+import pharmacyService from '../../../services/pharmacyService';
+import AddMedicineDialog from './AddMedicineDialog';
+import AddBatchDialog from './AddBatchDialog';
 import './PharmacyFinal.css';
 
 // Custom SVG Icons (matching other pages)
@@ -47,6 +50,12 @@ const PharmacyFinal = () => {
   const [statusFilter, setStatusFilter] = useState('All');
   const [currentPage, setCurrentPage] = useState(0);
   const [batchPage, setBatchPage] = useState(0);
+  
+  // Dialog states
+  const [showMedicineDialog, setShowMedicineDialog] = useState(false);
+  const [showBatchDialog, setShowBatchDialog] = useState(false);
+  const [selectedMedicine, setSelectedMedicine] = useState(null);
+  const [selectedBatch, setSelectedBatch] = useState(null);
   
   const itemsPerPage = 20;
   const batchesPerPage = 10;
@@ -177,15 +186,15 @@ const PharmacyFinal = () => {
   };
 
   const handleEdit = (item) => {
-    console.log('Edit:', item);
-    alert(`Edit ${item.name} - Coming soon!`);
+    setSelectedMedicine(item);
+    setShowMedicineDialog(true);
   };
 
   const handleDelete = async (item) => {
     if (window.confirm(`Are you sure you want to delete ${item.name}?`)) {
       try {
-        await authService.delete(`/pharmacy/medicines/${item._id}`);
-        alert('Deleted successfully');
+        await pharmacyService.deleteMedicine(item._id);
+        alert('Medicine deleted successfully');
         fetchData();
       } catch (error) {
         alert(`Error: ${error.message}`);
@@ -194,11 +203,42 @@ const PharmacyFinal = () => {
   };
 
   const handleAddMedicine = () => {
-    alert('Add Medicine - Coming soon!');
+    setSelectedMedicine(null);
+    setShowMedicineDialog(true);
   };
 
   const handleAddBatch = () => {
-    alert('Add Batch - Coming soon!');
+    setSelectedBatch(null);
+    setShowBatchDialog(true);
+  };
+
+  const handleEditBatch = (batch) => {
+    setSelectedBatch(batch);
+    setShowBatchDialog(true);
+  };
+
+  const handleDeleteBatch = async (batch) => {
+    if (window.confirm(`Are you sure you want to delete batch ${batch.batchNumber}?`)) {
+      try {
+        await pharmacyService.deleteBatch(batch._id);
+        alert('Batch deleted successfully');
+        fetchData();
+      } catch (error) {
+        alert(`Error: ${error.message}`);
+      }
+    }
+  };
+
+  const handleMedicineDialogSuccess = () => {
+    fetchData();
+    setShowMedicineDialog(false);
+    setSelectedMedicine(null);
+  };
+
+  const handleBatchDialogSuccess = () => {
+    fetchData();
+    setShowBatchDialog(false);
+    setSelectedBatch(null);
   };
 
   // Pagination for Medicines
@@ -453,10 +493,10 @@ const PharmacyFinal = () => {
                           </td>
                           <td>
                             <div className="action-buttons-group">
-                              <button className="btn-action edit" title="Edit">
+                              <button className="btn-action edit" title="Edit" onClick={() => handleEditBatch(batch)}>
                                 <Icons.Edit />
                               </button>
-                              <button className="btn-action delete" title="Delete">
+                              <button className="btn-action delete" title="Delete" onClick={() => handleDeleteBatch(batch)}>
                                 <Icons.Delete />
                               </button>
                             </div>
@@ -508,6 +548,28 @@ const PharmacyFinal = () => {
             </div>
         </>
       )}
+
+      {/* Dialogs */}
+      <AddMedicineDialog
+        isOpen={showMedicineDialog}
+        onClose={() => {
+          setShowMedicineDialog(false);
+          setSelectedMedicine(null);
+        }}
+        medicine={selectedMedicine}
+        onSuccess={handleMedicineDialogSuccess}
+      />
+
+      <AddBatchDialog
+        isOpen={showBatchDialog}
+        onClose={() => {
+          setShowBatchDialog(false);
+          setSelectedBatch(null);
+        }}
+        batch={selectedBatch}
+        medicines={medicines}
+        onSuccess={handleBatchDialogSuccess}
+      />
     </div>
   );
 };

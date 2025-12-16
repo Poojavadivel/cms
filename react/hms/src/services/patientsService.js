@@ -8,12 +8,14 @@
 import axios from 'axios';
 import { PatientEndpoints, ReportEndpoints } from './apiConstants';
 import logger from './loggerService';
+import { PatientDetails } from '../models/Patients';
+import { fetchPrescriptions, fetchLabReports } from './prescriptionService';
 
 /**
  * Get auth token from localStorage
  */
 const getAuthToken = () => {
-  return localStorage.getItem('authToken');
+  return localStorage.getItem('x-auth-token') || localStorage.getItem('authToken');
 };
 
 /**
@@ -22,9 +24,10 @@ const getAuthToken = () => {
 const createAxiosInstance = () => {
   const token = getAuthToken();
   return axios.create({
+    baseURL: process.env.REACT_APP_API_URL || 'https://hms-dev.onrender.com/api',
     headers: {
       'Content-Type': 'application/json',
-      ...(token && { 'Authorization': `Bearer ${token}` })
+      ...(token && { 'x-auth-token': token })
     }
   });
 };
@@ -59,14 +62,17 @@ export const fetchPatients = async (options = {}) => {
     logger.apiResponse('GET', url, response.status);
     
     // Handle both array response and object with patients property
-    let patients = [];
+    let rawPatients = [];
     if (Array.isArray(response.data)) {
-      patients = response.data;
+      rawPatients = response.data;
     } else if (response.data.patients) {
-      patients = response.data.patients;
+      rawPatients = response.data.patients;
     } else if (response.data.data) {
-      patients = response.data.data;
+      rawPatients = response.data.data;
     }
+    
+    // Transform each patient using PatientDetails.fromJSON for proper data extraction
+    const patients = rawPatients.map(p => PatientDetails.fromJSON(p));
     
     logger.success('PATIENTS', `Fetched ${patients.length} patients`);
     return patients;
@@ -79,7 +85,7 @@ export const fetchPatients = async (options = {}) => {
 /**
  * Fetch patient by ID
  * @param {string} id - Patient ID
- * @returns {Promise<Object>} Patient details
+ * @returns {Promise<PatientDetails>} Patient details
  */
 export const fetchPatientById = async (id) => {
   try {
@@ -90,9 +96,12 @@ export const fetchPatientById = async (id) => {
     
     logger.apiResponse('GET', PatientEndpoints.getById(id), response.status);
     
-    const patient = response.data.patient || response.data.data || response.data;
+    const rawPatient = response.data.patient || response.data.data || response.data;
     
-    logger.success('PATIENTS', `Fetched patient ${id}`);
+    // Transform using PatientDetails.fromJSON to ensure proper data extraction
+    const patient = PatientDetails.fromJSON(rawPatient);
+    
+    logger.success('PATIENTS', `Fetched patient ${id} - Name: ${patient.name}, Age: ${patient.age}, Blood Group: ${patient.bloodGroup}`);
     return patient;
   } catch (error) {
     logger.apiError('GET', PatientEndpoints.getById(id), error);
@@ -206,6 +215,63 @@ export const downloadPatientReport = async (patientId) => {
   }
 };
 
+/**
+ * Fetch patient appointments/medical history
+ * @param {string} patientId - Patient ID
+ * @returns {Promise<Array>} List of appointments
+ */
+export const fetchPatientAppointments = async (patientId) => {
+  try {
+    const url = `/api/appointments?patientId=${patientId}`;
+    logger.apiRequest('GET', url);
+    
+    const axiosInstance = createAxiosInstance();
+    const response = await axiosInstance.get(url);
+    
+    logger.apiResponse('GET', url, response.status);
+    
+    const appointments = response.data.appointments || response.data.data || response.data || [];
+    
+    logger.success('PATIENTS', `Fetched ${appointments.length} appointments for patient ${patientId}`);
+    return appointments;
+  } catch (error) {
+    logger.apiError('GET', `/api/appointments?patientId=${patientId}`, error);
+    return [];
+  }
+};
+
+/**
+ * Fetch patient prescriptions
+ * Now uses the dedicated prescription service that matches Flutter's implementation
+ * @param {string} patientId - Patient ID
+ * @returns {Promise<Array>} List of prescriptions
+ */
+export const fetchPatientPrescriptions = async (patientId) => {
+  try {
+    // Use the new prescription service that matches Flutter's getPrescriptions
+    return await fetchPrescriptions(patientId, 100, 0);
+  } catch (error) {
+    logger.error('PATIENTS', `Failed to fetch prescriptions for patient ${patientId}: ${error.message}`);
+    return [];
+  }
+};
+
+/**
+ * Fetch patient lab results
+ * Now uses the dedicated prescription service that matches Flutter's implementation
+ * @param {string} patientId - Patient ID
+ * @returns {Promise<Array>} List of lab results
+ */
+export const fetchPatientLabResults = async (patientId) => {
+  try {
+    // Use the new prescription service that matches Flutter's getLabReports
+    return await fetchLabReports(patientId);
+  } catch (error) {
+    logger.error('PATIENTS', `Failed to fetch lab results for patient ${patientId}: ${error.message}`);
+    return [];
+  }
+};
+
 // Export as default
 const patientsService = {
   fetchPatients,
@@ -214,6 +280,9 @@ const patientsService = {
   updatePatient,
   deletePatient,
   downloadPatientReport,
+  fetchPatientAppointments,
+  fetchPatientPrescriptions,
+  fetchPatientLabResults,
 };
 
 export default patientsService;

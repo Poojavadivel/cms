@@ -20,7 +20,7 @@ const api = axios.create({
 api.interceptors.request.use((config) => {
   const token = getAuthToken();
   if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+    config.headers['x-auth-token'] = token;
   }
   return config;
 });

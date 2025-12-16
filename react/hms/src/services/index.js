@@ -22,3 +22,6 @@ export { default as appointmentsService } from './appointmentsService';
 
 // Patients service
 export { default as patientsService } from './patientsService';
+
+// Report service (NEW - equivalent to Flutter's ReportService)
+export { default as reportService } from './reportService';

@@ -334,6 +334,20 @@ body {
   gap: 12px;
 }
 
+.cell-patient.clickable {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cell-patient.clickable:hover {
+  background-color: rgba(38, 99, 255, 0.05);
+}
+
+.cell-patient.clickable:hover .primary {
+  color: var(--primary);
+  text-decoration: underline;
+}
+
 /* Patient Avatar Image - matches Flutter */
 .patient-avatar {
   width: 28px;

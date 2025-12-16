@@ -1,133 +1,160 @@
 /**
- * Staff Service
- * Handles all API calls related to staff management
+ * Staff Service - Complete Implementation
+ * Matches Flutter functionality exactly
  */
 
 import axios from 'axios';
 import logger from './loggerService';
+import { Staff } from '../models/Staff';
 
-/**
- * Get auth token from localStorage
- */
-const getAuthToken = () => {
-  return localStorage.getItem('authToken');
-};
+const getAuthToken = () => localStorage.getItem('x-auth-token') || localStorage.getItem('authToken');
 
-/**
- * Create axios instance with default config
- */
 const api = axios.create({
   baseURL: process.env.REACT_APP_API_URL || 'https://hms-dev.onrender.com/api',
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  headers: { 'Content-Type': 'application/json' },
 });
 
-// Add auth token to requests
 api.interceptors.request.use((config) => {
   const token = getAuthToken();
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
+  if (token) config.headers['x-auth-token'] = token;
   return config;
 });
 
-const API_BASE = '/staff';
-
-const StaffEndpoints = {
-  getAll: API_BASE,
-  getById: (id) => `${API_BASE}/${id}`,
-  create: API_BASE,
-  update: (id) => `${API_BASE}/${id}`,
-  delete: (id) => `${API_BASE}/${id}`,
-  downloadReport: (id) => `${API_BASE}/${id}/report`,
-  getByDepartment: (dept) => `${API_BASE}/department/${dept}`,
-  getByRole: (role) => `${API_BASE}/role/${role}`,
-};
+// Cache for staff data (mimics Flutter's _staffList)
+let staffCache = [];
+let currentStaff = null;
 
 /**
- * Fetch all staff members
+ * Fetch all staff members with caching
  */
-const fetchStaff = async () => {
+const fetchStaffs = async (forceRefresh = false) => {
   try {
-    logger.apiRequest('GET', StaffEndpoints.getAll);
-    const response = await api.get(StaffEndpoints.getAll);
-    logger.apiResponse('GET', StaffEndpoints.getAll, response.status, response.data);
+    if (staffCache.length > 0 && !forceRefresh) {
+      return staffCache;
+    }
+
+    logger.apiRequest('GET', '/staff');
+    const response = await api.get('/staff');
+    logger.apiResponse('GET', '/staff', response.status, response.data);
     
-    // Handle different response formats from backend
-    let staffData;
+    // Handle multiple response formats (Flutter compatibility)
+    let data;
     if (Array.isArray(response.data)) {
-      staffData = response.data;
+      data = response.data;
     } else if (response.data?.staff) {
-      staffData = response.data.staff;
+      data = response.data.staff;
     } else if (response.data?.data) {
-      staffData = response.data.data;
+      data = response.data.data;
     } else {
-      staffData = [];
+      throw new Error('Unexpected response format');
     }
     
-    // Transform backend data to match frontend expectations
-    return staffData.map(staff => ({
-      id: staff._id || staff.id,
-      name: staff.name || `${staff.firstName || ''} ${staff.lastName || ''}`.trim(),
-      employeeId: staff.staffId || staff.employeeId || staff.id || 'N/A',
-      role: staff.role || staff.position || 'Staff',
-      department: staff.department || 'General',
-      email: staff.email || '',
-      phone: staff.phone || staff.phoneNumber || staff.mobile || '',
-      joinDate: staff.joinDate || staff.joiningDate || staff.createdAt || new Date().toISOString(),
-      status: staff.status || (staff.isActive ? 'Active' : 'Inactive') || 'Active',
-      gender: staff.gender || 'Unknown'
-    }));
+    staffCache = data.map(item => Staff.fromJSON(item));
+    return staffCache;
   } catch (error) {
-    logger.apiError('GET', StaffEndpoints.getAll, error);
-    console.error('Failed to fetch staff from API:', error);
-    throw new Error(error.response?.data?.message || 'Failed to fetch staff members');
+    logger.apiError('GET', '/staff', error);
+    throw error;
   }
 };
 
 /**
- * Fetch staff member by ID
+ * Fetch single staff by ID
  */
 const fetchStaffById = async (id) => {
   try {
-    logger.apiRequest('GET', StaffEndpoints.getById(id));
-    const response = await api.get(StaffEndpoints.getById(id));
-    logger.apiResponse('GET', StaffEndpoints.getById(id), response.status, response.data);
-    return response.data;
+    logger.apiRequest('GET', `/staff/${id}`);
+    const response = await api.get(`/staff/${id}`);
+    logger.apiResponse('GET', `/staff/${id}`, response.status, response.data);
+    
+    // Handle wrapped response
+    const data = response.data?.staff || response.data?.data || response.data;
+    const staff = Staff.fromJSON(data);
+    
+    currentStaff = staff;
+    
+    // Update cache
+    const idx = staffCache.findIndex(s => s.id === staff.id);
+    if (idx === -1) {
+      staffCache.push(staff);
+    } else {
+      staffCache[idx] = staff;
+    }
+    
+    return staff;
   } catch (error) {
-    logger.apiError('GET', StaffEndpoints.getById(id), error);
-    throw new Error(error.response?.data?.message || 'Failed to fetch staff member');
+    logger.apiError('GET', `/staff/${id}`, error);
+    throw error;
   }
 };
 
 /**
  * Create new staff member
  */
-const createStaff = async (staffData) => {
+const createStaff = async (staffDraft) => {
   try {
-    logger.apiRequest('POST', StaffEndpoints.create, staffData);
-    const response = await api.post(StaffEndpoints.create, staffData);
-    logger.apiResponse('POST', StaffEndpoints.create, response.status, response.data);
-    return response.data;
+    const payload = staffDraft instanceof Staff ? staffDraft.toJSON() : staffDraft;
+    
+    logger.apiRequest('POST', '/staff', payload);
+    const response = await api.post('/staff', payload);
+    logger.apiResponse('POST', '/staff', response.status, response.data);
+    
+    const data = response.data?.staff || response.data?.data || response.data;
+    const created = Staff.fromJSON(data);
+    
+    // Add to cache
+    staffCache.unshift(created);
+    
+    return created;
   } catch (error) {
-    logger.apiError('POST', StaffEndpoints.create, error);
-    throw new Error(error.response?.data?.message || 'Failed to create staff member');
+    logger.apiError('POST', '/staff', error);
+    throw error;
   }
 };
 
 /**
  * Update staff member
  */
-const updateStaff = async (id, staffData) => {
+const updateStaff = async (staffDraft) => {
   try {
-    logger.apiRequest('PUT', StaffEndpoints.update(id), staffData);
-    const response = await api.put(StaffEndpoints.update(id), staffData);
-    logger.apiResponse('PUT', StaffEndpoints.update(id), response.status, response.data);
-    return response.data;
+    const payload = staffDraft instanceof Staff ? staffDraft.toJSON() : staffDraft;
+    const id = payload._id || payload.id;
+    
+    logger.apiRequest('PUT', `/staff/${id}`, payload);
+    const response = await api.put(`/staff/${id}`, payload);
+    logger.apiResponse('PUT', `/staff/${id}`, response.status, response.data);
+    
+    // Handle different success response formats
+    if (response.data?.success === true || response.data?.status === 200) {
+      // Success without returning data - update cache with our draft
+      const idx = staffCache.findIndex(s => s.id === id);
+      if (idx !== -1) {
+        staffCache[idx] = staffDraft instanceof Staff ? staffDraft : Staff.fromJSON(staffDraft);
+      }
+      if (currentStaff?.id === id) {
+        currentStaff = staffDraft instanceof Staff ? staffDraft : Staff.fromJSON(staffDraft);
+      }
+      return true;
+    }
+    
+    const data = response.data?.staff || response.data?.data || response.data;
+    if (data && typeof data === 'object') {
+      const updated = Staff.fromJSON(data);
+      const idx = staffCache.findIndex(s => s.id === updated.id);
+      if (idx !== -1) {
+        staffCache[idx] = updated;
+      } else {
+        staffCache.push(updated);
+      }
+      if (currentStaff?.id === updated.id) {
+        currentStaff = updated;
+      }
+      return true;
+    }
+    
+    return false;
   } catch (error) {
-    logger.apiError('PUT', StaffEndpoints.update(id), error);
-    throw new Error(error.response?.data?.message || 'Failed to update staff member');
+    logger.apiError('PUT', `/staff/${staffDraft.id}`, error);
+    throw error;
   }
 };
 
@@ -136,47 +163,202 @@ const updateStaff = async (id, staffData) => {
  */
 const deleteStaff = async (id) => {
   try {
-    logger.apiRequest('DELETE', StaffEndpoints.delete(id));
-    const response = await api.delete(StaffEndpoints.delete(id));
-    logger.apiResponse('DELETE', StaffEndpoints.delete(id), response.status, response.data);
-    return response.data;
+    logger.apiRequest('DELETE', `/staff/${id}`);
+    const response = await api.delete(`/staff/${id}`);
+    logger.apiResponse('DELETE', `/staff/${id}`, response.status, response.data);
+    
+    if (response.data?.success === true || response.data?.status === 200 || response.status === 200) {
+      staffCache = staffCache.filter(s => s.id !== id);
+      if (currentStaff?.id === id) currentStaff = null;
+      return true;
+    }
+    
+    return false;
   } catch (error) {
-    logger.apiError('DELETE', StaffEndpoints.delete(id), error);
-    throw new Error(error.response?.data?.message || 'Failed to delete staff member');
+    logger.apiError('DELETE', `/staff/${id}`, error);
+    throw error;
   }
 };
 
 /**
- * Download staff report
+ * Download staff report PDF
  */
-const downloadStaffReport = async (id) => {
+const downloadStaffReport = async (staffId) => {
   try {
-    logger.apiRequest('GET', StaffEndpoints.downloadReport(id));
-    const response = await api.get(StaffEndpoints.downloadReport(id), {
-      responseType: 'blob'
+    const token = getAuthToken();
+    if (!token) {
+      return {
+        success: false,
+        message: 'Authentication token not found. Please login again.'
+      };
+    }
+
+    const url = `${api.defaults.baseURL}/reports-proper/staff/${staffId}`;
+    
+    const response = await fetch(url, {
+      headers: {
+        'x-auth-token': token,
+        'Content-Type': 'application/json',
+      },
     });
-    
-    // Create download link
-    const url = window.URL.createObjectURL(new Blob([response.data]));
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `staff_${id}_report.pdf`);
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    
-    logger.apiResponse('GET', StaffEndpoints.downloadReport(id), response.status, 'File downloaded');
-    return response.data;
+
+    if (response.status === 200) {
+      const blob = await response.blob();
+      
+      // Get filename from header or create default
+      let filename = `Staff_Report_${Date.now()}.pdf`;
+      const contentDisposition = response.headers.get('content-disposition');
+      if (contentDisposition) {
+        const filenameMatch = /filename="?([^"]+)"?/.exec(contentDisposition);
+        if (filenameMatch) {
+          filename = filenameMatch[1];
+        }
+      }
+
+      // Trigger download
+      const blobUrl = window.URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = blobUrl;
+      anchor.download = filename;
+      anchor.click();
+      window.URL.revokeObjectURL(blobUrl);
+
+      return {
+        success: true,
+        message: 'Staff report downloaded successfully',
+        filename
+      };
+    } else if (response.status === 404) {
+      return {
+        success: false,
+        message: 'Staff member not found'
+      };
+    } else {
+      return {
+        success: false,
+        message: `Failed to generate staff report: ${response.status}`
+      };
+    }
   } catch (error) {
-    logger.apiError('GET', StaffEndpoints.downloadReport(id), error);
-    throw new Error(error.response?.data?.message || 'Failed to download report');
+    console.error('Error downloading staff report:', error);
+    return {
+      success: false,
+      message: `Error downloading staff report: ${error.message}`
+    };
   }
 };
+
+/**
+ * Download doctor report PDF (for staff with doctor role)
+ */
+const downloadDoctorReport = async (doctorId) => {
+  try {
+    const token = getAuthToken();
+    if (!token) {
+      return {
+        success: false,
+        message: 'Authentication token not found. Please login again.'
+      };
+    }
+
+    const url = `${api.defaults.baseURL}/reports-proper/doctor/${doctorId}`;
+    
+    const response = await fetch(url, {
+      headers: {
+        'x-auth-token': token,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (response.status === 200) {
+      const blob = await response.blob();
+      
+      let filename = `Doctor_Report_${Date.now()}.pdf`;
+      const contentDisposition = response.headers.get('content-disposition');
+      if (contentDisposition) {
+        const filenameMatch = /filename="?([^"]+)"?/.exec(contentDisposition);
+        if (filenameMatch) {
+          filename = filenameMatch[1];
+        }
+      }
+
+      const blobUrl = window.URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = blobUrl;
+      anchor.download = filename;
+      anchor.click();
+      window.URL.revokeObjectURL(blobUrl);
+
+      return {
+        success: true,
+        message: 'Doctor report downloaded successfully',
+        filename
+      };
+    } else if (response.status === 404) {
+      return {
+        success: false,
+        message: 'Doctor not found'
+      };
+    } else {
+      return {
+        success: false,
+        message: `Failed to generate doctor report: ${response.status}`
+      };
+    }
+  } catch (error) {
+    console.error('Error downloading doctor report:', error);
+    return {
+      success: false,
+      message: `Error downloading doctor report: ${error.message}`
+    };
+  }
+};
+
+/**
+ * Find staff locally (no network)
+ */
+const findLocalStaffById = (id) => {
+  return staffCache.find(s => s.id === id) || null;
+};
+
+/**
+ * Clear staff cache (on logout)
+ */
+const clearStaffCache = () => {
+  staffCache = [];
+  currentStaff = null;
+};
+
+/**
+ * Get current staff
+ */
+const getCurrentStaff = () => currentStaff;
+
+/**
+ * Get staff list
+ */
+const getStaffList = () => [...staffCache];
+
+const staffService = {
+  fetchStaffs,
+  fetchStaffById,
+  createStaff,
+  updateStaff,
+  deleteStaff,
+  downloadStaffReport,
+  downloadDoctorReport,
+  findLocalStaffById,
+  clearStaffCache,
+  getCurrentStaff,
+  getStaffList
+};
+
+export default staffService;
 
 /**
  * Mock data for development/testing
  */
-const getMockStaffData = () => {
+export const getMockStaffData = () => {
   return [
     {
       id: 1,
@@ -324,15 +506,3 @@ const getMockStaffData = () => {
     }
   ];
 };
-
-const staffService = {
-  fetchStaff,
-  fetchStaffById,
-  createStaff,
-  updateStaff,
-  deleteStaff,
-  downloadStaffReport,
-  getMockStaffData
-};
-
-export default staffService;

@@ -13,7 +13,7 @@ import logger from './loggerService';
  * Get auth token from localStorage
  */
 const getAuthToken = () => {
-  return localStorage.getItem('authToken');
+  return localStorage.getItem('x-auth-token') || localStorage.getItem('authToken');
 };
 
 /**
@@ -22,9 +22,10 @@ const getAuthToken = () => {
 const createAxiosInstance = () => {
   const token = getAuthToken();
   return axios.create({
+    baseURL: process.env.REACT_APP_API_URL || 'https://hms-dev.onrender.com/api',
     headers: {
       'Content-Type': 'application/json',
-      ...(token && { 'Authorization': `Bearer ${token}` })
+      ...(token && { 'x-auth-token': token })
     }
   });
 };

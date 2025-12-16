@@ -112,6 +112,7 @@ export const PharmacyEndpoints = {
   deleteMedicine: (id) => `${API_BASE_URL}/pharmacy/medicines/${id}`,
   getPrescriptions: `${API_BASE_URL}/pharmacy/prescriptions`,
   getPrescriptionById: (id) => `${API_BASE_URL}/pharmacy/prescriptions/${id}`,
+  createPrescriptionFromIntake: `${API_BASE_URL}/pharmacy/prescriptions/create-from-intake`,
   dispensePrescription: (id) => `${API_BASE_URL}/pharmacy/prescriptions/${id}/dispense`,
 };
 
@@ -164,7 +165,19 @@ export const ChatbotEndpoints = {
 };
 
 /**
- * Reports endpoints
+ * Reports endpoints (matching Flutter's ReportService)
+ */
+export const ReportsEndpoints = {
+  patientReport: (patientId) => `${API_BASE_URL}/reports-proper/patient/${patientId}`,
+  doctorReport: (doctorId) => `${API_BASE_URL}/reports-proper/doctor/${doctorId}`,
+  staffReport: (staffId) => `${API_BASE_URL}/reports-proper/staff/${staffId}`,
+  prescriptionPdf: (prescriptionId) => `${API_BASE_URL}/pharmacy/prescriptions/${prescriptionId}/pdf`,
+  pathologyReports: `${API_BASE_URL}/pathology/reports`,
+  uploadTestReport: `${API_BASE_URL}/pathology/reports/upload`,
+};
+
+/**
+ * Legacy Report endpoints (keeping for compatibility)
  */
 export const ReportEndpoints = {
   generate: `${API_BASE_URL}/reports/generate`,
@@ -194,10 +207,28 @@ export const FileEndpoints = {
   delete: (id) => `${API_BASE_URL}/files/${id}`,
 };
 
+/**
+ * Scanner/OCR endpoints - Medical document scanning
+ * Matches Flutter ScannerEndpoints
+ */
+export const ScannerEndpoints = {
+  scan: `${API_BASE_URL}/scanner-enterprise/scan`,
+  upload: `${API_BASE_URL}/scanner-enterprise/upload`,
+  getReports: (patientId) => `${API_BASE_URL}/scanner-enterprise/reports/${patientId}`,
+  getReportDetails: (reportId) => `${API_BASE_URL}/scanner-enterprise/report/${reportId}`,
+  getPdf: (pdfId) => `${API_BASE_URL}/scanner-enterprise/pdf/${pdfId}`,
+  deletePdf: (pdfId) => `${API_BASE_URL}/scanner-enterprise/pdf/${pdfId}`,
+  // New separate endpoints
+  getPrescriptions: (patientId) => `${API_BASE_URL}/scanner-enterprise/prescriptions/${patientId}`,
+  getLabReports: (patientId) => `${API_BASE_URL}/scanner-enterprise/lab-reports/${patientId}`,
+  getMedicalHistory: (patientId) => `${API_BASE_URL}/scanner-enterprise/medical-history/${patientId}`,
+};
+
 // Export as named constant to avoid ESLint warning
 const apiConstants = {
   AuthEndpoints,
   UserEndpoints,
+  ReportsEndpoints,
   PatientEndpoints,
   AppointmentEndpoints,
   DoctorEndpoints,
@@ -211,6 +242,7 @@ const apiConstants = {
   ReportEndpoints,
   NotificationEndpoints,
   FileEndpoints,
+  ScannerEndpoints,
   API_BASE_URL,
 };
 

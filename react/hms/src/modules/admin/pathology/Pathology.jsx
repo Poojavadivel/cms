@@ -7,6 +7,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { MdChevronLeft, MdChevronRight, MdSearch } from 'react-icons/md';
 import pathologyService from '../../../services/pathologyService';
+import PathologyFormEnterprise from './PathologyFormEnterprise';
+import PathologyDetail from './PathologyDetail';
 import './Pathology.css';
 
 // Custom SVG Icons (matching Appointments)
@@ -50,6 +52,10 @@ const Pathology = () => {
   const [testTypeFilter, setTestTypeFilter] = useState('All');
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [actionMenuOpen, setActionMenuOpen] = useState(null);
+  const [showForm, setShowForm] = useState(false);
+  const [editingReport, setEditingReport] = useState(null);
+  const [showDetail, setShowDetail] = useState(false);
+  const [selectedReport, setSelectedReport] = useState(null);
   
   const itemsPerPage = 10;
 
@@ -119,6 +125,62 @@ const Pathology = () => {
     }
   };
 
+  // Handle add new report
+  const handleAddReport = () => {
+    setEditingReport(null);
+    setShowForm(true);
+  };
+
+  // Handle edit report
+  const handleEditReport = (report) => {
+    setEditingReport(report);
+    setShowForm(true);
+    setActionMenuOpen(null);
+  };
+
+  // Handle form submit
+  const handleFormSubmit = async (formData) => {
+    try {
+      if (editingReport) {
+        await pathologyService.updateReport(editingReport.id, formData);
+        console.log('✅ Report updated successfully');
+      } else {
+        await pathologyService.createReport(formData);
+        console.log('✅ Report created successfully');
+      }
+      
+      setShowForm(false);
+      setEditingReport(null);
+      await fetchReports();
+      alert(editingReport ? 'Report updated successfully!' : 'Report created successfully!');
+    } catch (error) {
+      console.error('❌ Form submission error:', error);
+      throw error;
+    }
+  };
+
+  // Handle form cancel
+  const handleFormCancel = () => {
+    setShowForm(false);
+    setEditingReport(null);
+  };
+
+  // Handle delete report
+  const handleDeleteReport = async (report) => {
+    if (window.confirm(`Are you sure you want to delete report ${report.reportId}?`)) {
+      try {
+        await pathologyService.deleteReport(report.id);
+        console.log('✅ Report deleted successfully');
+        await fetchReports();
+        alert('Report deleted successfully!');
+      } catch (error) {
+        console.error('❌ Delete error:', error);
+        alert('Failed to delete report: ' + error.message);
+      }
+    }
+    setActionMenuOpen(null);
+  };
+
   // Status badge component
   const StatusBadge = ({ status }) => {
     const getStatusStyle = (status) => {
@@ -151,14 +213,20 @@ const Pathology = () => {
   };
 
   // Handle actions
-  const handleView = (report) => {
-    console.log('View report:', report);
-    alert(`View Report: ${report.reportId}`);
+  const handleView = async (report) => {
+    try {
+      console.log('View report:', report);
+      setSelectedReport(report);
+      setShowDetail(true);
+    } catch (error) {
+      console.error('Failed to view report:', error);
+      alert('Failed to view report: ' + error.message);
+    }
   };
 
-  const handleEdit = (report) => {
-    console.log('Edit report:', report);
-    alert(`Edit Report: ${report.reportId}`);
+  const handleCloseDetail = () => {
+    setShowDetail(false);
+    setSelectedReport(null);
   };
 
   const handleDownload = async (report) => {
@@ -171,23 +239,6 @@ const Pathology = () => {
       alert('Failed to download report: ' + error.message);
     } finally {
       setIsDownloading(false);
-    }
-  };
-
-  const handleDelete = async (report) => {
-    if (!window.confirm(`Are you sure you want to delete report ${report.reportId}?`)) {
-      return;
-    }
-
-    try {
-      setIsLoading(true);
-      await pathologyService.deleteReport(report.id);
-      await fetchReports();
-      alert('Report deleted successfully!');
-    } catch (error) {
-      console.error('Failed to delete report:', error);
-      alert('Failed to delete report: ' + error.message);
-      setIsLoading(false);
     }
   };
 
@@ -206,17 +257,26 @@ const Pathology = () => {
   };
 
   return (
-    <div className="dashboard-container">
-      {/* Header */}
-      <div className="dashboard-header">
-        <div className="header-content">
-          <h1 className="main-title">Pathology Reports</h1>
-          <p className="main-subtitle">Manage all lab test reports</p>
+    <>
+      {showForm && (
+        <PathologyFormEnterprise
+          initial={editingReport}
+          onSubmit={handleFormSubmit}
+          onCancel={handleFormCancel}
+        />
+      )}
+
+      <div className="dashboard-container">
+        {/* Header */}
+        <div className="dashboard-header">
+          <div className="header-content">
+            <h1 className="main-title">Pathology Reports</h1>
+            <p className="main-subtitle">Manage all lab test reports</p>
+          </div>
+          <button className="btn-new-appointment" onClick={handleAddReport}>
+            + New Report
+          </button>
         </div>
-        <button className="btn-new-appointment" onClick={() => alert('Add Report functionality')}>
-          + New Report
-        </button>
-      </div>
 
       {/* Filters Row */}
       <div className="filter-bar-container">
@@ -302,10 +362,10 @@ const Pathology = () => {
                       <button className="btn-action view" title="View" onClick={() => handleView(report)}>
                         <Icons.Eye />
                       </button>
-                      <button className="btn-action edit" title="Edit" onClick={() => handleEdit(report)}>
+                      <button className="btn-action edit" title="Edit" onClick={() => handleEditReport(report)}>
                         <Icons.Edit />
                       </button>
-                      <button className="btn-action delete" title="Delete" onClick={() => handleDelete(report)}>
+                      <button className="btn-action delete" title="Delete" onClick={() => handleDeleteReport(report)}>
                         <Icons.Delete />
                       </button>
                     </div>
@@ -357,6 +417,16 @@ const Pathology = () => {
           </div>
       </div>
     </div>
+
+      {/* Pathology Detail Modal */}
+      {showDetail && selectedReport && (
+        <PathologyDetail
+          reportId={selectedReport.id}
+          report={selectedReport}
+          onClose={handleCloseDetail}
+        />
+      )}
+    </>
   );
 };
 

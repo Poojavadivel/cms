@@ -20,21 +20,27 @@ const api = axios.create({
 api.interceptors.request.use((config) => {
   const token = getAuthToken();
   if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+    config.headers['x-auth-token'] = token;
   }
   return config;
 });
 
-const API_BASE = '/pharmacy';
-
 const PharmacyEndpoints = {
-  getAll: `${API_BASE}/medicines`,
-  getById: (id) => `${API_BASE}/medicines/${id}`,
-  create: `${API_BASE}/medicines`,
-  update: (id) => `${API_BASE}/medicines/${id}`,
-  delete: (id) => `${API_BASE}/medicines/${id}`,
-  downloadReport: (id) => `${API_BASE}/medicines/${id}/report`,
-  lowStock: `${API_BASE}/medicines/low-stock`,
+  getAll: `/pharmacy/medicines`,
+  getById: (id) => `/pharmacy/medicines/${id}`,
+  create: `/pharmacy/medicines`,
+  update: (id) => `/pharmacy/medicines/${id}`,
+  delete: (id) => `/pharmacy/medicines/${id}`,
+  downloadReport: (id) => `/pharmacy/medicines/${id}/report`,
+  lowStock: `/pharmacy/medicines/low-stock`,
+  getBatches: `/pharmacy/batches`,
+  getBatchById: (id) => `/pharmacy/batches/${id}`,
+  createBatch: `/pharmacy/batches`,
+  updateBatch: (id) => `/pharmacy/batches/${id}`,
+  deleteBatch: (id) => `/pharmacy/batches/${id}`,
+  createPrescriptionFromIntake: `/pharmacy/prescriptions/create-from-intake`,
+  getPrescriptions: `/pharmacy/prescriptions`,
+  dispensePrescription: (id) => `/pharmacy/prescriptions/${id}/dispense`,
 };
 
 const fetchMedicines = async (params = {}) => {
@@ -167,13 +173,186 @@ const downloadMedicineReport = async (id) => {
   }
 };
 
+/**
+ * Create prescription from intake form
+ * This creates a prescription and automatically reduces stock
+ * @param {Object} prescriptionData - Prescription data from intake
+ * @returns {Promise} Prescription with stock reduction info
+ */
+const createPrescriptionFromIntake = async (prescriptionData) => {
+  try {
+    logger.apiRequest('POST', PharmacyEndpoints.createPrescriptionFromIntake, prescriptionData);
+    
+    const response = await api.post(PharmacyEndpoints.createPrescriptionFromIntake, prescriptionData);
+    
+    logger.apiResponse('POST', PharmacyEndpoints.createPrescriptionFromIntake, response.status, response.data);
+    
+    // Log prescription creation details
+    const { total, stockReductions } = response.data;
+    console.log('✅ Prescription created! Total: ₹' + (total || 0));
+    console.log('📦 Stock reduced from ' + (stockReductions?.length || 0) + ' batch(es)');
+    
+    return response.data;
+  } catch (error) {
+    logger.apiError('POST', PharmacyEndpoints.createPrescriptionFromIntake, error);
+    console.error('⚠️ Warning: Failed to create prescription:', error);
+    throw new Error(error.response?.data?.message || 'Failed to create prescription');
+  }
+};
+
+/**
+ * Check stock availability for pharmacy items
+ * @param {Array} pharmacyItems - Array of pharmacy items with medicineId and quantity
+ * @returns {Promise<Object>} Stock check results with warnings
+ */
+const checkStockAvailability = async (pharmacyItems) => {
+  try {
+    const warnings = [];
+    const stockChecks = await Promise.all(
+      pharmacyItems.map(async (item) => {
+        if (!item.medicineId) return null;
+        
+        try {
+          const medicine = await fetchMedicineById(item.medicineId);
+          const requestedQty = parseInt(item.quantity || 1);
+          const availableQty = medicine.quantity || medicine.stock || 0;
+          
+          if (availableQty === 0) {
+            warnings.push({
+              medicine: item.Medicine,
+              type: 'OUT_OF_STOCK',
+              message: `${item.Medicine} is out of stock`,
+              available: 0,
+              requested: requestedQty
+            });
+          } else if (availableQty < requestedQty) {
+            warnings.push({
+              medicine: item.Medicine,
+              type: 'LOW_STOCK',
+              message: `${item.Medicine} has only ${availableQty} units available (requested: ${requestedQty})`,
+              available: availableQty,
+              requested: requestedQty
+            });
+          }
+          
+          return {
+            medicineId: item.medicineId,
+            medicineName: item.Medicine,
+            available: availableQty,
+            requested: requestedQty,
+            sufficient: availableQty >= requestedQty
+          };
+        } catch (err) {
+          console.error('Error checking stock for:', item.Medicine, err);
+          return null;
+        }
+      })
+    );
+    
+    return {
+      hasWarnings: warnings.length > 0,
+      warnings,
+      stockChecks: stockChecks.filter(Boolean)
+    };
+  } catch (error) {
+    console.error('Error checking stock availability:', error);
+    return {
+      hasWarnings: false,
+      warnings: [],
+      stockChecks: []
+    };
+  }
+};
+
+/**
+ * Fetch all batches
+ */
+const fetchBatches = async (params = {}) => {
+  try {
+    const { page = 0, limit = 100 } = params;
+    const url = `${PharmacyEndpoints.getBatches}?page=${page}&limit=${limit}`;
+    
+    logger.apiRequest('GET', url);
+    const response = await api.get(url);
+    logger.apiResponse('GET', url, response.status, response.data);
+    
+    let batchesData;
+    if (Array.isArray(response.data)) {
+      batchesData = response.data;
+    } else if (response.data?.batches) {
+      batchesData = response.data.batches;
+    } else if (response.data?.data) {
+      batchesData = response.data.data;
+    } else {
+      batchesData = [];
+    }
+    
+    return batchesData;
+  } catch (error) {
+    logger.apiError('GET', PharmacyEndpoints.getBatches, error);
+    console.error('Failed to fetch batches from API:', error);
+    throw new Error(error.response?.data?.message || 'Failed to fetch batches');
+  }
+};
+
+/**
+ * Create new batch
+ */
+const createBatch = async (batchData) => {
+  try {
+    logger.apiRequest('POST', PharmacyEndpoints.createBatch, batchData);
+    const response = await api.post(PharmacyEndpoints.createBatch, batchData);
+    logger.apiResponse('POST', PharmacyEndpoints.createBatch, response.status, response.data);
+    return response.data;
+  } catch (error) {
+    logger.apiError('POST', PharmacyEndpoints.createBatch, error);
+    throw new Error(error.response?.data?.message || 'Failed to create batch');
+  }
+};
+
+/**
+ * Update batch
+ */
+const updateBatch = async (id, batchData) => {
+  try {
+    logger.apiRequest('PUT', PharmacyEndpoints.updateBatch(id), batchData);
+    const response = await api.put(PharmacyEndpoints.updateBatch(id), batchData);
+    logger.apiResponse('PUT', PharmacyEndpoints.updateBatch(id), response.status, response.data);
+    return response.data;
+  } catch (error) {
+    logger.apiError('PUT', PharmacyEndpoints.updateBatch(id), error);
+    throw new Error(error.response?.data?.message || 'Failed to update batch');
+  }
+};
+
+/**
+ * Delete batch
+ */
+const deleteBatch = async (id) => {
+  try {
+    logger.apiRequest('DELETE', PharmacyEndpoints.deleteBatch(id));
+    const response = await api.delete(PharmacyEndpoints.deleteBatch(id));
+    logger.apiResponse('DELETE', PharmacyEndpoints.deleteBatch(id), response.status, response.data);
+    return response.data;
+  } catch (error) {
+    logger.apiError('DELETE', PharmacyEndpoints.deleteBatch(id), error);
+    throw new Error(error.response?.data?.message || 'Failed to delete batch');
+  }
+};
+
 const pharmacyService = {
   fetchMedicines,
   fetchMedicineById,
   createMedicine,
   updateMedicine,
   deleteMedicine,
-  downloadMedicineReport
+  downloadMedicineReport,
+  fetchBatches,
+  createBatch,
+  updateBatch,
+  deleteBatch,
+  createPrescriptionFromIntake,
+  checkStockAvailability,
 };
 
 export default pharmacyService;

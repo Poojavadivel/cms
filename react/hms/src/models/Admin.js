@@ -4,6 +4,7 @@ import { User, UserRole } from './User';
  * The Admin model.
  * Composes a User object with admin role validation.
  */
+
 export class Admin {
   constructor(userProfile) {
     if (!(userProfile instanceof User)) {
