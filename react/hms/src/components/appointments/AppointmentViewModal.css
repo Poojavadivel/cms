@@ -30,12 +30,13 @@
   overflow: hidden;
 }
 
-.appointment-view-close {
+/* Floating Close Button */
+.appointment-close-floating {
   position: absolute;
-  top: 20px;
-  right: 20px;
-  background: #FFFFFF;
-  border: 2px solid #E2E8F0;
+  top: 24px;
+  right: 24px;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: 50%;
   width: 44px;
   height: 44px;
@@ -43,18 +44,350 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  z-index: 10;
   transition: all 0.2s;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  color: #ffffff;
+  padding: 0;
+  z-index: 11000;
+  backdrop-filter: blur(4px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
-.appointment-view-close:hover {
-  background: #F8FAFC;
-  border-color: #CBD5E1;
-  transform: scale(1.05);
+.appointment-close-floating:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.1);
+  border-color: #ffffff;
 }
 
-/* Header Card */
+/* Header Card - New Design Matching Image */
+.appointment-view-header-new {
+  background: #f8fafc;
+  padding: 24px 32px;
+  flex-shrink: 0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.header-main-content {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+  max-width: 100%;
+}
+
+/* Avatar Section */
+.header-avatar-section {
+  flex-shrink: 0;
+}
+
+.patient-avatar-container {
+  position: relative;
+  width: 220px;
+  height: 220px;
+}
+
+.patient-avatar-image {
+  width: 100%;
+  height: 100%;
+  border-radius: 12px;
+  object-fit: cover;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+}
+
+.lifestyle-indicators {
+  position: absolute;
+  bottom: -8px;
+  left: -8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lifestyle-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 2px solid #ef4444;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  color: #ef4444;
+  padding: 4px;
+  position: relative;
+  overflow: visible;
+}
+
+.lifestyle-badge::before {
+  content: '';
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #ef4444;
+  z-index: 1;
+}
+
+.lifestyle-badge::after {
+  content: '✕';
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: bold;
+  line-height: 20px;
+  z-index: 2;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lifestyle-badge.no-alcohol {
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+.lifestyle-badge.no-smoker {
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+.lifestyle-label {
+  font-size: 9px;
+  font-weight: 600;
+  text-align: center;
+  line-height: 1.1;
+  color: #0f172a;
+  margin-top: auto;
+  padding-bottom: 2px;
+}
+
+/* Info Section */
+.header-info-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.patient-name-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.patient-name-main {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: #0f172a;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.patient-name-main:hover {
+  opacity: 0.7;
+  text-decoration: underline;
+}
+
+.contact-icons-group {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.contact-icon-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s;
+  padding: 0;
+}
+
+.contact-icon-btn:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.personal-info-pills {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.info-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #64748b;
+  background: #f1f5f9;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.info-pill svg {
+  flex-shrink: 0;
+  color: #64748b;
+}
+
+.health-metrics-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.health-metric-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px 16px;
+  min-width: 100px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  position: relative;
+}
+
+.metric-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.2;
+}
+
+.metric-value small {
+  font-size: 14px;
+  font-weight: 500;
+  color: #64748b;
+}
+
+.metric-label {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.metric-change {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.metric-change.positive {
+  color: #10b981;
+  background: #d1fae5;
+}
+
+.metric-change.negative {
+  color: #ef4444;
+  background: #fee2e2;
+}
+
+/* Right Section */
+.header-right-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: flex-end;
+  flex-shrink: 0;
+  min-width: 200px;
+}
+
+.edit-button-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.edit-button-header:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+  color: #1e293b;
+}
+
+.diagnosis-section,
+.barriers-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+  width: 100%;
+}
+
+.section-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: capitalize;
+}
+
+.tags-container {
+  display: flex;
+  flex-direction: row;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  width: 100%;
+  justify-content: flex-end;
+}
+
+.diagnosis-tag {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-size: 11px;
+  font-weight: 600;
+  background: #fff7ed;
+  color: #c2410c;
+  border: 1px solid #ffedd5;
+}
+
+.barrier-tag {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-size: 11px;
+  font-weight: 600;
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #dbeafe;
+}
+
+/* Legacy Header Styles (keeping for backward compatibility) */
 .appointment-view-header {
   background: linear-gradient(135deg, #1E40AF 0%, #1E3A8A 100%);
   padding: 32px;
@@ -367,6 +700,7 @@
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -377,6 +711,7 @@
     opacity: 0;
     transform: translateY(40px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -395,6 +730,36 @@
     width: 100%;
     height: 100%;
     border-radius: 0;
+  }
+
+  .appointment-view-header-new {
+    padding: 16px;
+  }
+
+  .header-main-content {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .header-avatar-section {
+    align-self: center;
+  }
+
+  .header-info-section {
+    width: 100%;
+  }
+
+  .header-right-section {
+    width: 100%;
+    align-items: flex-start;
+  }
+
+  .health-metrics-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .health-metric-card {
+    min-width: auto;
   }
 
   .appointment-view-header {
@@ -425,4 +790,44 @@
   .info-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* Vitals Summary under Header */
+.appointment-vitals-summary {
+  display: flex;
+  gap: 16px;
+  padding: 14px 20px;
+  margin: 12px 0 8px;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+}
+
+.vital-card {
+  min-width: 120px;
+  padding: 10px 14px;
+  background: #ffffff;
+  border-radius: 10px;
+  border: 1px dashed #e5e7eb;
+  text-align: center;
+}
+
+.vital-label {
+  display: block;
+  font-size: 12px;
+  color: #64748b;
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+
+.vital-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.vital-value small {
+  font-size: 12px;
+  font-weight: 500;
+  color: #64748b;
 }

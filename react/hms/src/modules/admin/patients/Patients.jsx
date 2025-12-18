@@ -8,6 +8,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { MdChevronLeft, MdChevronRight, MdSearch } from 'react-icons/md';
 import patientsService from '../../../services/patientsService';
 import './Patients.css';
+import AddPatientModal from '../../../components/patient/addpatient';
+
 
 // Custom SVG Icons (matching Appointments)
 const Icons = {
@@ -55,7 +57,9 @@ const Patients = () => {
   const [genderFilter, setGenderFilter] = useState('All');
   const [ageRangeFilter, setAgeRangeFilter] = useState('All');
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
-  
+  const [isAddPatientOpen, setIsAddPatientOpen] = useState(false);
+
+
   const itemsPerPage = 10;
 
   // Fetch patients from API
@@ -64,7 +68,7 @@ const Patients = () => {
     try {
       const data = await patientsService.fetchPatients({ limit: 100 });
       console.log('✅ Fetched patients:', data);
-      
+
       // Transform data to match expected structure
       const transformedData = data.map(patient => ({
         id: patient._id || patient.id || patient.patientId,
@@ -77,7 +81,7 @@ const Patients = () => {
         reason: patient.reason || '',
         patientId: patient.patientId || patient._id || patient.id,
       }));
-      
+
       setPatients(transformedData);
       setFilteredPatients(transformedData);
     } catch (error) {
@@ -107,14 +111,14 @@ const Patients = () => {
     if (patient.condition && patient.condition.trim()) {
       return patient.condition;
     }
-    
+
     if (patient.medicalHistory && Array.isArray(patient.medicalHistory) && patient.medicalHistory.length > 0) {
       if (patient.medicalHistory.length === 1) {
         return patient.medicalHistory[0];
       }
       return `${patient.medicalHistory[0]} +${patient.medicalHistory.length - 1}`;
     }
-    
+
     if (patient.metadata?.medicalHistory && Array.isArray(patient.metadata.medicalHistory) && patient.metadata.medicalHistory.length > 0) {
       const history = patient.metadata.medicalHistory;
       if (history.length === 1) {
@@ -122,16 +126,16 @@ const Patients = () => {
       }
       return `${history[0]} +${history.length - 1}`;
     }
-    
+
     if (patient.metadata?.condition && patient.metadata.condition.trim()) {
       return patient.metadata.condition;
     }
-    
+
     if (patient.notes && patient.notes.trim()) {
       const notes = patient.notes.trim();
       return notes.length > 30 ? `${notes.substring(0, 30)}...` : notes;
     }
-    
+
     return 'N/A';
   };
 
@@ -153,25 +157,25 @@ const Patients = () => {
         const id = (patient.id || '').toLowerCase();
         const patientId = (patient.patientId || '').toLowerCase();
         const condition = (patient.condition || '').toLowerCase();
-        
+
         return name.includes(query) ||
-               doctor.includes(query) ||
-               id.includes(query) ||
-               patientId.includes(query) ||
-               condition.includes(query);
+          doctor.includes(query) ||
+          id.includes(query) ||
+          patientId.includes(query) ||
+          condition.includes(query);
       });
     }
 
     // Apply doctor filter
     if (doctorFilter !== 'All') {
-      filtered = filtered.filter(patient => 
+      filtered = filtered.filter(patient =>
         patient.doctor === doctorFilter
       );
     }
 
     // Apply gender filter
     if (genderFilter !== 'All') {
-      filtered = filtered.filter(patient => 
+      filtered = filtered.filter(patient =>
         patient.gender.toLowerCase() === genderFilter.toLowerCase()
       );
     }
@@ -217,10 +221,10 @@ const Patients = () => {
 
 
   // Check if any filter is active
-  const hasActiveFilters = searchQuery || 
-                          doctorFilter !== 'All' || 
-                          genderFilter !== 'All' || 
-                          ageRangeFilter !== 'All';
+  const hasActiveFilters = searchQuery ||
+    doctorFilter !== 'All' ||
+    genderFilter !== 'All' ||
+    ageRangeFilter !== 'All';
 
   // Pagination
   const startIndex = currentPage * itemsPerPage;
@@ -246,8 +250,7 @@ const Patients = () => {
   };
 
   const handleAdd = () => {
-    alert('Add new patient modal will open here');
-    // TODO: Open NewPatientModal
+    setIsAddPatientOpen(true);
   };
 
   const handleView = async (patient) => {
@@ -278,7 +281,7 @@ const Patients = () => {
     const confirmed = window.confirm(
       `Delete patient ${patient.name}?`
     );
-    
+
     if (!confirmed) return;
 
     try {
@@ -369,7 +372,7 @@ const Patients = () => {
               Female
             </button>
           </div>
-          <button 
+          <button
             className="btn-filter-date"
             onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
           >
@@ -436,16 +439,16 @@ const Patients = () => {
             <tbody>
               {paginatedPatients.map((patient, index) => {
                 const genderStr = (patient.gender || '').toLowerCase().trim();
-                const avatarSrc = genderStr.includes('female') || genderStr.startsWith('f') 
-                  ? '/girlicon.png' 
+                const avatarSrc = genderStr.includes('female') || genderStr.startsWith('f')
+                  ? '/girlicon.png'
                   : '/boyicon.png';
 
                 return (
                   <tr key={patient.id || index}>
                     {/* PATIENT COLUMN */}
                     <td className="cell-patient">
-                      <img 
-                        src={avatarSrc} 
+                      <img
+                        src={avatarSrc}
                         alt={patient.gender}
                         className="patient-avatar"
                       />
@@ -545,6 +548,17 @@ const Patients = () => {
           </button>
         </div>
       </div>
+      {/* Add Patient Modal */}
+      {isAddPatientOpen && (
+        <AddPatientModal
+          isOpen={isAddPatientOpen}
+          onClose={() => setIsAddPatientOpen(false)}
+          onSuccess={() => {
+            fetchPatients();
+            setIsAddPatientOpen(false);
+          }}
+        />
+      )}
     </div>
   );
 };

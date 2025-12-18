@@ -5,7 +5,7 @@ import appointmentsService from '../../../services/appointmentsService';
 import patientsService from '../../../services/patientsService';
 import AppointmentViewModal from '../../../components/appointments/AppointmentViewModal';
 import AppointmentEditModal from '../../../components/appointments/AppointmentEditModal';
-import AppointmentIntakeModal from '../../../components/appointments/AppointmentIntakeModal';
+
 import AppointmentPreviewDialog from '../../../components/doctor/AppointmentPreviewDialog';
 
 // --- MOCK DATA (KEPT FOR FALLBACK) ---
@@ -190,15 +190,7 @@ const Icons = {
       <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
     </svg>
   ),
-  Intake: () => (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0EA5E9" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-      <polyline points="14 2 14 8 20 8"></polyline>
-      <line x1="16" y1="13" x2="8" y2="13"></line>
-      <line x1="16" y1="17" x2="8" y2="17"></line>
-      <polyline points="10 9 9 9 8 9"></polyline>
-    </svg>
-  ),
+
   Delete: () => (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <polyline points="3 6 5 6 21 6"></polyline>
@@ -325,6 +317,59 @@ const formatDate = (dateStr) => {
   }
 };
 
+// Extract condition from patient data (Matched from Patients.jsx with enhancements for deeper nesting)
+const extractCondition = (patient) => {
+  if (!patient || typeof patient !== 'object') return 'N/A';
+
+  // 1. Direct condition string
+  if (patient.condition && patient.condition.trim()) {
+    return patient.condition;
+  }
+
+  // Helper to format array of conditions
+  const formatArray = (arr) => {
+    if (!Array.isArray(arr) || arr.length === 0) return null;
+    if (arr.length === 1) return arr[0];
+    return `${arr[0]} +${arr.length - 1}`;
+  };
+
+  // 2. medicalHistory (Array or Object with currentConditions)
+  if (patient.medicalHistory) {
+    if (Array.isArray(patient.medicalHistory)) {
+      const res = formatArray(patient.medicalHistory);
+      if (res) return res;
+    } else if (typeof patient.medicalHistory === 'object' && patient.medicalHistory.currentConditions) {
+      const res = formatArray(patient.medicalHistory.currentConditions);
+      if (res) return res;
+    }
+  }
+
+  // 3. metadata.medicalHistory (Array or Object with currentConditions)
+  if (patient.metadata && patient.metadata.medicalHistory) {
+    const metaHistory = patient.metadata.medicalHistory;
+    if (Array.isArray(metaHistory)) {
+      const res = formatArray(metaHistory);
+      if (res) return res;
+    } else if (typeof metaHistory === 'object' && metaHistory.currentConditions) {
+      const res = formatArray(metaHistory.currentConditions);
+      if (res) return res;
+    }
+  }
+
+  // 4. metadata.condition
+  if (patient.metadata?.condition && patient.metadata.condition.trim()) {
+    return patient.metadata.condition;
+  }
+
+  // 5. Notes (as last resort)
+  if (patient.notes && patient.notes.trim()) {
+    const notes = patient.notes.trim();
+    return notes.length > 30 ? `${notes.substring(0, 30)}...` : notes;
+  }
+
+  return 'N/A';
+};
+
 // Transform API appointment to component format (matching Flutter logic)
 const transformAppointment = (apt, index) => {
   // Extract doctor field safely (may be String, Map, or null) - EXACTLY like Flutter
@@ -337,19 +382,19 @@ const transformAppointment = (apt, index) => {
   } else if (typeof apt.doctor === 'string') {
     doctorName = apt.doctor;
   }
-  
+
   // Extract patient field safely - EXACTLY like Flutter
   let patientIdStr = '';
   let patientFullName = '';
   let gender = '';
   let patientCode = '';
-  
+
   if (apt.patientId && typeof apt.patientId === 'object') {
     const p = apt.patientId;
     patientIdStr = p._id || '';
     patientFullName = `${p.firstName || ''} ${p.lastName || ''}`.trim();
     gender = p.gender || '';
-    
+
     // Extract patient code from metadata
     if (p.metadata && typeof p.metadata === 'object') {
       patientCode = p.metadata.patientCode || '';
@@ -358,18 +403,18 @@ const transformAppointment = (apt, index) => {
     patientIdStr = apt.patientId;
     patientFullName = apt.clientName || '';
   }
-  
+
   // CRITICAL: In your API, gender is stored in appointment metadata, not patient record
   // This overrides any patient gender (which is usually empty anyway)
   if (apt.metadata && apt.metadata.gender) {
     gender = apt.metadata.gender;
   }
-  
+
   // Fallback: If still no gender, default to Male (matching Flutter behavior)
   if (!gender) {
     gender = 'Male';
   }
-  
+
   // Debug: Log gender extraction for first few records
   if (index < 3) {
     console.log(`📝 Transform ${index}:`, {
@@ -380,16 +425,16 @@ const transformAppointment = (apt, index) => {
       aptId: apt._id
     });
   }
-  
+
   // If patientFullName is still empty, try clientName
   if (!patientFullName && apt.clientName) {
     patientFullName = apt.clientName;
   }
-  
+
   // Parse date/time - EXACTLY like Flutter
   let date = apt.date || '';
   let time = apt.time || '';
-  
+
   // If date/time not present, try startAt
   if (!date && apt.startAt) {
     try {
@@ -400,7 +445,7 @@ const transformAppointment = (apt, index) => {
       // Ignore parse errors
     }
   }
-  
+
   // Extract reason/chiefComplaint
   let reason = '';
   if (apt.chiefComplaint) {
@@ -414,7 +459,7 @@ const transformAppointment = (apt, index) => {
   } else if (apt.notes) {
     reason = String(apt.notes).trim();
   }
-  
+
   // Store both display ID and actual patient object for lookup
   return {
     id: String(apt._id || apt.id || index),
@@ -429,7 +474,8 @@ const transformAppointment = (apt, index) => {
     time: time || 'Not set',
     service: apt.appointmentType || reason || 'Consultation',
     status: apt.status || 'Scheduled',
-    gender: gender || 'Male'
+    gender: gender || 'Male',
+    condition: extractCondition(apt.patientId)
   };
 };
 
@@ -444,13 +490,13 @@ const Appointments = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage] = useState(8);
   const [isLoading, setIsLoading] = useState(true);
-  
+
   // Modal states
   const [showViewModal, setShowViewModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [showIntakeModal, setShowIntakeModal] = useState(false);
+
   const [selectedAppointmentId, setSelectedAppointmentId] = useState(null);
-  
+
   // Patient dialog states
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [showPatientDialog, setShowPatientDialog] = useState(false);
@@ -462,18 +508,18 @@ const Appointments = () => {
         setIsLoading(true);
         const data = await appointmentsService.fetchAppointments();
         console.log('✅ Fetched appointments from API:', data);
-        
+
         // Log first appointment to see structure
         if (data && data.length > 0) {
           console.log('📊 First appointment structure:', JSON.stringify(data[0], null, 2));
         }
-        
+
         // Transform API data to match component's expected format
         const transformed = data.map((apt, index) => transformAppointment(apt, index));
-        
+
         // Log transformed data
         console.log('🔄 Transformed appointments:', transformed);
-        
+
         setAllAppointments(transformed);
         setFilteredAppointments(transformed);
       } catch (error) {
@@ -486,7 +532,7 @@ const Appointments = () => {
         setIsLoading(false);
       }
     };
-    
+
     fetchData();
   }, []);
 
@@ -538,62 +584,58 @@ const Appointments = () => {
     setSelectedAppointmentId(appointment.id);
     setShowEditModal(true);
   };
-  
-  // Handle intake form
-  const handleIntake = (appointment) => {
-    setSelectedAppointmentId(appointment.id);
-    setShowIntakeModal(true);
-  };
-  
+
+
+
   // Handle patient name click - open patient details dialog
   const handlePatientNameClick = async (appointment) => {
     try {
       console.log('🔍 [handlePatientNameClick] Full appointment data:', appointment);
-      
+
       // Extract patient UUID (_id) from appointment - NOT patientCode!
       let patientUUID = null;
-      
+
       // Try to get from the original appointment data stored in the transform
       const originalApt = allAppointments.find(a => a.id === appointment.id);
       console.log('📦 [handlePatientNameClick] Original appointment:', originalApt);
-      
+
       if (originalApt && originalApt.patientIdObj) {
         patientUUID = originalApt.patientIdObj._id;
         console.log('✅ Found patient UUID from patientIdObj:', patientUUID);
       }
-      
+
       if (!patientUUID) {
         console.error('❌ Could not extract patient UUID from appointment');
         console.error('Available appointment data:', appointment);
         alert('Unable to load patient details. Patient ID not found.');
         return;
       }
-      
+
       console.log('🔄 Fetching patient by UUID:', patientUUID);
-      
+
       // Fetch full patient details using UUID
       const fullPatient = await patientsService.fetchPatientById(patientUUID);
       console.log('✅ Fetched full patient:', fullPatient);
-      
+
       // Enrich patient data with info from appointment if available
       if (originalApt && originalApt.patientIdObj && originalApt.patientIdObj.metadata) {
         const appointmentMetadata = originalApt.patientIdObj.metadata;
         console.log('📦 Enriching with appointment metadata:', appointmentMetadata);
-        
+
         // Add emergency contacts from appointment metadata if not in patient record
         if (!fullPatient.emergencyContactName && appointmentMetadata.emergencyContactName) {
           fullPatient.emergencyContactName = appointmentMetadata.emergencyContactName;
           fullPatient.emergencyContactPhone = appointmentMetadata.emergencyContactPhone;
           console.log('✅ Added emergency contact:', fullPatient.emergencyContactName);
         }
-        
+
         // Add insurance from appointment metadata if not in patient record
         if (!fullPatient.insuranceNumber && appointmentMetadata.insurance) {
           fullPatient.insuranceNumber = appointmentMetadata.insurance.policyNumber;
           fullPatient.expiryDate = appointmentMetadata.insurance.validUntil;
           console.log('✅ Added insurance:', fullPatient.insuranceNumber);
         }
-        
+
         // Add medical history from appointment metadata - ENSURE it's always an array
         if (appointmentMetadata.medicalHistory) {
           if (Array.isArray(appointmentMetadata.medicalHistory)) {
@@ -608,14 +650,14 @@ const Appointments = () => {
             console.log('✅ Added medical history (from currentConditions):', fullPatient.medicalHistory);
           }
         }
-        
+
         // Ensure medicalHistory is always an array
         if (!Array.isArray(fullPatient.medicalHistory)) {
           console.warn('⚠️ medicalHistory is not an array, converting:', fullPatient.medicalHistory);
           fullPatient.medicalHistory = [];
         }
       }
-      
+
       setSelectedPatient(fullPatient);
       setShowPatientDialog(true);
     } catch (error) {
@@ -638,7 +680,7 @@ const Appointments = () => {
       await appointmentsService.deleteAppointment(appointment.id);
       console.log('✅ Deleted appointment:', appointment.id);
       alert(`Deleted appointment for ${appointment.patientName}`);
-      
+
       // Refresh appointments list
       await refreshAppointments();
     } catch (error) {
@@ -663,9 +705,9 @@ const Appointments = () => {
             <thead>
               <tr>
                 <th style={{ width: '25%' }}>Patient</th>
+                <th style={{ width: '18%' }}>Doctor</th>
                 <th style={{ width: '18%' }}>Date & Time</th>
-                <th style={{ width: '15%' }}>Service</th>
-                <th style={{ width: '18%' }}>Provider</th>
+                <th style={{ width: '15%' }}>Condition</th>
                 <th style={{ width: '12%' }}>Status</th>
                 <th style={{ width: '12%' }}>Actions</th>
               </tr>
@@ -680,7 +722,7 @@ const Appointments = () => {
                 } else {
                   avatarSrc = '/boyicon.png';
                 }
-                
+
                 // Debug EVERY row
                 if (idx < 5) { // Only log first 5 to avoid console spam
                   console.log(`🎨 Row ${idx}:`, {
@@ -691,82 +733,80 @@ const Appointments = () => {
                     fullObject: apt
                   });
                 }
-                
+
                 return (
-                <tr key={apt.id}>
-                  {/* PATIENT COLUMN - Clickable */}
-                  <td 
-                    className="cell-patient clickable" 
-                    onClick={() => handlePatientNameClick(apt)}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    <img 
-                      src={avatarSrc} 
-                      alt={apt.gender}
-                      className="patient-avatar"
-                      onError={(e) => {
-                        // Fallback if image doesn't load
-                        e.target.style.display = 'none';
-                        e.target.nextElementSibling.style.display = 'flex';
-                      }}
-                    />
-                    <div className="gender-icon-box" style={{ display: 'none' }}>
-                      {apt.gender === 'Female' ? <Icons.Female /> : <Icons.Male />}
-                    </div>
-                    <div className="info-group">
-                      <span className="primary patient-name-clickable">
-                        {apt.patientName}
-                      </span>
-                      <span className="secondary">{apt.patientId}</span>
-                    </div>
-                  </td>
-
-                  {/* DATE COLUMN */}
-                  <td>
-                    <div className="info-group">
-                      <span className="primary">{apt.date}</span>
-                      <span className="secondary">{apt.time}</span>
-                    </div>
-                  </td>
-
-                  {/* SERVICE */}
-                  <td style={{ fontWeight: 500, color: '#334155' }}>{apt.service}</td>
-
-                  {/* PROVIDER */}
-                  <td>
-                    <div className="cell-doctor">
-                      <div className="doc-avatar-sm">
-                        <Icons.Doctor />
+                  <tr key={apt.id}>
+                    {/* PATIENT COLUMN - Clickable */}
+                    {/* PATIENT COLUMN - Clickable */}
+                    <td
+                      className="cell-patient clickable"
+                      onClick={() => handlePatientNameClick(apt)}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <img
+                        src={avatarSrc}
+                        alt={apt.gender}
+                        className="patient-avatar"
+                        onError={(e) => {
+                          // Fallback if image doesn't load
+                          e.target.style.display = 'none';
+                          e.target.nextElementSibling.style.display = 'flex';
+                        }}
+                      />
+                      <div className="gender-icon-box" style={{ display: 'none' }}>
+                        {apt.gender === 'Female' ? <Icons.Female /> : <Icons.Male />}
                       </div>
-                      <span className="font-medium">{apt.doctor}</span>
-                    </div>
-                  </td>
+                      <div className="info-group">
+                        <span className="primary patient-name-clickable">
+                          {apt.patientName}
+                        </span>
+                        <span className="secondary">{apt.patientId}</span>
+                      </div>
+                    </td>
 
-                  {/* STATUS */}
-                  <td>
-                    <span className={`status-pill ${apt.status.toLowerCase()}`}>
-                      {apt.status}
-                    </span>
-                  </td>
+                    {/* DOCTOR COLUMN - Match Patient List Style */}
+                    <td>
+                      <div className="cell-doctor">
+                        <div className="doc-avatar-sm">
+                          <Icons.Doctor />
+                        </div>
+                        <span className="font-medium">{apt.doctor}</span>
+                      </div>
+                    </td>
 
-                  {/* ACTIONS */}
-                  <td>
-                    <div className="action-buttons-group">
-                      <button className="btn-action intake" title="Intake" onClick={() => handleIntake(apt)}>
-                        <Icons.Intake />
-                      </button>
-                      <button className="btn-action edit" title="Edit" onClick={() => handleEdit(apt)}>
-                        <Icons.Edit />
-                      </button>
-                      <button className="btn-action view" title="View" onClick={() => handleView(apt)}>
-                        <Icons.Eye />
-                      </button>
-                      <button className="btn-action delete" title="Delete" onClick={() => handleDelete(apt)}>
-                        <Icons.Delete />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
+                    {/* DATE & TIME - Split View */}
+                    <td>
+                      <div className="info-group">
+                        <span className="primary">{apt.date}</span>
+                        <span className="secondary">{apt.time}</span>
+                      </div>
+                    </td>
+
+                    {/* CONDITION */}
+                    <td style={{ fontWeight: 500, color: '#334155' }}>{apt.condition}</td>
+
+                    {/* STATUS */}
+                    <td>
+                      <span className={`status-pill ${apt.status.toLowerCase()}`}>
+                        {apt.status}
+                      </span>
+                    </td>
+
+                    {/* ACTIONS */}
+                    <td>
+                      <div className="action-buttons-group">
+                        <button className="btn-action edit" title="Edit" onClick={() => handleEdit(apt)}>
+                          <Icons.Edit />
+                        </button>
+                        <button className="btn-action view" title="View" onClick={() => handleView(apt)}>
+                          <Icons.Eye />
+                        </button>
+                        <button className="btn-action delete" title="Delete" onClick={() => handleDelete(apt)}>
+                          <Icons.Delete />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
                 );
               })}
               {isLoading && (
@@ -833,12 +873,7 @@ const Appointments = () => {
         onSuccess={refreshAppointments}
       />
 
-      <AppointmentIntakeModal
-        isOpen={showIntakeModal}
-        onClose={() => setShowIntakeModal(false)}
-        appointmentId={selectedAppointmentId}
-        onSuccess={refreshAppointments}
-      />
+
 
       {/* Appointment Preview Dialog - Matches Flutter DoctorAppointmentPreview */}
       <AppointmentPreviewDialog
