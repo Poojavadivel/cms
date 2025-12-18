@@ -13,6 +13,7 @@ import {
   MdLogout,
   MdPerson,
 } from 'react-icons/md';
+import { ChatbotFloatingButton } from '../../components/chatbot';
 
 const DoctorRoot = () => {
   const navigate = useNavigate();
@@ -123,10 +124,8 @@ const DoctorRoot = () => {
         <Outlet />
       </div>
 
-      <div className="chatbot-launcher" title="Ask Movi">
-        <img src="/assets/chatbotimg.png" alt="Chatbot" />
-        <span className="chatbot-label">Ask Movi</span>
-      </div>
+      {/* Chatbot - Functional Medical Assistant */}
+      <ChatbotFloatingButton userRole="doctor" />
     </div>
   );
 };

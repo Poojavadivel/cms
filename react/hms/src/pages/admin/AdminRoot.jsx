@@ -16,6 +16,7 @@ import {
   MdLogout,
   MdAdminPanelSettings,
 } from 'react-icons/md';
+import { ChatbotFloatingButton } from '../../components/chatbot';
 
 const AdminRoot = () => {
   const navigate = useNavigate();
@@ -134,11 +135,8 @@ const AdminRoot = () => {
         <Outlet />
       </div>
 
-      {/* Chatbot launcher - placeholder */}
-      <div className="chatbot-launcher" title="Ask Movi">
-        <img src="/assets/chatbotimg.png" alt="Chatbot" />
-        <span className="chatbot-label">Ask Movi</span>
-      </div>
+      {/* Chatbot - Functional Medical Assistant */}
+      <ChatbotFloatingButton userRole="admin" />
     </div>
   );
 };

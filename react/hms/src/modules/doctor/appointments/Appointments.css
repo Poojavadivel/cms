@@ -84,14 +84,14 @@ body {
   font-size: 22px;
   /* Smaller title */
   font-weight: 700;
-  color: var(--text-title);
+  color: #1E293B !important;
   margin: 0;
   letter-spacing: -0.01em;
 }
 
 .main-subtitle {
   font-size: 13px;
-  color: var(--neutral-gray);
+  color: #9CA3AF !important;
   margin: 2px 0 0 0;
 }
 
@@ -557,9 +557,20 @@ body {
   font-weight: 500;
   color: var(--text-muted);
 }
-/* Patient name clickable */
+/* Patient name clickable - Enterprise grade hover */
+.patient-name-clickable {
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  color: inherit;
+}
+
 .patient-name-clickable:hover {
   color: var(--primary);
-  text-decoration: underline;
-  transition: all 0.2s ease;
+  transform: translateX(2px);
+}
+
+.patient-name-clickable:active {
+  transform: translateX(0);
 }

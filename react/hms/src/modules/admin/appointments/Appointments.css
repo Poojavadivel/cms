@@ -336,7 +336,8 @@ body {
 
 .cell-patient.clickable {
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 8px;
 }
 
 .cell-patient.clickable:hover {
@@ -345,7 +346,12 @@ body {
 
 .cell-patient.clickable:hover .primary {
   color: var(--primary);
-  text-decoration: underline;
+  /* Removed underline for enterprise grade */
+}
+
+.cell-patient.clickable:active {
+  background-color: rgba(38, 99, 255, 0.08);
+  transform: scale(0.995);
 }
 
 /* Patient Avatar Image - matches Flutter */
@@ -558,9 +564,37 @@ body {
   color: var(--text-muted);
 }
 
-/* Patient name clickable */
+/* Patient name clickable - Enterprise grade hover */
+.patient-name-clickable {
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
 .patient-name-clickable:hover {
   color: var(--primary);
-  text-decoration: underline;
-  transition: all 0.2s ease;
+  transform: translateX(2px);
+}
+
+.patient-name-clickable:active {
+  transform: translateX(0);
+}
+
+/* Doctor name clickable - Enterprise grade hover */
+.doctor-name-clickable {
+  cursor: pointer;
+  color: var(--text-body);
+  font-weight: 500;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.doctor-name-clickable:hover {
+  color: var(--primary);
+  transform: translateX(2px);
+}
+
+.doctor-name-clickable:active {
+  transform: translateX(0);
 }
