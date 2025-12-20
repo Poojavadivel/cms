@@ -771,7 +771,7 @@ const Appointments = () => {
                     {/* PATIENT COLUMN - Clickable */}
                     <td
                       className="cell-patient clickable"
-                      onClick={() => handlePatientNameClick(apt)}
+                      onClick={() => handleView(apt)}
                       style={{ cursor: 'pointer' }}
                     >
                       <img
