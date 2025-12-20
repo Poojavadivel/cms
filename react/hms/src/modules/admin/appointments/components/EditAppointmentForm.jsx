@@ -1,18 +1,31 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import AuthService from '../../../../services/authService';
+import appointmentsService from '../../../../services/appointmentsService';
 import { AppointmentDraft } from '../../../../models/AppointmentDraft';
+import {
+  MdClose,
+  MdPerson,
+  MdEvent,
+  MdLocationOn,
+  MdMonitorHeart,
+  MdNotes,
+  MdDelete,
+  MdSave,
+  MdCheckCircle,
+  MdMale,
+  MdFemale
+} from 'react-icons/md';
 
 const EditAppointmentForm = ({ appointmentId, onClose, onUpdate, onDelete }) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  
+
   const [formData, setFormData] = useState({
     patientName: '',
     patientId: '',
     appointmentType: 'Consultation',
     date: '',
     time: '',
-    location: 'Clinic',
+    location: '',
     notes: '',
     chiefComplaint: '',
     mode: 'In-clinic',
@@ -24,45 +37,62 @@ const EditAppointmentForm = ({ appointmentId, onClose, onUpdate, onDelete }) => 
     bp: '',
     heartRate: '',
     spo2: '',
+    phoneNumber: '',
+    gender: 'Male',
+    sendReminder: true
   });
 
   const loadAppointment = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await AuthService.get(`/appointments/${appointmentId}`);
-      const data = response.data || response;
-      
+      const data = await appointmentsService.fetchAppointmentById(appointmentId);
+
       // Parse date and time
       let date = '';
       let time = '';
-      
+
       if (data.startAt) {
         const startAt = new Date(data.startAt);
         date = startAt.toISOString().split('T')[0];
         time = `${String(startAt.getHours()).padStart(2, '0')}:${String(startAt.getMinutes()).padStart(2, '0')}`;
+      } else {
+        date = data.date || '';
+        time = data.time || '';
       }
-      
-      // Get patient name
+
+      // Get patient details
       let patientName = '';
       let patientId = '';
+      let phoneNumber = '';
+      let gender = 'Male';
+
       if (data.patientId && typeof data.patientId === 'object') {
-        patientName = `${data.patientId.firstName || ''} ${data.patientId.lastName || ''}`.trim();
-        patientId = data.patientId._id || data.patientId.id;
+        const p = data.patientId;
+        patientName = `${p.firstName || ''} ${p.lastName || ''}`.trim();
+        patientId = p.metadata?.patientCode || p._id || '';
+
+        if (typeof p.phone === 'object') {
+          phoneNumber = p.phone?.phone || p.phone?.number || '';
+        } else {
+          phoneNumber = p.phone || p.phoneNumber || '';
+        }
+
+        gender = p.gender || 'Male';
       } else if (data.patientId) {
         patientId = data.patientId;
         patientName = data.clientName || '';
       }
-      
+
       const metadata = data.metadata || {};
       const vitals = data.vitals || {};
-      
+
       setFormData({
-        patientName,
-        patientId,
+        patientName: data.clientName || patientName,
+        patientId: patientId,
         appointmentType: data.appointmentType || 'Consultation',
         date,
         time,
-        location: data.location || 'Clinic',
+        location: data.location || '',
         notes: data.notes || '',
         chiefComplaint: metadata.chiefComplaint || data.chiefComplaint || '',
         mode: metadata.mode || 'In-clinic',
@@ -74,6 +104,9 @@ const EditAppointmentForm = ({ appointmentId, onClose, onUpdate, onDelete }) => 
         bp: vitals.bp || '',
         heartRate: vitals.heartRate || '',
         spo2: vitals.spo2 || '',
+        phoneNumber: metadata.phoneNumber || phoneNumber,
+        gender: metadata.gender || gender,
+        sendReminder: metadata.reminder !== undefined ? metadata.reminder : true
       });
     } catch (error) {
       console.error('Failed to load appointment:', error);
@@ -92,21 +125,20 @@ const EditAppointmentForm = ({ appointmentId, onClose, onUpdate, onDelete }) => 
   };
 
   const handleSubmit = async () => {
-    // Validation
-    if (!formData.date || !formData.time || !formData.chiefComplaint) {
-      alert('Please fill all required fields');
+    if (!formData.date || !formData.time) {
+      alert('Date and Time are required');
       return;
     }
 
     setSaving(true);
     try {
-      // Create draft
+      // Use AppointmentDraft structure
       const draft = new AppointmentDraft({
         id: appointmentId,
         clientName: formData.patientName,
         patientId: formData.patientId,
         appointmentType: formData.appointmentType,
-        date: new Date(formData.date),
+        date: formData.date,
         time: formData.time,
         location: formData.location,
         notes: formData.notes,
@@ -120,13 +152,16 @@ const EditAppointmentForm = ({ appointmentId, onClose, onUpdate, onDelete }) => 
         bp: formData.bp || null,
         heartRate: formData.heartRate || null,
         spo2: formData.spo2 || null,
+        phoneNumber: formData.phoneNumber,
+        gender: formData.gender,
+        reminder: formData.sendReminder
       });
 
       const payload = draft.toJSON();
-      
-      await AuthService.put(`/appointments/${appointmentId}`, payload);
-      
-      onUpdate();
+
+      await appointmentsService.updateAppointment(appointmentId, payload);
+
+      if (onUpdate) onUpdate();
       onClose();
     } catch (error) {
       console.error('Failed to update appointment:', error);
@@ -142,8 +177,8 @@ const EditAppointmentForm = ({ appointmentId, onClose, onUpdate, onDelete }) => 
     }
 
     try {
-      await AuthService.delete(`/appointments/${appointmentId}`);
-      onDelete();
+      await appointmentsService.deleteAppointment(appointmentId);
+      if (onDelete) onDelete();
       onClose();
     } catch (error) {
       console.error('Failed to delete appointment:', error);
@@ -154,277 +189,358 @@ const EditAppointmentForm = ({ appointmentId, onClose, onUpdate, onDelete }) => 
   if (loading) {
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4">
-          <div className="flex flex-col items-center">
-            <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mb-4"></div>
-            <p className="text-gray-700 font-medium">Loading appointment details...</p>
-          </div>
+        <div className="bg-white rounded-2xl p-8 flex flex-col items-center">
+          <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+          <p className="text-gray-600 font-medium">Loading details...</p>
         </div>
       </div>
     );
   }
 
+  // --- REUSABLE COMPONENTS FOR UI CONSISTENCY ---
+
+  const FormSection = ({ icon: Icon, title, subtitle, children }) => (
+    <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm mb-4">
+      <div className="flex items-start gap-4 mb-6">
+        <div className="p-3 bg-[#1e293b] rounded-xl text-white">
+          <Icon size={24} />
+        </div>
+        <div>
+          <h3 className="text-lg font-bold text-gray-900">{title}</h3>
+          {subtitle && <p className="text-sm text-gray-500">{subtitle}</p>}
+        </div>
+      </div>
+      {children}
+    </div>
+  );
+
+  const InputField = ({ label, value, onChange, type = 'text', required = false, placeholder = '', disabled = false, fullWidth = false }) => (
+    <div className={`flex flex-col ${fullWidth ? 'col-span-full' : ''}`}>
+      <label className="text-sm font-semibold text-gray-700 mb-2">
+        {label} {required && <span className="text-red-500">*</span>}
+      </label>
+      <div className="relative">
+        {/* Icon placeholders could go here if needed */}
+        <input
+          type={type}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          disabled={disabled}
+          placeholder={placeholder}
+          className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all disabled:bg-gray-50 disabled:text-gray-500"
+        />
+      </div>
+    </div>
+  );
+
+  const SelectField = ({ label, value, onChange, options, required = false }) => (
+    <div className="flex flex-col">
+      <label className="text-sm font-semibold text-gray-700 mb-2">
+        {label} {required && <span className="text-red-500">*</span>}
+      </label>
+      <div className="relative">
+        <select
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent appearance-none transition-all"
+        >
+          {options.map(opt => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </select>
+        <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500">
+          <svg width="12" height="8" viewBox="0 0 12 8" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="1 1 6 6 11 1"></polyline>
+          </svg>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-      <div className="bg-white rounded-2xl max-w-4xl w-full my-8 shadow-2xl">
-        {/* Header */}
-        <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-indigo-50 to-purple-50">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-xl">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900">Edit Appointment</h2>
-                <p className="text-sm text-gray-600 mt-1">Updating for {formData.patientName}</p>
-              </div>
-            </div>
-            <button
-              onClick={onClose}
-              className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
-            >
-              <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 font-sans">
+      <div className="bg-[#f8fafc] w-[95%] max-w-[1400px] h-[95vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+
+        {/* HEADER */}
+        <div className="bg-[#1e3a8a] text-white px-8 py-6 flex justify-between items-center shrink-0">
+          <div>
+            <h2 className="text-2xl font-bold flex items-center gap-3">
+              <span className="p-2 bg-white/10 rounded-lg"><MdCheckCircle size={24} /></span>
+              Edit Appointment
+            </h2>
+            <p className="text-blue-100 mt-1 text-sm opacity-90">Update appointment details and save changes</p>
           </div>
+          <button
+            onClick={onClose}
+            className="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors text-white"
+          >
+            <MdClose size={24} />
+          </button>
         </div>
 
-        {/* Form */}
-        <div className="p-6 max-h-[70vh] overflow-y-auto">
-          {/* Basic Info */}
-          <div className="mb-6">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Basic Information</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Patient Name</label>
-                <input
-                  type="text"
+        {/* SCROLLABLE CONTENT */}
+        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+          <div className="space-y-6">
+
+            {/* SECTION 1: Patient Information */}
+            <FormSection
+              icon={MdPerson}
+              title="Patient Information"
+              subtitle="Basic patient details and demographics"
+            >
+              <div className="grid grid-cols-2 gap-6">
+                <InputField
+                  label="Client Name"
                   value={formData.patientName}
+                  onChange={(val) => handleChange('patientName', val)}
+                  required
+                  placeholder="Patient Name"
+                // disabled // Usually locked in edit mode but let's allow edits for now or keep disabled if preferred
+                />
+                <InputField
+                  label="Patient ID"
+                  value={formData.patientId}
+                  onChange={(val) => handleChange('patientId', val)}
+                  placeholder="ID"
                   disabled
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-gray-50 text-gray-600 cursor-not-allowed"
+                />
+
+                {/* Gender Selection - Custom Radio Look */}
+                <div className="flex flex-col">
+                  <label className="text-sm font-semibold text-gray-700 mb-2">Gender</label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <button
+                      type="button"
+                      onClick={() => handleChange('gender', 'Male')}
+                      className={`flex items-center justify-center gap-2 py-3 rounded-xl border-2 transition-all ${formData.gender === 'Male' ? 'border-indigo-600 bg-indigo-50 text-indigo-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}
+                    >
+                      <MdMale size={20} /> Male
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleChange('gender', 'Female')}
+                      className={`flex items-center justify-center gap-2 py-3 rounded-xl border-2 transition-all ${formData.gender === 'Female' ? 'border-pink-600 bg-pink-50 text-pink-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}
+                    >
+                      <MdFemale size={20} /> Female
+                    </button>
+                  </div>
+                </div>
+
+                <InputField
+                  label="Phone Number"
+                  value={formData.phoneNumber}
+                  onChange={(val) => handleChange('phoneNumber', val)}
+                  placeholder="+91..."
                 />
               </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Appointment Type</label>
-                <select
-                  value={formData.appointmentType}
-                  onChange={(e) => handleChange('appointmentType', e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                >
-                  <option value="Consultation">Consultation</option>
-                  <option value="Follow-up">Follow-up</option>
-                  <option value="Check-up">Check-up</option>
-                  <option value="Emergency">Emergency</option>
-                </select>
-              </div>
-            </div>
-          </div>
+            </FormSection>
 
-          {/* Schedule */}
-          <div className="mb-6">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Schedule</h3>
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Date *</label>
-                <input
+            {/* SECTION 2: Appointment Schedule */}
+            <FormSection
+              icon={MdEvent}
+              title="Appointment Schedule"
+              subtitle="Date, time, and appointment details"
+            >
+              <div className="grid grid-cols-2 gap-6">
+                <InputField
+                  label="Date"
                   type="date"
                   value={formData.date}
-                  onChange={(e) => handleChange('date', e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  onChange={(val) => handleChange('date', val)}
+                  required
                 />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Time *</label>
-                <input
+                <InputField
+                  label="Time"
                   type="time"
                   value={formData.time}
-                  onChange={(e) => handleChange('time', e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  onChange={(val) => handleChange('time', val)}
+                  required
                 />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Duration (min)</label>
-                <select
-                  value={formData.duration}
-                  onChange={(e) => handleChange('duration', parseInt(e.target.value))}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                >
-                  <option value={15}>15 min</option>
-                  <option value={20}>20 min</option>
-                  <option value={30}>30 min</option>
-                  <option value={45}>45 min</option>
-                  <option value={60}>60 min</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          {/* Appointment Details */}
-          <div className="mb-6">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Appointment Details</h3>
-            <div className="grid grid-cols-3 gap-4 mb-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Mode</label>
-                <select
+                <SelectField
+                  label="Mode"
                   value={formData.mode}
-                  onChange={(e) => handleChange('mode', e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                >
-                  <option value="In-clinic">In-clinic</option>
-                  <option value="Telehealth">Telehealth</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Priority</label>
-                <select
+                  onChange={(val) => handleChange('mode', val)}
+                  options={[
+                    { value: 'In-clinic', label: 'In-clinic' },
+                    { value: 'Video', label: 'Video Call' },
+                    { value: 'Phone', label: 'Phone Call' }
+                  ]}
+                />
+                <SelectField
+                  label="Duration"
+                  value={formData.duration}
+                  onChange={(val) => handleChange('duration', parseInt(val))}
+                  options={[
+                    { value: 15, label: '15 minutes' },
+                    { value: 20, label: '20 minutes' },
+                    { value: 30, label: '30 minutes' },
+                    { value: 45, label: '45 minutes' },
+                    { value: 60, label: '1 hour' }
+                  ]}
+                />
+                <SelectField
+                  label="Priority"
                   value={formData.priority}
-                  onChange={(e) => handleChange('priority', e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                >
-                  <option value="Normal">Normal</option>
-                  <option value="Urgent">Urgent</option>
-                  <option value="Emergency">Emergency</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Status</label>
-                <select
+                  onChange={(val) => handleChange('priority', val)}
+                  options={[
+                    { value: 'Normal', label: 'Normal' },
+                    { value: 'Urgent', label: 'Urgent' },
+                    { value: 'High', label: 'High' }
+                  ]}
+                />
+                <SelectField
+                  label="Status"
                   value={formData.status}
-                  onChange={(e) => handleChange('status', e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                >
-                  <option value="Scheduled">Scheduled</option>
-                  <option value="In Progress">In Progress</option>
-                  <option value="Completed">Completed</option>
-                  <option value="Cancelled">Cancelled</option>
-                </select>
-              </div>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Chief Complaint *</label>
-                <input
-                  type="text"
-                  value={formData.chiefComplaint}
-                  onChange={(e) => handleChange('chiefComplaint', e.target.value)}
-                  placeholder="e.g., Fever, Headache"
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  onChange={(val) => handleChange('status', val)}
+                  options={[
+                    { value: 'Scheduled', label: 'Scheduled' },
+                    { value: 'Confirmed', label: 'Confirmed' },
+                    { value: 'Pending', label: 'Pending' },
+                    { value: 'Cancelled', label: 'Cancelled' },
+                    { value: 'Completed', label: 'Completed' }
+                  ]}
                 />
               </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Clinical Notes</label>
-                <textarea
-                  value={formData.notes}
-                  onChange={(e) => handleChange('notes', e.target.value)}
-                  rows={3}
-                  placeholder="Additional notes..."
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
-                />
-              </div>
-            </div>
-          </div>
+            </FormSection>
 
-          {/* Vitals (Optional) */}
-          <div className="mb-6">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Vitals (Optional)</h3>
-            <div className="grid grid-cols-5 gap-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Height (cm)</label>
-                <input
-                  type="text"
+            {/* SECTION 3: Location & Contact */}
+            <FormSection
+              icon={MdLocationOn}
+              title="Location & Contact"
+              subtitle="Appointment venue and contact details"
+            >
+              <div className="space-y-6">
+                <InputField
+                  label="Location"
+                  value={formData.location}
+                  onChange={(val) => handleChange('location', val)}
+                  required
+                  placeholder="e.g. Consultation Room 2"
+                  fullWidth
+                />
+                <InputField
+                  label="Chief Complaint"
+                  value={formData.chiefComplaint}
+                  onChange={(val) => handleChange('chiefComplaint', val)}
+                  placeholder="Reasons for visit"
+                  fullWidth
+                />
+              </div>
+            </FormSection>
+
+            {/* SECTION 4: Quick Vitals */}
+            <FormSection
+              icon={MdMonitorHeart}
+              title="Quick Vitals"
+              subtitle="Optional health measurements"
+            >
+              <div className="grid grid-cols-2 gap-6">
+                <InputField
+                  label="Height (cm)"
                   value={formData.heightCm}
-                  onChange={(e) => handleChange('heightCm', e.target.value)}
-                  placeholder="175"
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  onChange={(val) => handleChange('heightCm', val)}
+                  placeholder="e.g., 175"
                 />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Weight (kg)</label>
-                <input
-                  type="text"
+                <InputField
+                  label="Weight (kg)"
                   value={formData.weightKg}
-                  onChange={(e) => handleChange('weightKg', e.target.value)}
-                  placeholder="70"
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  onChange={(val) => handleChange('weightKg', val)}
+                  placeholder="e.g., 72"
                 />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">BP</label>
-                <input
-                  type="text"
+                <InputField
+                  label="Blood Pressure"
                   value={formData.bp}
-                  onChange={(e) => handleChange('bp', e.target.value)}
+                  onChange={(val) => handleChange('bp', val)}
                   placeholder="120/80"
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">HR (bpm)</label>
-                <input
-                  type="text"
+                <InputField
+                  label="Heart Rate (bpm)"
                   value={formData.heartRate}
-                  onChange={(e) => handleChange('heartRate', e.target.value)}
-                  placeholder="72"
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  onChange={(val) => handleChange('heartRate', val)}
+                  placeholder="e.g., 78"
                 />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">SpO2 (%)</label>
-                <input
-                  type="text"
+                <InputField
+                  label="SpO₂ (%)"
                   value={formData.spo2}
-                  onChange={(e) => handleChange('spo2', e.target.value)}
+                  onChange={(val) => handleChange('spo2', val)}
                   placeholder="98"
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  fullWidth
                 />
               </div>
-            </div>
+            </FormSection>
+
+            {/* SECTION 5: Clinical Notes & Preferences */}
+            <FormSection
+              icon={MdNotes}
+              title="Clinical Notes & Preferences"
+              subtitle="Additional information and reminders"
+            >
+              <div className="space-y-6">
+                <div className="flex flex-col">
+                  <label className="text-sm font-semibold text-gray-700 mb-2">Clinical Notes</label>
+                  <textarea
+                    value={formData.notes}
+                    onChange={(e) => handleChange('notes', e.target.value)}
+                    rows={3}
+                    className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all resize-none"
+                    placeholder="Add any private notes here..."
+                  />
+                </div>
+
+                {/* Send Reminder Toggle */}
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-200">
+                  <div>
+                    <h4 className="font-bold text-gray-900">Send Reminder</h4>
+                    <p className="text-sm text-gray-500">Notify patient before appointment</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="sr-only peer"
+                      checked={formData.sendReminder}
+                      onChange={(e) => handleChange('sendReminder', e.target.checked)}
+                    />
+                    <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  </label>
+                </div>
+              </div>
+            </FormSection>
+
           </div>
         </div>
 
-        {/* Actions */}
-        <div className="p-6 border-t border-gray-200 bg-gray-50 flex justify-between">
-          <button
-            onClick={handleDelete}
-            className="px-6 py-3 bg-red-600 text-white rounded-xl font-semibold hover:bg-red-700 transition-all flex items-center gap-2"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-            </svg>
-            Delete
-          </button>
-          <div className="flex gap-3">
+        {/* FOOTER */}
+        <div className="bg-white border-t border-gray-200 p-6 flex justify-between items-center shrink-0 rounded-b-2xl">
+          <div className="flex gap-4">
             <button
               onClick={onClose}
-              disabled={saving}
-              className="px-6 py-3 border-2 border-gray-300 rounded-xl text-gray-700 font-semibold hover:bg-gray-100 transition-all disabled:opacity-50"
+              className="px-6 py-2.5 rounded-xl border-2 border-gray-200 text-gray-600 font-bold hover:bg-gray-50 transition-colors flex items-center gap-2"
             >
-              Cancel
+              <MdClose size={18} /> Cancel
             </button>
             <button
-              onClick={handleSubmit}
-              disabled={saving}
-              className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all disabled:opacity-50 flex items-center gap-2"
+              onClick={handleDelete}
+              className="px-6 py-2.5 rounded-xl border-2 border-red-100 text-red-600 font-bold hover:bg-red-50 transition-colors flex items-center gap-2"
             >
-              {saving ? (
-                <>
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  Save Changes
-                </>
-              )}
+              <MdDelete size={18} /> Delete
             </button>
           </div>
+
+          <button
+            onClick={handleSubmit}
+            disabled={saving}
+            className="px-8 py-3 rounded-xl bg-[#1e3a8a] text-white font-bold hover:bg-blue-900 transition-colors shadow-lg shadow-blue-900/20 flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+          >
+            {saving ? (
+              'Saving...'
+            ) : (
+              <>
+                <MdCheckCircle size={20} /> Save Changes
+              </>
+            )}
+          </button>
         </div>
+
       </div>
     </div>
   );

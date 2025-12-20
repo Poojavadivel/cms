@@ -9,6 +9,7 @@ import { MdChevronLeft, MdChevronRight, MdSearch } from 'react-icons/md';
 import patientsService from '../../../services/patientsService';
 import './Patients.css';
 import AddPatientModal from '../../../components/patient/addpatient';
+import AppointmentViewModal from '../../../components/appointments/AppointmentViewModal';
 
 
 // Custom SVG Icons (matching Appointments)
@@ -58,6 +59,8 @@ const Patients = () => {
   const [ageRangeFilter, setAgeRangeFilter] = useState('All');
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [isAddPatientOpen, setIsAddPatientOpen] = useState(false);
+  const [selectedPatientId, setSelectedPatientId] = useState(null);
+  const [viewPatientId, setViewPatientId] = useState(null); // Added back for pure patient view
 
 
   const itemsPerPage = 10;
@@ -250,31 +253,29 @@ const Patients = () => {
   };
 
   const handleAdd = () => {
+    setSelectedPatientId(null);
     setIsAddPatientOpen(true);
   };
 
-  const handleView = async (patient) => {
-    try {
-      const fullPatient = await patientsService.fetchPatientById(patient.id);
-      console.log('View patient:', fullPatient);
-      alert(`View: ${patient.name}`);
-      // TODO: Open PatientPreviewModal
-    } catch (error) {
-      console.error('Failed to fetch patient details:', error);
-      alert('Failed to load patient details: ' + error.message);
-    }
+  // Handle View Logic: Reuse AppointmentViewModal
+  const [viewAppointmentId, setViewAppointmentId] = useState(null);
+  const [showAppointmentView, setShowAppointmentView] = useState(false);
+
+  const handleView = (patient) => {
+    // Directly view patient using AppointmentViewModal in 'patient mode'
+    setViewAppointmentId(null);
+    setShowAppointmentView(true);
+    // Use a temporary state or reuse existing one to store the 'target' patient for the modal
+    // Since viewAppointmentId is for appointment ID, we need a way to pass patient ID.
+    // Let's reuse 'selectedPatientId' or create 'viewPatientId' again?
+    // Reviewing state variables: 'selectedPatientId' is for Edit Modal.
+    // Let's add 'viewPatientId' back.
+    setViewPatientId(patient.id);
   };
 
-  const handleEdit = async (patient) => {
-    try {
-      const fullPatient = await patientsService.fetchPatientById(patient.id);
-      console.log('Edit patient:', fullPatient);
-      alert(`Edit: ${patient.name}`);
-      // TODO: Open EditPatientModal
-    } catch (error) {
-      console.error('Failed to fetch patient details:', error);
-      alert('Failed to load patient details: ' + error.message);
-    }
+  const handleEdit = (patient) => {
+    setSelectedPatientId(patient.id);
+    setIsAddPatientOpen(true);
   };
 
   const handleDelete = async (patient) => {
@@ -556,6 +557,25 @@ const Patients = () => {
           onSuccess={() => {
             fetchPatients();
             setIsAddPatientOpen(false);
+          }}
+          patientId={selectedPatientId}
+        />
+      )}
+      {/* Reusing Appointment View Modal */}
+      {showAppointmentView && (viewAppointmentId || viewPatientId) && (
+        <AppointmentViewModal
+          isOpen={showAppointmentView}
+          onClose={() => {
+            setShowAppointmentView(false);
+            setViewAppointmentId(null);
+            setViewPatientId(null);
+          }}
+          appointmentId={viewAppointmentId} // Will be null for pure patient view
+          patientId={viewPatientId} // Pass patient ID for pure patient view
+          onEdit={() => {
+            // Optional: Handle edit from within the view if needed, or leave empty
+            setShowAppointmentView(false);
+            // handleEdit(patient) - we'd need the patient object back, effectively we are just closing for now
           }}
         />
       )}

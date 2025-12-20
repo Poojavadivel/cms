@@ -11,7 +11,7 @@ import appointmentsService from '../../services/appointmentsService';
 import patientsService from '../../services/patientsService';
 import { getGenderAvatar } from '../../utils/avatarHelpers';
 
-const AppointmentViewModal = ({ isOpen, onClose, appointmentId, onEdit, onPatientClick }) => {
+const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdit, onPatientClick }) => {
   const [appointment, setAppointment] = useState(null);
   const [patient, setPatient] = useState(null);
   const [activeTab, setActiveTab] = useState('profile');
@@ -27,11 +27,15 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, onEdit, onPatien
   ];
 
   useEffect(() => {
-    if (isOpen && appointmentId) {
-      fetchAppointment();
+    if (isOpen) {
+      if (appointmentId) {
+        fetchAppointment();
+      } else if (patientId) {
+        fetchPatient();
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, appointmentId]);
+  }, [isOpen, appointmentId, patientId]);
 
   const fetchAppointment = async () => {
     setIsLoading(true);
@@ -98,6 +102,32 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, onEdit, onPatien
       }
     } catch (err) {
       setError(err.message || 'Failed to load appointment');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchPatient = async () => {
+    setIsLoading(true);
+    setError('');
+    try {
+      // Direct patient fetch without appointment context
+      const patientData = await patientsService.fetchPatientById(patientId);
+      setPatient(patientData);
+
+      // Create a dummy appointment object to satisfy render requirements without displaying appointment data
+      setAppointment({
+        _id: 'view-only',
+        patientId: patientData,
+        clientName: `${patientData.firstName || patientData.name || ''} ${patientData.lastName || ''}`.trim(),
+        // Mock other fields to prevent crashes, but they will be hidden
+        date: null,
+        time: null,
+        appointmentType: null,
+        mode: null
+      });
+    } catch (err) {
+      setError(err.message || 'Failed to load patient details');
     } finally {
       setIsLoading(false);
     }
@@ -271,8 +301,8 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, onEdit, onPatien
           </div>
         ) : appointment ? (
           <>
-            {/* Header Card - Matching Image Design */}
             {(() => {
+              // Calculate derived data here in render scope
               const patientData = getPatientData();
               const avatarSrc = patientData.avatarUrl || getGenderAvatar(patientData.gender);
 
@@ -313,9 +343,10 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, onEdit, onPatien
                         <h2
                           className="patient-name-main"
                           onClick={() => {
-                            const patientId = appointment.patientObjectId ||
-                              (typeof appointment.patientId === 'object' ? appointment.patientId?._id : appointment.patientId);
-                            onPatientClick && patientId && onPatientClick(patientId);
+                            const pId = appointment.patientObjectId ||
+                              (typeof appointment.patientId === 'object' ? appointment.patientId?._id : appointment.patientId) ||
+                              patientId; // Fallback to prop
+                            onPatientClick && pId && onPatientClick(pId);
                           }}
                         >
                           {patientData.name}
@@ -362,15 +393,12 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, onEdit, onPatien
                           <div className="health-metric-card">
                             <span className="metric-value">{patientData.bmi}</span>
                             <span className="metric-label">BMI</span>
-                            {/* Change indicator - would need previous value from backend */}
-                            {/* <span className="metric-change positive">↓ 10</span> */}
                           </div>
                         )}
                         {patientData.weightKg && (
                           <div className="health-metric-card">
                             <span className="metric-value">{patientData.weightKg} <small>kg</small></span>
                             <span className="metric-label">Weight</span>
-                            {/* <span className="metric-change positive">↓ 10 kg</span> */}
                           </div>
                         )}
                         {patientData.heightCm && (
@@ -383,18 +411,20 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, onEdit, onPatien
                           <div className="health-metric-card">
                             <span className="metric-value">{patientData.bp}</span>
                             <span className="metric-label">Blood pressure</span>
-                            {/* <span className="metric-change negative">↑ 10</span> */}
                           </div>
                         )}
                       </div>
                     </div>
 
-                    {/* Right Section: Edit Button, Diagnosis, Barriers */}
+                    {/* Right Section: Edit Button (Only show if we have an appointment or if we handle patient edit) */}
                     <div className="header-right-section">
-                      <button className="edit-button-header" onClick={() => onEdit(appointment)}>
-                        <MdEdit size={14} />
-                        <span>Edit</span>
-                      </button>
+                      {(appointmentId || onEdit) && (
+                        <button className="edit-button-header" onClick={() => onEdit(appointment)}>
+                          <MdEdit size={14} />
+                          {/* If pure patient view, maybe say "Edit Patient"? For now keep "Edit" assuming generic edit handler */}
+                          <span>Edit</span>
+                        </button>
+                      )}
 
                       {/* Own Diagnosis */}
                       {patientData.diagnosis.length > 0 && (
@@ -427,25 +457,27 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, onEdit, onPatien
 
 
 
-            {/* Appointment Details */}
-            <div className="appointment-details-card">
-              <div className="detail-item">
-                <span className="detail-label">Date:</span>
-                <span className="detail-value">{String(appointment.date || 'Not set')}</span>
+            {/* Appointment Details - only show if appointmentId is present (not in pure Patient View) */}
+            {appointmentId && (
+              <div className="appointment-details-card">
+                <div className="detail-item">
+                  <span className="detail-label">Date:</span>
+                  <span className="detail-value">{String(appointment.date || 'Not set')}</span>
+                </div>
+                <div className="detail-item">
+                  <span className="detail-label">Time:</span>
+                  <span className="detail-value">{String(appointment.time || 'Not set')}</span>
+                </div>
+                <div className="detail-item">
+                  <span className="detail-label">Type:</span>
+                  <span className="detail-value">{String(appointment.appointmentType || 'General')}</span>
+                </div>
+                <div className="detail-item">
+                  <span className="detail-label">Mode:</span>
+                  <span className="detail-value">{String(appointment.mode || 'In-clinic')}</span>
+                </div>
               </div>
-              <div className="detail-item">
-                <span className="detail-label">Time:</span>
-                <span className="detail-value">{String(appointment.time || 'Not set')}</span>
-              </div>
-              <div className="detail-item">
-                <span className="detail-label">Type:</span>
-                <span className="detail-value">{String(appointment.appointmentType || 'General')}</span>
-              </div>
-              <div className="detail-item">
-                <span className="detail-label">Mode:</span>
-                <span className="detail-value">{String(appointment.mode || 'In-clinic')}</span>
-              </div>
-            </div>
+            )}
 
             {/* Tabs */}
             <div className="appointment-tabs-section">
@@ -510,6 +542,11 @@ const ProfileTab = ({ appointment }) => {
             <label>Patient ID</label>
             <p>{
               (() => {
+                // Handle pure patient object if passed in appointment.patientId
+                if (appointment.patientId && !appointment.patientId._id && appointment.patientId.patientId) {
+                  return appointment.patientId.patientId;
+                }
+
                 if (typeof appointment.patientId === 'object' && appointment.patientId) {
                   return String(appointment.patientId.metadata?.patientCode || appointment.patientId._id || 'N/A');
                 }

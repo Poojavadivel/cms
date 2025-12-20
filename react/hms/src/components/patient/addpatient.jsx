@@ -16,7 +16,7 @@ import {
 import patientsService from '../../services/patientsService';
 import './addpatient.css';
 
-const AddPatientModal = ({ isOpen, onClose, onSuccess }) => {
+const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
     // --- State ---
     const [currentStep, setCurrentStep] = useState(0);
     const [loading, setLoading] = useState(false);
@@ -55,19 +55,61 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess }) => {
     });
 
     // Reset form when modal opens
+    // Reset or Fetch when modal opens
     useEffect(() => {
         if (isOpen) {
             setCurrentStep(0);
             setLoading(false);
-            setFormData({
+
+            const initialData = {
                 firstName: '', lastName: '', age: '', gender: '', bloodGroup: '',
                 phone: '', email: '', emergencyContactName: '', emergencyContactPhone: '',
                 houseNo: '', street: '', city: '', state: '',
                 knownConditions: '', allergies: '', currentMedications: '', pastSurgeries: '', notes: '',
                 height: '', weight: '', bmi: '', bp: '', pulse: '', spo2: ''
-            });
+            };
+
+            if (patientId) {
+                // Edit Mode: Fetch and Fill
+                // We'll set a local loading flag or just rely on async update
+                patientsService.fetchPatientById(patientId).then(patient => {
+                    setFormData({
+                        firstName: patient.firstName || (patient.name ? patient.name.split(' ')[0] : ''),
+                        lastName: patient.lastName || (patient.name ? patient.name.split(' ').slice(1).join(' ') : ''),
+                        age: patient.age || '',
+                        gender: patient.gender || '',
+                        bloodGroup: patient.bloodGroup || '',
+                        phone: patient.phone || '',
+                        email: '', // Not currently in PatientDetails model
+                        emergencyContactName: patient.emergencyContactName || '',
+                        emergencyContactPhone: patient.emergencyContactPhone || '',
+                        houseNo: patient.houseNo || '',
+                        street: patient.street || '',
+                        city: patient.city || '',
+                        state: patient.state || '',
+                        knownConditions: Array.isArray(patient.medicalHistory) ? patient.medicalHistory.join(', ') : (patient.medicalHistory || ''),
+                        allergies: Array.isArray(patient.allergies) ? patient.allergies.join(', ') : (patient.allergies || ''),
+                        currentMedications: '', // Not in model
+                        pastSurgeries: '', // Not in model
+                        notes: patient.notes || '',
+                        height: patient.height || '',
+                        weight: patient.weight || '',
+                        bmi: patient.bmi || '',
+                        bp: patient.bp || '',
+                        pulse: patient.pulse || '',
+                        spo2: patient.oxygen || '' // Mapped from spo2 in model to oxygen
+                    });
+                }).catch(error => {
+                    console.error('Failed to fetch patient details for edit:', error);
+                    alert('Failed to load patient details');
+                    onClose();
+                });
+            } else {
+                // Add Mode: Reset
+                setFormData(initialData);
+            }
         }
-    }, [isOpen]);
+    }, [isOpen, patientId]);
 
     // --- Logic ---
 
@@ -128,15 +170,15 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess }) => {
             const safeInt = (val) => (val && !isNaN(parseInt(val)) ? parseInt(val) : null);
             const safeFloat = (val) => (val && !isNaN(parseFloat(val)) ? parseFloat(val) : null);
 
-            // Payload construction to match Backend Route & Schema
+            // Payload construction aligned with PatientDetails.toJSON()
             const payload = {
                 firstName: formData.firstName,
                 lastName: formData.lastName || '',
-                // name: is composite, backend handles it or ignores it
+                // Combine for name if backend needs it (toJSON uses name property)
+                name: `${formData.firstName} ${formData.lastName || ''}`.trim(),
                 age: safeInt(formData.age),
                 gender: formData.gender || null,
-                bloodGroup: formData.bloodGroup || null, // Ensure empty string becomes null
-
+                bloodGroup: formData.bloodGroup || null,
                 phone: formData.phone,
                 email: formData.email || null,
 
@@ -144,53 +186,44 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess }) => {
                     houseNo: formData.houseNo || '',
                     street: formData.street || '',
                     city: formData.city || '',
-                    state: formData.state || ''
+                    state: formData.state || '',
+                    line1: `${formData.houseNo || ''} ${formData.street || ''} ${formData.city || ''}`.trim()
                 },
 
-                // Metadata fields that backend route might expect at root or handle via metadata
-                emergencyContactName: formData.emergencyContactName,
-                emergencyContactPhone: formData.emergencyContactPhone,
-
-                // Lists
-                medicalHistory: formData.knownConditions ? formData.knownConditions.split(',').map(s => s.trim()) : [],
+                // Root level fields that match PatientDetails
                 allergies: formData.allergies ? formData.allergies.split(',').map(s => s.trim()) : [],
-                prescriptions: formData.currentMedications ? formData.currentMedications.split(',').map(s => s.trim()) : [],
-                // surgeries mapped to notes or ignored? Backend doesn't explicitly map surgeries.
-                // We'll append to notes.
                 notes: `${formData.notes || ''}\nPast Surgeries: ${formData.pastSurgeries || 'None'}`.trim(),
 
-                // Vitals Object (Explicitly matches PatientVitals Schema)
+                // Metadata strictly for fields that live there in toJSON
+                metadata: {
+                    emergencyContactName: formData.emergencyContactName,
+                    emergencyContactPhone: formData.emergencyContactPhone,
+                    medicalHistory: formData.knownConditions ? formData.knownConditions.split(',').map(s => s.trim()) : [],
+                    prescriptions: formData.currentMedications ? formData.currentMedications.split(',').map(s => s.trim()) : [],
+                },
+
+                // Vitals Object - Simplified to match PatientDetails.toJSON ('vitals' keys)
                 vitals: {
-                    bloodPressure: (() => {
-                        if (!formData.bp) return null;
-                        const parts = formData.bp.split('/');
-                        if (parts.length === 2 && !isNaN(parseInt(parts[0])) && !isNaN(parseInt(parts[1]))) {
-                            return {
-                                systolic: parseInt(parts[0]),
-                                diastolic: parseInt(parts[1]),
-                                reading: formData.bp
-                            };
-                        }
-                        return null;
-                    })(),
-                    heartRate: safeInt(formData.pulse),
-                    temperature: null, // Form doesn't have temp input
-                    oxygenSaturation: safeFloat(formData.spo2),
-                    weight: safeFloat(formData.weight) ? { value: safeFloat(formData.weight), unit: 'kg' } : null,
-                    height: safeFloat(formData.height) ? { value: safeFloat(formData.height), unit: 'cm' } : null,
-                    bmi: safeFloat(formData.bmi),
-                    // Legacy fields if backend looks for them directly
+                    // Use simple keys as per toJSON
                     bp: formData.bp || null,
+                    heartRate: safeInt(formData.pulse), // Backend might map this or pulse
                     pulse: safeInt(formData.pulse),
+                    temperature: null,
                     spo2: safeFloat(formData.spo2),
+                    oxygen: safeFloat(formData.spo2), // Alias
                     weightKg: safeFloat(formData.weight),
-                    heightCm: safeFloat(formData.height)
+                    heightCm: safeFloat(formData.height),
+                    bmi: safeFloat(formData.bmi)
                 }
             };
 
             console.log('Sending Payload:', payload);
 
-            await patientsService.createPatient(payload);
+            if (patientId) {
+                await patientsService.updatePatient(patientId, payload);
+            } else {
+                await patientsService.createPatient(payload);
+            }
 
             // Close and Refresh
             setLoading(false);
@@ -224,8 +257,8 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess }) => {
                 {/* Header */}
                 <div className="modal-header-top">
                     <div className="header-title-block">
-                        <h2>Add New Patient</h2>
-                        <p>Complete patient information and medical records</p>
+                        <h2>{patientId ? 'Edit Patient' : 'Add New Patient'}</h2>
+                        <p>{patientId ? 'Update patient details' : 'Complete patient information and medical records'}</p>
                     </div>
                     <button className="close-btn" onClick={onClose}><MdClose size={24} /></button>
                 </div>
@@ -472,7 +505,7 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess }) => {
                         </button>
                     ) : (
                         <button className="btn-primary" onClick={handleSubmit} disabled={loading}>
-                            {loading ? 'Saving...' : 'Save Patient'} {loading ? '' : <MdSave />}
+                            {loading ? 'Saving...' : (patientId ? 'Update Patient' : 'Save Patient')} {loading ? '' : <MdSave />}
                         </button>
                     )}
                 </div>
