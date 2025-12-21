@@ -3,11 +3,18 @@ import React, { useState, useEffect } from 'react';
 import './Appointments.css';
 import appointmentsService from '../../../services/appointmentsService';
 import patientsService from '../../../services/patientsService';
+import staffService from '../../../services/staffService';
 import AppointmentViewModal from '../../../components/appointments/AppointmentViewModal';
-import EditAppointmentForm from './components/EditAppointmentForm';
-import NewAppointmentForm from './components/NewAppointmentForm';
+import AppointmentEditModal from '../../../components/appointments/AppointmentEditModal';
 
 import AppointmentPreviewDialog from '../../../components/doctor/AppointmentPreviewDialog';
+import NewAppointmentForm from './components/NewAppointmentForm';
+import EditAppointmentForm from './components/EditAppointmentForm';
+import StaffDetailEnterprise from '../staff/StaffDetailEnterprise';
+
+// Import doctor icons
+import doctorFemaleIcon from '../../../assets/doctor-femaleicon.png';
+import doctorMaleIcon from '../../../assets/doctor-male icon.png';
 
 // --- MOCK DATA (KEPT FOR FALLBACK) ---
 const MOCK_APPOINTMENTS = [
@@ -236,7 +243,7 @@ const Header = () => (
       <p className="main-subtitle">Manage bookings, schedules, and patient statuses</p>
     </div>
     <button
-      className="btn-add-new"
+      className="btn-new-appointment"
       onClick={() => window.dispatchEvent(new CustomEvent('openNewAppointmentModal'))}
     >
       <Icons.Plus /> Add New
@@ -387,9 +394,11 @@ const extractCondition = (patient) => {
 const transformAppointment = (apt, index) => {
   // Extract doctor field safely (may be String, Map, or null) - EXACTLY like Flutter
   let doctorName = '';
+  let doctorGender = 'Male'; // Default
   if (apt.doctorId && typeof apt.doctorId === 'object') {
     const d = apt.doctorId;
     doctorName = `${d.firstName || ''} ${d.lastName || ''}`.trim();
+    doctorGender = d.gender || 'Male';
   } else if (typeof apt.doctorId === 'string') {
     doctorName = apt.doctorId;
   } else if (typeof apt.doctor === 'string') {
@@ -480,6 +489,8 @@ const transformAppointment = (apt, index) => {
     patientId: patientCode || patientIdStr || `PT-${index}`, // Display code
     patientIdObj: apt.patientId, // CRITICAL: Store original patient object with _id
     doctor: doctorName || 'Not Assigned',
+    doctorGender: doctorGender, // Add doctor gender for icon display
+    doctorIdObj: apt.doctorId, // Store original doctor object with _id
     doctorInitials: getDoctorInitials(doctorName),
     doctorColor: getDoctorColor(index),
     doctorTextColor: getDoctorTextColor(index),
@@ -514,6 +525,10 @@ const Appointments = () => {
   // Patient dialog states
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [showPatientDialog, setShowPatientDialog] = useState(false);
+
+  // Doctor/Staff dialog states
+  const [selectedDoctor, setSelectedDoctor] = useState(null);
+  const [showDoctorDialog, setShowDoctorDialog] = useState(false);
 
   // Fetch appointments from API on mount
   useEffect(() => {
@@ -623,76 +638,100 @@ const Appointments = () => {
     try {
       console.log('🔍 [handlePatientNameClick] Full appointment data:', appointment);
 
-      // Extract patient UUID (_id) from appointment - NOT patientCode!
-      let patientUUID = null;
-
-      // Try to get from the original appointment data stored in the transform
+      // Extract patient object from appointment
       const originalApt = allAppointments.find(a => a.id === appointment.id);
       console.log('📦 [handlePatientNameClick] Original appointment:', originalApt);
 
-      if (originalApt && originalApt.patientIdObj) {
-        patientUUID = originalApt.patientIdObj._id;
-        console.log('✅ Found patient UUID from patientIdObj:', patientUUID);
+      let patientData = null;
+
+      // Try to get patient data from original appointment (as object)
+      if (originalApt && originalApt.patientIdObj && typeof originalApt.patientIdObj === 'object') {
+        patientData = originalApt.patientIdObj;
+        console.log('✅ Found patient data from patientIdObj:', patientData);
       }
 
-      if (!patientUUID) {
-        console.error('❌ Could not extract patient UUID from appointment');
+      if (!patientData || typeof patientData !== 'object') {
+        console.error('❌ Could not extract patient data from appointment');
         console.error('Available appointment data:', appointment);
-        alert('Unable to load patient details. Patient ID not found.');
+        alert('Unable to load patient details. Patient information not found.');
         return;
       }
 
-      console.log('🔄 Fetching patient by UUID:', patientUUID);
+      // Transform patient data to match expected format
+      const fullPatient = {
+        id: patientData._id,
+        _id: patientData._id,
+        name: `${patientData.firstName || ''} ${patientData.lastName || ''}`.trim(),
+        firstName: patientData.firstName,
+        lastName: patientData.lastName,
+        email: patientData.email,
+        phone: patientData.phone || patientData.contact,
+        contact: patientData.phone || patientData.contact,
+        gender: patientData.gender,
+        age: patientData.age,
+        dateOfBirth: patientData.dateOfBirth || patientData.dob,
+        bloodGroup: patientData.bloodGroup,
+        address: patientData.address,
+        city: patientData.city,
+        state: patientData.state,
+        country: patientData.country,
+        pincode: patientData.pincode,
+        emergencyContactName: patientData.emergencyContactName,
+        emergencyContactPhone: patientData.emergencyContactPhone,
+        insuranceNumber: patientData.insuranceNumber,
+        expiryDate: patientData.expiryDate,
+        medicalHistory: Array.isArray(patientData.medicalHistory) ? patientData.medicalHistory : [],
+        allergies: patientData.allergies,
+        currentMedications: patientData.currentMedications,
+        chronicDiseases: patientData.chronicDiseases,
+        metadata: patientData.metadata,
+        ...patientData // Spread any additional fields
+      };
 
-      // Fetch full patient details using UUID
-      const fullPatient = await patientsService.fetchPatientById(patientUUID);
-      console.log('✅ Fetched full patient:', fullPatient);
+      // Enrich with metadata if available
+      if (patientData.metadata) {
+        const metadata = patientData.metadata;
 
-      // Enrich patient data with info from appointment if available
-      if (originalApt && originalApt.patientIdObj && originalApt.patientIdObj.metadata) {
-        const appointmentMetadata = originalApt.patientIdObj.metadata;
-        console.log('📦 Enriching with appointment metadata:', appointmentMetadata);
-
-        // Add emergency contacts from appointment metadata if not in patient record
-        if (!fullPatient.emergencyContactName && appointmentMetadata.emergencyContactName) {
-          fullPatient.emergencyContactName = appointmentMetadata.emergencyContactName;
-          fullPatient.emergencyContactPhone = appointmentMetadata.emergencyContactPhone;
-          console.log('✅ Added emergency contact:', fullPatient.emergencyContactName);
+        // Add emergency contacts from metadata if not in main record
+        if (!fullPatient.emergencyContactName && metadata.emergencyContactName) {
+          fullPatient.emergencyContactName = metadata.emergencyContactName;
+          fullPatient.emergencyContactPhone = metadata.emergencyContactPhone;
+          console.log('✅ Added emergency contact from metadata:', fullPatient.emergencyContactName);
         }
 
-        // Add insurance from appointment metadata if not in patient record
-        if (!fullPatient.insuranceNumber && appointmentMetadata.insurance) {
-          fullPatient.insuranceNumber = appointmentMetadata.insurance.policyNumber;
-          fullPatient.expiryDate = appointmentMetadata.insurance.validUntil;
-          console.log('✅ Added insurance:', fullPatient.insuranceNumber);
+        // Add insurance from metadata if not in main record
+        if (!fullPatient.insuranceNumber && metadata.insurance) {
+          fullPatient.insuranceNumber = metadata.insurance.policyNumber;
+          fullPatient.expiryDate = metadata.insurance.validUntil;
+          console.log('✅ Added insurance from metadata:', fullPatient.insuranceNumber);
         }
 
-        // Add medical history from appointment metadata - ENSURE it's always an array
-        if (appointmentMetadata.medicalHistory) {
-          if (Array.isArray(appointmentMetadata.medicalHistory)) {
-            // Already an array
-            fullPatient.medicalHistory = appointmentMetadata.medicalHistory;
-            console.log('✅ Added medical history (array):', fullPatient.medicalHistory);
-          } else if (typeof appointmentMetadata.medicalHistory === 'object' && appointmentMetadata.medicalHistory.currentConditions) {
-            // Extract currentConditions array from object
-            fullPatient.medicalHistory = Array.isArray(appointmentMetadata.medicalHistory.currentConditions)
-              ? appointmentMetadata.medicalHistory.currentConditions
+        // Add medical history from metadata - ENSURE it's always an array
+        if (metadata.medicalHistory && fullPatient.medicalHistory.length === 0) {
+          if (Array.isArray(metadata.medicalHistory)) {
+            fullPatient.medicalHistory = metadata.medicalHistory;
+            console.log('✅ Added medical history from metadata (array):', fullPatient.medicalHistory);
+          } else if (typeof metadata.medicalHistory === 'object' && metadata.medicalHistory.currentConditions) {
+            fullPatient.medicalHistory = Array.isArray(metadata.medicalHistory.currentConditions)
+              ? metadata.medicalHistory.currentConditions
               : [];
-            console.log('✅ Added medical history (from currentConditions):', fullPatient.medicalHistory);
+            console.log('✅ Added medical history from metadata (currentConditions):', fullPatient.medicalHistory);
           }
         }
-
-        // Ensure medicalHistory is always an array
-        if (!Array.isArray(fullPatient.medicalHistory)) {
-          console.warn('⚠️ medicalHistory is not an array, converting:', fullPatient.medicalHistory);
-          fullPatient.medicalHistory = [];
-        }
       }
+
+      // Ensure medicalHistory is always an array
+      if (!Array.isArray(fullPatient.medicalHistory)) {
+        console.warn('⚠️ medicalHistory is not an array, converting:', fullPatient.medicalHistory);
+        fullPatient.medicalHistory = [];
+      }
+
+      console.log('✅ Transformed patient details:', fullPatient);
 
       setSelectedPatient(fullPatient);
       setShowPatientDialog(true);
     } catch (error) {
-      console.error('❌ Error fetching patient details:', error);
+      console.error('❌ Error loading patient details:', error);
       alert('Failed to load patient details: ' + error.message);
     }
   };
@@ -700,6 +739,76 @@ const Appointments = () => {
   const handleClosePatientDialog = () => {
     setShowPatientDialog(false);
     setSelectedPatient(null);
+  };
+
+  // Handle doctor name click - open staff details dialog
+  const handleDoctorNameClick = async (appointment) => {
+    try {
+      console.log('🔍 [handleDoctorNameClick] Appointment data:', appointment);
+
+      // Extract doctor object from appointment
+      const originalApt = allAppointments.find(a => a.id === appointment.id);
+      console.log('📦 [handleDoctorNameClick] Original appointment:', originalApt);
+
+      let doctorData = null;
+
+      // Try to get doctor data from original appointment (as object, not just ID)
+      if (originalApt) {
+        // Check if doctorIdObj exists and is an object with full data
+        if (originalApt.doctorIdObj && typeof originalApt.doctorIdObj === 'object') {
+          doctorData = originalApt.doctorIdObj;
+          console.log('✅ Found doctor data from doctorIdObj:', doctorData);
+        }
+        // Fallback: check if doctorId is an object with full data
+        else if (originalApt.doctorId && typeof originalApt.doctorId === 'object') {
+          doctorData = originalApt.doctorId;
+          console.log('✅ Found doctor data from doctorId:', doctorData);
+        }
+      }
+
+      if (!doctorData || typeof doctorData !== 'object') {
+        console.error('❌ Could not extract doctor data from appointment');
+        console.error('Available appointment data:', appointment);
+        alert('Unable to load doctor details. Doctor information not found.');
+        return;
+      }
+
+      // Transform doctor data to match Staff model format expected by StaffDetailEnterprise
+      const staffDetails = {
+        id: doctorData._id,
+        _id: doctorData._id,
+        name: `${doctorData.firstName || ''} ${doctorData.lastName || ''}`.trim(),
+        firstName: doctorData.firstName,
+        lastName: doctorData.lastName,
+        email: doctorData.email,
+        contact: doctorData.phone || doctorData.contact,
+        phone: doctorData.phone || doctorData.contact,
+        gender: doctorData.gender,
+        designation: doctorData.role || 'Doctor',
+        department: doctorData.department || 'Medical',
+        status: doctorData.status || 'Active',
+        joinDate: doctorData.joinDate || doctorData.createdAt,
+        address: doctorData.address,
+        salary: doctorData.salary,
+        notes: doctorData.notes,
+        tags: doctorData.tags,
+        metadata: doctorData.metadata,
+        ...doctorData // Spread any additional fields
+      };
+
+      console.log('✅ Transformed staff details:', staffDetails);
+
+      setSelectedDoctor(staffDetails);
+      setShowDoctorDialog(true);
+    } catch (error) {
+      console.error('❌ Error loading doctor details:', error);
+      alert('Failed to load doctor details: ' + error.message);
+    }
+  };
+
+  const handleCloseDoctorDialog = () => {
+    setShowDoctorDialog(false);
+    setSelectedDoctor(null);
   };
 
   // Handle delete appointment
@@ -798,10 +907,18 @@ const Appointments = () => {
                     {/* DOCTOR COLUMN - Match Patient List Style */}
                     <td>
                       <div className="cell-doctor">
-                        <div className="doc-avatar-sm">
-                          <Icons.Doctor />
-                        </div>
-                        <span className="font-medium">{apt.doctor}</span>
+                        <img
+                          src={apt.doctorGender === 'Female' ? doctorFemaleIcon : doctorMaleIcon}
+                          alt={apt.doctor}
+                          className="patient-avatar"
+                          style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }}
+                        />
+                        <span
+                          className="doctor-name-clickable"
+                          onClick={() => handleDoctorNameClick(apt)}
+                        >
+                          {apt.doctor}
+                        </span>
                       </div>
                     </td>
 
@@ -927,6 +1044,19 @@ const Appointments = () => {
         onClose={handleClosePatientDialog}
         showBillingTab={false}
       />
+
+      {/* Staff Detail Dialog - Show doctor/staff details */}
+      {showDoctorDialog && selectedDoctor && (
+        <StaffDetailEnterprise
+          staffId={selectedDoctor.id || selectedDoctor._id}
+          initial={selectedDoctor}
+          onClose={handleCloseDoctorDialog}
+          onUpdate={(updatedStaff) => {
+            console.log('Staff updated:', updatedStaff);
+            // Optionally refresh appointments if needed
+          }}
+        />
+      )}
     </div>
   );
 };

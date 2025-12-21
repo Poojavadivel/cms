@@ -428,6 +428,7 @@ const transformAppointment = (apt, index) => {
     date: formatDate(date),
     time: time || 'Not set',
     service: apt.appointmentType || reason || 'Consultation',
+    reason: reason || 'Not specified', // Add reason field
     status: apt.status || 'Scheduled',
     gender: gender || 'Male'
   };
@@ -665,7 +666,7 @@ const Appointments = () => {
                 <th style={{ width: '25%' }}>Patient</th>
                 <th style={{ width: '18%' }}>Date & Time</th>
                 <th style={{ width: '15%' }}>Service</th>
-                <th style={{ width: '18%' }}>Provider</th>
+                <th style={{ width: '18%' }}>Reason</th>
                 <th style={{ width: '12%' }}>Status</th>
                 <th style={{ width: '12%' }}>Actions</th>
               </tr>
@@ -732,14 +733,9 @@ const Appointments = () => {
                   {/* SERVICE */}
                   <td style={{ fontWeight: 500, color: '#334155' }}>{apt.service}</td>
 
-                  {/* PROVIDER */}
-                  <td>
-                    <div className="cell-doctor">
-                      <div className="doc-avatar-sm">
-                        <Icons.Doctor />
-                      </div>
-                      <span className="font-medium">{apt.doctor}</span>
-                    </div>
+                  {/* REASON */}
+                  <td style={{ fontWeight: 500, color: '#64748b', fontStyle: apt.reason === 'Not specified' ? 'italic' : 'normal' }}>
+                    {apt.reason}
                   </td>
 
                   {/* STATUS */}
