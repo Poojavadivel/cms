@@ -8,12 +8,14 @@ import React, { useState } from 'react';
 import {
     MdClose, MdPerson, MdHistory, MdMedicalServices,
     MdDescription, MdScience, MdPayment, MdHeight,
-    MdMonitorWeight, MdScale, MdMonitorHeart
+    MdMonitorWeight, MdScale, MdMonitorHeart, MdEventNote
 } from 'react-icons/md';
+import FollowUpDialog from './FollowUpDialog';
 import './PatientDetailsDialog.css';
 
 const PatientDetailsDialog = ({ patient, isOpen, onClose, showBillingTab = false }) => {
     const [activeTab, setActiveTab] = useState('profile');
+    const [showFollowUpDialog, setShowFollowUpDialog] = useState(false);
 
     if (!isOpen || !patient) return null;
 
@@ -59,6 +61,16 @@ const PatientDetailsDialog = ({ patient, isOpen, onClose, showBillingTab = false
                     {/* Close Button */}
                     <button className="btn-close-abs" onClick={onClose}>
                         <MdClose size={20} />
+                    </button>
+
+                    {/* Follow-Up Button */}
+                    <button 
+                        className="btn-followup-abs" 
+                        onClick={() => setShowFollowUpDialog(true)}
+                        title="Schedule Follow-Up"
+                    >
+                        <MdEventNote size={20} />
+                        <span>Follow-Up</span>
                     </button>
 
                     {/* PERSISTENT HEADER (Identity + Vitals) */}
@@ -205,6 +217,19 @@ const PatientDetailsDialog = ({ patient, isOpen, onClose, showBillingTab = false
                     </div>
                 </div>
             </div>
+
+            {/* Follow-Up Dialog */}
+            {showFollowUpDialog && (
+                <FollowUpDialog
+                    patient={patient}
+                    isOpen={showFollowUpDialog}
+                    onClose={() => setShowFollowUpDialog(false)}
+                    onSuccess={() => {
+                        setShowFollowUpDialog(false);
+                        // Optional: refresh patient data or show success message
+                    }}
+                />
+            )}
         </div>
     );
 };

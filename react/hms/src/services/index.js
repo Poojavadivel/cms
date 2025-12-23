@@ -3,8 +3,9 @@
  * Central export file for all services
  */
 
-// Auth service (singleton)
-export { default as authService } from './authService';
+// Auth service (singleton) - import the instance directly
+import authServiceInstance from './authService';
+export { authServiceInstance as authService };
 export { AuthResult, ApiException } from './authService';
 
 // Splash screen component

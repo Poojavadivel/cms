@@ -62,6 +62,14 @@ export const AppointmentEndpoints = {
 };
 
 /**
+ * Intake endpoints
+ */
+export const IntakeEndpoints = {
+  create: (patientId) => `${API_BASE_URL}/intake/${patientId}/intake`,
+  get: (patientId) => `${API_BASE_URL}/intake/${patientId}/intake`,
+};
+
+/**
  * Doctor endpoints
  */
 export const DoctorEndpoints = {

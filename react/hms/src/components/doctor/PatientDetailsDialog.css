@@ -130,6 +130,33 @@
     color: #ef4444;
 }
 
+/* Follow-Up Button */
+.btn-followup-abs {
+    position: absolute;
+    top: 20px;
+    right: 60px;
+    height: 32px;
+    padding: 0 16px;
+    border-radius: 16px;
+    background: #3b82f6;
+    border: none;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    cursor: pointer;
+    z-index: 50;
+    transition: all 0.2s;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.btn-followup-abs:hover {
+    background: #2563eb;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
 /* --- PERSISTENT HEADER (The "Old Page" Header Logic) --- */
 .pd-header {
     padding: 32px 40px;

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import AuthService from '../../../../services/authService';
+import authService from '../../../../services/authService';
 
 const AppointmentPreview = ({ appointmentId, onClose }) => {
   const [loading, setLoading] = useState(true);
@@ -8,7 +8,7 @@ const AppointmentPreview = ({ appointmentId, onClose }) => {
   const loadAppointment = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await AuthService.get(`/appointments/${appointmentId}`);
+      const response = await authService.get(`/appointments/${appointmentId}`);
       const data = response.data || response;
       setAppointment(data);
     } catch (error) {

@@ -233,6 +233,7 @@ const sendChatbotFeedback = async (messageId, type, conversationId) => {
 };
 
 const chatbotService = {
+  sendMessage: sendChatMessage, // Alias for consistency
   sendChatMessage,
   getConversations,
   getConversationMessages,

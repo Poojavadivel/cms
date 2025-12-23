@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import AuthService from '../../../../services/authService';
+import authService from '../../../../services/authService';
 import { AppointmentDraft } from '../../../../models/AppointmentDraft';
 
 const EditAppointmentForm = ({ appointmentId, onClose, onUpdate, onDelete }) => {

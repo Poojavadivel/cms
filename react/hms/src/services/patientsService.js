@@ -272,6 +272,36 @@ export const fetchPatientLabResults = async (patientId) => {
   }
 };
 
+/**
+ * Create follow-up appointment for patient
+ * @param {string} patientId - Patient ID
+ * @param {Object} followUpData - Follow-up data
+ * @returns {Promise<Object>} Created follow-up
+ */
+export const createFollowUp = async (patientId, followUpData) => {
+  try {
+    const api = createAxiosInstance();
+    const payload = {
+      patientId: patientId,
+      followUpDate: followUpData.followUpDate,
+      followUpTime: followUpData.followUpTime || '09:00',
+      reason: followUpData.reason,
+      notes: followUpData.notes || '',
+      status: 'scheduled'
+    };
+
+    logger.info('PATIENTS', `Creating follow-up for patient ${patientId}`, payload);
+    
+    const response = await api.post('/appointments/follow-up', payload);
+    
+    logger.success('PATIENTS', `Follow-up created successfully for patient ${patientId}`);
+    return response.data;
+  } catch (error) {
+    logger.error('PATIENTS', `Failed to create follow-up for patient ${patientId}: ${error.message}`);
+    throw new Error(error.response?.data?.message || 'Failed to schedule follow-up');
+  }
+};
+
 // Export as default
 const patientsService = {
   fetchPatients,
@@ -283,6 +313,7 @@ const patientsService = {
   fetchPatientAppointments,
   fetchPatientPrescriptions,
   fetchPatientLabResults,
+  createFollowUp,
 };
 
 export default patientsService;

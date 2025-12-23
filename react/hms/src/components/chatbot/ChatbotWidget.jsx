@@ -12,7 +12,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { MdClose, MdMinimize, MdMaximize, MdSend, MdSmartToy, MdDelete, MdHistory } from 'react-icons/md';
+import { MdClose, MdMinimize, MdMaximize, MdSend, MdSmartToy, MdDelete, MdHistory, MdMic, MdMicOff } from 'react-icons/md';
 import chatbotService from '../../services/chatbotService';
 import './ChatbotWidget.css';
 
@@ -26,9 +26,12 @@ const ChatbotWidget = ({ onClose, onToggleSize, isMaximized = false, userRole = 
   const [showSidebar, setShowSidebar] = useState(false);
   const [conversations, setConversations] = useState([]);
   const [typingMessage, setTypingMessage] = useState('');
+  const [isRecording, setIsRecording] = useState(false);
+  const [isVoiceSupported, setIsVoiceSupported] = useState(false);
   
   const messagesEndRef = useRef(null);
   const typingIntervalRef = useRef(null);
+  const recognitionRef = useRef(null);
 
   // Quick suggestions based on role
   const quickSuggestions = {
@@ -63,6 +66,17 @@ const ChatbotWidget = ({ onClose, onToggleSize, isMaximized = false, userRole = 
   // Initialize conversation and messages
   useEffect(() => {
     initConversation();
+    initVoiceRecognition();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Cleanup voice recognition on unmount
+  useEffect(() => {
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+    };
   }, []);
 
   // Auto-scroll to bottom when messages change
@@ -133,6 +147,61 @@ const ChatbotWidget = ({ onClose, onToggleSize, isMaximized = false, userRole = 
       text,
       time,
     };
+  };
+
+  // Initialize voice recognition
+  const initVoiceRecognition = () => {
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.continuous = false;
+      recognitionRef.current.interimResults = false;
+      recognitionRef.current.lang = 'en-US';
+
+      recognitionRef.current.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        setInput(transcript);
+        setIsRecording(false);
+      };
+
+      recognitionRef.current.onerror = (event) => {
+        console.error('Speech recognition error:', event.error);
+        setIsRecording(false);
+        if (event.error === 'not-allowed') {
+          alert('Microphone access denied. Please enable microphone permissions.');
+        }
+      };
+
+      recognitionRef.current.onend = () => {
+        setIsRecording(false);
+      };
+
+      setIsVoiceSupported(true);
+    } else {
+      setIsVoiceSupported(false);
+      console.warn('Speech recognition not supported in this browser');
+    }
+  };
+
+  // Toggle voice recording
+  const toggleVoiceRecording = () => {
+    if (!recognitionRef.current) {
+      alert('Voice input is not supported in your browser. Please use Chrome or Edge.');
+      return;
+    }
+
+    if (isRecording) {
+      recognitionRef.current.stop();
+      setIsRecording(false);
+    } else {
+      try {
+        recognitionRef.current.start();
+        setIsRecording(true);
+      } catch (error) {
+        console.error('Failed to start voice recognition:', error);
+        setIsRecording(false);
+      }
+    }
   };
 
   const startTypingAnimation = (botReply) => {
@@ -405,13 +474,23 @@ const ChatbotWidget = ({ onClose, onToggleSize, isMaximized = false, userRole = 
       <div className="chatbot-input">
         <input
           type="text"
-          placeholder="Type your message..."
+          placeholder={isRecording ? 'Listening...' : 'Type your message...'}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyPress={handleKeyPress}
-          disabled={isSending}
+          disabled={isSending || isRecording}
         />
-        <button onClick={sendMessage} disabled={!input.trim() || isSending}>
+        {isVoiceSupported && (
+          <button 
+            className={`btn-voice ${isRecording ? 'recording' : ''}`}
+            onClick={toggleVoiceRecording}
+            disabled={isSending}
+            title={isRecording ? 'Stop Recording' : 'Voice Input'}
+          >
+            {isRecording ? <MdMicOff size={20} /> : <MdMic size={20} />}
+          </button>
+        )}
+        <button onClick={sendMessage} disabled={!input.trim() || isSending || isRecording}>
           <MdSend size={20} />
         </button>
       </div>

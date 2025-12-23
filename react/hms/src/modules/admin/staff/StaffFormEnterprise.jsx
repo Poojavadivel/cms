@@ -111,7 +111,13 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
     setIsSubmitting(true);
     try {
       await onSubmit({ ...formData, ...(initial?.id && { id: initial.id, _id: initial.id }) });
-    } catch (error) { console.error(error); } finally { setIsSubmitting(false); }
+      alert(initial ? 'Staff updated successfully!' : 'Staff added successfully!');
+    } catch (error) { 
+      console.error(error); 
+      alert('Failed to save staff: ' + (error.message || 'Unknown error'));
+    } finally { 
+      setIsSubmitting(false); 
+    }
   };
 
   /* LIGHT THEME COMPONENTS */

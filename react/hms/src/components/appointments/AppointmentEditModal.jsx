@@ -51,6 +51,7 @@ const AppointmentEditModal = ({ isOpen, onClose, appointmentId, onSuccess }) => 
     setError('');
     try {
       const data = await appointmentsService.fetchAppointmentById(appointmentId);
+      console.log('📋 Fetched appointment data for edit:', data);
 
       // Handle nested patient object
       let clientName = data.clientName || '';
@@ -64,22 +65,43 @@ const AppointmentEditModal = ({ isOpen, onClose, appointmentId, onSuccess }) => 
         phoneNumber = patient.phone || patient.phoneNumber || '';
         patientIdValue = patient.metadata?.patientCode || patient._id || '';
         if (patient.gender) gender = patient.gender;
+        
+        console.log('✅ Extracted patient details:', {
+          clientName,
+          phoneNumber,
+          patientIdValue,
+          gender
+        });
       }
+
+      // Extract date and time from startAt if date/time not present
+      let appointmentDate = data.date || '';
+      let appointmentTime = data.time || '';
+      
+      if (!appointmentDate && data.startAt) {
+        const startDate = new Date(data.startAt);
+        appointmentDate = startDate.toISOString().split('T')[0]; // YYYY-MM-DD
+        appointmentTime = startDate.toTimeString().split(' ')[0].substring(0, 5); // HH:MM
+        console.log('📅 Extracted date/time from startAt:', { appointmentDate, appointmentTime });
+      }
+
+      // Extract chief complaint from metadata if not in root
+      const chiefComplaint = data.chiefComplaint || data.metadata?.chiefComplaint || '';
 
       setFormData({
         clientName: clientName,
         patientId: String(patientIdValue),
         phoneNumber: String(phoneNumber),
         gender: gender,
-        date: data.date || '',
-        time: data.time || '',
+        date: appointmentDate,
+        time: appointmentTime,
         appointmentType: data.appointmentType || '',
-        mode: data.mode || 'In-clinic',
-        priority: data.priority || 'Normal',
+        mode: data.mode || data.metadata?.mode || 'In-clinic',
+        priority: data.priority || data.metadata?.priority || 'Normal',
         status: data.status || 'Scheduled',
         durationMinutes: data.durationMinutes || 20,
         location: data.location || '',
-        chiefComplaint: data.chiefComplaint || '',
+        chiefComplaint: chiefComplaint,
         notes: data.notes || '',
         heightCm: data.heightCm || '',
         weightKg: data.weightKg || '',
@@ -87,7 +109,10 @@ const AppointmentEditModal = ({ isOpen, onClose, appointmentId, onSuccess }) => 
         heartRate: data.heartRate || '',
         spo2: data.spo2 || ''
       });
+      
+      console.log('✅ Form data populated successfully');
     } catch (err) {
+      console.error('❌ Failed to load appointment:', err);
       setError(err.message || 'Failed to load appointment');
     } finally {
       setIsLoading(false);
@@ -160,6 +185,27 @@ const AppointmentEditModal = ({ isOpen, onClose, appointmentId, onSuccess }) => 
 
         {/* NEO BODY */}
         <div className="neo-body">
+          {error && (
+            <div style={{ 
+              padding: '12px 16px', 
+              backgroundColor: '#FEE2E2', 
+              border: '1px solid #FCA5A5', 
+              borderRadius: '8px', 
+              color: '#991B1B', 
+              marginBottom: '16px',
+              fontSize: '14px'
+            }}>
+              <strong>Error:</strong> {error}
+            </div>
+          )}
+          {isLoading ? (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '60px', color: '#6B7280' }}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ width: '40px', height: '40px', border: '4px solid #e5e7eb', borderTopColor: '#3b82f6', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 16px' }}></div>
+                <p>Loading appointment details...</p>
+              </div>
+            </div>
+          ) : (
           <form onSubmit={handleSubmit} id="editForm">
             <div className="neo-form-grid">
 
@@ -167,14 +213,31 @@ const AppointmentEditModal = ({ isOpen, onClose, appointmentId, onSuccess }) => 
               <div className="neo-input-group">
                 <div className="neo-input-box">
                   <label className="neo-input-label">Patient Name</label>
-                  <input className="neo-input" name="clientName" value={formData.clientName} onChange={handleChange} required disabled={isSaving} />
+                  <input 
+                    className="neo-input" 
+                    name="clientName" 
+                    value={formData.clientName} 
+                    onChange={handleChange} 
+                    required 
+                    disabled={isSaving}
+                    readOnly
+                    style={{ backgroundColor: '#F9FAFB', cursor: 'not-allowed' }}
+                  />
                 </div>
               </div>
 
               <div className="neo-input-group">
                 <div className="neo-input-box">
                   <label className="neo-input-label">Contact Number</label>
-                  <input className="neo-input" name="phoneNumber" value={formData.phoneNumber} onChange={handleChange} disabled={isSaving} />
+                  <input 
+                    className="neo-input" 
+                    name="phoneNumber" 
+                    value={formData.phoneNumber} 
+                    onChange={handleChange} 
+                    disabled={isSaving}
+                    readOnly
+                    style={{ backgroundColor: '#F9FAFB', cursor: 'not-allowed' }}
+                  />
                 </div>
               </div>
 
@@ -235,6 +298,7 @@ const AppointmentEditModal = ({ isOpen, onClose, appointmentId, onSuccess }) => 
 
             </div>
           </form>
+          )}
         </div>
 
         {/* NEO FOOTER */}
