@@ -6,9 +6,11 @@ import appointmentsService from '../../../services/appointmentsService';
 // import staffService from '../../../services/staffService'; // Reserved for future use
 import AppointmentViewModal from '../../../components/appointments/AppointmentViewModal';
 import AppointmentEditModal from '../../../components/appointments/AppointmentEditModal';
-import StaffDetailEnterprise from '../../admin/staff/StaffDetailEnterprise';
 
 import AppointmentPreviewDialog from '../../../components/doctor/AppointmentPreviewDialog';
+import NewAppointmentForm from './components/NewAppointmentForm';
+import EditAppointmentForm from './components/EditAppointmentForm';
+import StaffDetailEnterprise from '../staff/StaffDetailEnterprise';
 
 // Import doctor icons
 import doctorFemaleIcon from '../../../assets/doctor-femaleicon.png';
@@ -146,6 +148,12 @@ const Icons = {
       <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
     </svg>
   ),
+  Plus: () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="12" y1="5" x2="12" y2="19"></line>
+      <line x1="5" y1="12" x2="19" y2="12"></line>
+    </svg>
+  ),
   Clock: () => (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="10"></circle>
@@ -234,6 +242,12 @@ const Header = () => (
       <h1 className="main-title">APPOINTMENTS</h1>
       <p className="main-subtitle">Manage bookings, schedules, and patient statuses</p>
     </div>
+    <button
+      className="btn-new-appointment"
+      onClick={() => window.dispatchEvent(new CustomEvent('openNewAppointmentModal'))}
+    >
+      <Icons.Plus /> Add New
+    </button>
   </div>
 );
 
@@ -504,6 +518,7 @@ const Appointments = () => {
   // Modal states
   const [showViewModal, setShowViewModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showNewApptModal, setShowNewApptModal] = useState(false);
 
   const [selectedAppointmentId, setSelectedAppointmentId] = useState(null);
 
@@ -548,6 +563,14 @@ const Appointments = () => {
     };
 
     fetchData();
+
+    // Listen for the custom event to open new appointment modal
+    const handleOpenNewModal = () => setShowNewApptModal(true);
+    window.addEventListener('openNewAppointmentModal', handleOpenNewModal);
+
+    return () => {
+      window.removeEventListener('openNewAppointmentModal', handleOpenNewModal);
+    };
   }, []);
 
   // Filter appointments based on tab and search
@@ -597,6 +620,15 @@ const Appointments = () => {
   const handleEdit = (appointment) => {
     setSelectedAppointmentId(appointment.id);
     setShowEditModal(true);
+  };
+
+  // Handle update from EditAppointmentForm
+  const handleUpdateSuccess = async () => {
+    await refreshAppointments();
+  };
+
+  const handleDeleteSuccess = async () => {
+    await refreshAppointments();
   };
 
 
@@ -659,7 +691,7 @@ const Appointments = () => {
       // Enrich with metadata if available
       if (patientData.metadata) {
         const metadata = patientData.metadata;
-        
+
         // Add emergency contacts from metadata if not in main record
         if (!fullPatient.emergencyContactName && metadata.emergencyContactName) {
           fullPatient.emergencyContactName = metadata.emergencyContactName;
@@ -848,7 +880,7 @@ const Appointments = () => {
                     {/* PATIENT COLUMN - Clickable */}
                     <td
                       className="cell-patient clickable"
-                      onClick={() => handlePatientNameClick(apt)}
+                      onClick={() => handleView(apt)}
                       style={{ cursor: 'pointer' }}
                     >
                       <img
@@ -881,7 +913,7 @@ const Appointments = () => {
                           className="patient-avatar"
                           style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }}
                         />
-                        <span 
+                        <span
                           className="doctor-name-clickable"
                           onClick={() => handleDoctorNameClick(apt)}
                         >
@@ -970,24 +1002,38 @@ const Appointments = () => {
         </div>
       </div>
 
-      {/* Modals */}
+      {/* VIEW MODAL */}
       <AppointmentViewModal
         isOpen={showViewModal}
         onClose={() => setShowViewModal(false)}
         appointmentId={selectedAppointmentId}
-        onEdit={(appointment) => {
+        onEdit={() => {
           setShowViewModal(false);
-          setSelectedAppointmentId(appointment._id || appointment.id);
           setShowEditModal(true);
         }}
+        onPatientClick={handlePatientNameClick}
       />
 
-      <AppointmentEditModal
-        isOpen={showEditModal}
-        onClose={() => setShowEditModal(false)}
-        appointmentId={selectedAppointmentId}
-        onSuccess={refreshAppointments}
-      />
+      {/* NEW APPOINTMENT MODAL */}
+      {showNewApptModal && (
+        <NewAppointmentForm
+          onClose={() => setShowNewApptModal(false)}
+          onSave={async () => {
+            setShowNewApptModal(false);
+            await refreshAppointments();
+          }}
+        />
+      )}
+
+      {/* EDIT MODAL */}
+      {showEditModal && selectedAppointmentId && (
+        <EditAppointmentForm
+          appointmentId={selectedAppointmentId}
+          onClose={() => setShowEditModal(false)}
+          onUpdate={handleUpdateSuccess}
+          onDelete={handleDeleteSuccess}
+        />
+      )}
 
 
 

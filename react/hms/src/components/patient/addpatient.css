@@ -188,6 +188,12 @@
     padding: 0 12px;
     height: 48px;
     transition: border 0.2s;
+    /* Removed line-height: 48px which causes placeholder overlap */
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    /* Ensures input doesn't spill out */
+    font-size: 0.95rem;
 }
 
 .input-wrapper:focus-within {
@@ -205,10 +211,15 @@
     border: none;
     outline: none;
     flex: 1;
+    height: 100%;
+    padding: 0;
+    padding-left: 28px;
+    line-height: 48px;
     font-size: 0.95rem;
     color: #1E293B;
     background: transparent;
 }
+
 
 .disabled-bg {
     background-color: #F1F5F9;
