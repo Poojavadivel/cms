@@ -13,6 +13,9 @@ import {
     MdLocationCity,
     MdLocalHospital
 } from 'react-icons/md';
+import {
+  FiUser, FiPhone, FiHeart, FiActivity, FiCheck, FiX, FiAlertCircle, FiArrowRight
+} from 'react-icons/fi';
 import patientsService from '../../services/patientsService';
 import './addpatient.css';
 
@@ -242,273 +245,341 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
 
     // --- Render Steps ---
 
-    const steps = [
-        { title: 'Personal Information', icon: <MdPerson /> },
-        { title: 'Contact Details', icon: <MdPhone /> },
-        { title: 'Medical History', icon: <MdMedicalServices /> },
-        { title: 'Vitals', icon: <MdFavorite /> }
+    const stepsConfig = [
+        { id: 1, name: 'Personal Info', desc: 'Basic demographics', icon: <FiUser /> },
+        { id: 2, name: 'Contact', desc: 'Address & emergency', icon: <FiPhone /> },
+        { id: 3, name: 'Medical History', desc: 'Conditions & allergies', icon: <FiHeart /> },
+        { id: 4, name: 'Vitals', desc: 'Height, weight, BP', icon: <FiActivity /> }
     ];
+
+    const InputGroup = ({ label, error, children, className = '' }) => (
+        <div className={`group relative ${className}`}>
+            <div className={`
+                border rounded-xl transition-all duration-200 bg-white
+                ${error ? 'border-red-300 ring-2 ring-red-100' : 'border-slate-200 group-focus-within:border-blue-400 group-focus-within:ring-2 group-focus-within:ring-blue-100'}
+            `}>
+                <label className="absolute top-2 left-3 text-[10px] uppercase tracking-wider font-bold text-slate-400 pointer-events-none">
+                    {label}
+                </label>
+                <div className="pt-6 pb-2 px-3">
+                    {children}
+                </div>
+                {error && (
+                    <div className="absolute top-2 right-2 text-red-500">
+                        <FiAlertCircle size={14} />
+                    </div>
+                )}
+            </div>
+        </div>
+    );
 
     if (!isOpen) return null;
 
     return (
-        <div className="add-patient-overlay">
-            <div className="add-patient-modal">
-                {/* Header */}
-                <div className="modal-header-top">
-                    <div className="header-title-block">
-                        <h2>{patientId ? 'Edit Patient' : 'Add New Patient'}</h2>
-                        <p>{patientId ? 'Update patient details' : 'Complete patient information and medical records'}</p>
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-[100] animate-in fade-in duration-200">
+            <style>
+                {`
+                    .no-scrollbar::-webkit-scrollbar { display: none; }
+                    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+                `}
+            </style>
+            <div className="w-full max-w-6xl h-[85vh] bg-slate-50 rounded-3xl border border-white shadow-2xl flex overflow-hidden relative">
+
+                {/* LEFT SIDEBAR - TIMELINE */}
+                <div className="w-80 bg-white border-r border-slate-200 flex flex-col hidden md:flex">
+                    <div className="p-8 border-b border-slate-100">
+                        <h2 className="text-xl font-bold text-slate-900 tracking-tight">Patient Editor</h2>
+                        <p className="text-xs text-slate-500 mt-1 font-mono uppercase tracking-wider">
+                            {patientId ? `ID: ${patientId}` : 'New Entry'}
+                        </p>
                     </div>
-                    <button className="close-btn" onClick={onClose}><MdClose size={24} /></button>
-                </div>
 
-                {/* Stepper */}
-                <div className="stepper-container">
-                    {steps.map((s, index) => {
-                        const isActive = index === currentStep;
-                        const isCompleted = index < currentStep;
-                        return (
-                            <div key={index} className={`step-item ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''}`}>
-                                <div className="step-icon">
-                                    {isCompleted ? <MdCheck /> : s.icon}
-                                </div>
-                                <span className="step-label">{s.title}</span>
-                                {index !== steps.length - 1 && <div className="step-line"></div>}
-                            </div>
-                        );
-                    })}
-                </div>
+                    <div className="flex-1 p-6 space-y-6 overflow-y-auto no-scrollbar">
+                        {stepsConfig.map((step) => {
+                            const isActive = currentStep === (step.id - 1);
+                            const isComplete = currentStep > (step.id - 1);
 
-                {/* Form Content */}
-                <div className="modal-form-content">
+                            return (
+                                <div key={step.id} className="relative pl-6 group cursor-default">
+                                    {/* Timeline Line */}
+                                    <div className={`absolute left-[3px] top-2 bottom-[-24px] w-[2px] bg-slate-100 ${step.id === 4 ? 'hidden' : ''}`} />
 
-                    {/* STEP 1: Personal */}
-                    {currentStep === 0 && (
-                        <div className="form-step-container fade-in">
-                            <h3>Personal Information</h3>
-                            <p className="step-desc">Enter the patient's basic demographic information</p>
+                                    {/* Dot */}
+                                    <div className={`
+                                        absolute left-0 top-1.5 w-2 h-2 rounded-full ring-4 ring-white transition-colors duration-300
+                                        ${isActive ? 'bg-blue-600 shadow-md' : isComplete ? 'bg-emerald-500' : 'bg-slate-300'}
+                                    `} />
 
-                            <div className="form-grid">
-                                <div className="form-group">
-                                    <label>First Name</label>
-                                    <div className="input-wrapper">
-                                        <MdPerson className="input-icon" />
-                                        <input name="firstName" value={formData.firstName} onChange={handleInputChange} placeholder="First Name" />
+                                    <div className={`${isActive ? 'opacity-100' : 'opacity-60'} transition-opacity`}>
+                                        <span className={`text-xs font-bold uppercase tracking-widest block mb-0.5 ${isActive ? 'text-blue-600' : 'text-slate-400'}`}>
+                                            Step {step.id}
+                                        </span>
+                                        <h3 className="text-sm font-semibold text-slate-800">{step.name}</h3>
+                                        <p className="text-[11px] text-slate-500">{step.desc}</p>
                                     </div>
                                 </div>
-                                <div className="form-group">
-                                    <label>Last Name</label>
-                                    <div className="input-wrapper">
-                                        <MdPerson className="input-icon" />
-                                        <input name="lastName" value={formData.lastName} onChange={handleInputChange} placeholder="Last Name" />
-                                    </div>
-                                </div>
-                                <div className="form-group">
-                                    <label>Age</label>
-                                    <div className="input-wrapper">
-                                        <MdPerson className="input-icon" />
-                                        <input type="number" name="age" value={formData.age} onChange={handleInputChange} placeholder="Age" min="1" max="120" />
-                                    </div>
-                                </div>
-                                <div className="form-group">
-                                    <label>Blood Group</label>
-                                    <select name="bloodGroup" value={formData.bloodGroup} onChange={handleInputChange} className="std-select">
-                                        <option value="">Select Group</option>
-                                        <option value="A+">A+</option>
-                                        <option value="A-">A-</option>
-                                        <option value="B+">B+</option>
-                                        <option value="B-">B-</option>
-                                        <option value="O+">O+</option>
-                                        <option value="O-">O-</option>
-                                        <option value="AB+">AB+</option>
-                                        <option value="AB-">AB-</option>
-                                    </select>
-                                </div>
-                            </div>
+                            );
+                        })}
+                    </div>
 
-                            <div className="form-group full-width" style={{ marginTop: '16px' }}>
-                                <label>Gender</label>
-                                <div className="gender-selector">
-                                    <button
-                                        className={`gender-btn ${formData.gender === 'Male' ? 'active' : ''}`}
-                                        onClick={() => handleSelectGender('Male')}
-                                    >Male</button>
-                                    <button
-                                        className={`gender-btn ${formData.gender === 'Female' ? 'active' : ''}`}
-                                        onClick={() => handleSelectGender('Female')}
-                                    >Female</button>
-                                    <button
-                                        className={`gender-btn ${formData.gender === 'Other' ? 'active' : ''}`}
-                                        onClick={() => handleSelectGender('Other')}
-                                    >Other</button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* STEP 2: Contact */}
-                    {currentStep === 1 && (
-                        <div className="form-step-container fade-in">
-                            <h3>Contact Details</h3>
-                            <p className="step-desc">Patient contact information and emergency contacts</p>
-
-                            <div className="form-grid">
-                                <div className="form-group">
-                                    <label>Phone Number</label>
-                                    <div className="input-wrapper">
-                                        <MdPhone className="input-icon" />
-                                        <input name="phone" value={formData.phone} onChange={handleInputChange} placeholder="Primary Phone" />
-                                    </div>
-                                </div>
-                                <div className="form-group">
-                                    <label>Email Address</label>
-                                    <div className="input-wrapper">
-                                        <MdPerson className="input-icon" />
-                                        <input name="email" value={formData.email} onChange={handleInputChange} placeholder="Optional" />
-                                    </div>
-                                </div>
-                                <div className="form-group">
-                                    <label>Emergency Contact Name</label>
-                                    <div className="input-wrapper">
-                                        <MdPerson className="input-icon" />
-                                        <input name="emergencyContactName" value={formData.emergencyContactName} onChange={handleInputChange} placeholder="Contact Name" />
-                                    </div>
-                                </div>
-                                <div className="form-group">
-                                    <label>Emergency Contact Phone</label>
-                                    <div className="input-wrapper">
-                                        <MdPhone className="input-icon" />
-                                        <input name="emergencyContactPhone" value={formData.emergencyContactPhone} onChange={handleInputChange} placeholder="Contact Phone" />
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="form-group full-width" style={{ marginTop: '20px' }}>
-                                <label>Address</label>
-                                <div className="address-grid">
-                                    <div className="input-wrapper"><MdHome className="input-icon" /><input name="houseNo" value={formData.houseNo} onChange={handleInputChange} placeholder="House / Flat No" /></div>
-                                    <div className="input-wrapper"><MdLocationCity className="input-icon" /><input name="street" value={formData.street} onChange={handleInputChange} placeholder="Street Name" /></div>
-                                    <div className="input-wrapper"><MdLocationCity className="input-icon" /><input name="city" value={formData.city} onChange={handleInputChange} placeholder="City" /></div>
-                                    <div className="input-wrapper"><MdLocationCity className="input-icon" /><input name="state" value={formData.state} onChange={handleInputChange} placeholder="State" /></div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* STEP 3: Medical */}
-                    {currentStep === 2 && (
-                        <div className="form-step-container fade-in">
-                            <h3>Medical History</h3>
-                            <p className="step-desc">Known conditions and past medical records</p>
-
-                            <div className="form-grid">
-                                <div className="form-group">
-                                    <label>Known Conditions</label>
-                                    <div className="input-wrapper">
-                                        <MdLocalHospital className="input-icon" />
-                                        <input name="knownConditions" value={formData.knownConditions} onChange={handleInputChange} placeholder="e.g. Diabetes, Hypertension" />
-                                    </div>
-                                </div>
-                                <div className="form-group">
-                                    <label>Allergies</label>
-                                    <div className="input-wrapper">
-                                        <MdMedicalServices className="input-icon" />
-                                        <input name="allergies" value={formData.allergies} onChange={handleInputChange} placeholder="e.g. Peanuts, Penicillin" />
-                                    </div>
-                                </div>
-                                <div className="form-group">
-                                    <label>Current Medications</label>
-                                    <div className="input-wrapper">
-                                        <MdMedicalServices className="input-icon" />
-                                        <input name="currentMedications" value={formData.currentMedications} onChange={handleInputChange} placeholder="List current meds" />
-                                    </div>
-                                </div>
-                                <div className="form-group">
-                                    <label>Past Surgeries</label>
-                                    <div className="input-wrapper">
-                                        <MdLocalHospital className="input-icon" />
-                                        <input name="pastSurgeries" value={formData.pastSurgeries} onChange={handleInputChange} placeholder="Any past surgeries" />
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="form-group full-width" style={{ marginTop: '16px' }}>
-                                <label>Notes</label>
-                                <textarea name="notes" value={formData.notes} onChange={handleInputChange} placeholder="Additional medical notes..." className="std-textarea"></textarea>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* STEP 4: Vitals */}
-                    {currentStep === 3 && (
-                        <div className="form-step-container fade-in">
-                            <h3>Vitals</h3>
-                            <p className="step-desc">Record patient vital signs</p>
-
-                            <div className="form-grid">
-                                <div className="form-group">
-                                    <label>Height (cm)</label>
-                                    <div className="input-wrapper">
-                                        <input type="number" name="height" value={formData.height} onChange={handleInputChange} placeholder="Height in cm" />
-                                    </div>
-                                </div>
-                                <div className="form-group">
-                                    <label>Weight (kg)</label>
-                                    <div className="input-wrapper">
-                                        <input type="number" name="weight" value={formData.weight} onChange={handleInputChange} placeholder="Weight in kg" />
-                                    </div>
-                                </div>
-                                <div className="form-group">
-                                    <label>BMI</label>
-                                    <div className="input-wrapper disabled-bg">
-                                        <input name="bmi" value={formData.bmi} readOnly placeholder="Auto-calculated" />
-                                    </div>
-                                </div>
-                                <div className="form-group">
-                                    <label>Blood Pressure</label>
-                                    <div className="input-wrapper">
-                                        <input name="bp" value={formData.bp} onChange={handleInputChange} placeholder="e.g. 120/80" />
-                                    </div>
-                                </div>
-                                <div className="form-group">
-                                    <label>Pulse (bpm)</label>
-                                    <div className="input-wrapper">
-                                        <input type="number" name="pulse" value={formData.pulse} onChange={handleInputChange} placeholder="BPM" />
-                                    </div>
-                                </div>
-                                <div className="form-group">
-                                    <label>Oxygen Saturation (%)</label>
-                                    <div className="input-wrapper">
-                                        <input type="number" name="spo2" value={formData.spo2} onChange={handleInputChange} placeholder="SpO2 %" />
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                </div>
-
-                {/* Footer Actions */}
-                <div className="modal-footer-actions">
-                    {currentStep > 0 ? (
-                        <button className="btn-secondary" onClick={handleBack}>
-                            <MdArrowBack /> Previous
+                    <div className="p-6 border-t border-slate-100">
+                        <button onClick={onClose} className="w-full py-3 px-4 rounded-lg border border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-50 text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-2">
+                            <FiX size={14} /> Cancel
                         </button>
-                    ) : (
-                        <button className="btn-text" onClick={onClose}>Cancel</button>
-                    )}
-
-                    {currentStep < 3 ? (
-                        <button className="btn-primary" onClick={handleNext}>
-                            Next Step <MdArrowForward />
-                        </button>
-                    ) : (
-                        <button className="btn-primary" onClick={handleSubmit} disabled={loading}>
-                            {loading ? 'Saving...' : (patientId ? 'Update Patient' : 'Save Patient')} {loading ? '' : <MdSave />}
-                        </button>
-                    )}
+                    </div>
                 </div>
+
+                {/* RIGHT CONTENT - FORM FOCUS */}
+                <div className="flex-1 flex flex-col relative bg-slate-50">
+
+                    {/* Context Header (Mobile/Compact) */}
+                    <div className="md:hidden p-4 border-b border-slate-200 bg-white flex justify-between items-center">
+                        <span className="text-slate-800 font-bold">Step {currentStep + 1}/4</span>
+                        <button onClick={onClose} className="p-2 text-slate-500"><FiX /></button>
+                    </div>
+
+                    {/* Scrollable Form Area */}
+                    <div className="flex-1 overflow-y-auto p-8 md:p-12 no-scrollbar">
+                        <form onSubmit={handleSubmit} className="max-w-2xl mx-auto space-y-8">
+                            {/* STEP 1: Personal Info */}
+                            {currentStep === 0 && (
+                                <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-300 fade-in">
+                                    <div>
+                                        <h2 className="text-2xl font-bold text-slate-900">Personal Information</h2>
+                                        <p className="text-slate-500">Basic demographics and identification</p>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <InputGroup label="First Name" className="col-span-1">
+                                            <input name="firstName" value={formData.firstName} onChange={handleInputChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300 font-medium" placeholder="e.g. John" autoFocus />
+                                        </InputGroup>
+
+                                        <InputGroup label="Last Name" className="col-span-1">
+                                            <input name="lastName" value={formData.lastName} onChange={handleInputChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" placeholder="e.g. Doe" />
+                                        </InputGroup>
+
+                                        <InputGroup label="Age">
+                                            <input type="number" name="age" value={formData.age} onChange={handleInputChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" placeholder="Age" min="1" max="120" />
+                                        </InputGroup>
+
+                                        <InputGroup label="Blood Group">
+                                            <select name="bloodGroup" value={formData.bloodGroup} onChange={handleInputChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0">
+                                                <option value="">Select...</option>
+                                                <option value="A+">A+</option>
+                                                <option value="A-">A-</option>
+                                                <option value="B+">B+</option>
+                                                <option value="B-">B-</option>
+                                                <option value="O+">O+</option>
+                                                <option value="O-">O-</option>
+                                                <option value="AB+">AB+</option>
+                                                <option value="AB-">AB-</option>
+                                            </select>
+                                        </InputGroup>
+
+                                        <InputGroup label="Gender" className="col-span-2">
+                                            <div className="flex gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleSelectGender('Male')}
+                                                    className={`flex-1 py-2 px-4 rounded-lg border-2 font-medium transition-all ${
+                                                        formData.gender === 'Male' 
+                                                            ? 'border-blue-500 bg-blue-50 text-blue-700' 
+                                                            : 'border-slate-200 hover:border-slate-300'
+                                                    }`}
+                                                >
+                                                    Male
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleSelectGender('Female')}
+                                                    className={`flex-1 py-2 px-4 rounded-lg border-2 font-medium transition-all ${
+                                                        formData.gender === 'Female' 
+                                                            ? 'border-blue-500 bg-blue-50 text-blue-700' 
+                                                            : 'border-slate-200 hover:border-slate-300'
+                                                    }`}
+                                                >
+                                                    Female
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleSelectGender('Other')}
+                                                    className={`flex-1 py-2 px-4 rounded-lg border-2 font-medium transition-all ${
+                                                        formData.gender === 'Other' 
+                                                            ? 'border-blue-500 bg-blue-50 text-blue-700' 
+                                                            : 'border-slate-200 hover:border-slate-300'
+                                                    }`}
+                                                >
+                                                    Other
+                                                </button>
+                                            </div>
+                                        </InputGroup>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* STEP 2: Contact */}
+                            {currentStep === 1 && (
+                                <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-300 fade-in">
+                                    <div>
+                                        <h2 className="text-2xl font-bold text-slate-900">Contact Details</h2>
+                                        <p className="text-slate-500">Address and emergency contact information</p>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <InputGroup label="Phone Number" className="col-span-1">
+                                            <input name="phone" value={formData.phone} onChange={handleInputChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" placeholder="+1 555 000 0000" autoFocus />
+                                        </InputGroup>
+
+                                        <InputGroup label="Email Address" className="col-span-1">
+                                            <input name="email" value={formData.email} onChange={handleInputChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" placeholder="patient@email.com" />
+                                        </InputGroup>
+
+                                        <InputGroup label="House No." className="col-span-1">
+                                            <input name="houseNo" value={formData.houseNo} onChange={handleInputChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" placeholder="123" />
+                                        </InputGroup>
+
+                                        <InputGroup label="Street" className="col-span-1">
+                                            <input name="street" value={formData.street} onChange={handleInputChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" placeholder="Main Street" />
+                                        </InputGroup>
+
+                                        <InputGroup label="City" className="col-span-1">
+                                            <input name="city" value={formData.city} onChange={handleInputChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" placeholder="City Name" />
+                                        </InputGroup>
+
+                                        <InputGroup label="State" className="col-span-1">
+                                            <input name="state" value={formData.state} onChange={handleInputChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" placeholder="State" />
+                                        </InputGroup>
+
+                                        <InputGroup label="Emergency Contact Name" className="col-span-1">
+                                            <input name="emergencyContactName" value={formData.emergencyContactName} onChange={handleInputChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" placeholder="Contact Person" />
+                                        </InputGroup>
+
+                                        <InputGroup label="Emergency Phone" className="col-span-1">
+                                            <input name="emergencyContactPhone" value={formData.emergencyContactPhone} onChange={handleInputChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" placeholder="+1 555 000 0000" />
+                                        </InputGroup>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* STEP 3: Medical History */}
+                            {currentStep === 2 && (
+                                <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-300 fade-in">
+                                    <div>
+                                        <h2 className="text-2xl font-bold text-slate-900">Medical History</h2>
+                                        <p className="text-slate-500">Known conditions, allergies, and past records</p>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <InputGroup label="Known Conditions" className="col-span-2">
+                                            <input name="knownConditions" value={formData.knownConditions} onChange={handleInputChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" placeholder="e.g. Diabetes, Hypertension" autoFocus />
+                                        </InputGroup>
+
+                                        <InputGroup label="Allergies" className="col-span-2">
+                                            <input name="allergies" value={formData.allergies} onChange={handleInputChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" placeholder="e.g. Peanuts, Penicillin" />
+                                        </InputGroup>
+
+                                        <InputGroup label="Current Medications" className="col-span-1">
+                                            <input name="currentMedications" value={formData.currentMedications} onChange={handleInputChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" placeholder="List current medications" />
+                                        </InputGroup>
+
+                                        <InputGroup label="Past Surgeries" className="col-span-1">
+                                            <input name="pastSurgeries" value={formData.pastSurgeries} onChange={handleInputChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" placeholder="Any past surgeries" />
+                                        </InputGroup>
+
+                                        <InputGroup label="Additional Notes" className="col-span-2">
+                                            <textarea name="notes" value={formData.notes} onChange={handleInputChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300 min-h-[80px] resize-none" placeholder="Any additional medical notes..."></textarea>
+                                        </InputGroup>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* STEP 4: Vitals */}
+                            {currentStep === 3 && (
+                                <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-300 fade-in">
+                                    <div>
+                                        <h2 className="text-2xl font-bold text-slate-900">Vital Signs</h2>
+                                        <p className="text-slate-500">Record patient measurements and vital statistics</p>
+                                    </div>
+
+                                    <div className="grid grid-cols-3 gap-4">
+                                        <InputGroup label="Height (cm)">
+                                            <input type="number" name="height" value={formData.height} onChange={handleInputChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" placeholder="170" autoFocus />
+                                        </InputGroup>
+
+                                        <InputGroup label="Weight (kg)">
+                                            <input type="number" name="weight" value={formData.weight} onChange={handleInputChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" placeholder="70" />
+                                        </InputGroup>
+
+                                        <InputGroup label="BMI">
+                                            <input name="bmi" value={formData.bmi} readOnly className="w-full bg-slate-50 border-none p-0 text-slate-500 focus:ring-0 font-mono" placeholder="Auto" />
+                                        </InputGroup>
+
+                                        <InputGroup label="Blood Pressure">
+                                            <input name="bp" value={formData.bp} onChange={handleInputChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300 font-mono" placeholder="120/80" />
+                                        </InputGroup>
+
+                                        <InputGroup label="Pulse (bpm)">
+                                            <input type="number" name="pulse" value={formData.pulse} onChange={handleInputChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" placeholder="72" />
+                                        </InputGroup>
+
+                                        <InputGroup label="SpO2 (%)">
+                                            <input type="number" name="spo2" value={formData.spo2} onChange={handleInputChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" placeholder="98" />
+                                        </InputGroup>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* ACTION BUTTONS */}
+                            <div className="flex items-center justify-between pt-8 border-t border-slate-200">
+                                <div>
+                                    {currentStep > 0 && (
+                                        <button
+                                            type="button"
+                                            onClick={handleBack}
+                                            className="px-6 py-3 text-slate-600 hover:text-slate-900 font-medium transition-colors flex items-center gap-2"
+                                        >
+                                            <FiArrowRight className="rotate-180" size={16} />
+                                            Previous
+                                        </button>
+                                    )}
+                                </div>
+
+                                <div className="flex gap-3">
+                                    {currentStep < 3 ? (
+                                        <button
+                                            type="button"
+                                            onClick={handleNext}
+                                            className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all shadow-lg shadow-blue-600/20 hover:shadow-xl hover:shadow-blue-600/30 flex items-center gap-2"
+                                        >
+                                            Continue
+                                            <FiArrowRight size={16} />
+                                        </button>
+                                    ) : (
+                                        <button
+                                            type="submit"
+                                            disabled={loading}
+                                            className="px-8 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-all shadow-lg shadow-emerald-600/20 hover:shadow-xl hover:shadow-emerald-600/30 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            {loading ? (
+                                                <>
+                                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                                    Saving...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <FiCheck size={16} />
+                                                    {patientId ? 'Update Patient' : 'Save Patient'}
+                                                </>
+                                            )}
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+
+                        </form>
+                    </div>
+                </div>
+
             </div>
         </div>
     );
