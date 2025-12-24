@@ -1,392 +1,321 @@
 /**
  * AppointmentPreviewDialog.jsx
- * Premium Enterprise Dashboard 2025
- * Features: Fixed Header, Split Layout, Asset Integration, Real Data, Viewport Corner Floating Action
+ * Flutter-styled appointment preview popup
+ * Matches exact design patterns from Flutter DoctorAppointmentPreview
  */
 
-import React, { useState, useEffect } from 'react';
-import {
-    MdClose, MdPerson, MdHistory, MdMedicalServices,
-    MdDescription, MdScience, MdPayment, MdHeight,
-    MdMonitorWeight, MdScale, MdMonitorHeart,
-    MdPhone, MdEmail, MdLocationOn, MdWarning, MdEditNote, MdContentCopy,
-    MdSecurity, MdWork
+import React, { useState } from 'react';
+import { 
+  MdClose, MdBadge, MdBloodtype, MdMale, MdFemale, 
+  MdCake, MdHeight, MdMonitorWeight, MdScale, 
+  MdMonitorHeart 
 } from 'react-icons/md';
-
-// Asset Imports
-import boyIcon from '../../assets/boyicon.png';
-import girlIcon from '../../assets/girlicon.png';
-
-import patientsService from '../../services/patientsService';
-import { fetchPrescriptions, fetchLabReports, fetchMedicalHistory } from '../../services/prescriptionService';
 import './AppointmentPreviewDialog.css';
 
 const AppointmentPreviewDialog = ({ patient, isOpen, onClose, showBillingTab = true }) => {
-    const [activeTab, setActiveTab] = useState('profile');
-    const [currentPatient, setCurrentPatient] = useState(patient);
+  const [activeTab, setActiveTab] = useState('profile');
 
-    const f = (val, suffix = '') => (val || val === 0 ? `${val}${suffix}` : '—');
+  if (!isOpen || !patient) return null;
 
-    const getAvatarSrc = (p) => {
-        if (p?.avatar) return p.avatar;
-        const gender = p?.gender?.toLowerCase() || '';
-        if (gender.startsWith('f') || gender.includes('girl')) return girlIcon;
-        return boyIcon;
-    };
+  // Helper to extract vital from vitals object or legacy field
+  const extractVital = (vitalKey, legacyKey) => {
+    if (patient.vitals && typeof patient.vitals === 'object') {
+      const value = patient.vitals[vitalKey];
+      if (value != null) return value.toString();
+    }
+    return patient[legacyKey]?.toString() || '';
+  };
 
-    useEffect(() => {
-        if (isOpen && patient) {
-            setCurrentPatient(patient);
-            refreshPatientData();
-        }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isOpen, patient]);
+  // Extract vitals properly
+  const height = extractVital('heightCm', 'height');
+  const weight = extractVital('weightKg', 'weight');
+  const bmi = extractVital('bmi', 'bmi');
+  const oxygen = extractVital('spo2', 'oxygen');
 
-    const refreshPatientData = async () => {
-        if (!patient?.patientId) return;
-        try {
-            const freshData = await patientsService.fetchPatientById(patient.patientId);
-            setCurrentPatient(freshData);
-        } catch (error) { /* silent */ }
-    };
+  // Helpers - Updated
+  const f = (val, suffix = '') => (val || val === 0 ? `${val}${suffix}` : '—');
+  const isFemale = patient.gender?.toLowerCase()?.startsWith('f');
 
-    if (!isOpen || !currentPatient) return null;
+  // Get patient code (prefer patientCode over patientId)
+  const patientCode = patient.patientCode || patient.patientId || 'NO-ID';
+  
+  // Build complete address
+  const addressParts = [
+    patient.houseNo, 
+    patient.street, 
+    patient.city, 
+    patient.state
+  ].filter(Boolean);
+  const fullAddress = addressParts.length > 0 ? addressParts.join(', ') : '—';
 
-    const navItems = [
-        { id: 'profile', label: 'Overview', icon: <MdPerson /> },
-        { id: 'history', label: 'Medical History', icon: <MdHistory /> },
-        { id: 'prescriptions', label: 'Prescriptions', icon: <MdDescription /> },
-        { id: 'lab', label: 'Lab Results', icon: <MdScience /> },
-        ...(showBillingTab ? [{ id: 'billing', label: 'Billing', icon: <MdPayment /> }] : [])
-    ];
+  // Tabs
+  const tabs = [
+    { id: 'profile', label: 'Profile' },
+    { id: 'history', label: 'Medical History' },
+    { id: 'prescriptions', label: 'Prescription' },
+    { id: 'lab', label: 'Lab Result' },
+    ...(showBillingTab ? [{ id: 'billing', label: 'Billings' }] : [])
+  ];
 
-    return (
-        <div className="appointment-preview-overlay" onClick={onClose}>
+  return (
+    <div className="appointment-preview-overlay-flutter" onClick={onClose}>
+      <div className="appointment-preview-content-flutter" onClick={e => e.stopPropagation()}>
+        
+        {/* Floating Close Button */}
+        <button className="btn-close-floating-appt" onClick={onClose}>
+          <MdClose size={20} />
+        </button>
 
-            {/* --- FLOATING CLOSE BUTTON (OUTSIDE DIALOG) --- */}
-            <button className="btn-close-floating" onClick={onClose} title="Close Dialog">
-                <MdClose size={28} />
-            </button>
-
-            {/* --- DIALOG CONTENT --- */}
-            <div className="appointment-preview-dialog" onClick={e => e.stopPropagation()}>
-
-                {/* --- FIXED TOP HEADER --- */}
-                <div className="pd-header">
-                    {/* Identity */}
-                    <div className="pd-identity">
-                        <img
-                            src={getAvatarSrc(currentPatient)}
-                            alt="Profile"
-                            className="pd-avatar-img"
-                            onError={(e) => { e.target.src = boyIcon; }}
-                        />
-                        <div className="pd-info">
-                            <h1>{currentPatient.name || currentPatient.clientName || 'Unknown Patient'}</h1>
-
-                            {/* Row 1: Patient ID */}
-                            <div className="pd-chips-row">
-                                <span className="pd-pill id">{currentPatient.patientId || 'NO ID'}</span>
-                            </div>
-
-                            {/* Row 2: Demographics */}
-                            <div className="pd-chips-row">
-                                <span className="pd-pill">{currentPatient.gender || 'Unknown'}</span>
-                                <span className="pd-pill">{currentPatient.age ? `${currentPatient.age} Yrs` : 'Age N/A'}</span>
-                                <span className="pd-pill">{currentPatient.bloodGroup || 'Blood N/A'}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Vitals Grid */}
-                    <div className="pd-vitals-container">
-                        <VitalCard type="height" icon={<MdHeight />} label="Height" value={f(currentPatient.height, ' cm')} />
-                        <VitalCard type="weight" icon={<MdMonitorWeight />} label="Weight" value={f(currentPatient.weight, ' kg')} />
-                        <VitalCard type="bmi" icon={<MdScale />} label="BMI" value={f(currentPatient.bmi)} />
-                        <VitalCard type="spo2" icon={<MdMonitorHeart />} label="SpO₂" value={f(currentPatient.oxygen, '%')} />
-                    </div>
-                </div>
-
-                {/* --- BODY CONTAINER --- */}
-                <div className="pd-body-container">
-
-                    {/* SIDEBAR */}
-                    <div className="pd-sidebar">
-                        <div className="pd-sidebar-header">
-                            <span className="pd-sidebar-title">PATIENT MENU</span>
-                        </div>
-                        <div className="pd-nav-menu">
-                            {navItems.map(item => (
-                                <div
-                                    key={item.id}
-                                    className={`pd-nav-item ${activeTab === item.id ? 'active' : ''}`}
-                                    onClick={() => setActiveTab(item.id)}
-                                >
-                                    {item.icon}
-                                    <span>{item.label}</span>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* MAIN CONTENT Area */}
-                    <div className="pd-main">
-                        <div className="pd-scroll-area">
-                            {activeTab === 'profile' && <OverviewTab patient={currentPatient} />}
-                            {activeTab === 'history' && <MedicalHistoryTab patient={currentPatient} />}
-                            {activeTab === 'prescriptions' && <PrescriptionTab patient={currentPatient} />}
-                            {activeTab === 'lab' && <LabResultsTab patient={currentPatient} />}
-                            {activeTab === 'billing' && <BillingTab />}
-                        </div>
-                    </div>
-
-                </div>
+        {/* Main Content Wrapper */}
+        <div className="appt-flutter-wrapper">
+          
+          {/* Header Card */}
+          <div className="appt-header-card-flutter">
+            
+            {/* Left: Avatar */}
+            <img 
+              src={isFemale ? '/girlicon.png' : '/boyicon.png'}
+              alt={patient.gender}
+              className="appt-avatar-flutter"
+              onError={(e) => {
+                e.target.style.display = 'none';
+                e.target.nextSibling.style.display = 'flex';
+              }}
+            />
+            <div className="appt-avatar-fallback-flutter" style={{ display: 'none' }}>
+              {isFemale ? '👩' : '👨'}
             </div>
+
+            {/* Middle: Identity Block */}
+            <div className="appt-identity-flutter">
+              <h1 className="appt-name-flutter">
+                {patient.name || patient.clientName || 'Unknown'}
+              </h1>
+
+              {/* Patient Code Badge */}
+              <div className="appt-code-badge-flutter">
+                <MdBadge className="icon" />
+                <span className="text">{patientCode}</span>
+              </div>
+
+              {/* Info Pills */}
+              <div className="appt-pills-flutter">
+                <div className="appt-pill-flutter blood">
+                  <MdBloodtype className="icon" />
+                  <span>Blood: {patient.bloodGroup || 'N/A'}</span>
+                </div>
+                <div className={`appt-pill-flutter ${isFemale ? 'female' : 'male'}`}>
+                  {isFemale ? <MdFemale className="icon" /> : <MdMale className="icon" />}
+                  <span>{patient.gender || 'N/A'}</span>
+                </div>
+                <div className="appt-pill-flutter age">
+                  <MdCake className="icon" />
+                  <span>{patient.age ? `${patient.age} yrs` : 'Age: N/A'}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Right: Vitals Grid */}
+            <div className="appt-vitals-grid-flutter">
+              <VitalCard 
+                icon={<MdHeight />} 
+                label="Height" 
+                value={f(height, ' cm')} 
+                type="height"
+              />
+              <VitalCard 
+                icon={<MdMonitorWeight />} 
+                label="Weight" 
+                value={f(weight, ' kg')} 
+                type="weight"
+              />
+              <VitalCard 
+                icon={<MdScale />} 
+                label="BMI" 
+                value={f(bmi)} 
+                type="bmi"
+              />
+              <VitalCard 
+                icon={<MdMonitorHeart />} 
+                label="SpO₂" 
+                value={f(oxygen, '%')} 
+                type="spo2"
+              />
+            </div>
+          </div>
+
+          {/* Tabs Container */}
+          <div className="appt-tabs-container-flutter">
+            
+            {/* Tab Bar */}
+            <div className="appt-tabs-flutter">
+              {tabs.map(tab => (
+                <div
+                  key={tab.id}
+                  className={`appt-tab-flutter ${activeTab === tab.id ? 'active' : ''}`}
+                  onClick={() => setActiveTab(tab.id)}
+                >
+                  {tab.label}
+                </div>
+              ))}
+            </div>
+
+            {/* Tab Content */}
+            <div className="appt-tab-content-flutter">
+              {activeTab === 'profile' && <ProfileTab patient={patient} />}
+              {activeTab === 'history' && <HistoryTab patient={patient} />}
+              {activeTab === 'prescriptions' && <PrescriptionsTab patient={patient} />}
+              {activeTab === 'lab' && <LabTab patient={patient} />}
+              {activeTab === 'billing' && <BillingTab patient={patient} />}
+            </div>
+          </div>
+
         </div>
-    );
+      </div>
+    </div>
+  );
 };
 
-// --- SUB COMPONENTS ---
-const VitalCard = ({ type, icon, label, value }) => (
-    <div className={`pd-vital-card ${type}`}>
-        <div className="pd-vital-icon">{icon}</div>
-        <div className="pd-vital-content">
-            <span className="pd-vital-value">{value}</span>
-            <span className="pd-vital-label">{label}</span>
-        </div>
+// Vital Card Component
+const VitalCard = ({ icon, label, value, type }) => (
+  <div className="appt-vital-card-flutter">
+    <div className={`appt-vital-icon-flutter ${type}`}>
+      {icon}
     </div>
+    <span className="appt-vital-value-flutter">{value}</span>
+    <span className="appt-vital-label-flutter">{label}</span>
+  </div>
 );
 
-// 1. OVERVIEW TAB - Enterprise Bento Grid (3-Column)
-const OverviewTab = ({ patient }) => (
-    <div className="animate-in h-full flex flex-col">
-        <div className="pd-section-title">
-            <MdPerson /> Personal Information
+// Tab Components
+const ProfileTab = ({ patient }) => {
+  // Build address properly
+  const addressParts = [patient.houseNo, patient.street, patient.city, patient.state].filter(Boolean);
+  const fullAddress = addressParts.length > 0 ? addressParts.join(', ') : '—';
+
+  return (
+    <div className="appt-tab-inner">
+      <h3 className="appt-section-title-flutter">Personal Information</h3>
+      <div className="appt-info-grid">
+        <div className="appt-info-card">
+          <h4 className="appt-card-title">Contact Details</h4>
+          <InfoRow label="Phone Number" value={patient.phone || patient.phoneNumber || patient.contact} />
+          <InfoRow label="Email Address" value={patient.email} />
+          <InfoRow label="Residential Address" value={fullAddress} />
         </div>
-
-        <div className="pd-bento-grid-3">
-
-            {/* COL 1: Contact Information */}
-            <div className="pd-bento-col">
-                <h3 className="pd-bento-title">Contact Details</h3>
-                <div className="pd-bento-list">
-                    <BentoItem icon={<MdPhone />} label="Phone Number" value={patient.phone || patient.phoneNumber} color="blue" copyable />
-                    <BentoItem icon={<MdEmail />} label="Email Address" value={patient.email} color="indigo" copyable />
-                    <BentoItem icon={<MdLocationOn />} label="Residential Address" value={[patient.houseNo, patient.street, patient.city, patient.state, patient.pincode].filter(Boolean).join(', ')} color="emerald" />
-                </div>
+        
+        <div className="appt-info-card">
+          <h4 className="appt-card-title">Emergency & Allergies</h4>
+          <InfoRow label="Emergency Contact" value={patient.emergencyContactName} />
+          {patient.emergencyContactPhone && (
+            <div style={{ fontSize: '12px', color: '#64748B', marginTop: '4px' }}>
+              {patient.emergencyContactPhone}
             </div>
-
-            {/* COL 2: Administrative & Social */}
-            <div className="pd-bento-col">
-                <h3 className="pd-bento-title">Administrative</h3>
-                <div className="pd-bento-list">
-                    <BentoItem
-                        icon={<MdSecurity />}
-                        label="Insurance Provider"
-                        value={patient.insuranceProvider || 'Private Pay'}
-                        color="rose"
-                    />
-                    <BentoItem
-                        icon={<MdDescription />}
-                        label="Policy Number"
-                        value={patient.insuranceNumber || 'N/A'}
-                        color="rose"
-                        copyable
-                    />
-                    <BentoItem
-                        icon={<MdWork />}
-                        label="Occupation"
-                        value={patient.occupation || 'Not Specified'}
-                        color="slate"
-                    />
-                    <BentoItem
-                        icon={<MdPerson />}
-                        label="Marital Status"
-                        value={patient.maritalStatus || 'Single'}
-                        color="slate"
-                    />
-                </div>
-            </div>
-
-            {/* COL 3: Clinical Context */}
-            <div className="pd-bento-col clinical-col">
-
-                {/* Emergency Card */}
-                <div className="pd-bento-subcard emergency">
-                    <div className="pd-subcard-header">
-                        <div className="pd-icon-box rose"><MdWarning /></div>
-                        <div>
-                            <span className="pd-subcard-label">Emergency</span>
-                            <div className="pd-subcard-value">{patient.emergencyContactName || 'None'}</div>
-                        </div>
-                    </div>
-                    {patient.emergencyContactPhone && <div className="pd-subcard-meta">{patient.emergencyContactPhone}</div>}
-                </div>
-
-                {/* Allergies Card */}
-                <div className="pd-bento-subcard allergies">
-                    <div className="pd-subcard-header">
-                        <div className="pd-icon-box orange"><MdMedicalServices /></div>
-                        <span className="pd-subcard-label">Allergies</span>
-                    </div>
-                    <div className="pd-tags-cloud">
-                        {patient.allergies?.length ? patient.allergies.map((a, i) => (
-                            <span key={i} className="pd-tag alert">{a}</span>
-                        )) : <span className="pd-empty-text">No Known Allergies</span>}
-                    </div>
-                </div>
-
-                {/* Notes Preview */}
-                <div className="pd-bento-subcard notes">
-                    <div className="pd-subcard-header">
-                        <div className="pd-icon-box slate"><MdEditNote /></div>
-                        <span className="pd-subcard-label">Notes</span>
-                    </div>
-                    <div className="pd-notes-content line-clamp-3">
-                        {patient.notes || 'No notes available.'}
-                    </div>
-                </div>
-
-            </div>
+          )}
+          <InfoRow label="Allergies" value={
+            patient.allergies && patient.allergies.length > 0 ? (
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '8px' }}>
+                {patient.allergies.map((a, i) => (
+                  <span key={i} className="appt-allergy-badge">
+                    {a}
+                  </span>
+                ))}
+              </div>
+            ) : 'No Known Allergies'
+          } />
         </div>
+      </div>
+
+      {patient.notes && (
+        <div className="appt-info-card" style={{ marginTop: '24px' }}>
+          <h4 className="appt-card-title">Clinical Notes</h4>
+          <p className="appt-notes">{patient.notes}</p>
+        </div>
+      )}
     </div>
+  );
+};
+
+const HistoryTab = ({ patient }) => {
+  // Extract medical history from various possible locations
+  const medicalHistory = (() => {
+    if (patient.medicalHistory && Array.isArray(patient.medicalHistory) && patient.medicalHistory.length > 0) {
+      return patient.medicalHistory;
+    }
+    if (patient.metadata && patient.metadata.medicalHistory) {
+      if (Array.isArray(patient.metadata.medicalHistory)) {
+        return patient.metadata.medicalHistory;
+      }
+      if (patient.metadata.medicalHistory.currentConditions && Array.isArray(patient.metadata.medicalHistory.currentConditions)) {
+        return patient.metadata.medicalHistory.currentConditions;
+      }
+    }
+    return [];
+  })();
+
+  return (
+    <div className="appt-tab-inner">
+      <h3 className="appt-section-title-flutter">Medical History Timeline</h3>
+      {medicalHistory.length > 0 ? (
+        <div>
+          {medicalHistory.map((item, i) => (
+            <div key={i} className="appt-history-item-flutter">
+              {item}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <EmptyState title="No Medical History" />
+      )}
+    </div>
+  );
+};
+
+const PrescriptionsTab = () => (
+  <div className="appt-tab-inner">
+    <h3 className="appt-section-title-flutter">Active Prescriptions</h3>
+    <EmptyState 
+      title="No Active Prescriptions" 
+      subtitle="Prescriptions issued by doctors will appear here."
+    />
+  </div>
 );
 
-const BentoItem = ({ icon, label, value, color, copyable }) => (
-    <div className="pd-bento-item">
-        <div className={`pd-icon-box ${color}`}>{icon}</div>
-        <div className="pd-item-content">
-            <span className="pd-item-label">{label}</span>
-            <div className="pd-item-value-row">
-                <span className="pd-item-value">{value || 'N/A'}</span>
-                {copyable && value && (
-                    <button className="pd-copy-btn" title="Copy">
-                        <MdContentCopy size={12} />
-                    </button>
-                )}
-            </div>
-        </div>
-    </div>
+const LabTab = () => (
+  <div className="appt-tab-inner">
+    <h3 className="appt-section-title-flutter">Lab Reports</h3>
+    <EmptyState 
+      title="No Lab Results" 
+      subtitle="Pathology and imaging reports will be listed here."
+    />
+  </div>
 );
-
-// 2. MEDICAL HISTORY TAB
-const MedicalHistoryTab = ({ patient }) => {
-    const [history, setHistory] = useState([]);
-    const [isLoading, setIsLoading] = useState(true);
-
-    useEffect(() => {
-        if (patient?.patientId) {
-            fetchMedicalHistory(patient.patientId, 100, 0)
-                .then(setHistory).catch(console.error).finally(() => setIsLoading(false));
-        }
-    }, [patient]);
-
-    if (isLoading) return <div className="pd-empty-state">Loading History...</div>;
-    if (!history.length) return <div className="pd-empty-state">No Medical History Found</div>;
-
-    return (
-        <div className="animate-in">
-            <div className="pd-section-title"><MdHistory /> Medical History Timeline</div>
-            <div className="pd-table-container">
-                <table className="pd-table">
-                    <thead>
-                        <tr><th>Condition / Title</th><th>Date Recorded</th><th>Category</th><th width="40%">Notes</th></tr>
-                    </thead>
-                    <tbody>
-                        {history.map((item, i) => (
-                            <tr key={i}>
-                                <td><strong>{item.title || item.condition || 'Medical Record'}</strong></td>
-                                <td>{new Date(item.date || item.createdAt).toLocaleDateString()}</td>
-                                <td><span style={{ padding: '4px 8px', background: '#f1f5f9', color: '#475569', borderRadius: '4px', fontSize: '12px', fontWeight: '600' }}>{item.category || item.type || 'General'}</span></td>
-                                <td style={{ color: '#64748b' }}>{item.description || item.notes || '—'}</td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    );
-};
-
-// 3. PRESCRIPTIONS TAB
-const PrescriptionTab = ({ patient }) => {
-    const [prescriptions, setPrescriptions] = useState([]);
-    const [isLoading, setIsLoading] = useState(true);
-
-    useEffect(() => {
-        if (patient?.patientId) {
-            fetchPrescriptions(patient.patientId, 100, 0)
-                .then(setPrescriptions).catch(console.error).finally(() => setIsLoading(false));
-        }
-    }, [patient]);
-
-    if (isLoading) return <div className="pd-empty-state">Loading Prescriptions...</div>;
-    if (!prescriptions.length) return <div className="pd-empty-state">No Prescriptions Found</div>;
-
-    return (
-        <div className="animate-in">
-            <div className="pd-section-title"><MdDescription /> Active Prescriptions</div>
-            <div className="pd-table-container">
-                <table className="pd-table">
-                    <thead>
-                        <tr><th>Date</th><th>Prescription Details</th><th>Action</th></tr>
-                    </thead>
-                    <tbody>
-                        {prescriptions.map((p, i) => (
-                            <tr key={i}>
-                                <td>{new Date(p.createdAt || p.date).toLocaleDateString()}</td>
-                                <td>{p.notes || `Prescription ID: ${p.id || 'N/A'}`}</td>
-                                <td>{p.pdfId ? <button className="text-blue-600 font-bold hover:underline">View PDF</button> : '—'}</td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    );
-};
-
-// 4. LAB RESULTS TAB
-const LabResultsTab = ({ patient }) => {
-    const [reports, setReports] = useState([]);
-    const [isLoading, setIsLoading] = useState(true);
-
-    useEffect(() => {
-        if (patient?.patientId) {
-            fetchLabReports(patient.patientId, 100, 0)
-                .then(setReports).catch(console.error).finally(() => setIsLoading(false));
-        }
-    }, [patient]);
-
-    if (isLoading) return <div className="pd-empty-state">Loading Reports...</div>;
-    if (!reports.length) return <div className="pd-empty-state">No Lab Reports Found</div>;
-
-    return (
-        <div className="animate-in">
-            <div className="pd-section-title"><MdScience /> Lab Results</div>
-            <div className="pd-table-container">
-                <table className="pd-table">
-                    <thead><tr><th>Test Name</th><th>Date</th><th>Status</th></tr></thead>
-                    <tbody>
-                        {reports.map((r, i) => (
-                            <tr key={i}>
-                                <td><strong>{r.testName || r.name}</strong></td>
-                                <td>{new Date(r.createdAt || r.date).toLocaleDateString()}</td>
-                                <td><span style={{ padding: '4px 10px', background: '#dcfce7', color: '#166534', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold' }}>Completed</span></td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    );
-};
 
 const BillingTab = () => (
-    <div className="pd-empty-state">
-        <MdPayment size={64} style={{ opacity: 0.2, marginBottom: '16px' }} />
-        <h3>No Invoices Generated</h3>
+  <div className="appt-tab-inner">
+    <h3 className="appt-section-title-flutter">Billing & Payments</h3>
+    <EmptyState title="No Invoices Found" />
+  </div>
+);
+
+// Helper Components
+const InfoRow = ({ label, value }) => (
+  <div className="appt-field-group-flutter">
+    <span className="appt-label-flutter">{label}</span>
+    <div className="appt-value-flutter">{value || '—'}</div>
+  </div>
+);
+
+const EmptyState = ({ title, subtitle }) => (
+  <div className="appt-empty-state-flutter">
+    <div className="appt-empty-icon">
+      📋
     </div>
+    <h3 className="appt-empty-title">{title}</h3>
+    <p className="appt-empty-subtitle">
+      {subtitle || 'No data available for this section yet.'}
+    </p>
+  </div>
 );
 
 export default AppointmentPreviewDialog;

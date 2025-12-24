@@ -1,0 +1,107 @@
+# =======================================================================
+# REACT API CONFIGURATION - COMPLETE FIX SUMMARY
+# =======================================================================
+# Date: 2025-12-15 21:33:38
+# 
+# PROBLEM IDENTIFIED:
+# -------------------
+# The React frontend was making requests to:
+#   ❌ https://hms-dev.onrender.com/auth/login (404 Not Found)
+# 
+# Instead of the correct endpoint:
+#   ✅ https://hms-dev.onrender.com/api/auth/login
+#
+# ROOT CAUSES:
+# ------------
+# 1. Missing '/api' suffix in .env file
+# 2. Hardcoded fallback URLs without '/api' in multiple service files
+# 3. Inconsistent authentication header usage (Bearer vs x-auth-token)
+# 4. Mixed token storage keys (token vs authToken vs x-auth-token)
+#
+# FILES FIXED:
+# ------------
+# 1. /.env
+#    - Changed: REACT_APP_API_URL=https://hms-dev.onrender.com
+#    - To:      REACT_APP_API_URL=https://hms-dev.onrender.com/api
+#
+# 2. /src/services/authService.js
+#    - Already correct (uses REACT_APP_API_URL with /api fallback)
+#
+# 3. /src/services/staffService.js
+#    - Fixed baseURL fallback to include /api
+#    - Fixed auth header from 'Authorization: Bearer' to 'x-auth-token'
+#    - Fixed report download endpoints
+#
+# 4. /src/services/pharmacyService.js
+#    - Fixed baseURL fallback to include /api
+#    - Fixed auth header from 'Authorization: Bearer' to 'x-auth-token'
+#
+# 5. /src/services/pathologyService.js
+#    - Fixed baseURL fallback to include /api
+#    - Fixed auth header from 'Authorization: Bearer' to 'x-auth-token'
+#
+# 6. /src/services/invoiceService.js
+#    - Fixed auth header from 'Authorization: Bearer' to 'x-auth-token'
+#
+# 7. /src/services/medicinesService.js
+#    - Fixed baseURL fallback from localhost:5000 to include /api
+#    - Fixed token retrieval to check both storage keys
+#    - Fixed auth header to 'x-auth-token'
+#
+# 8. /src/services/patientsService.js
+#    - Added baseURL to axios instance
+#    - Fixed token retrieval to check both storage keys
+#    - Fixed auth header to 'x-auth-token'
+#
+# 9. /src/services/appointmentsService.js
+#    - Added baseURL to axios instance
+#    - Fixed token retrieval to check both storage keys
+#    - Fixed auth header to 'x-auth-token'
+#
+# 10. /src/services/medicineService.js
+#     - Added baseURL to axios instance
+#     - Fixed token retrieval to check both storage keys
+#     - Fixed auth header to 'x-auth-token'
+#
+# 11. /src/services/prescriptionService.js
+#     - Added baseURL to axios instance
+#     - Fixed token retrieval to check both storage keys
+#     - Fixed auth header to 'x-auth-token'
+#
+# 12. /src/services/reportService.js
+#     - Added baseURL to axios instance
+#     - Fixed token retrieval to check both storage keys
+#     - Fixed auth header to 'x-auth-token'
+#
+# 13. /src/services/apiHelpers.js
+#     - Fixed apiCall function token retrieval
+#     - Fixed auth header to 'x-auth-token'
+#
+# BACKEND COMPATIBILITY:
+# ----------------------
+# The backend expects:
+#   - Header: 'x-auth-token: <token>'
+#   - Base URL: https://hms-dev.onrender.com
+#   - Endpoints: /api/auth/login, /api/patients, etc.
+#
+# Flutter app (working correctly) uses:
+#   - Base URL: https://hms-dev.onrender.com
+#   - Full path: /api/auth/login
+#   - Header: 'x-auth-token'
+#
+# NEXT STEPS:
+# -----------
+# 1. Restart the React development server: npm start
+# 2. Clear browser cache and localStorage
+# 3. Test login with: banu@karurgastro.com
+# 4. Verify all API endpoints are working
+#
+# VERIFICATION:
+# -------------
+# All service files now use:
+#   ✅ Correct base URL with /api suffix
+#   ✅ Consistent x-auth-token header
+#   ✅ Fallback token retrieval from both storage keys
+#   ✅ Proper baseURL in axios instances
+#
+# =======================================================================
