@@ -330,6 +330,7 @@ const Payroll = () => {
       {showForm && (
         <PayrollForm
           payroll={selectedPayroll}
+          isOpen={showForm}
           onClose={handleFormClose}
         />
       )}
@@ -337,6 +338,7 @@ const Payroll = () => {
       {showView && selectedPayroll && (
         <PayrollView
           payroll={selectedPayroll}
+          isOpen={showView}
           onClose={handleViewClose}
         />
       )}

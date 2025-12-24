@@ -464,6 +464,31 @@
   cursor: not-allowed;
 }
 
+/* Voice Button */
+.btn-voice {
+  background: #10b981 !important;
+}
+
+.btn-voice:hover:not(:disabled) {
+  background: #059669 !important;
+}
+
+.btn-voice.recording {
+  background: #ef4444 !important;
+  animation: pulse-record 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-record {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .chatbot-widget.minimized {

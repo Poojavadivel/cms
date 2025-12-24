@@ -1,0 +1,281 @@
+// INTEGRATION_CODE.jsx
+// Copy and paste these snippets into your project
+
+// ============================================
+// 1. ADD IMPORTS TO YOUR ROUTER FILE
+// ============================================
+
+import FollowUpManagement from './modules/doctor/followup/FollowUpManagement';
+import PathologistDashboard from './modules/pathologist/dashboard/PathologistDashboard';
+import TestReportsManagement from './modules/pathologist/reports/TestReportsManagement';
+
+// ============================================
+// 2. ADD ROUTES (Inside <Routes> component)
+// ============================================
+
+// Doctor Routes
+<Route path="/doctor/follow-ups" element={<FollowUpManagement />} />
+<Route path="/doctor/followup-management" element={<FollowUpManagement />} />
+
+// Pathologist Routes  
+<Route path="/pathologist/dashboard" element={<PathologistDashboard />} />
+<Route path="/pathologist/reports" element={<TestReportsManagement />} />
+<Route path="/pathologist/test-reports" element={<TestReportsManagement />} />
+
+// ============================================
+// 3. ADD MENU ITEMS (Doctor Sidebar)
+// ============================================
+
+// Add to your doctor navigation array
+{
+  id: 'follow-ups',
+  name: 'Follow-Ups',
+  path: '/doctor/follow-ups',
+  icon: <MdEventNote />, // or any icon you prefer
+}
+
+// ============================================
+// 4. ADD MENU ITEMS (Pathologist Sidebar)
+// ============================================
+
+// Add to your pathologist navigation array
+{
+  id: 'dashboard',
+  name: 'Dashboard',
+  path: '/pathologist/dashboard',
+  icon: <MdScience />,
+},
+{
+  id: 'reports',
+  name: 'Test Reports',
+  path: '/pathologist/reports',
+  icon: <MdUploadFile />,
+}
+
+// ============================================
+// 5. OPTIONAL: ADD TO DASHBOARD QUICK LINKS
+// ============================================
+
+// Doctor Dashboard Quick Links
+<Link to="/doctor/follow-ups" className="dashboard-quick-link">
+  <MdEventNote size={24} />
+  <span>Follow-Up Management</span>
+</Link>
+
+// Pathologist Dashboard Quick Links  
+<Link to="/pathologist/reports" className="dashboard-quick-link">
+  <MdUploadFile size={24} />
+  <span>Upload Test Report</span>
+</Link>
+
+// ============================================
+// 6. EXAMPLE: Complete Router Setup
+// ============================================
+
+import React from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
+
+// Import new components
+import FollowUpManagement from './modules/doctor/followup/FollowUpManagement';
+import PathologistDashboard from './modules/pathologist/dashboard/PathologistDashboard';
+import TestReportsManagement from './modules/pathologist/reports/TestReportsManagement';
+
+// Your existing imports
+import DoctorDashboard from './modules/doctor/dashboard/Dashboard';
+import DoctorAppointments from './modules/doctor/appointments/Appointments';
+// ... other imports
+
+function AppRoutes() {
+  return (
+    <Routes>
+      {/* Doctor Routes */}
+      <Route path="/doctor" element={<DoctorLayout />}>
+        <Route index element={<DoctorDashboard />} />
+        <Route path="dashboard" element={<DoctorDashboard />} />
+        <Route path="appointments" element={<DoctorAppointments />} />
+        <Route path="patients" element={<DoctorPatients />} />
+        
+        {/* NEW: Follow-Up Management */}
+        <Route path="follow-ups" element={<FollowUpManagement />} />
+        <Route path="followup-management" element={<FollowUpManagement />} />
+      </Route>
+
+      {/* Pathologist Routes */}
+      <Route path="/pathologist" element={<PathologistLayout />}>
+        {/* NEW: Pathologist Dashboard */}
+        <Route index element={<PathologistDashboard />} />
+        <Route path="dashboard" element={<PathologistDashboard />} />
+        
+        {/* NEW: Test Reports Management */}
+        <Route path="reports" element={<TestReportsManagement />} />
+        <Route path="test-reports" element={<TestReportsManagement />} />
+      </Route>
+
+      {/* Redirect */}
+      <Route path="/" element={<Navigate to="/login" replace />} />
+    </Routes>
+  );
+}
+
+export default AppRoutes;
+
+// ============================================
+// 7. EXAMPLE: Navigation Sidebar Configuration
+// ============================================
+
+// Doctor Navigation
+export const doctorNavigation = [
+  {
+    id: 'dashboard',
+    name: 'Dashboard',
+    path: '/doctor/dashboard',
+    icon: <MdDashboard />,
+  },
+  {
+    id: 'appointments',
+    name: 'Appointments',
+    path: '/doctor/appointments',
+    icon: <MdCalendarToday />,
+  },
+  {
+    id: 'patients',
+    name: 'Patients',
+    path: '/doctor/patients',
+    icon: <MdPeople />,
+  },
+  // NEW
+  {
+    id: 'follow-ups',
+    name: 'Follow-Ups',
+    path: '/doctor/follow-ups',
+    icon: <MdEventNote />,
+    badge: 'NEW', // Optional: Show "NEW" badge
+  },
+  {
+    id: 'schedule',
+    name: 'Schedule',
+    path: '/doctor/schedule',
+    icon: <MdSchedule />,
+  },
+  {
+    id: 'settings',
+    name: 'Settings',
+    path: '/doctor/settings',
+    icon: <MdSettings />,
+  },
+];
+
+// Pathologist Navigation
+export const pathologistNavigation = [
+  // NEW
+  {
+    id: 'dashboard',
+    name: 'Dashboard',
+    path: '/pathologist/dashboard',
+    icon: <MdScience />,
+  },
+  // NEW
+  {
+    id: 'reports',
+    name: 'Test Reports',
+    path: '/pathologist/reports',
+    icon: <MdUploadFile />,
+  },
+  {
+    id: 'settings',
+    name: 'Settings',
+    path: '/pathologist/settings',
+    icon: <MdSettings />,
+  },
+];
+
+// ============================================
+// 8. REQUIRED ICONS (Make sure to import)
+// ============================================
+
+import {
+  MdEventNote,      // Follow-ups
+  MdScience,        // Pathologist dashboard
+  MdUploadFile,     // Test reports
+  MdDashboard,      // Dashboard
+  MdCalendarToday,  // Calendar
+  MdPeople,         // Patients
+  MdSchedule,       // Schedule
+  MdSettings,       // Settings
+} from 'react-icons/md';
+
+// ============================================
+// 9. API SERVICE CONFIGURATION
+// ============================================
+
+// Make sure your authService is configured correctly
+// File: src/services/authService.js
+
+import axios from 'axios';
+
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+
+class AuthService {
+  constructor() {
+    this.api = axios.create({
+      baseURL: API_BASE_URL,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    // Add token to all requests
+    this.api.interceptors.request.use((config) => {
+      const token = localStorage.getItem('token');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+      return config;
+    });
+  }
+
+  async get(endpoint) {
+    const response = await this.api.get(endpoint);
+    return response.data;
+  }
+
+  async post(endpoint, data) {
+    const response = await this.api.post(endpoint, data);
+    return response.data;
+  }
+
+  async put(endpoint, data) {
+    const response = await this.api.put(endpoint, data);
+    return response.data;
+  }
+
+  async delete(endpoint) {
+    const response = await this.api.delete(endpoint);
+    return response.data;
+  }
+}
+
+export const authService = new AuthService();
+
+// ============================================
+// 10. ENVIRONMENT VARIABLES
+// ============================================
+
+// Add to your .env file:
+// REACT_APP_API_URL=http://localhost:5000/api
+
+// ============================================
+// THAT'S IT! YOU'RE READY TO TEST! 🚀
+// ============================================
+
+/*
+  QUICK START:
+  1. Copy imports and routes to your router file
+  2. Copy menu items to your navigation config
+  3. Start your React app: npm start
+  4. Navigate to:
+     - /doctor/follow-ups
+     - /pathologist/dashboard
+     - /pathologist/reports
+  5. Test all features using TESTING_GUIDE.md
+*/

@@ -4,8 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { MdSmartToy } from 'react-icons/md';
-import ChatbotWidget from './ChatbotWidget';
+import ChatbotWidget from './ChatbotWidget-Flutter';
 import './ChatbotFloatingButton.css';
 
 const ChatbotFloatingButton = ({ userRole = 'doctor' }) => {

@@ -135,16 +135,6 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdi
 
   if (!isOpen) return null;
 
-  const getStatusColor = (status) => {
-    const colors = {
-      scheduled: '#0EA5E9',
-      completed: '#10B981',
-      cancelled: '#EF4444',
-      pending: '#F59E0B'
-    };
-    return colors[status?.toLowerCase()] || '#94A3B8';
-  };
-
   const getGenderIcon = (gender) => {
     return gender?.toLowerCase() === 'female' ? <MdFemale size={16} /> : <MdMale size={16} />;
   };

@@ -1,5 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
+<<<<<<< HEAD
 import appointmentsService from '../../../../services/appointmentsService';
+=======
+import authService from '../../../../services/authService';
+>>>>>>> c742c3f3f40335b6e83828d79ce4d5edee66c6de
 import { AppointmentDraft } from '../../../../models/AppointmentDraft';
 import {
   MdClose,

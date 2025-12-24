@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
@@ -88,6 +89,47 @@ const TimePicker = ({ value, onChange, onClose }) => {
       }
       setSelectedHour(hr);
       setSelectedMinute(mn);
+=======
+import React, { useState, useEffect, useCallback } from 'react';
+import authService from '../../../../services/authService';
+import { AppointmentDraft } from '../../../../models/AppointmentDraft';
+
+const NewAppointmentForm = ({ onClose, onSave }) => {
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [patients, setPatients] = useState([]);
+  const [filteredPatients, setFilteredPatients] = useState([]);
+  const [selectedPatient, setSelectedPatient] = useState(null);
+  
+  const [searchQuery, setSearchQuery] = useState('');
+  const [reason, setReason] = useState('');
+  const [notes, setNotes] = useState('');
+  const [selectedDate, setSelectedDate] = useState('');
+  const [selectedTime, setSelectedTime] = useState('');
+
+  const loadPatients = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const response = await AuthService.get('/patients');
+      const patientsData = response.data || response;
+      const patientsList = Array.isArray(patientsData) ? patientsData : [];
+      
+      const mappedPatients = patientsList.map(p => ({
+        id: p._id || p.id,
+        name: p.name || `${p.firstName || ''} ${p.lastName || ''}`.trim(),
+        age: p.age || calculateAge(p.dateOfBirth),
+        gender: p.gender || '',
+        phone: p.phone || ''
+      }));
+      
+      setPatients(mappedPatients);
+      setFilteredPatients(mappedPatients);
+    } catch (error) {
+      console.error('Failed to load patients:', error);
+      alert('Failed to load patients. Please try again.');
+    } finally {
+      setIsLoading(false);
+>>>>>>> c742c3f3f40335b6e83828d79ce4d5edee66c6de
     }
   }, [value]);
   const handleHourClick = (hour) => {

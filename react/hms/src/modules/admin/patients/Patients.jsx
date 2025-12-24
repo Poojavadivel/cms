@@ -5,11 +5,17 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { MdChevronLeft, MdChevronRight, MdSearch } from 'react-icons/md';
+import { MdChevronLeft, MdChevronRight, MdSearch, MdRefresh } from 'react-icons/md';
 import patientsService from '../../../services/patientsService';
 import './Patients.css';
 import AddPatientModal from '../../../components/patient/addpatient';
+<<<<<<< HEAD
 import AppointmentViewModal from '../../../components/appointments/AppointmentViewModal';
+=======
+import EditPatientModal from '../../../components/patient/EditPatientModal';
+import PatientDetailsDialog from '../../../components/doctor/PatientDetailsDialog';
+import FollowUpDialog from '../../../components/patient/FollowUpDialog';
+>>>>>>> c742c3f3f40335b6e83828d79ce4d5edee66c6de
 
 
 // Custom SVG Icons (matching Appointments)
@@ -43,6 +49,14 @@ const Icons = {
       <polyline points="7 10 12 15 17 10"></polyline>
       <line x1="12" y1="15" x2="12" y2="3"></line>
     </svg>
+  ),
+  Calendar: () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+      <line x1="16" y1="2" x2="16" y2="6"></line>
+      <line x1="8" y1="2" x2="8" y2="6"></line>
+      <line x1="3" y1="10" x2="21" y2="10"></line>
+    </svg>
   )
 };
 
@@ -59,9 +73,18 @@ const Patients = () => {
   const [ageRangeFilter, setAgeRangeFilter] = useState('All');
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [isAddPatientOpen, setIsAddPatientOpen] = useState(false);
+<<<<<<< HEAD
   const [selectedPatientId, setSelectedPatientId] = useState(null);
   const [viewPatientId, setViewPatientId] = useState(null); // Added back for pure patient view
 
+=======
+  const [showPatientDialog, setShowPatientDialog] = useState(false);
+  const [selectedPatient, setSelectedPatient] = useState(null);
+  const [isEditPatientOpen, setIsEditPatientOpen] = useState(false);
+  const [patientToEdit, setPatientToEdit] = useState(null);
+  const [showFollowUpDialog, setShowFollowUpDialog] = useState(false);
+  const [selectedPatientForFollowUp, setSelectedPatientForFollowUp] = useState(null);
+>>>>>>> c742c3f3f40335b6e83828d79ce4d5edee66c6de
 
   const itemsPerPage = 10;
 
@@ -257,6 +280,7 @@ const Patients = () => {
     setIsAddPatientOpen(true);
   };
 
+<<<<<<< HEAD
   // Handle View Logic: Reuse AppointmentViewModal
   const [viewAppointmentId, setViewAppointmentId] = useState(null);
   const [showAppointmentView, setShowAppointmentView] = useState(false);
@@ -276,6 +300,35 @@ const Patients = () => {
   const handleEdit = (patient) => {
     setSelectedPatientId(patient.id);
     setIsAddPatientOpen(true);
+=======
+  const handleView = async (patient) => {
+    try {
+      const fullPatient = await patientsService.fetchPatientById(patient.id);
+      console.log('View patient:', fullPatient);
+      setSelectedPatient(fullPatient);
+      setShowPatientDialog(true);
+    } catch (error) {
+      console.error('Failed to fetch patient details:', error);
+      alert('Failed to load patient details: ' + error.message);
+    }
+  };
+
+  const handleClosePatientDialog = () => {
+    setShowPatientDialog(false);
+    setSelectedPatient(null);
+  };
+
+  const handleEdit = async (patient) => {
+    try {
+      const fullPatient = await patientsService.fetchPatientById(patient.id);
+      console.log('Edit patient:', fullPatient);
+      setPatientToEdit(fullPatient);
+      setIsEditPatientOpen(true);
+    } catch (error) {
+      console.error('Failed to fetch patient details:', error);
+      alert('Failed to load patient details: ' + error.message);
+    }
+>>>>>>> c742c3f3f40335b6e83828d79ce4d5edee66c6de
   };
 
   const handleDelete = async (patient) => {
@@ -315,6 +368,30 @@ const Patients = () => {
     }
   };
 
+  // Handle Follow-Up
+  const handleFollowUp = (patient) => {
+    setSelectedPatientForFollowUp(patient);
+    setShowFollowUpDialog(true);
+  };
+
+  const handleFollowUpSubmit = async (followUpData) => {
+    try {
+      await patientsService.createFollowUp(selectedPatientForFollowUp.id, followUpData);
+      alert('Follow-up scheduled successfully');
+      setShowFollowUpDialog(false);
+      setSelectedPatientForFollowUp(null);
+      await fetchPatients();
+    } catch (error) {
+      console.error('❌ Failed to create follow-up:', error);
+      alert('Failed to schedule follow-up: ' + error.message);
+    }
+  };
+
+  // Reload handler
+  const handleReload = () => {
+    fetchPatients();
+  };
+
   // Format date
   const formatLastVisit = (dateString) => {
     if (!dateString) return '';
@@ -334,9 +411,32 @@ const Patients = () => {
           <h1 className="main-title">Patient Management</h1>
           <p className="main-subtitle">Manage patient records, medical history, and appointments.</p>
         </div>
-        <button className="btn-new-appointment" onClick={handleAdd}>
-          <span>+</span> New Patient
-        </button>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <button 
+            className="btn-reload" 
+            onClick={handleReload} 
+            disabled={isLoading}
+            title="Reload Patients"
+            style={{
+              padding: '10px 20px',
+              backgroundColor: '#f0f0f0',
+              border: '1px solid #ddd',
+              borderRadius: '8px',
+              cursor: isLoading ? 'not-allowed' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              fontWeight: '500',
+              opacity: isLoading ? 0.6 : 1
+            }}
+          >
+            <MdRefresh size={18} style={{ animation: isLoading ? 'spin 1s linear infinite' : 'none' }} />
+            {isLoading ? 'Loading...' : 'Reload'}
+          </button>
+          <button className="btn-new-appointment" onClick={handleAdd}>
+            <span>+</span> New Patient
+          </button>
+        </div>
       </div>
 
       {/* Search & Filter Bar */}
@@ -494,6 +594,9 @@ const Patients = () => {
                         <button className="btn-action edit" title="Edit" onClick={() => handleEdit(patient)}>
                           <Icons.Edit />
                         </button>
+                        <button className="btn-action followup" title="Follow Up" onClick={() => handleFollowUp(patient)} style={{ backgroundColor: '#10b981', color: 'white' }}>
+                          <Icons.Calendar />
+                        </button>
                         <button className="btn-action delete" title="Delete" onClick={() => handleDelete(patient)}>
                           <Icons.Delete />
                         </button>
@@ -577,6 +680,46 @@ const Patients = () => {
             setShowAppointmentView(false);
             // handleEdit(patient) - we'd need the patient object back, effectively we are just closing for now
           }}
+        />
+      )}
+
+      {/* Patient Details Dialog */}
+      {showPatientDialog && selectedPatient && (
+        <PatientDetailsDialog
+          patient={selectedPatient}
+          isOpen={showPatientDialog}
+          onClose={handleClosePatientDialog}
+          showBillingTab={true}
+        />
+      )}
+
+      {/* Edit Patient Modal */}
+      {isEditPatientOpen && patientToEdit && (
+        <EditPatientModal
+          patient={patientToEdit}
+          isOpen={isEditPatientOpen}
+          onClose={() => {
+            setIsEditPatientOpen(false);
+            setPatientToEdit(null);
+          }}
+          onSuccess={() => {
+            fetchPatients();
+            setIsEditPatientOpen(false);
+            setPatientToEdit(null);
+          }}
+        />
+      )}
+
+      {/* Follow-Up Dialog */}
+      {showFollowUpDialog && selectedPatientForFollowUp && (
+        <FollowUpDialog
+          isOpen={showFollowUpDialog}
+          patient={selectedPatientForFollowUp}
+          onClose={() => {
+            setShowFollowUpDialog(false);
+            setSelectedPatientForFollowUp(null);
+          }}
+          onSubmit={handleFollowUpSubmit}
         />
       )}
     </div>

@@ -6,7 +6,7 @@
  */
 
 import axios from 'axios';
-import { AppointmentEndpoints, PatientEndpoints } from './apiConstants';
+import { AppointmentEndpoints, PatientEndpoints, IntakeEndpoints } from './apiConstants';
 import logger from './loggerService';
 
 /**
@@ -245,6 +245,36 @@ export const fetchUpcomingAppointments = async () => {
   }
 };
 
+/**
+ * Add intake data for a patient
+ * @param {Object} payload - Intake data
+ * @param {string} patientId - Patient ID
+ * @returns {Promise<Object>} Created intake
+ */
+export const addIntake = async (payload, patientId) => {
+  try {
+    if (!patientId || patientId.trim() === '') {
+      throw new Error('patientId is required');
+    }
+
+    const endpoint = IntakeEndpoints.create(patientId);
+    logger.apiRequest('POST', endpoint, payload);
+    
+    const axiosInstance = createAxiosInstance();
+    const response = await axiosInstance.post(endpoint, payload);
+    
+    logger.apiResponse('POST', endpoint, response.status);
+    logger.success('INTAKE', 'Intake data saved successfully');
+    
+    // Normalize response shape
+    const result = response.data.data || response.data.intake || response.data;
+    return result;
+  } catch (error) {
+    logger.apiError('POST', IntakeEndpoints.create(patientId), error);
+    throw new Error(error.response?.data?.message || 'Failed to save intake data');
+  }
+};
+
 const appointmentsService = {
   fetchAppointments,
   fetchAppointmentById,
@@ -254,7 +284,8 @@ const appointmentsService = {
   fetchPatients,
   updateAppointmentStatus,
   fetchTodayAppointments,
-  fetchUpcomingAppointments
+  fetchUpcomingAppointments,
+  addIntake
 };
 
 export default appointmentsService;

@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 // import { useNavigate } from 'react-router-dom'; // Reserved for future navigation
 import './Appointments.css';
 import appointmentsService from '../../../services/appointmentsService';
-import patientsService from '../../../services/patientsService';
-import staffService from '../../../services/staffService';
+// import patientsService from '../../../services/patientsService'; // Reserved for future use
+// import staffService from '../../../services/staffService'; // Reserved for future use
 import AppointmentViewModal from '../../../components/appointments/AppointmentViewModal';
 import AppointmentEditModal from '../../../components/appointments/AppointmentEditModal';
 

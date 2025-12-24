@@ -145,7 +145,23 @@ const AppointmentIntakeModal = ({ isOpen, onClose, appointmentId, onSuccess }) =
       }
 
       // Step 2: Save intake data to appointment
+      // Extract patient ID safely
+      let patientId = null;
+      if (appointment?.patientId) {
+        if (typeof appointment.patientId === 'object' && appointment.patientId?._id) {
+          patientId = appointment.patientId._id;
+        } else if (typeof appointment.patientId === 'string') {
+          patientId = appointment.patientId;
+        }
+      }
+
+      if (!patientId) {
+        throw new Error('Missing patient ID - cannot save intake');
+      }
+
       const payload = {
+        patientId: patientId,
+        patientName: appointment?.clientName || 'Unknown Patient',
         appointmentId: appointmentId,
         vitals: {
           heightCm: height || null,
@@ -156,15 +172,34 @@ const AppointmentIntakeModal = ({ isOpen, onClose, appointmentId, onSuccess }) =
           spo2: spo2 || null,
         },
         currentNotes: currentNotes || null,
-        pharmacy: pharmacyRows,
-        pathology: pathologyRows,
+        pharmacy: pharmacyRows.map(row => ({
+          name: row.Medicine || '',
+          Medicine: row.Medicine || '',
+          dosage: row.Dosage || '',
+          Dosage: row.Dosage || '',
+          frequency: row.Frequency || '',
+          Frequency: row.Frequency || '',
+          notes: row.Notes || '',
+          Notes: row.Notes || '',
+        })),
+        pathology: pathologyRows.map(row => ({...row})),
         followUp: followUpData,
         updatedAt: new Date().toISOString(),
       };
 
-      console.log('💾 Saving intake data to appointment...');
-      const savedIntake = await appointmentsService.updateAppointment(appointmentId, payload);
-      console.log('✅ Intake data saved successfully!');
+      console.log('💾 Saving intake data...');
+      console.log('💾 [INTAKE SAVE] Sending vitals:', payload.vitals);
+      console.log('💾 [INTAKE SAVE] Appointment ID:', appointmentId);
+      console.log('💾 [INTAKE SAVE] Patient ID:', patientId);
+      console.log('💾 [INTAKE SAVE] Follow-Up Data:', Object.keys(followUpData));
+      if (followUpData.isRequired) {
+        console.log('💾 [INTAKE SAVE] ✅ Follow-up IS required - will be saved to appointment');
+      } else {
+        console.log('💾 [INTAKE SAVE] ⚠️ Follow-up NOT required - will not show in follow-up list');
+      }
+
+      const savedIntake = await appointmentsService.addIntake(payload, patientId);
+      console.log('✅ Intake data saved successfully!', savedIntake);
 
       // Step 3: Create prescription if pharmacy items exist
       if (pharmacyRows.length > 0) {
@@ -229,9 +264,19 @@ const AppointmentIntakeModal = ({ isOpen, onClose, appointmentId, onSuccess }) =
     
     if (!appointment) return null;
 
+    // Extract patient ID safely
+    let extractedPatientId = null;
+    if (appointment.patientId) {
+      if (typeof appointment.patientId === 'object' && appointment.patientId?._id) {
+        extractedPatientId = appointment.patientId._id;
+      } else if (typeof appointment.patientId === 'string') {
+        extractedPatientId = appointment.patientId;
+      }
+    }
+
     // Create basic patient object from appointment
     return new PatientDetails({
-      patientId: typeof appointment.patientId === 'object' ? appointment.patientId._id : appointment.patientId,
+      patientId: extractedPatientId,
       name: appointment.clientName || 'Unknown Patient',
       firstName: appointment.clientName?.split(' ')[0] || '',
       lastName: appointment.clientName?.split(' ').slice(1).join(' ') || '',

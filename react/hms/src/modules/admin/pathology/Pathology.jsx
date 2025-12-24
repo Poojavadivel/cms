@@ -45,6 +45,7 @@ const Pathology = () => {
   const [reports, setReports] = useState([]);
   const [filteredReports, setFilteredReports] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isDownloading, setIsDownloading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(0);
   const [statusFilter, setStatusFilter] = useState('All');
@@ -174,6 +175,26 @@ const Pathology = () => {
         console.error('❌ Delete error:', error);
         alert('Failed to delete report: ' + error.message);
       }
+    }
+  };
+
+  // Handle download report
+  const handleDownloadReport = async (report) => {
+    if (isDownloading) return;
+    
+    setIsDownloading(true);
+    try {
+      const result = await pathologyService.downloadReport(report.id);
+      if (result.success) {
+        alert(result.message || 'Report downloaded successfully');
+      } else {
+        alert(result.message || 'Failed to download report');
+      }
+    } catch (error) {
+      console.error('❌ Download error:', error);
+      alert('Error downloading report: ' + error.message);
+    } finally {
+      setIsDownloading(false);
     }
   };
 
@@ -350,6 +371,9 @@ const Pathology = () => {
                       </button>
                       <button className="btn-action delete" title="Delete" onClick={() => handleDeleteReport(report)}>
                         <Icons.Delete />
+                      </button>
+                      <button className="btn-action download" title="Download" onClick={() => handleDownloadReport(report)} disabled={isDownloading}>
+                        <Icons.Download />
                       </button>
                     </div>
                   </td>

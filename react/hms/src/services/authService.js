@@ -370,4 +370,5 @@ class AuthService {
 
 // Export singleton instance
 const authService = new AuthService();
+console.log('✅ [authService] Singleton instance created:', typeof authService, 'Has get method:', typeof authService.get);
 export default authService;

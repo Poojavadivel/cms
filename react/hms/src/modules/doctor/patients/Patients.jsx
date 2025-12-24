@@ -7,6 +7,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { MdSearch, MdChevronLeft, MdChevronRight } from 'react-icons/md';
 import patientsService from '../../../services/patientsService';
 import PatientDetailsDialog from '../../../components/doctor/PatientDetailsDialog';
+import FollowUpDialog from '../../../components/doctor/FollowUpDialog';
 import './Patients.css';
 
 // Custom SVG Icons (matching admin)
@@ -36,6 +37,8 @@ const DoctorPatients = () => {
   const [genderFilter, setGenderFilter] = useState('All');
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [showPatientDialog, setShowPatientDialog] = useState(false);
+  const [showFollowUpDialog, setShowFollowUpDialog] = useState(false);
+  const [selectedFollowUpPatient, setSelectedFollowUpPatient] = useState(null);
 
   const itemsPerPage = 10;
 
@@ -128,6 +131,23 @@ const DoctorPatients = () => {
   const handleCloseDialog = () => {
     setShowPatientDialog(false);
     setSelectedPatient(null);
+  };
+
+  const handleFollowUpClick = (patient, event) => {
+    event.stopPropagation(); // Prevent row click
+    setSelectedFollowUpPatient(patient);
+    setShowFollowUpDialog(true);
+  };
+
+  const handleCloseFollowUpDialog = () => {
+    setShowFollowUpDialog(false);
+    setSelectedFollowUpPatient(null);
+  };
+
+  const handleFollowUpSuccess = () => {
+    setShowFollowUpDialog(false);
+    setSelectedFollowUpPatient(null);
+    fetchPatients(); // Refresh patient list
   };
 
   return (
@@ -256,12 +276,16 @@ const DoctorPatients = () => {
                       <td className="cell-actions">
                         <button 
                           className="action-btn action-view" 
-                          title="View"
+                          title="View Details"
                           onClick={() => handlePatientClick(patient)}
                         >
                           <Icons.Eye />
                         </button>
-                        <button className="action-btn action-appt" title="Appointments">
+                        <button 
+                          className="action-btn action-appt" 
+                          title="Schedule Follow-Up"
+                          onClick={(e) => handleFollowUpClick(patient, e)}
+                        >
                           <Icons.Calendar />
                         </button>
                       </td>
@@ -308,6 +332,16 @@ const DoctorPatients = () => {
         onClose={handleCloseDialog}
         showBillingTab={false}
       />
+
+      {/* Follow-Up Dialog */}
+      {showFollowUpDialog && selectedFollowUpPatient && (
+        <FollowUpDialog
+          patient={selectedFollowUpPatient}
+          isOpen={showFollowUpDialog}
+          onClose={handleCloseFollowUpDialog}
+          onSuccess={handleFollowUpSuccess}
+        />
+      )}
     </>
   );
 };
