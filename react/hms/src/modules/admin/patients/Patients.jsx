@@ -9,13 +9,10 @@ import { MdChevronLeft, MdChevronRight, MdSearch, MdRefresh } from 'react-icons/
 import patientsService from '../../../services/patientsService';
 import './Patients.css';
 import AddPatientModal from '../../../components/patient/addpatient';
-<<<<<<< HEAD
 import AppointmentViewModal from '../../../components/appointments/AppointmentViewModal';
-=======
 import EditPatientModal from '../../../components/patient/EditPatientModal';
 import PatientDetailsDialog from '../../../components/doctor/PatientDetailsDialog';
 import FollowUpDialog from '../../../components/patient/FollowUpDialog';
->>>>>>> c742c3f3f40335b6e83828d79ce4d5edee66c6de
 
 
 // Custom SVG Icons (matching Appointments)
@@ -73,18 +70,14 @@ const Patients = () => {
   const [ageRangeFilter, setAgeRangeFilter] = useState('All');
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [isAddPatientOpen, setIsAddPatientOpen] = useState(false);
-<<<<<<< HEAD
   const [selectedPatientId, setSelectedPatientId] = useState(null);
-  const [viewPatientId, setViewPatientId] = useState(null); // Added back for pure patient view
-
-=======
+  const [viewPatientId, setViewPatientId] = useState(null);
   const [showPatientDialog, setShowPatientDialog] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [isEditPatientOpen, setIsEditPatientOpen] = useState(false);
   const [patientToEdit, setPatientToEdit] = useState(null);
   const [showFollowUpDialog, setShowFollowUpDialog] = useState(false);
   const [selectedPatientForFollowUp, setSelectedPatientForFollowUp] = useState(null);
->>>>>>> c742c3f3f40335b6e83828d79ce4d5edee66c6de
 
   const itemsPerPage = 10;
 
@@ -280,27 +273,9 @@ const Patients = () => {
     setIsAddPatientOpen(true);
   };
 
-<<<<<<< HEAD
-  // Handle View Logic: Reuse AppointmentViewModal
   const [viewAppointmentId, setViewAppointmentId] = useState(null);
   const [showAppointmentView, setShowAppointmentView] = useState(false);
 
-  const handleView = (patient) => {
-    // Directly view patient using AppointmentViewModal in 'patient mode'
-    setViewAppointmentId(null);
-    setShowAppointmentView(true);
-    // Use a temporary state or reuse existing one to store the 'target' patient for the modal
-    // Since viewAppointmentId is for appointment ID, we need a way to pass patient ID.
-    // Let's reuse 'selectedPatientId' or create 'viewPatientId' again?
-    // Reviewing state variables: 'selectedPatientId' is for Edit Modal.
-    // Let's add 'viewPatientId' back.
-    setViewPatientId(patient.id);
-  };
-
-  const handleEdit = (patient) => {
-    setSelectedPatientId(patient.id);
-    setIsAddPatientOpen(true);
-=======
   const handleView = async (patient) => {
     try {
       const fullPatient = await patientsService.fetchPatientById(patient.id);
@@ -328,7 +303,6 @@ const Patients = () => {
       console.error('Failed to fetch patient details:', error);
       alert('Failed to load patient details: ' + error.message);
     }
->>>>>>> c742c3f3f40335b6e83828d79ce4d5edee66c6de
   };
 
   const handleDelete = async (patient) => {
