@@ -9,6 +9,8 @@ services:
         value: 18.17.0
       - key: REACT_APP_API_URL
         value: https://hms-dev.onrender.com/api
+      - key: NODE_ENV
+        value: production
     headers:
       - path: /*
         name: X-Frame-Options
@@ -19,6 +21,9 @@ services:
       - path: /*
         name: X-XSS-Protection
         value: 1; mode=block
+      - path: /*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
     routes:
       - type: rewrite
         source: /*
