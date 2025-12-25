@@ -1,7 +1,17 @@
 /**
  * Patients module index
- * Exports the Patients component as default
+ * Exports the Patients component wrapped with ErrorBoundary
  */
 
-export { default } from './Patients';
-export { default as Patients } from './Patients';
+import React from 'react';
+import PatientsComponent from './Patients';
+import ErrorBoundary from '../../../components/common/ErrorBoundary';
+
+const PatientsWithErrorBoundary = (props) => (
+  <ErrorBoundary>
+    <PatientsComponent {...props} />
+  </ErrorBoundary>
+);
+
+export default PatientsWithErrorBoundary;
+export { PatientsWithErrorBoundary as Patients };

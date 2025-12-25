@@ -171,6 +171,10 @@
     gap: 24px;
 }
 
+.form-group {
+    margin-bottom: 24px;
+}
+
 .form-group label {
     display: block;
     font-size: 0.85rem;

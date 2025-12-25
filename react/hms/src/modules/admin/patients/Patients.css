@@ -527,3 +527,28 @@ body {
     flex: 1;
   }
 }
+
+/* Doctor name clickable styling - Match Appointments page */
+.doctor-name-clickable {
+  cursor: pointer;
+  color: var(--text-body);
+  font-weight: 500;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.doctor-name-clickable:hover {
+  color: var(--primary);
+  transform: translateX(2px);
+}
+
+.doctor-name-clickable:active {
+  transform: translateX(0);
+}
+
+.cell-doctor {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+

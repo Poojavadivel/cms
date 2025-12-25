@@ -145,17 +145,23 @@ router.get('/', auth, async (req, res) => {
         .skip(skip)
         .limit(limit)
         .sort({ firstName: 1 })
-        .populate('doctorId', 'firstName lastName email')
+        .populate('doctorId', 'firstName lastName email phone gender role department designation')
         .lean(),
       Patient.countDocuments(filter),
     ]);
     console.timeEnd('⏱️ [DB Query Time]');
 
     console.log(`📊 Query Result: Found ${items.length} patients (of ${total} total)`);
+    
+    // Log first item's doctor population for debugging
+    if (items.length > 0 && items[0].doctorId) {
+      console.log('👨‍⚕️ First patient doctor:', JSON.stringify(items[0].doctorId, null, 2));
+    }
 
-    // Enrich results
+    // Enrich results - CRITICAL: Keep doctorId as object AND add doctor field
     const enriched = items.map(p => ({
       ...p,
+      doctor: p.doctorId, // ✅ ADD THIS: Mirror doctorId to doctor field for frontend
       doctorName: p.doctorId ? `${p.doctorId.firstName} ${p.doctorId.lastName}`.trim() : '',
     }));
 
@@ -202,31 +208,38 @@ router.get('/', auth, async (req, res) => {
 router.get('/:id', auth, async (req, res) => {
   try {
     const patient = await Patient.findById(req.params.id)
-      .populate('doctorId', 'firstName lastName email')
+      .populate('doctorId', 'firstName lastName email phone gender role department designation')
       .lean();
 
     if (!patient || patient.deleted_at) {
       return res.status(404).json({ success: false, message: 'Patient not found', errorCode: 3007 });
     }
 
+    // ✅ CRITICAL: Add doctor field mirroring doctorId for frontend compatibility
+    const enrichedPatient = {
+      ...patient,
+      doctor: patient.doctorId // Mirror doctorId to doctor field
+    };
+
     // DEBUG: Log what we're sending to frontend
     console.log('📤 [PATIENT GET] Sending patient data:');
-    console.log('   Patient ID:', patient._id);
-    console.log('   Name:', patient.firstName, patient.lastName);
-    console.log('   Age:', patient.age);
-    console.log('   Gender:', patient.gender);
-    console.log('   Blood Group:', patient.bloodGroup);
-    console.log('   Has metadata:', !!patient.metadata);
-    if (patient.metadata) {
-      console.log('   Metadata:', JSON.stringify(patient.metadata, null, 2));
+    console.log('   Patient ID:', enrichedPatient._id);
+    console.log('   Name:', enrichedPatient.firstName, enrichedPatient.lastName);
+    console.log('   Age:', enrichedPatient.age);
+    console.log('   Gender:', enrichedPatient.gender);
+    console.log('   Blood Group:', enrichedPatient.bloodGroup);
+    console.log('   Doctor (populated):', enrichedPatient.doctor ? `${enrichedPatient.doctor.firstName} ${enrichedPatient.doctor.lastName}` : 'None');
+    console.log('   Has metadata:', !!enrichedPatient.metadata);
+    if (enrichedPatient.metadata) {
+      console.log('   Metadata:', JSON.stringify(enrichedPatient.metadata, null, 2));
     }
-    console.log('   Has vitals:', !!patient.vitals);
-    if (patient.vitals) {
-      console.log('   Vitals:', patient.vitals);
+    console.log('   Has vitals:', !!enrichedPatient.vitals);
+    if (enrichedPatient.vitals) {
+      console.log('   Vitals:', enrichedPatient.vitals);
     }
-    console.log('   Legacy fields - height:', patient.height, 'weight:', patient.weight, 'bmi:', patient.bmi);
+    console.log('   Legacy fields - height:', enrichedPatient.height, 'weight:', enrichedPatient.weight, 'bmi:', enrichedPatient.bmi);
 
-    return res.status(200).json(patient);
+    return res.status(200).json(enrichedPatient);
   } catch (err) {
     console.error('❌ [PATIENT GET] Error:', err);
     return res.status(500).json({ success: false, message: 'Failed to fetch patient', errorCode: 5002 });
@@ -328,7 +341,7 @@ router.put('/:id', auth, async (req, res) => {
       update, 
       { new: true, runValidators: true }
     )
-      .populate('doctorId', 'firstName lastName email')
+      .populate('doctorId', 'firstName lastName email phone gender role department designation')
       .lean();
 
     if (!updated) {
@@ -339,8 +352,14 @@ router.put('/:id', auth, async (req, res) => {
       });
     }
 
+    // ✅ CRITICAL: Add doctor field mirroring doctorId for frontend compatibility
+    const enrichedPatient = {
+      ...updated,
+      doctor: updated.doctorId // Mirror doctorId to doctor field
+    };
+
     console.log('✅ [PATIENT UPDATE] Success');
-    return res.status(200).json(updated);
+    return res.status(200).json(enrichedPatient);
   } catch (err) {
     console.error('❌ [PATIENT UPDATE] Error:', err);
     return res.status(500).json({ 

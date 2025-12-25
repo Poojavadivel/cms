@@ -4,15 +4,34 @@
  * React equivalent of Flutter's PatientsScreen with live backend data
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { MdChevronLeft, MdChevronRight, MdSearch, MdRefresh } from 'react-icons/md';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { MdChevronLeft, MdChevronRight, MdSearch } from 'react-icons/md';
+import axios from 'axios';
 import patientsService from '../../../services/patientsService';
 import './Patients.css';
 import AddPatientModal from '../../../components/patient/addpatient';
-import AppointmentViewModal from '../../../components/appointments/AppointmentViewModal';
 import EditPatientModal from '../../../components/patient/EditPatientModal';
 import PatientDetailsDialog from '../../../components/doctor/PatientDetailsDialog';
-import FollowUpDialog from '../../../components/patient/FollowUpDialog';
+import StaffDetailEnterprise from '../staff/StaffDetailEnterprise';
+import doctorFemaleIcon from '../../../assets/doctor-femaleicon.png';
+import doctorMaleIcon from '../../../assets/doctor-male icon.png';
+
+// Toast notification helper (replace with react-toastify if available)
+const toast = {
+  success: (msg) => {
+    console.log('✅ SUCCESS:', msg);
+    // TODO: Implement proper toast notification
+    alert(msg);
+  },
+  error: (msg) => {
+    console.error('❌ ERROR:', msg);
+    // TODO: Implement proper toast notification
+    alert(msg);
+  },
+  info: (msg) => {
+    console.log('ℹ️ INFO:', msg);
+  }
+};
 
 
 // Custom SVG Icons (matching Appointments)
@@ -57,45 +76,128 @@ const Icons = {
   )
 };
 
+// Configuration constants
+const CONFIG = {
+  ITEMS_PER_PAGE: 10,
+  MAX_FETCH_LIMIT: 100,
+  DEBOUNCE_DELAY: 300
+};
+
 const Patients = () => {
   // State management
   const [patients, setPatients] = useState([]);
   const [filteredPatients, setFilteredPatients] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadingPatients, setDownloadingPatients] = useState(new Set());
+  const [loadingPatientId, setLoadingPatientId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(0);
   const [doctorFilter, setDoctorFilter] = useState('All');
   const [genderFilter, setGenderFilter] = useState('All');
   const [ageRangeFilter, setAgeRangeFilter] = useState('All');
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
-  const [isAddPatientOpen, setIsAddPatientOpen] = useState(false);
-  const [selectedPatientId, setSelectedPatientId] = useState(null);
-  const [viewPatientId, setViewPatientId] = useState(null);
-  const [showPatientDialog, setShowPatientDialog] = useState(false);
-  const [selectedPatient, setSelectedPatient] = useState(null);
-  const [isEditPatientOpen, setIsEditPatientOpen] = useState(false);
-  const [patientToEdit, setPatientToEdit] = useState(null);
-  const [showFollowUpDialog, setShowFollowUpDialog] = useState(false);
-  const [selectedPatientForFollowUp, setSelectedPatientForFollowUp] = useState(null);
+  
+  // Modal state management - use single state to prevent multiple modals
+  const [activeModal, setActiveModal] = useState(null);
+  const [modalData, setModalData] = useState(null);
+  
+  // Doctor dialog states (same as Appointments page)
+  const [selectedDoctor, setSelectedDoctor] = useState(null);
+  const [showDoctorDialog, setShowDoctorDialog] = useState(false);
+  
+  // Refs for cleanup
+  const abortControllerRef = useRef(null);
 
-  const itemsPerPage = 10;
+  const itemsPerPage = CONFIG.ITEMS_PER_PAGE;
 
   // Fetch patients from API
   const fetchPatients = useCallback(async () => {
     setIsLoading(true);
     try {
-      const data = await patientsService.fetchPatients({ limit: 100 });
-      console.log('✅ Fetched patients:', data);
+      const data = await patientsService.fetchPatients({ limit: CONFIG.MAX_FETCH_LIMIT });
+      
+      if (process.env.NODE_ENV === 'development') {
+        console.log('✅ Fetched patients:', data);
+      }
 
-      // Transform data to match expected structure
-      const transformedData = data.map(patient => ({
-        id: patient._id || patient.id || patient.patientId,
+      // Helper functions for data extraction
+      const normalizeGender = (gender) => {
+        if (!gender) return 'Other';
+        const normalized = gender.toString().trim();
+        const lower = normalized.toLowerCase();
+        if (lower === 'male' || lower === 'm') return 'Male';
+        if (lower === 'female' || lower === 'f') return 'Female';
+        return normalized;
+      };
+
+      const extractDoctorName = (patient) => {
+        if (!patient) return '';
+        const doctor = patient.doctor;
+        if (!doctor) return patient.assignedDoctor || patient.doctorName || patient.doctorId || '';
+        if (typeof doctor === 'object' && doctor !== null) {
+          return doctor.name || doctor.fullName || '';
+        }
+        return String(doctor);
+      };
+
+      const extractDoctorId = (patient) => {
+        if (!patient) return '';
+        const doctor = patient.doctor;
+        if (doctor && typeof doctor === 'object' && doctor !== null) {
+          return doctor._id || doctor.id || '';
+        }
+        return patient.doctorId || '';
+      };
+
+      const extractDoctorGender = (patient) => {
+        if (!patient) return 'Male';
+        if (patient.doctor && typeof patient.doctor === 'object' && patient.doctor !== null) {
+          return patient.doctor.gender || 'Male';
+        }
+        return patient.doctorGender || 'Male';
+      };
+
+      const formatCondition = (value) => {
+        if (!value) return null;
+        if (typeof value === 'string') {
+          const trimmed = value.trim();
+          if (!trimmed) return null;
+          return trimmed.length > 30 ? `${trimmed.substring(0, 30)}...` : trimmed;
+        }
+        if (Array.isArray(value) && value.length > 0) {
+          return value.length === 1 ? value[0] : `${value[0]} +${value.length - 1}`;
+        }
+        return null;
+      };
+
+      const extractCondition = (patient) => {
+        if (!patient) return 'N/A';
+        const sources = [
+          patient.condition,
+          patient.medicalHistory,
+          patient.metadata?.medicalHistory,
+          patient.metadata?.condition,
+          patient.notes
+        ];
+        for (const source of sources) {
+          const condition = formatCondition(source);
+          if (condition) return condition;
+        }
+        return 'N/A';
+      };
+
+      // Transform data to match expected structure with proper ID handling
+      const transformedData = data.map((patient, index) => ({
+        id: patient._id || patient.id || patient.patientId || `temp-${index}-${Date.now()}`,
         name: patient.name || `${patient.firstName || ''} ${patient.lastName || ''}`.trim() || 'Unknown',
         age: patient.age || 0,
-        gender: patient.gender || 'Other',
+        gender: normalizeGender(patient.gender),
         lastVisit: patient.lastVisit || patient.lastVisitDate || patient.updatedAt || '',
         doctor: extractDoctorName(patient),
+        doctorId: extractDoctorId(patient),
+        doctorGender: extractDoctorGender(patient),
+        doctorObj: patient.doctor && typeof patient.doctor === 'object' ? patient.doctor : null, // Store full doctor object
         condition: extractCondition(patient),
         reason: patient.reason || '',
         patientId: patient.patientId || patient._id || patient.id,
@@ -105,71 +207,40 @@ const Patients = () => {
       setFilteredPatients(transformedData);
     } catch (error) {
       console.error('❌ Failed to fetch patients:', error);
-      alert('Failed to load patients: ' + error.message);
+      toast.error('Failed to load patients: ' + error.message);
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  // Extract doctor name from various fields
-  const extractDoctorName = (patient) => {
-    if (patient.doctor) {
-      if (typeof patient.doctor === 'object') {
-        return patient.doctor.name || patient.doctor.fullName || '';
-      }
-      return patient.doctor;
-    }
-    if (patient.assignedDoctor) return patient.assignedDoctor;
-    if (patient.doctorName) return patient.doctorName;
-    if (patient.doctorId) return patient.doctorId;
-    return '';
-  };
-
-  // Extract condition from medical history or notes
-  const extractCondition = (patient) => {
-    if (patient.condition && patient.condition.trim()) {
-      return patient.condition;
-    }
-
-    if (patient.medicalHistory && Array.isArray(patient.medicalHistory) && patient.medicalHistory.length > 0) {
-      if (patient.medicalHistory.length === 1) {
-        return patient.medicalHistory[0];
-      }
-      return `${patient.medicalHistory[0]} +${patient.medicalHistory.length - 1}`;
-    }
-
-    if (patient.metadata?.medicalHistory && Array.isArray(patient.metadata.medicalHistory) && patient.metadata.medicalHistory.length > 0) {
-      const history = patient.metadata.medicalHistory;
-      if (history.length === 1) {
-        return history[0];
-      }
-      return `${history[0]} +${history.length - 1}`;
-    }
-
-    if (patient.metadata?.condition && patient.metadata.condition.trim()) {
-      return patient.metadata.condition;
-    }
-
-    if (patient.notes && patient.notes.trim()) {
-      const notes = patient.notes.trim();
-      return notes.length > 30 ? `${notes.substring(0, 30)}...` : notes;
-    }
-
-    return 'N/A';
-  };
-
-  // Load patients on mount
+  // Load patients on mount and cleanup on unmount
   useEffect(() => {
     fetchPatients();
+    
+    // Cleanup function to cancel pending requests
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
   }, [fetchPatients]);
+  
+  // Debounce search input
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, CONFIG.DEBOUNCE_DELAY);
+    
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
 
-  // Filter patients
+  // Filter patients - using debounced search
   useEffect(() => {
     let filtered = [...patients];
 
-    // Apply search filter
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
+    // Apply search filter with debounced value
+    if (debouncedSearch.trim()) {
+      const query = debouncedSearch.toLowerCase();
       filtered = filtered.filter(patient => {
         const name = (patient.name || '').toLowerCase();
         const doctor = (patient.doctor || '').toLowerCase();
@@ -192,23 +263,26 @@ const Patients = () => {
       );
     }
 
-    // Apply gender filter
+    // Apply gender filter with proper case handling
     if (genderFilter !== 'All') {
-      filtered = filtered.filter(patient =>
-        patient.gender.toLowerCase() === genderFilter.toLowerCase()
-      );
+      filtered = filtered.filter(patient => {
+        const patientGender = (patient.gender || '').trim();
+        return patientGender.toLowerCase() === genderFilter.toLowerCase();
+      });
     }
 
-    // Apply age range filter
+    // Apply age range filter with fixed edge cases
     if (ageRangeFilter !== 'All') {
       filtered = filtered.filter(patient => {
-        const age = patient.age;
+        const age = patient.age || 0;
+        if (age < 0) return false; // Invalid age
+        
         switch (ageRangeFilter) {
-          case '0-18': return age >= 0 && age <= 18;
+          case '0-18': return age <= 18;
           case '19-35': return age >= 19 && age <= 35;
           case '36-50': return age >= 36 && age <= 50;
           case '51-65': return age >= 51 && age <= 65;
-          case '65+': return age > 65;
+          case '65+': return age >= 66; // Fixed: no overlap with 51-65
           default: return true;
         }
       });
@@ -216,34 +290,49 @@ const Patients = () => {
 
     setFilteredPatients(filtered);
     setCurrentPage(0); // Reset to first page
-  }, [searchQuery, doctorFilter, genderFilter, ageRangeFilter, patients]);
+  }, [debouncedSearch, doctorFilter, genderFilter, ageRangeFilter, patients]);
 
-  // Get unique doctors for filter
-  const uniqueDoctors = ['All', ...new Set(
-    patients
-      .map(patient => patient.doctor)
-      .filter(doctor => doctor && doctor.trim())
-  )];
+  // Get unique doctors for filter with proper IDs
+  const uniqueDoctors = useMemo(() => {
+    const doctorMap = new Map();
+    
+    patients.forEach(patient => {
+      if (patient.doctor && patient.doctor.trim()) {
+        const doctorName = patient.doctor;
+        if (!doctorMap.has(doctorName)) {
+          doctorMap.set(doctorName, {
+            id: patient.doctorId || doctorName,
+            name: doctorName
+          });
+        }
+      }
+    });
+    
+    const doctors = Array.from(doctorMap.values());
+    return ['All', ...doctors.map(d => d.name)];
+  }, [patients]);
 
   // Age range options
   const ageRanges = ['All', '0-18', '19-35', '36-50', '51-65', '65+'];
 
   // Clear all filters
-  const clearAllFilters = () => {
+  const clearAllFilters = useCallback(() => {
     setSearchQuery('');
+    setDebouncedSearch('');
     setDoctorFilter('All');
     setGenderFilter('All');
     setAgeRangeFilter('All');
     setShowAdvancedFilters(false);
-  };
-
-
+  }, []);
 
   // Check if any filter is active
-  const hasActiveFilters = searchQuery ||
+  const hasActiveFilters = useMemo(() => 
+    searchQuery ||
     doctorFilter !== 'All' ||
     genderFilter !== 'All' ||
-    ageRangeFilter !== 'All';
+    ageRangeFilter !== 'All',
+    [searchQuery, doctorFilter, genderFilter, ageRangeFilter]
+  );
 
   // Pagination
   const startIndex = currentPage * itemsPerPage;
@@ -251,131 +340,464 @@ const Patients = () => {
   const paginatedPatients = filteredPatients.slice(startIndex, endIndex);
   const totalPages = Math.ceil(filteredPatients.length / itemsPerPage);
 
-  // Handlers
-  const handleSearchChange = (e) => {
+  // Handlers - memoized for performance
+  const handleSearchChange = useCallback((e) => {
     setSearchQuery(e.target.value);
-  };
+  }, []);
 
-  const handlePreviousPage = () => {
+  const handlePreviousPage = useCallback(() => {
     if (currentPage > 0) {
       setCurrentPage(prev => prev - 1);
     }
-  };
+  }, [currentPage]);
 
-  const handleNextPage = () => {
+  const handleNextPage = useCallback(() => {
     if (currentPage < totalPages - 1) {
       setCurrentPage(prev => prev + 1);
     }
-  };
+  }, [currentPage, totalPages]);
 
-  const handleAdd = () => {
-    setSelectedPatientId(null);
-    setIsAddPatientOpen(true);
-  };
+  const handleAdd = useCallback(() => {
+    setActiveModal('add');
+    setModalData(null);
+  }, []);
 
-  const [viewAppointmentId, setViewAppointmentId] = useState(null);
-  const [showAppointmentView, setShowAppointmentView] = useState(false);
-
-  const handleView = async (patient) => {
+  const handleView = useCallback(async (patient) => {
+    // Cancel any pending requests
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    
+    abortControllerRef.current = new AbortController();
+    setLoadingPatientId(patient.id);
+    
     try {
       const fullPatient = await patientsService.fetchPatientById(patient.id);
-      console.log('View patient:', fullPatient);
-      setSelectedPatient(fullPatient);
-      setShowPatientDialog(true);
+      
+      if (process.env.NODE_ENV === 'development') {
+        console.log('View patient:', fullPatient);
+      }
+      
+      setActiveModal('view');
+      setModalData(fullPatient);
     } catch (error) {
+      if (error.name === 'AbortError') {
+        console.log('Request cancelled');
+        return;
+      }
       console.error('Failed to fetch patient details:', error);
-      alert('Failed to load patient details: ' + error.message);
+      toast.error('Failed to load patient details: ' + error.message);
+    } finally {
+      setLoadingPatientId(null);
+      abortControllerRef.current = null;
     }
-  };
+  }, []);
 
-  const handleClosePatientDialog = () => {
-    setShowPatientDialog(false);
-    setSelectedPatient(null);
-  };
-
-  const handleEdit = async (patient) => {
+  const handleEdit = useCallback(async (patient) => {
+    // Cancel any pending requests
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    
+    abortControllerRef.current = new AbortController();
+    setLoadingPatientId(patient.id);
+    
     try {
       const fullPatient = await patientsService.fetchPatientById(patient.id);
-      console.log('Edit patient:', fullPatient);
-      setPatientToEdit(fullPatient);
-      setIsEditPatientOpen(true);
+      
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Edit patient:', fullPatient);
+      }
+      
+      setActiveModal('edit');
+      setModalData(fullPatient);
     } catch (error) {
+      if (error.name === 'AbortError') {
+        console.log('Request cancelled');
+        return;
+      }
       console.error('Failed to fetch patient details:', error);
-      alert('Failed to load patient details: ' + error.message);
+      toast.error('Failed to load patient details: ' + error.message);
+    } finally {
+      setLoadingPatientId(null);
+      abortControllerRef.current = null;
     }
-  };
+  }, []);
 
-  const handleDelete = async (patient) => {
-    const confirmed = window.confirm(
-      `Delete patient ${patient.name}?`
-    );
+  const handleDelete = useCallback(async (patient, retryCount = 0) => {
+    if (!patient || !patient.id) {
+      toast.error('Invalid patient data');
+      return;
+    }
 
-    if (!confirmed) return;
+    // Only show confirmation on first attempt, not on retries
+    if (retryCount === 0) {
+      const confirmed = window.confirm(
+        `Are you sure you want to delete patient ${patient.name}?\n\nThis action cannot be undone.`
+      );
+
+      if (!confirmed) return;
+    }
+
+    // Show which patient is being deleted
+    console.log(`Attempting to delete patient (attempt ${retryCount + 1}):`, {
+      id: patient.id,
+      name: patient.name,
+      patientId: patient.patientId
+    });
+
+    // Store original data for rollback (only on first attempt)
+    const originalPatients = retryCount === 0 ? [...patients] : null;
+    const originalFiltered = retryCount === 0 ? [...filteredPatients] : null;
 
     try {
       setIsLoading(true);
-      await patientsService.deletePatient(patient.id);
-      console.log('✅ Deleted patient:', patient.id);
-      alert(`Deleted patient ${patient.name}`);
-      await fetchPatients(); // Refresh list
+      
+      // Optimistic update - remove from UI immediately (only on first attempt)
+      if (retryCount === 0) {
+        setPatients(prev => prev.filter(p => p.id !== patient.id));
+        setFilteredPatients(prev => prev.filter(p => p.id !== patient.id));
+      }
+      
+      // Attempt to delete from backend
+      const result = await patientsService.deletePatient(patient.id);
+      
+      console.log('Delete result:', result);
+
+      if (process.env.NODE_ENV === 'development') {
+        console.log('✅ Deleted patient:', patient.id);
+      }
+
+      toast.success(`Successfully deleted patient: ${patient.name}`);
+
+      // Reset to first page
+      setCurrentPage(0);
+      
+      // Refresh patient list from backend to ensure sync
+      await fetchPatients();
+      
     } catch (error) {
-      console.error('❌ Failed to delete patient:', error);
-      alert('Failed to delete patient: ' + error.message);
+      console.error(`❌ Failed to delete patient (attempt ${retryCount + 1}):`, {
+        error: error,
+        message: error.message,
+        response: error.response?.data,
+        patientId: patient.id
+      });
+      
+      // Rollback on error (if we have original data)
+      if (originalPatients && originalFiltered) {
+        setPatients(originalPatients);
+        setFilteredPatients(originalFiltered);
+      }
+      
+      const errorMessage = error.response?.data?.message 
+        || error.message 
+        || 'Failed to delete patient';
+      
+      // Retry logic - max 3 attempts with exponential backoff
+      const maxRetries = 2;
+      if (retryCount < maxRetries) {
+        const retryDelay = Math.pow(2, retryCount) * 1000; // 1s, 2s, 4s
+        
+        toast.error(`${errorMessage}. Retrying in ${retryDelay / 1000} seconds... (${retryCount + 1}/${maxRetries})`);
+        
+        setTimeout(() => {
+          handleDelete(patient, retryCount + 1);
+        }, retryDelay);
+      } else {
+        // Final failure after all retries
+        toast.error(`Delete failed after ${maxRetries + 1} attempts: ${errorMessage}`);
+        
+        // Offer manual retry option
+        const retry = window.confirm(
+          `Failed to delete patient ${patient.name} after multiple attempts.\n\nWould you like to try again?`
+        );
+        
+        if (retry) {
+          handleDelete(patient, 0); // Start fresh
+        } else {
+          // Ensure we refresh to show accurate data
+          await fetchPatients();
+        }
+      }
+    } finally {
       setIsLoading(false);
     }
-  };
+  }, [fetchPatients, patients, filteredPatients]);
 
-  const handleDownload = async (patient) => {
-    setIsDownloading(true);
+  const handleDownload = useCallback(async (patient) => {
+    // Add patient ID to downloading set
+    setDownloadingPatients(prev => new Set(prev).add(patient.id));
+    
     try {
       const result = await patientsService.downloadPatientReport(patient.id);
       if (result.success) {
-        alert(result.message || 'Report downloaded successfully');
+        toast.success(result.message || 'Report downloaded successfully');
       } else {
-        alert(result.message || 'Failed to download report');
+        toast.error(result.message || 'Failed to download report');
       }
     } catch (error) {
       console.error('❌ Failed to download report:', error);
-      alert('Error: ' + error.message);
+      toast.error('Error: ' + error.message);
     } finally {
-      setIsDownloading(false);
+      // Remove patient ID from downloading set
+      setDownloadingPatients(prev => {
+        const next = new Set(prev);
+        next.delete(patient.id);
+        return next;
+      });
     }
-  };
+  }, []);
+  
+  // Modal close handler
+  const handleCloseModal = useCallback(() => {
+    setActiveModal(null);
+    setModalData(null);
+  }, []);
 
-  // Handle Follow-Up
-  const handleFollowUp = (patient) => {
-    setSelectedPatientForFollowUp(patient);
-    setShowFollowUpDialog(true);
-  };
+  // Modal success handler
+  const handleModalSuccess = useCallback(async () => {
+    setCurrentPage(0);
+    await fetchPatients();
+    handleCloseModal();
+  }, [fetchPatients, handleCloseModal]);
 
-  const handleFollowUpSubmit = async (followUpData) => {
+  // Doctor dialog handlers - Match Appointments page implementation with robust fallbacks
+  const handleDoctorClick = async (patient) => {
     try {
-      await patientsService.createFollowUp(selectedPatientForFollowUp.id, followUpData);
-      alert('Follow-up scheduled successfully');
-      setShowFollowUpDialog(false);
-      setSelectedPatientForFollowUp(null);
-      await fetchPatients();
+      console.log('🔍 [handleDoctorClick] Patient data:', patient);
+
+      let doctorData = null;
+
+      // Strategy 1: Check if we have the doctor object stored in memory
+      const fullPatient = patients.find(p => p.id === patient.id);
+      if (fullPatient?.doctorObj && typeof fullPatient.doctorObj === 'object') {
+        doctorData = fullPatient.doctorObj;
+        console.log('✅ Found doctor data from stored doctorObj:', doctorData);
+      }
+
+      // Strategy 2: Try fetching fresh patient data with populated doctor
+      if (!doctorData) {
+        try {
+          const freshPatientData = await patientsService.fetchPatientById(patient.id);
+          console.log('📋 Fresh patient data:', freshPatientData);
+          
+          // Check if doctor field is populated as object
+          if (freshPatientData.doctor && typeof freshPatientData.doctor === 'object') {
+            doctorData = freshPatientData.doctor;
+            console.log('✅ Found doctor data from fresh patient.doctor:', doctorData);
+          }
+        } catch (err) {
+          console.warn('⚠️ Could not fetch fresh patient data:', err);
+        }
+      }
+
+      // Strategy 3: If doctor is just an ID string, fetch all patients with populated data
+      if (!doctorData && patient.doctorId) {
+        try {
+          console.log('🔄 Attempting to fetch all patients with populated doctor field...');
+          const allPatients = await patientsService.fetchPatients({ limit: 1000 });
+          const patientWithDoctor = allPatients.find(p => 
+            (p.id === patient.id || p._id === patient.id) && 
+            p.doctor && 
+            typeof p.doctor === 'object'
+          );
+          
+          if (patientWithDoctor?.doctor) {
+            doctorData = patientWithDoctor.doctor;
+            console.log('✅ Found doctor data from all patients fetch:', doctorData);
+          }
+        } catch (err) {
+          console.warn('⚠️ Could not fetch all patients:', err);
+        }
+      }
+
+      // Strategy 4: Try fetching doctor directly by ID using staff/doctor API
+      if (!doctorData && patient.doctorId && patient.doctorId !== 'Not Assigned') {
+        try {
+          console.log('🔄 Attempting to fetch doctor directly by ID:', patient.doctorId);
+          const axiosInstance = axios.create({
+            baseURL: process.env.REACT_APP_API_URL || 'https://hms-dev.onrender.com/api',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-auth-token': localStorage.getItem('x-auth-token') || localStorage.getItem('authToken')
+            }
+          });
+          
+          // Try staff endpoint first (doctors are staff members)
+          try {
+            const response = await axiosInstance.get(`/staff/${patient.doctorId}`);
+            doctorData = response.data.staff || response.data.data || response.data;
+            console.log('✅ Found doctor data from staff API:', doctorData);
+          } catch (staffErr) {
+            // Fallback to doctors endpoint
+            console.log('⚠️ Staff API failed, trying doctors endpoint...');
+            const response = await axiosInstance.get(`/doctors/${patient.doctorId}`);
+            doctorData = response.data.doctor || response.data.data || response.data;
+            console.log('✅ Found doctor data from doctors API:', doctorData);
+          }
+        } catch (err) {
+          console.warn('⚠️ Could not fetch doctor by ID:', err);
+        }
+      }
+
+      // Strategy 5: Search staff by name if we have doctor name
+      if (!doctorData && patient.doctor && patient.doctor !== 'Not Assigned') {
+        try {
+          console.log('🔄 Attempting to search staff by name:', patient.doctor);
+          const axiosInstance = axios.create({
+            baseURL: process.env.REACT_APP_API_URL || 'https://hms-dev.onrender.com/api',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-auth-token': localStorage.getItem('x-auth-token') || localStorage.getItem('authToken')
+            }
+          });
+          
+          // Search staff by name
+          const response = await axiosInstance.get(`/staff?search=${encodeURIComponent(patient.doctor)}`);
+          const staffList = response.data.staff || response.data.data || response.data || [];
+          
+          // Find exact or partial match
+          const matchedStaff = staffList.find(s => {
+            const fullName = `${s.firstName || ''} ${s.lastName || ''}`.trim();
+            const name = s.name || fullName;
+            return name === patient.doctor || 
+                   name.toLowerCase() === patient.doctor.toLowerCase() ||
+                   fullName === patient.doctor ||
+                   fullName.toLowerCase() === patient.doctor.toLowerCase();
+          });
+          
+          if (matchedStaff) {
+            doctorData = matchedStaff;
+            console.log('✅ Found doctor data from staff search by name:', doctorData);
+          }
+        } catch (err) {
+          console.warn('⚠️ Could not search staff by name:', err);
+        }
+      }
+
+      // Strategy 6: Get ALL staff and search in memory
+      if (!doctorData && patient.doctor && patient.doctor !== 'Not Assigned') {
+        try {
+          console.log('🔄 Fetching all staff to search by name...');
+          const axiosInstance = axios.create({
+            baseURL: process.env.REACT_APP_API_URL || 'https://hms-dev.onrender.com/api',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-auth-token': localStorage.getItem('x-auth-token') || localStorage.getItem('authToken')
+            }
+          });
+          
+          const response = await axiosInstance.get('/staff');
+          const allStaff = response.data.staff || response.data.data || response.data || [];
+          
+          // Search for doctor in all staff
+          const matchedStaff = allStaff.find(s => {
+            const fullName = `${s.firstName || ''} ${s.lastName || ''}`.trim();
+            const name = s.name || fullName;
+            
+            // Try multiple matching strategies
+            return name === patient.doctor || 
+                   name.toLowerCase() === patient.doctor.toLowerCase() ||
+                   fullName === patient.doctor ||
+                   fullName.toLowerCase() === patient.doctor.toLowerCase() ||
+                   name.includes(patient.doctor) ||
+                   patient.doctor.includes(name);
+          });
+          
+          if (matchedStaff) {
+            doctorData = matchedStaff;
+            console.log('✅ Found doctor data from all staff list:', doctorData);
+          }
+        } catch (err) {
+          console.warn('⚠️ Could not fetch all staff:', err);
+        }
+      }
+
+      if (!doctorData || typeof doctorData !== 'object') {
+        console.error('❌ Could not extract doctor data after all strategies');
+        console.error('Patient data:', patient);
+        console.error('Doctor ID:', patient.doctorId);
+        console.error('Doctor name:', patient.doctor);
+        alert(`Unable to load doctor details for "${patient.doctor}". The doctor may not exist in the system or the doctor ID is invalid.`);
+        return;
+      }
+
+      // Transform doctor data to match Staff model format expected by StaffDetailEnterprise
+      // This matches the exact transformation in Appointments.jsx (lines 777-797)
+      const staffDetails = {
+        id: doctorData._id || doctorData.id || patient.doctorId,
+        _id: doctorData._id || doctorData.id || patient.doctorId,
+        name: `${doctorData.firstName || ''} ${doctorData.lastName || ''}`.trim() || doctorData.name || patient.doctor,
+        firstName: doctorData.firstName,
+        lastName: doctorData.lastName,
+        email: doctorData.email,
+        contact: doctorData.phone || doctorData.contact,
+        phone: doctorData.phone || doctorData.contact,
+        gender: doctorData.gender,
+        designation: doctorData.role || doctorData.designation || 'Doctor',
+        department: doctorData.department || 'Medical',
+        status: doctorData.status || 'Active',
+        joinDate: doctorData.joinDate || doctorData.createdAt,
+        address: doctorData.address,
+        salary: doctorData.salary,
+        notes: doctorData.notes,
+        tags: doctorData.tags,
+        metadata: doctorData.metadata,
+        ...doctorData // Spread any additional fields
+      };
+
+      console.log('✅ Transformed staff details:', staffDetails);
+
+      setSelectedDoctor(staffDetails);
+      setShowDoctorDialog(true);
     } catch (error) {
-      console.error('❌ Failed to create follow-up:', error);
-      alert('Failed to schedule follow-up: ' + error.message);
+      console.error('❌ Error loading doctor details:', error);
+      alert('Failed to load doctor details: ' + error.message);
     }
   };
 
-  // Reload handler
-  const handleReload = () => {
-    fetchPatients();
+  const handleCloseDoctorDialog = () => {
+    setShowDoctorDialog(false);
+    setSelectedDoctor(null);
   };
 
-  // Format date
-  const formatLastVisit = (dateString) => {
-    if (!dateString) return '';
+  // Format date with proper validation
+  const formatLastVisit = useCallback((dateString) => {
+    if (!dateString) return 'N/A';
+    
     try {
       const date = new Date(dateString);
+      
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        return 'Invalid date';
+      }
+      
       return date.toLocaleDateString('en-GB'); // dd/mm/yyyy
     } catch (error) {
-      return dateString;
+      console.error('Date formatting error:', error);
+      return 'Invalid date';
     }
-  };
+  }, []);
+  
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyPress = (e) => {
+      // Only handle if no modal is open
+      if (activeModal) return;
+      
+      if (e.key === 'ArrowLeft' && currentPage > 0) {
+        handlePreviousPage();
+      }
+      if (e.key === 'ArrowRight' && currentPage < totalPages - 1) {
+        handleNextPage();
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [currentPage, totalPages, activeModal, handlePreviousPage, handleNextPage]);
 
   return (
     <div className="dashboard-container">
@@ -386,27 +808,6 @@ const Patients = () => {
           <p className="main-subtitle">Manage patient records, medical history, and appointments.</p>
         </div>
         <div style={{ display: 'flex', gap: '12px' }}>
-          <button 
-            className="btn-reload" 
-            onClick={handleReload} 
-            disabled={isLoading}
-            title="Reload Patients"
-            style={{
-              padding: '10px 20px',
-              backgroundColor: '#f0f0f0',
-              border: '1px solid #ddd',
-              borderRadius: '8px',
-              cursor: isLoading ? 'not-allowed' : 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              fontWeight: '500',
-              opacity: isLoading ? 0.6 : 1
-            }}
-          >
-            <MdRefresh size={18} style={{ animation: isLoading ? 'spin 1s linear infinite' : 'none' }} />
-            {isLoading ? 'Loading...' : 'Reload'}
-          </button>
           <button className="btn-new-appointment" onClick={handleAdd}>
             <span>+</span> New Patient
           </button>
@@ -512,14 +913,14 @@ const Patients = () => {
               </tr>
             </thead>
             <tbody>
-              {paginatedPatients.map((patient, index) => {
+              {paginatedPatients.map((patient) => {
                 const genderStr = (patient.gender || '').toLowerCase().trim();
                 const avatarSrc = genderStr.includes('female') || genderStr.startsWith('f')
                   ? '/girlicon.png'
                   : '/boyicon.png';
 
                 return (
-                  <tr key={patient.id || index}>
+                  <tr key={patient.id}>
                     {/* PATIENT COLUMN */}
                     <td className="cell-patient">
                       <img
@@ -546,13 +947,21 @@ const Patients = () => {
                       </div>
                     </td>
 
-                    {/* DOCTOR */}
+                    {/* DOCTOR - Match Appointments page style */}
                     <td>
                       <div className="cell-doctor">
-                        <div className="doc-avatar-sm">
-                          <Icons.Doctor />
-                        </div>
-                        <span className="font-medium">{patient.doctor || 'Not Assigned'}</span>
+                        <img
+                          src={patient.doctorGender === 'Female' ? doctorFemaleIcon : doctorMaleIcon}
+                          alt={patient.doctor}
+                          className="patient-avatar"
+                          style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }}
+                        />
+                        <span
+                          className="doctor-name-clickable"
+                          onClick={() => handleDoctorClick(patient)}
+                        >
+                          {patient.doctor || 'Not Assigned'}
+                        </span>
                       </div>
                     </td>
 
@@ -562,20 +971,41 @@ const Patients = () => {
                     {/* ACTIONS */}
                     <td>
                       <div className="action-buttons-group">
-                        <button className="btn-action view" title="View" onClick={() => handleView(patient)}>
-                          <Icons.Eye />
+                        <button 
+                          className="btn-action view" 
+                          title="View patient details"
+                          aria-label={`View details for ${patient.name}`}
+                          onClick={() => handleView(patient)}
+                          disabled={loadingPatientId === patient.id}
+                        >
+                          {loadingPatientId === patient.id ? '...' : <Icons.Eye />}
                         </button>
-                        <button className="btn-action edit" title="Edit" onClick={() => handleEdit(patient)}>
+                        <button 
+                          className="btn-action edit" 
+                          title="Edit patient"
+                          aria-label={`Edit ${patient.name}`}
+                          onClick={() => handleEdit(patient)}
+                          disabled={loadingPatientId === patient.id}
+                        >
                           <Icons.Edit />
                         </button>
-                        <button className="btn-action followup" title="Follow Up" onClick={() => handleFollowUp(patient)} style={{ backgroundColor: '#10b981', color: 'white' }}>
-                          <Icons.Calendar />
-                        </button>
-                        <button className="btn-action delete" title="Delete" onClick={() => handleDelete(patient)}>
+                        <button 
+                          className="btn-action delete" 
+                          title="Delete patient"
+                          aria-label={`Delete ${patient.name}`}
+                          onClick={() => handleDelete(patient)}
+                          disabled={isLoading}
+                        >
                           <Icons.Delete />
                         </button>
-                        <button className="btn-action download" title="Download" onClick={() => handleDownload(patient)} disabled={isDownloading}>
-                          <Icons.Download />
+                        <button 
+                          className="btn-action download" 
+                          title="Download report"
+                          aria-label={`Download report for ${patient.name}`}
+                          onClick={() => handleDownload(patient)} 
+                          disabled={downloadingPatients.has(patient.id)}
+                        >
+                          {downloadingPatients.has(patient.id) ? '...' : <Icons.Download />}
                         </button>
                       </div>
                     </td>
@@ -626,74 +1056,45 @@ const Patients = () => {
           </button>
         </div>
       </div>
-      {/* Add Patient Modal */}
-      {isAddPatientOpen && (
+      {/* Modals - Single state management */}
+      {activeModal === 'add' && (
         <AddPatientModal
-          isOpen={isAddPatientOpen}
-          onClose={() => setIsAddPatientOpen(false)}
-          onSuccess={() => {
-            fetchPatients();
-            setIsAddPatientOpen(false);
-          }}
-          patientId={selectedPatientId}
-        />
-      )}
-      {/* Reusing Appointment View Modal */}
-      {showAppointmentView && (viewAppointmentId || viewPatientId) && (
-        <AppointmentViewModal
-          isOpen={showAppointmentView}
-          onClose={() => {
-            setShowAppointmentView(false);
-            setViewAppointmentId(null);
-            setViewPatientId(null);
-          }}
-          appointmentId={viewAppointmentId} // Will be null for pure patient view
-          patientId={viewPatientId} // Pass patient ID for pure patient view
-          onEdit={() => {
-            // Optional: Handle edit from within the view if needed, or leave empty
-            setShowAppointmentView(false);
-            // handleEdit(patient) - we'd need the patient object back, effectively we are just closing for now
-          }}
+          isOpen={true}
+          onClose={handleCloseModal}
+          onSuccess={handleModalSuccess}
+          patientId={null}
         />
       )}
 
-      {/* Patient Details Dialog */}
-      {showPatientDialog && selectedPatient && (
+      {activeModal === 'view' && modalData && (
         <PatientDetailsDialog
-          patient={selectedPatient}
-          isOpen={showPatientDialog}
-          onClose={handleClosePatientDialog}
+          patient={modalData}
+          isOpen={true}
+          onClose={handleCloseModal}
           showBillingTab={true}
         />
       )}
 
-      {/* Edit Patient Modal */}
-      {isEditPatientOpen && patientToEdit && (
+      {activeModal === 'edit' && modalData && (
         <EditPatientModal
-          patient={patientToEdit}
-          isOpen={isEditPatientOpen}
-          onClose={() => {
-            setIsEditPatientOpen(false);
-            setPatientToEdit(null);
-          }}
-          onSuccess={() => {
-            fetchPatients();
-            setIsEditPatientOpen(false);
-            setPatientToEdit(null);
-          }}
+          patient={modalData}
+          isOpen={true}
+          onClose={handleCloseModal}
+          onSuccess={handleModalSuccess}
         />
       )}
 
-      {/* Follow-Up Dialog */}
-      {showFollowUpDialog && selectedPatientForFollowUp && (
-        <FollowUpDialog
-          isOpen={showFollowUpDialog}
-          patient={selectedPatientForFollowUp}
-          onClose={() => {
-            setShowFollowUpDialog(false);
-            setSelectedPatientForFollowUp(null);
+      {/* Staff Detail Dialog - Show doctor/staff details (same as Appointments page) */}
+      {showDoctorDialog && selectedDoctor && (
+        <StaffDetailEnterprise
+          staffId={selectedDoctor.id || selectedDoctor._id}
+          initial={selectedDoctor}
+          onClose={handleCloseDoctorDialog}
+          onUpdate={(updatedStaff) => {
+            console.log('Doctor updated:', updatedStaff);
+            handleCloseDoctorDialog();
+            fetchPatients(); // Refresh patient list
           }}
-          onSubmit={handleFollowUpSubmit}
         />
       )}
     </div>

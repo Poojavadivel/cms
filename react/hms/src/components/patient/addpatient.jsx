@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
     MdClose,
     MdPerson,
@@ -17,16 +17,53 @@ import {
   FiUser, FiPhone, FiHeart, FiActivity, FiCheck, FiX, FiAlertCircle, FiArrowRight
 } from 'react-icons/fi';
 import patientsService from '../../services/patientsService';
+import doctorService from '../../services/doctorService';
+import scannerService from '../../services/scannerService';
 import './addpatient.css';
+
+// Move InputGroup OUTSIDE the component to prevent recreation on every render
+const InputGroup = ({ label, error, required, children, className = '' }) => (
+    <div className={`group relative ${className}`}>
+        <div className={`
+            border rounded-xl transition-all duration-200 bg-white
+            ${error ? 'border-red-500 ring-2 ring-red-100' : 'border-slate-200 group-focus-within:border-blue-400 group-focus-within:ring-2 group-focus-within:ring-blue-100'}
+        `}>
+            <label className="absolute top-2 left-3 text-[10px] uppercase tracking-wider font-bold text-slate-400 pointer-events-none">
+                {label} {required && <span className="text-red-500">*</span>}
+            </label>
+            <div className="pt-6 pb-2 px-3">
+                {children}
+            </div>
+        </div>
+    </div>
+);
 
 const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
     // --- State ---
     const [currentStep, setCurrentStep] = useState(0);
     const [loading, setLoading] = useState(false);
+    const [fetchingData, setFetchingData] = useState(false);
+    const [errors, setErrors] = useState({});
+    const [fieldErrors, setFieldErrors] = useState({});
+    
+    // NEW: Doctor dropdown state
+    const [doctors, setDoctors] = useState([]);
+    const [loadingDoctors, setLoadingDoctors] = useState(false);
+    
+    // NEW: File upload and scanner state
+    const [uploadedFiles, setUploadedFiles] = useState([]);
+    const [uploading, setUploading] = useState(false);
+    const [scannerError, setScannerError] = useState(null);
+    const [scannedData, setScannedData] = useState(null);
+    
+    // Generate temp patient ID for linking documents during creation
+    const [tempPatientId] = useState(`temp-${Math.floor(Math.random() * 999999)}`);
+    
     const [formData, setFormData] = useState({
         // Step 1: Personal
         firstName: '',
         lastName: '',
+        dateOfBirth: '', // NEW: Date of birth
         age: '',
         gender: '', // 'Male', 'Female', 'Other'
         bloodGroup: '',
@@ -40,129 +77,275 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
         street: '',
         city: '',
         state: '',
+        pincode: '', // NEW: Pincode/Zipcode
+        country: 'India', // NEW: Country field
 
         // Step 3: Medical
-        knownConditions: '', // Comma spread later if needed, or keeping as string
+        assignedDoctor: '', // NEW: Doctor assignment
+        knownConditions: '',
         allergies: '',
         currentMedications: '',
         pastSurgeries: '',
         notes: '',
+        lastVisit: '', // NEW: Last visit date
 
         // Step 4: Vitals
         height: '',
         weight: '',
         bmi: '',
-        bp: '', // systolic/diastolic
+        bp: '',
         pulse: '',
-        spo2: ''
+        spo2: '',
+        
+        // Step 5: Insurance (NEW)
+        insuranceNumber: '',
+        insuranceProvider: '',
+        insuranceExpiry: ''
     });
 
     // Reset form when modal opens
-    // Reset or Fetch when modal opens
     useEffect(() => {
         if (isOpen) {
             setCurrentStep(0);
             setLoading(false);
+            setFetchingData(false);
+            setErrors({});
+            setFieldErrors({});
+            setUploadedFiles([]);
+            setScannerError(null);
+            setScannedData(null);
 
             const initialData = {
-                firstName: '', lastName: '', age: '', gender: '', bloodGroup: '',
+                firstName: '', lastName: '', dateOfBirth: '', age: '', gender: '', bloodGroup: '',
                 phone: '', email: '', emergencyContactName: '', emergencyContactPhone: '',
-                houseNo: '', street: '', city: '', state: '',
-                knownConditions: '', allergies: '', currentMedications: '', pastSurgeries: '', notes: '',
-                height: '', weight: '', bmi: '', bp: '', pulse: '', spo2: ''
+                houseNo: '', street: '', city: '', state: '', pincode: '', country: 'India',
+                assignedDoctor: '', knownConditions: '', allergies: '', currentMedications: '', 
+                pastSurgeries: '', notes: '', lastVisit: '',
+                height: '', weight: '', bmi: '', bp: '', pulse: '', spo2: '',
+                insuranceNumber: '', insuranceProvider: '', insuranceExpiry: ''
             };
 
             if (patientId) {
                 // Edit Mode: Fetch and Fill
-                // We'll set a local loading flag or just rely on async update
+                setFetchingData(true);
                 patientsService.fetchPatientById(patientId).then(patient => {
                     setFormData({
                         firstName: patient.firstName || (patient.name ? patient.name.split(' ')[0] : ''),
                         lastName: patient.lastName || (patient.name ? patient.name.split(' ').slice(1).join(' ') : ''),
-                        age: patient.age || '',
+                        dateOfBirth: patient.dateOfBirth || patient.dob || '',
+                        age: patient.age?.toString() || '',
                         gender: patient.gender || '',
                         bloodGroup: patient.bloodGroup || '',
                         phone: patient.phone || '',
-                        email: '', // Not currently in PatientDetails model
-                        emergencyContactName: patient.emergencyContactName || '',
-                        emergencyContactPhone: patient.emergencyContactPhone || '',
-                        houseNo: patient.houseNo || '',
-                        street: patient.street || '',
-                        city: patient.city || '',
-                        state: patient.state || '',
+                        email: patient.email || '',
+                        emergencyContactName: patient.emergencyContactName || patient.metadata?.emergencyContactName || '',
+                        emergencyContactPhone: patient.emergencyContactPhone || patient.metadata?.emergencyContactPhone || '',
+                        houseNo: patient.address?.houseNo || patient.houseNo || '',
+                        street: patient.address?.street || patient.street || '',
+                        city: patient.address?.city || patient.city || '',
+                        state: patient.address?.state || patient.state || '',
+                        pincode: patient.address?.pincode || patient.pincode || '',
+                        country: patient.address?.country || patient.country || 'India',
+                        assignedDoctor: patient.assignedDoctor || patient.doctorId || '',
                         knownConditions: Array.isArray(patient.medicalHistory) ? patient.medicalHistory.join(', ') : (patient.medicalHistory || ''),
                         allergies: Array.isArray(patient.allergies) ? patient.allergies.join(', ') : (patient.allergies || ''),
-                        currentMedications: '', // Not in model
-                        pastSurgeries: '', // Not in model
+                        currentMedications: patient.currentMedications || patient.metadata?.prescriptions || '',
+                        pastSurgeries: patient.pastSurgeries || '',
                         notes: patient.notes || '',
-                        height: patient.height || '',
-                        weight: patient.weight || '',
-                        bmi: patient.bmi || '',
-                        bp: patient.bp || '',
-                        pulse: patient.pulse || '',
-                        spo2: patient.oxygen || '' // Mapped from spo2 in model to oxygen
+                        lastVisit: patient.lastVisit || '',
+                        height: patient.vitals?.heightCm || patient.height || '',
+                        weight: patient.vitals?.weightKg || patient.weight || '',
+                        bmi: patient.vitals?.bmi || patient.bmi || '',
+                        bp: patient.vitals?.bp || patient.bp || '',
+                        pulse: patient.vitals?.pulse || patient.pulse || '',
+                        spo2: patient.vitals?.spo2 || patient.oxygen || '',
+                        insuranceNumber: patient.insuranceNumber || patient.metadata?.insuranceNumber || '',
+                        insuranceProvider: patient.insuranceProvider || patient.metadata?.insuranceProvider || '',
+                        insuranceExpiry: patient.insuranceExpiry || patient.metadata?.insuranceExpiry || ''
                     });
+                    setFetchingData(false);
                 }).catch(error => {
                     console.error('Failed to fetch patient details for edit:', error);
                     alert('Failed to load patient details');
+                    setFetchingData(false);
                     onClose();
                 });
             } else {
                 // Add Mode: Reset
                 setFormData(initialData);
             }
+            
+            // Fetch doctors list
+            fetchDoctors();
         }
-    }, [isOpen, patientId]);
+    }, [isOpen, patientId, onClose]);
+    
+    // ESC key handler for closing modal
+    useEffect(() => {
+        const handleEscape = (e) => {
+            if (e.key === 'Escape' && isOpen && !loading) {
+                onClose();
+            }
+        };
+        
+        document.addEventListener('keydown', handleEscape);
+        return () => document.removeEventListener('keydown', handleEscape);
+    }, [isOpen, loading, onClose]);
+    
+    // Fetch doctors for dropdown
+    const fetchDoctors = useCallback(async () => {
+        setLoadingDoctors(true);
+        try {
+            console.log('🔍 [DOCTOR DROPDOWN] Fetching doctors from API...');
+            
+            // Call real doctor service
+            const doctors = await doctorService.fetchAllDoctors();
+            
+            console.log(`✅ [DOCTOR DROPDOWN] Received ${doctors.length} doctors:`, doctors);
+            
+            setDoctors(doctors);
+        } catch (error) {
+            console.error('❌ [DOCTOR DROPDOWN] Failed to fetch doctors:', error);
+            
+            // Fallback to mock data if API fails (for development)
+            console.warn('⚠️ [DOCTOR DROPDOWN] Using mock data as fallback');
+            setDoctors([
+                { id: 'doc1', name: 'Dr. Sharma', specialization: 'General Medicine' },
+                { id: 'doc2', name: 'Dr. Patel', specialization: 'Cardiology' },
+                { id: 'doc3', name: 'Dr. Kumar', specialization: 'Pediatrics' }
+            ]);
+        } finally {
+            setLoadingDoctors(false);
+        }
+    }, []);
+    
+    // Validation helper functions
+    const validateEmail = useCallback((email) => {
+        if (!email) return true; // optional field
+        const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return re.test(email);
+    }, []);
+    
+    const validatePhone = useCallback((phone) => {
+        if (!phone) return false; // required field
+        const cleaned = phone.replace(/\D/g, '');
+        return cleaned.length >= 10;
+    }, []);
+    
+    const validateBP = useCallback((bp) => {
+        if (!bp) return true; // optional field
+        const re = /^\d{2,3}\/\d{2,3}$/;
+        return re.test(bp);
+    }, []);
+    
+    // Calculate age from date of birth
+    const calculateAge = useCallback((dob) => {
+        if (!dob) return '';
+        const birthDate = new Date(dob);
+        const today = new Date();
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+        
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+            age--;
+        }
+        
+        return age.toString();
+    }, []);
 
     // --- Logic ---
 
-    const handleInputChange = (e) => {
+    const handleInputChange = useCallback((e) => {
         const { name, value } = e.target;
+        
+        // Clear field error when user starts typing
+        if (fieldErrors[name]) {
+            setFieldErrors(prev => {
+                const updated = { ...prev };
+                delete updated[name];
+                return updated;
+            });
+        }
+        
         setFormData(prev => {
             const newData = { ...prev, [name]: value };
+            
+            // Auto-calculate age from DOB
+            if (name === 'dateOfBirth') {
+                newData.age = calculateAge(value);
+            }
 
-            // Auto-calculate BMI if height/weight change
+            // Auto-calculate BMI if height/weight change with validation
             if (name === 'height' || name === 'weight') {
                 const h = name === 'height' ? value : prev.height;
                 const w = name === 'weight' ? value : prev.weight;
-                if (h && w) {
-                    const heightM = h / 100;
-                    const bmi = (w / (heightM * heightM)).toFixed(1);
+                
+                // Only calculate if both values are positive numbers
+                if (h && w && parseFloat(h) > 0 && parseFloat(w) > 0) {
+                    const heightM = parseFloat(h) / 100;
+                    const bmi = (parseFloat(w) / (heightM * heightM)).toFixed(1);
                     newData.bmi = bmi;
+                } else {
+                    newData.bmi = '';
                 }
             }
+            
             return newData;
         });
-    };
+    }, [calculateAge, fieldErrors]);
 
-    const handleSelectGender = (gender) => {
+    const handleSelectGender = useCallback((gender) => {
         setFormData(prev => ({ ...prev, gender }));
-    };
+        
+        // Clear error
+        if (fieldErrors.gender) {
+            setFieldErrors(prev => {
+                const updated = { ...prev };
+                delete updated.gender;
+                return updated;
+            });
+        }
+    }, [fieldErrors]);
 
     const validateStep = () => {
-        // Basic validation for required fields
+        const newErrors = {};
+        
+        // Step 1: Personal Info
         if (currentStep === 0) {
-            return formData.firstName && formData.lastName && formData.age && formData.gender;
+            if (!formData.firstName?.trim()) newErrors.firstName = true;
+            if (!formData.lastName?.trim()) newErrors.lastName = true;
+            if (!formData.age) newErrors.age = true;
+            if (!formData.gender) newErrors.gender = true;
         }
+        
+        // Step 2: Contact
         if (currentStep === 1) {
-            return formData.phone && formData.city; // Minimal requirement
+            if (!formData.phone?.trim()) newErrors.phone = true;
+            if (!formData.city?.trim()) newErrors.city = true;
         }
-        return true; // Other steps optional
+        
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
     };
 
     const handleNext = () => {
         if (validateStep()) {
+            setErrors({}); // Clear errors on successful validation
             setCurrentStep(prev => prev + 1);
-        } else {
-            alert('Please fill in all required fields');
         }
     };
 
     const handleBack = () => {
+        setErrors({});
         setCurrentStep(prev => prev - 1);
     };
 
     const handleSubmit = async () => {
+        // Validate before submit
+        if (!validateStep()) {
+            return;
+        }
+        
         setLoading(true);
         try {
             // Basic validation strict check
@@ -179,6 +362,7 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                 lastName: formData.lastName || '',
                 // Combine for name if backend needs it (toJSON uses name property)
                 name: `${formData.firstName} ${formData.lastName || ''}`.trim(),
+                dateOfBirth: formData.dateOfBirth || null,
                 age: safeInt(formData.age),
                 gender: formData.gender || null,
                 bloodGroup: formData.bloodGroup || null,
@@ -190,8 +374,13 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                     street: formData.street || '',
                     city: formData.city || '',
                     state: formData.state || '',
+                    pincode: formData.pincode || '',
+                    country: formData.country || 'India',
                     line1: `${formData.houseNo || ''} ${formData.street || ''} ${formData.city || ''}`.trim()
                 },
+
+                doctorId: formData.assignedDoctor || null,
+                lastVisit: formData.lastVisit || null,
 
                 // Root level fields that match PatientDetails
                 allergies: formData.allergies ? formData.allergies.split(',').map(s => s.trim()) : [],
@@ -203,6 +392,9 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                     emergencyContactPhone: formData.emergencyContactPhone,
                     medicalHistory: formData.knownConditions ? formData.knownConditions.split(',').map(s => s.trim()) : [],
                     prescriptions: formData.currentMedications ? formData.currentMedications.split(',').map(s => s.trim()) : [],
+                    insuranceNumber: formData.insuranceNumber || null,
+                    insuranceProvider: formData.insuranceProvider || null,
+                    insuranceExpiry: formData.insuranceExpiry || null,
                 },
 
                 // Vitals Object - Simplified to match PatientDetails.toJSON ('vitals' keys)
@@ -242,36 +434,84 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
         }
     };
 
+    // File upload handlers
+    const handleFileUpload = async (event) => {
+        const files = event.target.files;
+        if (!files || files.length === 0) return;
+
+        setUploading(true);
+        setScannerError(null);
+
+        try {
+            const file = files[0];
+            console.log('📤 Uploading file:', file.name);
+
+            // Use temp patient ID for new patients, real ID for editing
+            const patientIdForUpload = patientId || tempPatientId;
+
+            // Scan and extract data
+            const scannedResult = await scannerService.scanAndExtractMedicalData(file, patientIdForUpload);
+
+            console.log('✅ File scanned successfully:', scannedResult);
+
+            // Store scanned data
+            setScannedData(scannedResult);
+
+            // Auto-fill form fields if data was extracted
+            if (scannedResult.medicalHistory) {
+                const current = formData.knownConditions;
+                setFormData(prev => ({
+                    ...prev,
+                    knownConditions: current ? `${current}, ${scannedResult.medicalHistory}` : scannedResult.medicalHistory
+                }));
+            }
+
+            if (scannedResult.allergies) {
+                const current = formData.allergies;
+                setFormData(prev => ({
+                    ...prev,
+                    allergies: current ? `${current}, ${scannedResult.allergies}` : scannedResult.allergies
+                }));
+            }
+
+            if (scannedResult.medications) {
+                const current = formData.currentMedications;
+                setFormData(prev => ({
+                    ...prev,
+                    currentMedications: current ? `${current}, ${scannedResult.medications}` : scannedResult.medications
+                }));
+            }
+
+            // Add to uploaded files list
+            setUploadedFiles(prev => [...prev, { file, name: file.name, scannedResult }]);
+
+        } catch (error) {
+            console.error('❌ File upload error:', error);
+            setScannerError(error.message || 'Failed to process document');
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    const removeUploadedFile = (index) => {
+        setUploadedFiles(prev => prev.filter((_, i) => i !== index));
+        
+        // Clear scanned data if all files are removed
+        if (uploadedFiles.length === 1) {
+            setScannedData(null);
+        }
+    };
+
 
     // --- Render Steps ---
 
     const stepsConfig = [
         { id: 1, name: 'Personal Info', desc: 'Basic demographics', icon: <FiUser /> },
         { id: 2, name: 'Contact', desc: 'Address & emergency', icon: <FiPhone /> },
-        { id: 3, name: 'Medical History', desc: 'Conditions & allergies', icon: <FiHeart /> },
-        { id: 4, name: 'Vitals', desc: 'Height, weight, BP', icon: <FiActivity /> }
+        { id: 3, name: 'Medical History', desc: 'Conditions & doctor', icon: <FiHeart /> },
+        { id: 4, name: 'Vitals', desc: 'Height, weight, BP', icon: <FiActivity /> },
+        { id: 5, name: 'Insurance', desc: 'Insurance details', icon: <FiCheck /> }
     ];
-
-    const InputGroup = ({ label, error, children, className = '' }) => (
-        <div className={`group relative ${className}`}>
-            <div className={`
-                border rounded-xl transition-all duration-200 bg-white
-                ${error ? 'border-red-300 ring-2 ring-red-100' : 'border-slate-200 group-focus-within:border-blue-400 group-focus-within:ring-2 group-focus-within:ring-blue-100'}
-            `}>
-                <label className="absolute top-2 left-3 text-[10px] uppercase tracking-wider font-bold text-slate-400 pointer-events-none">
-                    {label}
-                </label>
-                <div className="pt-6 pb-2 px-3">
-                    {children}
-                </div>
-                {error && (
-                    <div className="absolute top-2 right-2 text-red-500">
-                        <FiAlertCircle size={14} />
-                    </div>
-                )}
-            </div>
-        </div>
-    );
 
     if (!isOpen) return null;
 
@@ -331,16 +571,32 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
 
                 {/* RIGHT CONTENT - FORM FOCUS */}
                 <div className="flex-1 flex flex-col relative bg-slate-50">
+                
+                    {/* Loading Overlay */}
+                    {fetchingData && (
+                        <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center z-50">
+                            <div className="text-center">
+                                <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                                <p className="text-slate-700 font-medium">Loading patient data...</p>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Context Header (Mobile/Compact) */}
                     <div className="md:hidden p-4 border-b border-slate-200 bg-white flex justify-between items-center">
-                        <span className="text-slate-800 font-bold">Step {currentStep + 1}/4</span>
+                        <span className="text-slate-800 font-bold">Step {currentStep + 1}/5</span>
                         <button onClick={onClose} className="p-2 text-slate-500"><FiX /></button>
                     </div>
 
                     {/* Scrollable Form Area */}
                     <div className="flex-1 overflow-y-auto p-8 md:p-12 no-scrollbar">
-                        <form onSubmit={handleSubmit} className="max-w-2xl mx-auto space-y-8">
+                        <form 
+                            onSubmit={(e) => {
+                                e.preventDefault();
+                                // Prevent auto-submit - user must click the button
+                            }} 
+                            className="max-w-2xl mx-auto space-y-8"
+                        >
                             {/* STEP 1: Personal Info */}
                             {currentStep === 0 && (
                                 <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-300 fade-in">
@@ -350,16 +606,54 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-4">
-                                        <InputGroup label="First Name" className="col-span-1">
-                                            <input name="firstName" value={formData.firstName} onChange={handleInputChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300 font-medium" placeholder="e.g. John" autoFocus />
+                                        <InputGroup label="First Name" error={fieldErrors.firstName} required className="col-span-1">
+                                            <input 
+                                                name="firstName" 
+                                                value={formData.firstName} 
+                                                onChange={handleInputChange} 
+                                                className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300 font-medium" 
+                                                placeholder="e.g. John" 
+                                            />
+                                            {fieldErrors.firstName && <span className="text-red-500 text-xs mt-1">{fieldErrors.firstName}</span>}
                                         </InputGroup>
 
-                                        <InputGroup label="Last Name" className="col-span-1">
-                                            <input name="lastName" value={formData.lastName} onChange={handleInputChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" placeholder="e.g. Doe" />
+                                        <InputGroup label="Last Name" error={fieldErrors.lastName} required className="col-span-1">
+                                            <input 
+                                                name="lastName" 
+                                                value={formData.lastName} 
+                                                onChange={handleInputChange} 
+                                                className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" 
+                                                placeholder="e.g. Doe" 
+                                            />
+                                            {fieldErrors.lastName && <span className="text-red-500 text-xs mt-1">{fieldErrors.lastName}</span>}
                                         </InputGroup>
 
-                                        <InputGroup label="Age">
-                                            <input type="number" name="age" value={formData.age} onChange={handleInputChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" placeholder="Age" min="1" max="120" />
+                                        <InputGroup label="Date of Birth" error={fieldErrors.dateOfBirth} required>
+                                            <input 
+                                                type="date" 
+                                                name="dateOfBirth" 
+                                                value={formData.dateOfBirth} 
+                                                onChange={handleInputChange} 
+                                                className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" 
+                                                max={new Date().toISOString().split('T')[0]}
+                                            />
+                                            {fieldErrors.dateOfBirth && <span className="text-red-500 text-xs mt-1">{fieldErrors.dateOfBirth}</span>}
+                                        </InputGroup>
+
+                                        <InputGroup label="Age" error={fieldErrors.age}>
+                                            <input 
+                                                type="number" 
+                                                name="age" 
+                                                value={formData.age} 
+                                                onChange={handleInputChange} 
+                                                className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" 
+                                                placeholder="Auto-calculated from DOB" 
+                                                min="1" 
+                                                max="120"
+                                                readOnly={formData.dateOfBirth !== ''}
+                                            />
+                                            {fieldErrors.age && <span className="text-red-500 text-xs mt-1">{fieldErrors.age}</span>}
+                                            {formData.dateOfBirth && <span className="text-blue-500 text-xs mt-1">Auto-calculated from DOB</span>}
                                         </InputGroup>
 
                                         <InputGroup label="Blood Group">
@@ -376,7 +670,7 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                                             </select>
                                         </InputGroup>
 
-                                        <InputGroup label="Gender" className="col-span-2">
+                                        <InputGroup label="Gender" error={fieldErrors.gender} required className="col-span-2">
                                             <div className="flex gap-2">
                                                 <button
                                                     type="button"
@@ -426,12 +720,28 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-4">
-                                        <InputGroup label="Phone Number" className="col-span-1">
-                                            <input name="phone" value={formData.phone} onChange={handleInputChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" placeholder="+1 555 000 0000" autoFocus />
+                                        <InputGroup label="Phone Number" error={fieldErrors.phone} required className="col-span-1">
+                                            <input 
+                                                type="tel"
+                                                name="phone" 
+                                                value={formData.phone} 
+                                                onChange={handleInputChange} 
+                                                className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" 
+                                                placeholder="+1 555 000 0000" 
+                                            />
+                                            {fieldErrors.phone && <span className="text-red-500 text-xs mt-1">{fieldErrors.phone}</span>}
                                         </InputGroup>
 
-                                        <InputGroup label="Email Address" className="col-span-1">
-                                            <input name="email" value={formData.email} onChange={handleInputChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" placeholder="patient@email.com" />
+                                        <InputGroup label="Email Address" error={fieldErrors.email} className="col-span-1">
+                                            <input 
+                                                type="email"
+                                                name="email" 
+                                                value={formData.email} 
+                                                onChange={handleInputChange} 
+                                                className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" 
+                                                placeholder="patient@email.com" 
+                                            />
+                                            {fieldErrors.email && <span className="text-red-500 text-xs mt-1">{fieldErrors.email}</span>}
                                         </InputGroup>
 
                                         <InputGroup label="House No." className="col-span-1">
@@ -442,12 +752,45 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                                             <input name="street" value={formData.street} onChange={handleInputChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" placeholder="Main Street" />
                                         </InputGroup>
 
-                                        <InputGroup label="City" className="col-span-1">
+                                        <InputGroup label="City" error={fieldErrors.city} required className="col-span-1">
                                             <input name="city" value={formData.city} onChange={handleInputChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" placeholder="City Name" />
+                                            {fieldErrors.city && <span className="text-red-500 text-xs mt-1">{fieldErrors.city}</span>}
                                         </InputGroup>
 
                                         <InputGroup label="State" className="col-span-1">
                                             <input name="state" value={formData.state} onChange={handleInputChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" placeholder="State" />
+                                        </InputGroup>
+
+                                        <InputGroup label="Pincode/Zipcode" error={fieldErrors.pincode} required className="col-span-1">
+                                            <input 
+                                                type="text"
+                                                name="pincode" 
+                                                value={formData.pincode} 
+                                                onChange={handleInputChange} 
+                                                className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" 
+                                                placeholder="e.g. 560001" 
+                                                maxLength="6"
+                                                pattern="[0-9]{6}"
+                                            />
+                                            {fieldErrors.pincode && <span className="text-red-500 text-xs mt-1">{fieldErrors.pincode}</span>}
+                                        </InputGroup>
+
+                                        <InputGroup label="Country" error={fieldErrors.country} required className="col-span-1">
+                                            <select 
+                                                name="country" 
+                                                value={formData.country} 
+                                                onChange={handleInputChange} 
+                                                className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0"
+                                            >
+                                                <option value="India">India</option>
+                                                <option value="USA">USA</option>
+                                                <option value="UK">UK</option>
+                                                <option value="Canada">Canada</option>
+                                                <option value="Australia">Australia</option>
+                                                <option value="UAE">UAE</option>
+                                                <option value="Singapore">Singapore</option>
+                                            </select>
+                                            {fieldErrors.country && <span className="text-red-500 text-xs mt-1">{fieldErrors.country}</span>}
                                         </InputGroup>
 
                                         <InputGroup label="Emergency Contact Name" className="col-span-1">
@@ -466,12 +809,43 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                                 <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-300 fade-in">
                                     <div>
                                         <h2 className="text-2xl font-bold text-slate-900">Medical History</h2>
-                                        <p className="text-slate-500">Known conditions, allergies, and past records</p>
+                                        <p className="text-slate-500">Known conditions, doctor assignment, and medical records</p>
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-4">
+                                        <InputGroup label="Assign Doctor" error={fieldErrors.assignedDoctor} required className="col-span-2">
+                                            <select 
+                                                name="assignedDoctor" 
+                                                value={formData.assignedDoctor} 
+                                                onChange={handleInputChange} 
+                                                className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0"
+                                                disabled={loadingDoctors}
+                                            >
+                                                <option value="">-- Select Doctor --</option>
+                                                {doctors.map(doctor => (
+                                                    <option key={doctor.id} value={doctor.id}>
+                                                        Dr. {doctor.name} - {doctor.specialization}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            {loadingDoctors && <span className="text-blue-500 text-xs mt-1">Loading doctors...</span>}
+                                            {fieldErrors.assignedDoctor && <span className="text-red-500 text-xs mt-1">{fieldErrors.assignedDoctor}</span>}
+                                        </InputGroup>
+
+                                        <InputGroup label="Last Visit Date" error={fieldErrors.lastVisit} className="col-span-2">
+                                            <input 
+                                                type="date" 
+                                                name="lastVisit" 
+                                                value={formData.lastVisit} 
+                                                onChange={handleInputChange} 
+                                                className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" 
+                                                max={new Date().toISOString().split('T')[0]}
+                                            />
+                                            {fieldErrors.lastVisit && <span className="text-red-500 text-xs mt-1">{fieldErrors.lastVisit}</span>}
+                                        </InputGroup>
+
                                         <InputGroup label="Known Conditions" className="col-span-2">
-                                            <input name="knownConditions" value={formData.knownConditions} onChange={handleInputChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" placeholder="e.g. Diabetes, Hypertension" autoFocus />
+                                            <input name="knownConditions" value={formData.knownConditions} onChange={handleInputChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" placeholder="e.g. Diabetes, Hypertension" />
                                         </InputGroup>
 
                                         <InputGroup label="Allergies" className="col-span-2">
@@ -489,6 +863,114 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                                         <InputGroup label="Additional Notes" className="col-span-2">
                                             <textarea name="notes" value={formData.notes} onChange={handleInputChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300 min-h-[80px] resize-none" placeholder="Any additional medical notes..."></textarea>
                                         </InputGroup>
+
+                                        {/* Medical Report Upload Section */}
+                                        <div className="col-span-2 mt-6 p-6 bg-blue-50 border-2 border-blue-200 rounded-xl">
+                                            <div className="flex items-center gap-3 mb-4">
+                                                <FiActivity className="text-blue-600" size={24} />
+                                                <div>
+                                                    <h3 className="text-lg font-bold text-slate-900">Upload Medical Reports</h3>
+                                                    <p className="text-sm text-slate-600">Upload lab reports or medical history documents (auto-scanned with OCR)</p>
+                                                </div>
+                                            </div>
+
+                                            {/* Upload Button */}
+                                            <div className="flex gap-3 mb-4">
+                                                <label className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg cursor-pointer transition-colors flex items-center gap-2">
+                                                    <FiArrowRight size={18} />
+                                                    Choose File (Image/PDF)
+                                                    <input
+                                                        type="file"
+                                                        accept="image/*,.pdf"
+                                                        onChange={handleFileUpload}
+                                                        className="hidden"
+                                                        disabled={uploading}
+                                                    />
+                                                </label>
+                                            </div>
+
+                                            {/* Processing Indicator */}
+                                            {uploading && (
+                                                <div className="flex items-center gap-3 p-4 bg-white rounded-lg border border-blue-300">
+                                                    <div className="w-5 h-5 border-3 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                                                    <span className="text-sm text-slate-700 font-medium">Processing document with scanner...</span>
+                                                </div>
+                                            )}
+
+                                            {/* Error Display */}
+                                            {scannerError && (
+                                                <div className="flex items-center gap-3 p-4 bg-red-50 rounded-lg border border-red-300">
+                                                    <FiAlertCircle className="text-red-600" size={20} />
+                                                    <span className="text-sm text-red-700">{scannerError}</span>
+                                                </div>
+                                            )}
+
+                                            {/* Uploaded Files List */}
+                                            {uploadedFiles.length > 0 && (
+                                                <div className="mt-4">
+                                                    <p className="text-sm font-semibold text-slate-800 mb-2">Uploaded Documents ({uploadedFiles.length})</p>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {uploadedFiles.map((item, index) => (
+                                                            <div key={index} className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg border border-slate-300">
+                                                                <span className="text-sm text-slate-700">{item.name}</span>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => removeUploadedFile(index)}
+                                                                    className="text-red-600 hover:text-red-800"
+                                                                >
+                                                                    <FiX size={16} />
+                                                                </button>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Scanned Data Display */}
+                                            {scannedData && (
+                                                <div className="mt-4 p-4 bg-green-50 rounded-lg border border-green-300">
+                                                    <div className="flex items-center justify-between mb-3">
+                                                        <div className="flex items-center gap-2">
+                                                            <FiCheck className="text-green-600" size={20} />
+                                                            <h4 className="text-sm font-bold text-green-800">Scanned Data Extracted</h4>
+                                                        </div>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setScannedData(null)}
+                                                            className="text-slate-500 hover:text-slate-700"
+                                                        >
+                                                            <FiX size={16} />
+                                                        </button>
+                                                    </div>
+                                                    <div className="space-y-2 text-sm">
+                                                        {scannedData.medicalHistory && (
+                                                            <div>
+                                                                <span className="font-semibold text-slate-700">Medical History: </span>
+                                                                <span className="text-slate-600">{scannedData.medicalHistory}</span>
+                                                            </div>
+                                                        )}
+                                                        {scannedData.allergies && (
+                                                            <div>
+                                                                <span className="font-semibold text-slate-700">Allergies: </span>
+                                                                <span className="text-slate-600">{scannedData.allergies}</span>
+                                                            </div>
+                                                        )}
+                                                        {scannedData.medications && (
+                                                            <div>
+                                                                <span className="font-semibold text-slate-700">Medications: </span>
+                                                                <span className="text-slate-600">{scannedData.medications}</span>
+                                                            </div>
+                                                        )}
+                                                        {scannedData.warning && (
+                                                            <div className="mt-2 p-2 bg-yellow-100 rounded border border-yellow-300">
+                                                                <FiAlertCircle className="inline mr-2 text-yellow-700" size={14} />
+                                                                <span className="text-xs text-yellow-800">{scannedData.warning}</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             )}
@@ -503,7 +985,7 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
 
                                     <div className="grid grid-cols-3 gap-4">
                                         <InputGroup label="Height (cm)">
-                                            <input type="number" name="height" value={formData.height} onChange={handleInputChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" placeholder="170" autoFocus />
+                                            <input type="number" name="height" value={formData.height} onChange={handleInputChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" placeholder="170" />
                                         </InputGroup>
 
                                         <InputGroup label="Weight (kg)">
@@ -514,8 +996,18 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                                             <input name="bmi" value={formData.bmi} readOnly className="w-full bg-slate-50 border-none p-0 text-slate-500 focus:ring-0 font-mono" placeholder="Auto" />
                                         </InputGroup>
 
-                                        <InputGroup label="Blood Pressure">
-                                            <input name="bp" value={formData.bp} onChange={handleInputChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300 font-mono" placeholder="120/80" />
+                                        <InputGroup label="Blood Pressure" error={fieldErrors.bp}>
+                                            <input 
+                                                type="text"
+                                                name="bp" 
+                                                value={formData.bp} 
+                                                onChange={handleInputChange} 
+                                                className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300 font-mono" 
+                                                placeholder="120/80"
+                                                pattern="[0-9]{2,3}/[0-9]{2,3}"
+                                            />
+                                            {fieldErrors.bp && <span className="text-red-500 text-xs mt-1">{fieldErrors.bp}</span>}
+                                            <span className="text-slate-400 text-xs mt-1">Format: systolic/diastolic (e.g., 120/80)</span>
                                         </InputGroup>
 
                                         <InputGroup label="Pulse (bpm)">
@@ -525,6 +1017,60 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                                         <InputGroup label="SpO2 (%)">
                                             <input type="number" name="spo2" value={formData.spo2} onChange={handleInputChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" placeholder="98" />
                                         </InputGroup>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* STEP 5: Insurance Details */}
+                            {currentStep === 4 && (
+                                <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-300 fade-in">
+                                    <div>
+                                        <h2 className="text-2xl font-bold text-slate-900">Insurance Details</h2>
+                                        <p className="text-slate-500">Insurance and billing information (Optional)</p>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <InputGroup label="Insurance Number" error={fieldErrors.insuranceNumber} className="col-span-2">
+                                            <input 
+                                                type="text" 
+                                                name="insuranceNumber" 
+                                                value={formData.insuranceNumber} 
+                                                onChange={handleInputChange} 
+                                                className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" 
+                                                placeholder="e.g. INS-123456789" 
+                                            />
+                                            {fieldErrors.insuranceNumber && <span className="text-red-500 text-xs mt-1">{fieldErrors.insuranceNumber}</span>}
+                                        </InputGroup>
+
+                                        <InputGroup label="Insurance Provider" error={fieldErrors.insuranceProvider}>
+                                            <input 
+                                                type="text" 
+                                                name="insuranceProvider" 
+                                                value={formData.insuranceProvider} 
+                                                onChange={handleInputChange} 
+                                                className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" 
+                                                placeholder="e.g. HDFC ERGO, Star Health" 
+                                            />
+                                            {fieldErrors.insuranceProvider && <span className="text-red-500 text-xs mt-1">{fieldErrors.insuranceProvider}</span>}
+                                        </InputGroup>
+
+                                        <InputGroup label="Insurance Expiry Date" error={fieldErrors.insuranceExpiry}>
+                                            <input 
+                                                type="date" 
+                                                name="insuranceExpiry" 
+                                                value={formData.insuranceExpiry} 
+                                                onChange={handleInputChange} 
+                                                className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" 
+                                                min={new Date().toISOString().split('T')[0]}
+                                            />
+                                            {fieldErrors.insuranceExpiry && <span className="text-red-500 text-xs mt-1">{fieldErrors.insuranceExpiry}</span>}
+                                        </InputGroup>
+                                    </div>
+
+                                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                        <p className="text-sm text-blue-800">
+                                            <strong>Note:</strong> Insurance information is optional but recommended for billing and claims processing.
+                                        </p>
                                     </div>
                                 </div>
                             )}
@@ -545,7 +1091,7 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                                 </div>
 
                                 <div className="flex gap-3">
-                                    {currentStep < 3 ? (
+                                    {currentStep < 4 ? (
                                         <button
                                             type="button"
                                             onClick={handleNext}
@@ -556,7 +1102,8 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                                         </button>
                                     ) : (
                                         <button
-                                            type="submit"
+                                            type="button"
+                                            onClick={handleSubmit}
                                             disabled={loading}
                                             className="px-8 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-all shadow-lg shadow-emerald-600/20 hover:shadow-xl hover:shadow-emerald-600/30 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
