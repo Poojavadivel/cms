@@ -405,3 +405,8 @@
   color: var(--neo-accent);
   border-color: #dbeafe;
 }
+
+/* Loading spinner animation */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

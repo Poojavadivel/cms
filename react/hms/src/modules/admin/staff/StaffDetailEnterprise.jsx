@@ -25,8 +25,22 @@ import girlIcon from '../../../assets/girlicon.png';
 const StaffDetailEnterprise = ({ staffId, initial, onClose, onUpdate }) => {
   const [activeTab, setActiveTab] = useState('overview');
 
-  // If no data, show nothing or loading
+  // If no data, show nothing
   if (!initial) return null;
+
+  // Show loading state while doctor data is being fetched
+  if (initial.loading) {
+    return (
+      <div className="enterprise-modal" onClick={(e) => e.target.className === 'enterprise-modal' && onClose && onClose()}>
+        <div className="enterprise-content" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '400px' }}>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ width: '48px', height: '48px', border: '4px solid #e5e7eb', borderTopColor: '#3b82f6', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 16px' }}></div>
+            <p style={{ color: '#64748B', fontSize: '14px' }}>Loading doctor details...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Helper to format dates
   const formatDate = (dateString) => {

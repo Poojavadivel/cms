@@ -15,6 +15,7 @@ import {
   MdMenuOpen,
   MdLogout,
   MdAdminPanelSettings,
+  MdLocalHospital,
 } from 'react-icons/md';
 import { ChatbotFloatingButton } from '../../components/chatbot';
 
@@ -28,8 +29,8 @@ const AdminRoot = () => {
   const navItems = useMemo(() => [
     { icon: <MdDashboard />, label: 'Dashboard', path: '/admin/dashboard' },
     { icon: <MdCalendarToday />, label: 'Appointments', path: '/admin/appointments' },
-    { icon: <MdPeople />, label: 'Patients', path: '/admin/patients' },
-    { icon: <MdGroup />, label: 'Staff', path: '/admin/staff' },
+    { icon: <MdLocalHospital />, label: 'Patients', path: '/admin/patients' },
+    { icon: <MdPeople />, label: 'Staff', path: '/admin/staff' },
     { icon: <MdReceipt />, label: 'Invoice', path: '/admin/invoice' },
     { icon: <MdBiotech />, label: 'Pathology', path: '/admin/pathology' },
     { icon: <MdLocalPharmacy />, label: 'Pharmacy', path: '/admin/pharmacy' },

@@ -201,6 +201,7 @@ const Patients = () => {
         condition: extractCondition(patient),
         reason: patient.reason || '',
         patientId: patient.patientId || patient._id || patient.id,
+        patientCode: patient.patientCode || patient.patient_code || patient.metadata?.patientCode || null,
       }));
 
       setPatients(transformedData);
@@ -530,15 +531,56 @@ const Patients = () => {
     setDownloadingPatients(prev => new Set(prev).add(patient.id));
     
     try {
-      const result = await patientsService.downloadPatientReport(patient.id);
-      if (result.success) {
-        toast.success(result.message || 'Report downloaded successfully');
+      // Use the reportService (matching Flutter's implementation)
+      const token = localStorage.getItem('x-auth-token') || localStorage.getItem('authToken');
+      if (!token) {
+        toast.error('Authentication token not found. Please login again.');
+        return;
+      }
+
+      const endpoint = `${process.env.REACT_APP_API_URL || 'https://hms-dev.onrender.com/api'}/reports-proper/patient/${patient.id}`;
+      
+      const response = await fetch(endpoint, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'x-auth-token': token,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        // Get filename from header or create default
+        let filename = `Patient_Report_${patient.name}_${Date.now()}.pdf`;
+        const contentDisposition = response.headers.get('content-disposition');
+        if (contentDisposition) {
+          const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+          if (filenameMatch && filenameMatch[1]) {
+            filename = filenameMatch[1];
+          }
+        }
+
+        // Create blob and trigger download
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', filename);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+
+        toast.success('Patient report downloaded successfully');
+      } else if (response.status === 404) {
+        toast.error('Patient not found');
       } else {
-        toast.error(result.message || 'Failed to download report');
+        const errorData = await response.text();
+        toast.error(`Failed to download report: ${response.status}`);
       }
     } catch (error) {
       console.error('❌ Failed to download report:', error);
-      toast.error('Error: ' + error.message);
+      toast.error('Error downloading report: ' + error.message);
     } finally {
       // Remove patient ID from downloading set
       setDownloadingPatients(prev => {
@@ -564,6 +606,10 @@ const Patients = () => {
 
   // Doctor dialog handlers - Match Appointments page implementation with robust fallbacks
   const handleDoctorClick = async (patient) => {
+    // Show dialog immediately to avoid mis-touch
+    setShowDoctorDialog(true);
+    setSelectedDoctor({ loading: true, name: patient.doctor || 'Loading...' });
+
     try {
       console.log('🔍 [handleDoctorClick] Patient data:', patient);
 
@@ -719,7 +765,9 @@ const Patients = () => {
         console.error('Patient data:', patient);
         console.error('Doctor ID:', patient.doctorId);
         console.error('Doctor name:', patient.doctor);
-        alert(`Unable to load doctor details for "${patient.doctor}". The doctor may not exist in the system or the doctor ID is invalid.`);
+        setShowDoctorDialog(false);
+        setSelectedDoctor(null);
+        toast.error(`Unable to load doctor details for "${patient.doctor}". The doctor may not exist in the system or the doctor ID is invalid.`);
         return;
       }
 
@@ -750,10 +798,11 @@ const Patients = () => {
       console.log('✅ Transformed staff details:', staffDetails);
 
       setSelectedDoctor(staffDetails);
-      setShowDoctorDialog(true);
     } catch (error) {
       console.error('❌ Error loading doctor details:', error);
-      alert('Failed to load doctor details: ' + error.message);
+      setShowDoctorDialog(false);
+      setSelectedDoctor(null);
+      toast.error('Failed to load doctor details: ' + error.message);
     }
   };
 
@@ -930,7 +979,7 @@ const Patients = () => {
                       />
                       <div className="info-group">
                         <span className="primary">{patient.name}</span>
-                        <span className="secondary">{patient.patientId || patient.id}</span>
+                        <span className="secondary">{patient.patientCode || patient.patientId || patient.id}</span>
                       </div>
                     </td>
 

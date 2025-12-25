@@ -6,7 +6,7 @@
  */
 
 import axios from 'axios';
-import { PatientEndpoints, ReportEndpoints } from './apiConstants';
+import { PatientEndpoints, ReportsEndpoints } from './apiConstants';
 import logger from './loggerService';
 import { PatientDetails } from '../models/Patients';
 import { fetchPrescriptions, fetchLabReports } from './prescriptionService';
@@ -177,24 +177,46 @@ export const deletePatient = async (id) => {
 };
 
 /**
- * Download patient report
+ * Download patient report (matching Flutter's ReportService implementation)
  * @param {string} patientId - Patient ID
  * @returns {Promise<Object>} Download result
  */
 export const downloadPatientReport = async (patientId) => {
   try {
-    logger.apiRequest('GET', ReportEndpoints.download(patientId));
+    const endpoint = ReportsEndpoints.patientReport(patientId);
+    logger.apiRequest('GET', endpoint);
     
-    const axiosInstance = createAxiosInstance();
-    const response = await axiosInstance.get(ReportEndpoints.download(patientId), {
-      responseType: 'blob' // For file download
+    const token = getAuthToken();
+    if (!token) {
+      return {
+        success: false,
+        message: 'Authentication token not found. Please login again.'
+      };
+    }
+    
+    const response = await axios.get(endpoint, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      responseType: 'blob'
     });
+    
+    // Get filename from header or create default
+    let filename = `Patient_Report_${Date.now()}.pdf`;
+    const contentDisposition = response.headers['content-disposition'];
+    if (contentDisposition) {
+      const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+      if (filenameMatch) {
+        filename = filenameMatch[1];
+      }
+    }
     
     // Create blob link to download
     const url = window.URL.createObjectURL(new Blob([response.data]));
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `patient_${patientId}_report.pdf`);
+    link.setAttribute('download', filename);
     document.body.appendChild(link);
     link.click();
     link.remove();
@@ -204,13 +226,22 @@ export const downloadPatientReport = async (patientId) => {
     
     return {
       success: true,
-      message: 'Report downloaded successfully'
+      message: 'Patient report downloaded successfully',
+      filename: filename
     };
   } catch (error) {
-    logger.apiError('GET', ReportEndpoints.download(patientId), error);
+    logger.apiError('GET', ReportsEndpoints.patientReport(patientId), error);
+    
+    if (error.response?.status === 404) {
+      return {
+        success: false,
+        message: 'Patient not found'
+      };
+    }
+    
     return {
       success: false,
-      message: error.response?.data?.message || 'Failed to download report'
+      message: error.response?.data?.message || `Failed to generate patient report: ${error.message}`
     };
   }
 };
