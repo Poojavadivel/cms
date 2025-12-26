@@ -326,27 +326,46 @@ const ProfileTab = ({ patient }) => {
                 <div className="pv-card-body">
                     <div className="pv-info-row">
                         <span className="pv-label">HOUSE NO</span>
-                        <span className="pv-value"><strong>{address.houseNumber || '117'}</strong></span>
+                        <span className="pv-value">
+                            <strong>{patient.houseNo || patient.address?.houseNo || 'Not Provided'}</strong>
+                        </span>
+
                     </div>
                     <div className="pv-info-row">
                         <span className="pv-label">STREET</span>
-                        <span className="pv-value"><strong>{address.street || 'Temple Road'}</strong></span>
+                        <span className="pv-value">
+                            <strong>{patient.street || patient.address?.street || 'Not Provided'}</strong>
+                        </span>
+
                     </div>
                     <div className="pv-info-row">
                         <span className="pv-label">CITY</span>
-                        <span className="pv-value"><strong>{address.city || 'Coimbatore'}</strong></span>
+                        <span className="pv-value">
+                            <strong>{patient.city || patient.address?.city || 'Not Provided'}</strong>
+                        </span>
+
+
                     </div>
                     <div className="pv-info-row">
                         <span className="pv-label">STATE</span>
-                        <span className="pv-value"><strong>{address.state || 'Tamil Nadu'}</strong></span>
+                        <span className="pv-value">
+                            <strong>{patient.state || patient.address?.state || 'Not Provided'}</strong>
+                        </span>
+
                     </div>
                     <div className="pv-info-row">
                         <span className="pv-label">PINCODE</span>
-                        <span className="pv-value"><strong>{address.zipCode || address.pincode || 'Not Provided'}</strong></span>
+                        <span className="pv-value">
+                            <strong>{patient.pincode || patient.address?.pincode || 'Not Provided'}</strong>
+                        </span>
+
                     </div>
                     <div className="pv-info-row">
                         <span className="pv-label">COUNTRY</span>
-                        <span className="pv-value"><strong>{address.country || 'India'}</strong></span>
+                        <span className="pv-value">
+                            <strong>{patient.country || patient.address?.country || 'Not Provided'}</strong>
+                        </span>
+
                     </div>
 
                     <div className="pv-action-buttons">
@@ -370,11 +389,13 @@ const ProfileTab = ({ patient }) => {
                 <div className="pv-card-body">
                     <div className="pv-info-row">
                         <span className="pv-label">NAME</span>
-                        <span className="pv-value"><strong>{patient.emergencyContact?.name || 'No contact on file'}</strong></span>
+                        {patient.emergencyContactName || 'No contact on file'}
+
                     </div>
                     <div className="pv-info-row">
                         <span className="pv-label">PHONE</span>
-                        <span className="pv-value"><strong>{patient.emergencyContact?.phone || 'No phone on file'}</strong></span>
+                        {patient.emergencyContactPhone || 'No phone on file'}
+
                     </div>
 
                     <div className="pv-update-badge-container">
@@ -389,23 +410,45 @@ const ProfileTab = ({ patient }) => {
 // --- MEDICAL HISTORY TAB ---
 const MedicalHistoryTab = ({ patientId }) => {
     const [searchTerm, setSearchTerm] = useState('');
+    const [historyData, setHistoryData] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-    const historyData = [
-        {
-            title: 'Complete Medical History',
-            date: '03 Dec 2025',
-            category: 'General',
-            notes: '{currentConditions: [Type 2 Diabetes, Arthritis], pastConditions: [Gastritis, GERD (Acid Reflux)], s...',
-            document: true
+    useEffect(() => {
+        if (patientId) {
+            fetchHistory();
         }
-    ];
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [patientId]);
+
+    const fetchHistory = async () => {
+        setLoading(true);
+        try {
+            const data = await patientsService.fetchPatientAppointments(patientId);
+            setHistoryData(Array.isArray(data) ? data : []);
+        } catch (error) {
+            console.error('Failed to fetch medical history:', error);
+            setHistoryData([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Optional simple search (title / reason)
+    const filteredData = historyData.filter(item =>
+        (item.reason || item.title || '')
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase())
+    );
 
     return (
         <div className="pv-tab-container">
+            {/* Header */}
             <div className="pv-tab-header-row">
                 <h3 className="pv-tab-title">MEDICAL HISTORY</h3>
                 <div className="pv-actions-right">
-                    <button className="pv-btn-icon"><MdFilterList /></button>
+                    <button className="pv-btn-icon">
+                        <MdFilterList />
+                    </button>
                     <div className="pv-search-box">
                         <MdSearch />
                         <input
@@ -418,6 +461,7 @@ const MedicalHistoryTab = ({ patientId }) => {
                 </div>
             </div>
 
+            {/* Table */}
             <div className="pv-table-container">
                 <table className="pv-table">
                     <thead>
@@ -430,31 +474,65 @@ const MedicalHistoryTab = ({ patientId }) => {
                             <th>Actions</th>
                         </tr>
                     </thead>
+
                     <tbody>
-                        {historyData.map((item, index) => (
-                            <tr key={index}>
-                                <td>{item.title}</td>
-                                <td>{item.date}</td>
-                                <td>{item.category}</td>
-                                <td className="pv-td-notes">{item.notes}</td>
-                                <td>
-                                    {item.document && (
-                                        <button className="pv-btn-text-icon red">
-                                            <MdPictureAsPdf className="icon-red" /> View
-                                        </button>
-                                    )}
-                                </td>
-                                <td>
-                                    <button className="pv-btn-action-circle"><MdVisibility /></button>
+                        {/* Loading */}
+                        {loading && (
+                            <tr>
+                                <td colSpan="6" className="text-center">
+                                    Loading medical history...
                                 </td>
                             </tr>
-                        ))}
-                        {historyData.length === 0 && (
-                            <tr><td colSpan="6" className="text-center">No Records Found</td></tr>
                         )}
+
+                        {/* No Data */}
+                        {!loading && filteredData.length === 0 && (
+                            <tr>
+                                <td colSpan="6" className="text-center">
+                                    No Records Found
+                                </td>
+                            </tr>
+                        )}
+
+                        {/* Data Rows */}
+                        {!loading &&
+                            filteredData.map((item, index) => (
+                                <tr key={index}>
+                                    <td>
+                                        {item.title || item.reason || 'General Checkup'}
+                                    </td>
+                                    <td>
+                                        {item.date
+                                            ? new Date(item.date).toLocaleDateString()
+                                            : item.createdAt
+                                                ? new Date(item.createdAt).toLocaleDateString()
+                                                : '—'}
+                                    </td>
+                                    <td>
+                                        {item.category || item.speciality || 'General'}
+                                    </td>
+                                    <td className="pv-td-notes">
+                                        {item.notes || item.description || '—'}
+                                    </td>
+                                    <td>
+                                        {item.reportStatus === 'completed' && (
+                                            <button className="pv-btn-text-icon red">
+                                                <MdPictureAsPdf className="icon-red" /> View
+                                            </button>
+                                        )}
+                                    </td>
+                                    <td>
+                                        <button className="pv-btn-action-circle">
+                                            <MdVisibility />
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
                     </tbody>
                 </table>
             </div>
+
+            {/* Pagination (static for now) */}
             <div className="pv-pagination">
                 <span>Page 1 of 1</span>
                 <div className="pv-page-controls">
@@ -466,55 +544,41 @@ const MedicalHistoryTab = ({ patientId }) => {
     );
 };
 
+
 // --- PRESCRIPTION TAB ---
 const PrescriptionTab = ({ patientId }) => {
     const [prescriptions, setPrescriptions] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        fetchData();
+        if (patientId) {
+            fetchPrescriptionsData();
+        }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [patientId]);
 
-    const fetchData = async () => {
+    const fetchPrescriptionsData = async () => {
+        setLoading(true);
         try {
             const data = await prescriptionService.fetchPrescriptions(patientId);
-            setPrescriptions(data);
-        } catch (e) {
-            console.error(e);
+            setPrescriptions(Array.isArray(data) ? data : []);
+        } catch (error) {
+            console.error('Failed to fetch prescriptions:', error);
+            setPrescriptions([]);
         } finally {
             setLoading(false);
         }
     };
 
-    // Mock data if empty for visualization match (based on screenshot)
-    const displayData = prescriptions.length > 0 ? prescriptions : [
-        {
-            medicine: 'Pantoprazole',
-            dosage: '0-0-1',
-            frequency: '3 days',
-            duration: '—',
-            instructions: 'Take on time. Drink plenty of water.',
-            date: '18 Nov 2025',
-            document: true
-        },
-        {
-            medicine: 'Loperamide',
-            dosage: '1-1-1',
-            frequency: '7 days',
-            duration: '—',
-            instructions: 'Take on time. Drink plenty of water.',
-            date: '18 Nov 2025',
-            document: true
-        }
-    ];
-
     return (
         <div className="pv-tab-container">
+            {/* Header */}
             <div className="pv-tab-header-row">
                 <h3 className="pv-tab-title">PRESCRIPTIONS</h3>
                 <div className="pv-actions-right">
-                    <button className="pv-btn-icon"><MdFilterList /></button>
+                    <button className="pv-btn-icon">
+                        <MdFilterList />
+                    </button>
                     <div className="pv-search-box">
                         <MdSearch />
                         <input type="text" placeholder="Search..." />
@@ -522,6 +586,7 @@ const PrescriptionTab = ({ patientId }) => {
                 </div>
             </div>
 
+            {/* Table */}
             <div className="pv-table-container">
                 <table className="pv-table">
                     <thead>
@@ -536,28 +601,61 @@ const PrescriptionTab = ({ patientId }) => {
                             <th>Actions</th>
                         </tr>
                     </thead>
+
                     <tbody>
-                        {displayData.map((item, idx) => (
-                            <tr key={idx}>
-                                <td><strong>{item.medicine || item.medicationName}</strong></td>
-                                <td>{item.dosage}</td>
-                                <td>{item.frequency}</td>
-                                <td>{item.duration || '—'}</td>
-                                <td>{item.instructions}</td>
-                                <td>{item.date || new Date().toDateString()}</td>
-                                <td>
-                                    <button className="pv-btn-text-icon red">
-                                        <MdPictureAsPdf className="icon-red" /> View
-                                    </button>
-                                </td>
-                                <td>
-                                    <button className="pv-btn-action-circle"><MdVisibility /></button>
+                        {/* Loading */}
+                        {loading && (
+                            <tr>
+                                <td colSpan="8" className="text-center">
+                                    Loading prescriptions...
                                 </td>
                             </tr>
-                        ))}
+                        )}
+
+                        {/* No Data */}
+                        {!loading && prescriptions.length === 0 && (
+                            <tr>
+                                <td colSpan="8" className="text-center">
+                                    No Prescriptions Found
+                                </td>
+                            </tr>
+                        )}
+
+                        {/* Data Rows */}
+                        {!loading &&
+                            prescriptions.map((item, idx) => (
+                                <tr key={idx}>
+                                    <td>
+                                        <strong>
+                                            {item.medicationName || item.medicine || '—'}
+                                        </strong>
+                                    </td>
+                                    <td>{item.dosage || '—'}</td>
+                                    <td>{item.frequency || '—'}</td>
+                                    <td>{item.duration || '—'}</td>
+                                    <td>{item.instructions || '—'}</td>
+                                    <td>
+                                        {item.createdAt
+                                            ? new Date(item.createdAt).toLocaleDateString()
+                                            : '—'}
+                                    </td>
+                                    <td>
+                                        <button className="pv-btn-text-icon red">
+                                            <MdPictureAsPdf className="icon-red" /> View
+                                        </button>
+                                    </td>
+                                    <td>
+                                        <button className="pv-btn-action-circle">
+                                            <MdVisibility />
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
                     </tbody>
                 </table>
             </div>
+
+            {/* Pagination (static as per current design) */}
             <div className="pv-pagination">
                 <span>Page 1 of 1</span>
                 <div className="pv-page-controls">
@@ -571,28 +669,59 @@ const PrescriptionTab = ({ patientId }) => {
 
 // --- LAB RESULTS TAB ---
 const LabResultTab = ({ patientId }) => {
-    const mockLabs = [
-        {
-            testName: 'CT Scan Abdomen',
-            result: '2 parameters',
-            date: '05 Sep 2025',
-            status: 'Completed'
+    const [labs, setLabs] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState('');
+
+    useEffect(() => {
+        if (patientId) {
+            fetchLabResults();
         }
-    ];
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [patientId]);
+
+    const fetchLabResults = async () => {
+        setLoading(true);
+        try {
+            const data = await patientsService.fetchPatientLabResults(patientId);
+            setLabs(Array.isArray(data) ? data : []);
+        } catch (error) {
+            console.error('Failed to fetch lab results:', error);
+            setLabs([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Simple search by test name
+    const filteredLabs = labs.filter(item =>
+        (item.testName || item.name || '')
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase())
+    );
 
     return (
         <div className="pv-tab-container">
+            {/* Header */}
             <div className="pv-tab-header-row">
                 <h3 className="pv-tab-title">LAB RESULTS</h3>
                 <div className="pv-actions-right">
-                    <button className="pv-btn-icon"><MdFilterList /></button>
+                    <button className="pv-btn-icon">
+                        <MdFilterList />
+                    </button>
                     <div className="pv-search-box">
                         <MdSearch />
-                        <input type="text" placeholder="Search..." />
+                        <input
+                            type="text"
+                            placeholder="Search..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
                     </div>
                 </div>
             </div>
 
+            {/* Table */}
             <div className="pv-table-container">
                 <table className="pv-table">
                     <thead>
@@ -604,25 +733,62 @@ const LabResultTab = ({ patientId }) => {
                             <th>Actions</th>
                         </tr>
                     </thead>
+
                     <tbody>
-                        {mockLabs.map((item, idx) => (
-                            <tr key={idx}>
-                                <td>{item.testName}</td>
-                                <td>{item.result}</td>
-                                <td>{item.date}</td>
-                                <td>
-                                    <span className={`pv-badge status-${item.status.toLowerCase()}`}>
-                                        {item.status}
-                                    </span>
-                                </td>
-                                <td>
-                                    <button className="pv-btn-action-circle"><MdVisibility /></button>
+                        {/* Loading */}
+                        {loading && (
+                            <tr>
+                                <td colSpan="5" className="text-center">
+                                    Loading lab results...
                                 </td>
                             </tr>
-                        ))}
+                        )}
+
+                        {/* No Data */}
+                        {!loading && filteredLabs.length === 0 && (
+                            <tr>
+                                <td colSpan="5" className="text-center">
+                                    No Lab Results Found
+                                </td>
+                            </tr>
+                        )}
+
+                        {/* Data Rows */}
+                        {!loading &&
+                            filteredLabs.map((item, idx) => (
+                                <tr key={idx}>
+                                    <td>
+                                        {item.testName || item.name || '—'}
+                                    </td>
+                                    <td>
+                                        {item.result || item.summary || '—'}
+                                    </td>
+                                    <td>
+                                        {item.date
+                                            ? new Date(item.date).toLocaleDateString()
+                                            : item.createdAt
+                                                ? new Date(item.createdAt).toLocaleDateString()
+                                                : '—'}
+                                    </td>
+                                    <td>
+                                        <span
+                                            className={`pv-badge status-${(item.status || 'completed').toLowerCase()}`}
+                                        >
+                                            {item.status || 'Completed'}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <button className="pv-btn-action-circle">
+                                            <MdVisibility />
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
                     </tbody>
                 </table>
             </div>
+
+            {/* Pagination (static – same as other tabs) */}
             <div className="pv-pagination">
                 <span>Page 1 of 1</span>
                 <div className="pv-page-controls">
@@ -634,49 +800,68 @@ const LabResultTab = ({ patientId }) => {
     );
 };
 
+
 // --- BILLINGS TAB ---
 const BillingsTab = ({ patientId }) => {
-    // Mock Data based on requirement text and screenshot conflict resolution (using text for columns mostly)
-    const mockBills = [
-        {
-            invoiceId: 'INV-1000',
-            date: '2025-08-10',
-            amount: '500',
-            paymentMode: 'Credit Card', // Mapped to 'Route' visually if needed, but text says 'Payment Mode'
-            startDate: '2025-09-10',
-            description: 'Billing for visit 1',
-            status: 'Unpaid'
-        },
-        {
-            invoiceId: 'INV-1001',
-            date: '2025-08-11',
-            amount: '520',
-            paymentMode: 'Cash',
-            startDate: '2025-09-11',
-            description: 'Billing for visit 2',
-            status: 'Paid'
+    const [bills, setBills] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState('');
+
+    useEffect(() => {
+        if (patientId) {
+            fetchBills();
         }
-    ];
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [patientId]);
+
+    const fetchBills = async () => {
+        setLoading(true);
+        try {
+            // Assumes invoiceService already exists in your project
+            const data = await invoiceService.fetchInvoicesByPatient(patientId);
+            setBills(Array.isArray(data) ? data : []);
+        } catch (error) {
+            console.error('Failed to fetch billing data:', error);
+            setBills([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Simple search (invoice id / description)
+    const filteredBills = bills.filter(item =>
+        (item.invoiceId || item.invoiceNumber || item.description || '')
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase())
+    );
 
     return (
         <div className="pv-tab-container">
+            {/* Header */}
             <div className="pv-tab-header-row">
                 <h3 className="pv-tab-title">BILLINGS</h3>
                 <div className="pv-actions-right">
-                    <button className="pv-btn-icon"><MdFilterList /></button>
+                    <button className="pv-btn-icon">
+                        <MdFilterList />
+                    </button>
                     <div className="pv-search-box">
                         <MdSearch />
-                        <input type="text" placeholder="Search..." />
+                        <input
+                            type="text"
+                            placeholder="Search..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
                     </div>
                 </div>
             </div>
 
+            {/* Table */}
             <div className="pv-table-container">
                 <table className="pv-table">
                     <thead>
                         <tr>
-                            {/* Headers matching the layout but semantically correct */}
-                            <th>Medication</th> {/* Just using "Medication" to match screenshot visual for column 1, even if data is InvoiceID */}
+                            <th>Medication</th>
                             <th>Dose</th>
                             <th>Route</th>
                             <th>Frequency</th>
@@ -686,41 +871,89 @@ const BillingsTab = ({ patientId }) => {
                             <th>Actions</th>
                         </tr>
                     </thead>
+
                     <tbody>
-                        {mockBills.map((item, idx) => (
-                            <tr key={idx}>
-                                <td>{item.invoiceId}</td>
-                                <td>{item.date}</td>
-                                <td>{item.amount}</td>
-                                <td>{item.paymentMode}</td>
-                                <td>{item.startDate}</td>
-                                <td>{item.description}</td>
-                                <td>
-                                    <span className={`pv-badge status-${item.status.toLowerCase()}`}>
-                                        {item.status}
-                                    </span>
-                                </td>
-                                <td>
-                                    <div className="pv-action-group">
-                                        <button className="pv-btn-action-circle"><MdVisibility /></button>
-                                        <button className="pv-btn-action-circle"><MdEdit /></button>
-                                        <button className="pv-btn-action-circle red-text"><MdDelete /></button>
-                                    </div>
+                        {/* Loading */}
+                        {loading && (
+                            <tr>
+                                <td colSpan="8" className="text-center">
+                                    Loading billings...
                                 </td>
                             </tr>
-                        ))}
+                        )}
+
+                        {/* No Data */}
+                        {!loading && filteredBills.length === 0 && (
+                            <tr>
+                                <td colSpan="8" className="text-center">
+                                    No Billing Records Found
+                                </td>
+                            </tr>
+                        )}
+
+                        {/* Data Rows */}
+                        {!loading &&
+                            filteredBills.map((item, idx) => (
+                                <tr key={idx}>
+                                    <td>
+                                        {item.invoiceId || item.invoiceNumber || '—'}
+                                    </td>
+                                    <td>
+                                        {item.date
+                                            ? new Date(item.date).toLocaleDateString()
+                                            : '—'}
+                                    </td>
+                                    <td>
+                                        {item.amount || '—'}
+                                    </td>
+                                    <td>
+                                        {item.paymentMode || item.mode || '—'}
+                                    </td>
+                                    <td>
+                                        {item.startDate
+                                            ? new Date(item.startDate).toLocaleDateString()
+                                            : '—'}
+                                    </td>
+                                    <td>
+                                        {item.description || '—'}
+                                    </td>
+                                    <td>
+                                        <span
+                                            className={`pv-badge status-${(item.status || 'paid').toLowerCase()}`}
+                                        >
+                                            {item.status || 'Paid'}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div className="pv-action-group">
+                                            <button className="pv-btn-action-circle">
+                                                <MdVisibility />
+                                            </button>
+                                            <button className="pv-btn-action-circle">
+                                                <MdEdit />
+                                            </button>
+                                            <button className="pv-btn-action-circle red-text">
+                                                <MdDelete />
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
                     </tbody>
                 </table>
             </div>
+
+            {/* Pagination (static for now) */}
             <div className="pv-pagination">
-                <span>Page 1 of 2</span>
+                <span>Page 1 of 1</span>
                 <div className="pv-page-controls">
                     <button className="pv-page-btn" disabled>&lt;</button>
-                    <button className="pv-page-btn">&gt;</button>
+                    <button className="pv-page-btn" disabled>&gt;</button>
                 </div>
             </div>
         </div>
     );
 };
+
 
 export default PatientView;

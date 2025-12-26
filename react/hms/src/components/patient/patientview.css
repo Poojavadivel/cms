@@ -387,11 +387,11 @@
 
 /* --- TAB CONTENT AREA --- */
 .patient-tab-content {
-    flex: 1;
+    flex: 4;
     /* Grow to fill remaining space */
     overflow-y: auto;
     /* Scroll ONLY inside content if needed */
-    padding: 24px;
+    padding: 16px;
     /* Reduced padding */
     background-color: #F8FAFC;
     display: flex;
@@ -401,7 +401,7 @@
 /* --- Profile Tab Styles (Compact) --- */
 .pv-profile-container {
     display: flex;
-    gap: 16px;
+    gap: 74px;
     flex: 1;
     /* Stretch to fill */
     min-height: 0;
@@ -410,7 +410,7 @@
 
 .pv-card {
     background: white;
-    border-radius: 8px;
+    border-radius: 10px;
     padding: 16px;
     /* Reduced */
     flex: 1;

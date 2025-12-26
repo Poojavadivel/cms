@@ -5,13 +5,14 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { MdClose, MdPerson, MdPhone, MdEmail, MdLocationOn, MdWork, MdCalendarToday, MdMale, MdFemale, MdWarning, MdSearch } from 'react-icons/md';
+import { MdClose, MdPerson, MdPhone, MdEmail, MdLocationOn, MdWork, MdCalendarToday, MdMale, MdFemale, MdWarning, MdSearch, MdEdit } from 'react-icons/md';
 import './AppointmentViewModal.css';
+import '../patient/patientview.css';
 import appointmentsService from '../../services/appointmentsService';
 import patientsService from '../../services/patientsService';
 import { getGenderAvatar } from '../../utils/avatarHelpers';
 
-const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdit, onPatientClick }) => {
+const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdit, onPatientClick, appointmentData }) => {
   const [appointment, setAppointment] = useState(null);
   const [patient, setPatient] = useState(null);
   const [activeTab, setActiveTab] = useState('appointments'); // ONLY tab
@@ -24,14 +25,50 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdi
 
   useEffect(() => {
     if (isOpen) {
-      if (appointmentId) {
+      if (appointmentData) {
+        // DIRECT MAPPING - No API call
+
+        const mappedAppt = {
+          ...appointmentData,
+          _id: appointmentData.id, // Ensure internal ID usage
+          clientName: appointmentData.patientName,
+          condition: appointmentData.condition
+        };
+
+        // Get or create patient object
+        let patientObj = appointmentData.patientIdObj || null;
+
+        if (!patientObj && appointmentData.patientId) {
+          patientObj = {
+            _id: appointmentData.patientIdObj?._id || appointmentData.patientId,
+            firstName: appointmentData.patientName?.split(' ')[0] || '',
+            lastName: appointmentData.patientName?.split(' ').slice(1).join(' ') || '',
+            gender: appointmentData.gender,
+          };
+        }
+
+        // Normalize vitals from appointment and patient data
+        const normalizedVitals = normalizeVitals(appointmentData, patientObj);
+
+        // Ensure patient has normalized vitals
+        if (patientObj) {
+          patientObj.vitals = normalizedVitals;
+        }
+
+        setAppointment(mappedAppt);
+        setPatient(patientObj);
+        setPatientAppointments([mappedAppt]);
+        setIsLoading(false);
+
+      } else if (appointmentId) {
         fetchAppointment();
       } else if (patientId) {
         fetchPatient();
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, appointmentId, patientId]);
+  }, [isOpen, appointmentId, patientId, appointmentData]);
+
 
   // OLD: Fetch Logic from Step 4 (Original)
   const fetchAppointment = async () => {
@@ -70,7 +107,7 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdi
           transformedData.metadata = { ...transformedData.metadata, ...patientObj.metadata };
         }
 
-        setPatient(patientObj);
+        // Don't set patient yet - wait for full fetch below
       } else if (typeof data.patientId === 'string') {
         patientIdToFetch = data.patientId;
         transformedData.patientObjectId = data.patientId;
@@ -88,6 +125,11 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdi
         if (!patient) {
           try {
             const patientData = await patientsService.fetchPatientById(patientIdToFetch);
+
+            // Normalize vitals from appointment + patient data
+            const normalizedVitals = normalizeVitals(data, patientData);
+            patientData.vitals = normalizedVitals;
+
             setPatient(patientData);
           } catch (e) { console.warn(e); }
         }
@@ -105,6 +147,11 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdi
     setError('');
     try {
       const patientData = await patientsService.fetchPatientById(patientId);
+
+      // Normalize vitals from patient data only (no appointment data in this path)
+      const normalizedVitals = normalizeVitals(null, patientData);
+      patientData.vitals = normalizedVitals;
+
       setPatient(patientData);
 
       // Create a dummy appointment for header logic compatibility
@@ -148,6 +195,52 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdi
 
   const getGenderIcon = (gender) => {
     return gender?.toLowerCase() === 'female' ? <MdFemale size={16} /> : <MdMale size={16} />;
+  };
+
+  /**
+   * Normalize vitals from appointment or patient data into consistent structure
+   * Priority: appointment.vitals > appointment fields > patient.vitals > patient fields
+   * @param {Object} appointmentData - Appointment data (may have vitals)
+   * @param {Object} patientData - Patient data (may have vitals)
+   * @returns {Object} Normalized vitals { weightKg, heightCm, bmi, bp }
+   */
+  const normalizeVitals = (appointmentData, patientData) => {
+    const weightKg =
+      appointmentData?.vitals?.weightKg ||
+      appointmentData?.weightKg ||
+      appointmentData?.weight ||
+      patientData?.vitals?.weightKg ||
+      patientData?.weight ||
+      null;
+
+    const heightCm =
+      appointmentData?.vitals?.heightCm ||
+      appointmentData?.heightCm ||
+      appointmentData?.height ||
+      patientData?.vitals?.heightCm ||
+      patientData?.height ||
+      null;
+
+    const bp =
+      appointmentData?.vitals?.bp ||
+      appointmentData?.bp ||
+      patientData?.vitals?.bp ||
+      patientData?.bp ||
+      '—';
+
+    let bmi =
+      appointmentData?.vitals?.bmi ||
+      appointmentData?.bmi ||
+      patientData?.vitals?.bmi ||
+      patientData?.bmi ||
+      null;
+
+    // Calculate BMI if missing but weight/height exist
+    if (!bmi && weightKg && heightCm) {
+      bmi = (weightKg / Math.pow(heightCm / 100, 2)).toFixed(1);
+    }
+
+    return { weightKg, heightCm, bmi, bp };
   };
 
   // OLD: Logic to extract patient data for header (Restored)
@@ -217,20 +310,10 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdi
       age = typeof apptData.patientAge === 'number' ? apptData.patientAge : parseInt(apptData.patientAge) || 0;
     }
 
-    const weightKg = apptData.weightKg || patientData?.vitals?.weightKg || patientData?.weight || null;
-    const heightCm = apptData.heightCm || patientData?.vitals?.heightCm || patientData?.height || null;
-    const bp = apptData.bp || patientData?.vitals?.bp || patientData?.bp || '—';
-
-    let bmi = null;
-    if (weightKg && heightCm) {
-      bmi = (weightKg / Math.pow(heightCm / 100, 2)).toFixed(1);
-    } else if (apptData.bmi) {
-      bmi = parseFloat(apptData.bmi).toFixed(1);
-    } else if (patientData?.vitals?.bmi) {
-      bmi = parseFloat(patientData.vitals.bmi).toFixed(1);
-    } else if (patientData?.bmi) {
-      bmi = parseFloat(patientData.bmi).toFixed(1);
-    }
+    const weightKg = patientData?.vitals?.weightKg || null;
+    const heightCm = patientData?.vitals?.heightCm || null;
+    const bmi = patientData?.vitals?.bmi || null;
+    const bp = patientData?.vitals?.bp || '—';
 
     const diagnosis = apptData.diagnosis ||
       patientData?.diagnosis ||
@@ -344,101 +427,102 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdi
               const avatarSrc = patientData.avatarUrl || getGenderAvatar(patientData.gender);
 
               return (
-                <div className="appointment-view-header-new">
-                  <div className="header-main-content">
-                    {/* RESTORED OLD HEADER STRUCTURE */}
-                    <div className="header-avatar-section">
-                      <div className="patient-avatar-container">
+                <div className="pv-summary-header">
+                  <div className="pv-header-content">
+                    {/* Avatar */}
+                    <div className="pv-avatar-section">
+                      <div className="pv-avatar-container">
                         <img
                           src={avatarSrc}
                           alt={patientData.name}
-                          className="patient-avatar-image"
-                          onError={(e) => {
-                            e.target.src = getGenderAvatar(patientData.gender);
-                          }}
+                          className="pv-avatar-image"
+                          onError={(e) => { e.target.src = getGenderAvatar(patientData.gender); }}
                         />
-                        {/* Lifestyle Indicators Overlay */}
-                        <div className="lifestyle-indicators">
+                        <div className="pv-lifestyle-indicators">
                           {patientData.noAlcohol && (
-                            <div className="lifestyle-badge no-alcohol">
-                              <span className="lifestyle-label">Alcohol</span>
+                            <div className="pv-lifestyle-badge no-alcohol">
+                              <span className="pv-lifestyle-label">Alcohol</span>
                             </div>
                           )}
                           {patientData.noSmoker && (
-                            <div className="lifestyle-badge no-smoker">
-                              <span className="lifestyle-label">Smoker</span>
+                            <div className="pv-lifestyle-badge no-smoker">
+                              <span className="pv-lifestyle-label">Smoker</span>
                             </div>
                           )}
                         </div>
                       </div>
                     </div>
 
-                    <div className="header-info-section">
-                      <div className="patient-name-row">
-                        <h2 className="patient-name-main" onClick={() => onPatientClick && onPatientClick(patient._id)}>
-                          {patientData.name}
-                        </h2>
-                        <div className="contact-icons-group">
-                          {patientData.phone && (
-                            <button className="contact-icon-btn" title={patientData.phone}>
-                              <MdPhone size={14} />
-                            </button>
-                          )}
-                          {patientData.email && (
-                            <button className="contact-icon-btn" title={patientData.email}>
-                              <MdEmail size={14} />
-                            </button>
-                          )}
+                    {/* Info */}
+                    <div className="pv-info-section">
+                      <div className="pv-name-row">
+                        <h2 className="pv-name-main">{patientData.name}</h2>
+                        <div className="pv-contact-icons">
+                          {patientData.phone && <button className="pv-contact-btn" title={patientData.phone}><MdPhone size={14} /></button>}
+                          {patientData.email && <button className="pv-contact-btn" title={patientData.email}><MdEmail size={14} /></button>}
                         </div>
                       </div>
 
-                      <div className="personal-info-pills">
-                        <span className="info-pill">
-                          {getGenderIcon(patientData.gender)}
-                          <span>{patientData.gender}</span>
-                        </span>
-                        <span className="info-pill">
-                          <MdLocationOn size={14} />
-                          <span>{patientData.location}</span>
-                        </span>
-                        <span className="info-pill">
-                          <MdWork size={14} />
-                          <span>{patientData.occupation}</span>
-                        </span>
+                      <div className="pv-info-pills">
+                        <div className="pv-pill">
+                          {getGenderIcon(patientData.gender)} <span>{patientData.gender}</span>
+                        </div>
+                        <div className="pv-pill">
+                          <MdLocationOn size={14} /> <span>{patientData.location}</span>
+                        </div>
+                        <div className="pv-pill">
+                          <MdWork size={14} /> <span>{patientData.occupation}</span>
+                        </div>
                         {patientData.dob && (
-                          <span className="info-pill">
-                            <MdCalendarToday size={14} />
-                            <span>{patientData.dob} {patientData.age ? `(${patientData.age} years)` : ''}</span>
-                          </span>
+                          <div className="pv-pill">
+                            <MdCalendarToday size={14} /> <span>{patientData.dob} ({patientData.age} years)</span>
+                          </div>
                         )}
                       </div>
 
-                      <div className="health-metrics-row">
-                        {patientData.bmi && (
-                          <div className="health-metric-card">
-                            <span className="metric-value">{patientData.bmi}</span>
-                            <span className="metric-label">BMI</span>
-                          </div>
-                        )}
-                        {patientData.weightKg && (
-                          <div className="health-metric-card">
-                            <span className="metric-value">{patientData.weightKg} <small>kg</small></span>
-                            <span className="metric-label">Weight</span>
-                          </div>
-                        )}
-                        {patientData.heightCm && (
-                          <div className="health-metric-card">
-                            <span className="metric-value">{patientData.heightCm} <small>Cm</small></span>
-                            <span className="metric-label">Height</span>
-                          </div>
-                        )}
-                        {patientData.bp && patientData.bp !== '—' && (
-                          <div className="health-metric-card">
-                            <span className="metric-value">{patientData.bp}</span>
-                            <span className="metric-label">Blood pressure</span>
-                          </div>
-                        )}
+                      <div className="pv-metrics-row">
+                        <div className="pv-metric-card">
+                          <span className="pv-metric-val">{patientData.bmi || '—'}</span>
+                          <span className="pv-metric-lbl">BMI</span>
+                        </div>
+                        <div className="pv-metric-card">
+                          <span className="pv-metric-val">{patientData.weightKg || '—'} <small>kg</small></span>
+                          <span className="pv-metric-lbl">Weight</span>
+                        </div>
+                        <div className="pv-metric-card">
+                          <span className="pv-metric-val">{patientData.heightCm || '—'} <small>Cm</small></span>
+                          <span className="pv-metric-lbl">Height</span>
+                        </div>
+                        <div className="pv-metric-card">
+                          <span className="pv-metric-val">{patientData.bp}</span>
+                          <span className="pv-metric-lbl">Blood Pressure</span>
+                        </div>
                       </div>
+                    </div>
+
+                    {/* Right Actions */}
+                    <div className="pv-header-right">
+                      <button className="pv-edit-btn" onClick={() => onEdit && onEdit(appointment)}>
+                        <MdEdit size={14} /> Edit
+                      </button>
+
+                      {patientData.diagnosis.length > 0 && (
+                        <div className="pv-diagnosis-section">
+                          <span className="pv-sec-label">Own Diagnosis</span>
+                          <div className="pv-tags-row">
+                            {patientData.diagnosis.map((d, i) => <span key={i} className="pv-tag diag">{d}</span>)}
+                          </div>
+                        </div>
+                      )}
+
+                      {patientData.barriers.length > 0 && (
+                        <div className="pv-barriers-section">
+                          <span className="pv-sec-label">Health Barriers</span>
+                          <div className="pv-tags-row">
+                            {patientData.barriers.map((b, i) => <span key={i} className="pv-tag barrier">{b}</span>)}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -489,7 +573,7 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdi
                             if (!pObj && patient && (appt.patientId === patient._id || patient._id === patientId)) {
                               pObj = patient;
                             }
-                            const condition = extractCondition(pObj);
+                            const condition = appt.condition || extractCondition(pObj);
 
                             return (
                               <tr key={appt._id}>

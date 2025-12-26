@@ -818,7 +818,7 @@ const Appointments = () => {
                     {/* PATIENT COLUMN - Clickable */}
                     <td
                       className="cell-patient clickable"
-                      onClick={() => handleView(apt)}
+                      onClick={() => handlePatientNameClick(apt)}
                       style={{ cursor: 'pointer' }}
                     >
                       <img
@@ -945,6 +945,7 @@ const Appointments = () => {
         isOpen={showViewModal}
         onClose={() => setShowViewModal(false)}
         appointmentId={selectedAppointmentId}
+        appointmentData={allAppointments.find(a => a.id === selectedAppointmentId)}
         onEdit={() => {
           setShowViewModal(false);
           setShowEditModal(true);
