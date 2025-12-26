@@ -1,0 +1,735 @@
+/* PatientView.css - Compact Fixed Layout */
+
+/* Overlay */
+.patient-view-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    backdrop-filter: blur(2px);
+    overflow: hidden;
+    /* Prevent body scroll */
+}
+
+/* Floating Close Button */
+.patient-close-floating {
+    position: absolute;
+    top: 16px;
+    right: 24px;
+    background: transparent;
+    border: none;
+    color: white;
+    cursor: pointer;
+    z-index: 1010;
+    transition: transform 0.2s;
+}
+
+.patient-close-floating:hover {
+    transform: scale(1.1);
+}
+
+/* Container */
+.patient-view-container {
+    background-color: #F8FAFC;
+    width: 90%;
+    max-width: 1200px;
+    height: 90vh;
+    /* Fixed Height */
+    max-height: 800px;
+    /* Cap max height to avoid being too tall on huge screens but also too small */
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    /* No scroll on container */
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+/* Loading & Error States */
+.patient-view-loading,
+.patient-view-error {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    color: #64748B;
+}
+
+.patient-view-error .btn-error-close {
+    margin-top: 10px;
+    padding: 8px 16px;
+    background-color: #E2E8F0;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+/* --- FIXED HEADER SECTION (COMPACT) --- */
+.pv-summary-header {
+    background-color: white;
+    padding: 16px 24px;
+    /* Reduced padding */
+    border-bottom: 1px solid #E2E8F0;
+    flex-shrink: 0;
+}
+
+.pv-header-content {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+}
+
+/* Avatar Section */
+.pv-avatar-section {
+    flex-shrink: 0;
+}
+
+.pv-avatar-container {
+    position: relative;
+    width: 140px;
+    /* Reduced from 180px */
+    height: 140px;
+}
+
+.pv-avatar-image {
+    width: 100%;
+    height: 100%;
+    border-radius: 12px;
+    object-fit: cover;
+    border: 1px solid #E2E8F0;
+    background: #FFFFFF;
+}
+
+/* Lifestyle Badges */
+.pv-lifestyle-indicators {
+    position: absolute;
+    bottom: -6px;
+    left: -6px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.pv-lifestyle-badge {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    width: 36px;
+    /* Reduced */
+    height: 36px;
+    border-radius: 50%;
+    background: #FFFFFF;
+    border: 2px solid #EF4444;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    color: #EF4444;
+    padding: 2px;
+    position: relative;
+}
+
+.pv-lifestyle-badge::before {
+    content: '';
+    position: absolute;
+    top: 4px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #EF4444;
+}
+
+.pv-lifestyle-badge::after {
+    content: '✕';
+    position: absolute;
+    top: 4px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: white;
+    font-size: 10px;
+    font-weight: bold;
+    line-height: 12px;
+}
+
+.pv-lifestyle-badge.no-alcohol,
+.pv-lifestyle-badge.no-smoker {
+    border-color: #EF4444;
+    color: #EF4444;
+}
+
+.pv-lifestyle-label {
+    font-size: 7px;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-top: auto;
+}
+
+/* Info Section */
+.pv-info-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    /* Reduced gap */
+    min-width: 0;
+    justify-content: center;
+    /* Center vertically if space allows */
+}
+
+.pv-name-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.pv-name-main {
+    margin: 0;
+    font-size: 20px;
+    /* Reduced */
+    font-weight: 700;
+    color: #0F172A;
+}
+
+.pv-contact-icons {
+    display: flex;
+    gap: 6px;
+}
+
+.pv-contact-btn {
+    width: 24px;
+    /* Reduced */
+    height: 24px;
+    border-radius: 6px;
+    background: #F1F5F9;
+    border: 1px solid #E2E8F0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #64748B;
+    cursor: default;
+}
+
+/* Pills */
+.pv-info-pills {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.pv-pill {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: #64748B;
+    background: #F1F5F9;
+    padding: 4px 10px;
+    /* Reduced */
+    border-radius: 6px;
+    font-weight: 500;
+}
+
+.pv-pill svg {
+    color: #94A3B8;
+    width: 12px;
+    height: 12px;
+}
+
+/* Health Metrics */
+.pv-metrics-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 2px;
+}
+
+.pv-metric-card {
+    background: #FFFFFF;
+    border: 1px solid #E2E8F0;
+    border-radius: 6px;
+    padding: 8px 12px;
+    /* Reduced */
+    min-width: 80px;
+    display: flex;
+    flex-direction: column;
+}
+
+.pv-metric-val {
+    font-size: 16px;
+    /* Reduced */
+    font-weight: 700;
+    color: #0F172A;
+}
+
+.pv-metric-val small {
+    font-size: 10px;
+    font-weight: 500;
+    color: #64748B;
+    margin-left: 2px;
+}
+
+.pv-metric-lbl {
+    font-size: 10px;
+    color: #64748B;
+    font-weight: 500;
+    text-transform: capitalize;
+}
+
+/* Right Section */
+.pv-header-right {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: flex-end;
+    flex-shrink: 0;
+    min-width: 160px;
+}
+
+.pv-edit-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 14px;
+    background: #FFFFFF;
+    border: 1px solid #CBD5E1;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #475569;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.pv-edit-btn:hover {
+    background: #F8FAFC;
+    color: #1E293B;
+}
+
+.pv-diagnosis-section,
+.pv-barriers-section {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: flex-end;
+}
+
+.pv-sec-label {
+    font-size: 10px;
+    font-weight: 600;
+    color: #64748B;
+}
+
+.pv-tags-row {
+    display: flex;
+    gap: 4px;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+}
+
+.pv-tag {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 10px;
+}
+
+.pv-tag.diag {
+    background: #FFF7ED;
+    color: #C2410C;
+    border: 1px solid #FFEDD5;
+}
+
+.pv-tag.barrier {
+    background: #EFF6FF;
+    color: #1D4ED8;
+    border: 1px solid #DBEAFE;
+}
+
+/* --- TABS NAVIGATION --- */
+.patient-tabs-nav-bar {
+    background: #FFFFFF;
+    border-bottom: 1px solid #E2E8F0;
+    padding: 0 24px;
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.patient-tab-btn {
+    background: transparent;
+    border: none;
+    padding: 12px 16px;
+    /* Reduced */
+    font-size: 13px;
+    font-weight: 600;
+    color: #64748B;
+    cursor: pointer;
+    position: relative;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+}
+
+.patient-tab-btn:hover {
+    color: #1E40AF;
+    background-color: #F8FAFC;
+}
+
+.patient-tab-btn.active {
+    color: #1E40AF;
+    border-bottom-color: #1E40AF;
+}
+
+/* --- TAB CONTENT AREA --- */
+.patient-tab-content {
+    flex: 1;
+    /* Grow to fill remaining space */
+    overflow-y: auto;
+    /* Scroll ONLY inside content if needed */
+    padding: 24px;
+    /* Reduced padding */
+    background-color: #F8FAFC;
+    display: flex;
+    flex-direction: column;
+}
+
+/* --- Profile Tab Styles (Compact) --- */
+.pv-profile-container {
+    display: flex;
+    gap: 16px;
+    flex: 1;
+    /* Stretch to fill */
+    min-height: 0;
+    /* Important for flex child scrolling */
+}
+
+.pv-card {
+    background: white;
+    border-radius: 8px;
+    padding: 16px;
+    /* Reduced */
+    flex: 1;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    border: 1px solid #E2E8F0;
+    max-width: 500px;
+    display: flex;
+    flex-direction: column;
+}
+
+.pv-card-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+    flex-shrink: 0;
+}
+
+.pv-icon-circle {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #FEE2E2;
+    color: #EF4444;
+    font-size: 16px;
+}
+
+.pv-card-header h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #0F172A;
+}
+
+.pv-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex: 1;
+    overflow-y: auto;
+    /* Scroll inside card if needed */
+}
+
+.pv-info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+}
+
+.pv-label {
+    color: #64748B;
+    font-weight: 500;
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 0.05em;
+}
+
+.pv-value {
+    color: #0F172A;
+    font-weight: 500;
+    text-align: right;
+}
+
+.pv-action-buttons {
+    display: flex;
+    gap: 8px;
+    margin-top: auto;
+    /* Push to bottom */
+    align-items: center;
+    padding-top: 12px;
+}
+
+.pv-btn-outline {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border: 1px solid #E2E8F0;
+    background: white;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #475569;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.pv-btn-outline:hover {
+    background-color: #F1F5F9;
+    border-color: #CBD5E1;
+}
+
+.pv-update-badge-container {
+    margin-top: auto;
+    padding-top: 12px;
+}
+
+.pv-badge-updated {
+    font-size: 10px;
+    color: #64748B;
+    background-color: #F1F5F9;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-left: auto;
+    display: inline-block;
+}
+
+/* --- Common Tab Styles --- */
+.pv-tab-container {
+    background: white;
+    border-radius: 8px;
+    padding: 16px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    border: 1px solid #E2E8F0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    /* Contain inner scroll */
+}
+
+.pv-tab-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    flex-shrink: 0;
+}
+
+.pv-tab-title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #0F172A;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+.pv-actions-right {
+    display: flex;
+    gap: 8px;
+}
+
+.pv-btn-icon {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #E2E8F0;
+    background: white;
+    border-radius: 6px;
+    color: #64748B;
+    cursor: pointer;
+}
+
+.pv-search-box {
+    display: flex;
+    align-items: center;
+    border: 1px solid #E2E8F0;
+    border-radius: 6px;
+    padding: 0 8px;
+    width: 200px;
+    background: white;
+}
+
+.pv-search-box input {
+    border: none;
+    outline: none;
+    padding: 6px;
+    font-size: 13px;
+    color: #0F172A;
+    width: 100%;
+}
+
+.pv-table-container {
+    flex: 1;
+    overflow: auto;
+    /* Scroll table within container */
+    margin-bottom: 8px;
+    border: 1px solid #E2E8F0;
+    border-radius: 6px;
+}
+
+.pv-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.pv-table th {
+    text-align: left;
+    padding: 12px;
+    background-color: #F8FAFC;
+    color: #64748B;
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    border-bottom: 1px solid #E2E8F0;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.pv-table td {
+    padding: 12px;
+    border-bottom: 1px solid #E2E8F0;
+    color: #334155;
+    vertical-align: middle;
+}
+
+.pv-table tr:hover td {
+    background-color: #FAFAF9;
+}
+
+.pv-td-notes {
+    max-width: 200px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #64748B;
+}
+
+/* Badges */
+.pv-badge {
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+/* Action Buttons in Table */
+.pv-btn-text-icon {
+    border: none;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.pv-btn-action-circle {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 1px solid #E2E8F0;
+    background: white;
+    color: #64748B;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-right: 4px;
+}
+
+/* Pagination */
+.pv-pagination {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: auto;
+    /* Push to bottom */
+    padding-top: 12px;
+    border-top: 1px solid #E2E8F0;
+    color: #64748B;
+    font-size: 12px;
+    flex-shrink: 0;
+}
+
+.pv-page-controls {
+    display: flex;
+    gap: 6px;
+}
+
+.pv-page-btn {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #E2E8F0;
+    background: white;
+    border-radius: 6px;
+    cursor: pointer;
+    color: #64748B;
+}
+
+@media (max-width: 768px) {
+    .patient-view-container {
+        width: 100%;
+        height: 100%;
+        border-radius: 0;
+        max-height: none;
+    }
+
+    .pv-header-content {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+
+    .pv-avatar-container {
+        width: 100px;
+        height: 100px;
+    }
+
+    .patient-tabs-nav-bar {
+        overflow-x: auto;
+    }
+
+    .pv-profile-container {
+        flex-direction: column;
+        height: auto;
+    }
+}

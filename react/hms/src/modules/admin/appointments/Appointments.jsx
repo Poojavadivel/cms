@@ -6,8 +6,8 @@ import appointmentsService from '../../../services/appointmentsService';
 // import staffService from '../../../services/staffService'; // Reserved for future use
 import AppointmentViewModal from '../../../components/appointments/AppointmentViewModal';
 import AppointmentEditModal from '../../../components/appointments/AppointmentEditModal';
+import PatientView from '../../../components/patient/patientview';
 
-import AppointmentPreviewDialog from '../../../components/doctor/AppointmentPreviewDialog';
 import NewAppointmentForm from './components/NewAppointmentForm';
 import EditAppointmentForm from './components/EditAppointmentForm';
 import StaffDetailEnterprise from '../staff/StaffDetailEnterprise';
@@ -642,97 +642,35 @@ const Appointments = () => {
       const originalApt = allAppointments.find(a => a.id === appointment.id);
       console.log('📦 [handlePatientNameClick] Original appointment:', originalApt);
 
-      let patientData = null;
+      let patientId = appointment.patientIdObj?._id || appointment.patientIdObj || appointment.patientId;
 
-      // Try to get patient data from original appointment (as object)
-      if (originalApt && originalApt.patientIdObj && typeof originalApt.patientIdObj === 'object') {
-        patientData = originalApt.patientIdObj;
-        console.log('✅ Found patient data from patientIdObj:', patientData);
+      // Fallbacks if patientId is still not clear (e.g. string "PT-123")
+      // But transforming logic puts original object in patientIdObj
+
+      if (!patientId) {
+        // Try to get from originalApt
+        if (originalApt?.patientId?._id) patientId = originalApt.patientId._id;
+        else if (originalApt?.patientId) patientId = originalApt.patientId;
       }
 
-      if (!patientData || typeof patientData !== 'object') {
-        console.error('❌ Could not extract patient data from appointment');
-        console.error('Available appointment data:', appointment);
-        alert('Unable to load patient details. Patient information not found.');
-        return;
-      }
+      // If patientId is a string like "PT-xxx" (display ID) vs ObjectId, PatientView might fail if it expects ObjectId
+      // But existing logic seemed to rely on objects
+      // Let's pass the object if possible to PatientView? No, PatientView expects ID.
+      // So ensuring we have the ID.
 
-      // Transform patient data to match expected format
-      const fullPatient = {
-        id: patientData._id,
-        _id: patientData._id,
-        name: `${patientData.firstName || ''} ${patientData.lastName || ''}`.trim(),
-        firstName: patientData.firstName,
-        lastName: patientData.lastName,
-        email: patientData.email,
-        phone: patientData.phone || patientData.contact,
-        contact: patientData.phone || patientData.contact,
-        gender: patientData.gender,
-        age: patientData.age,
-        dateOfBirth: patientData.dateOfBirth || patientData.dob,
-        bloodGroup: patientData.bloodGroup,
-        address: patientData.address,
-        city: patientData.city,
-        state: patientData.state,
-        country: patientData.country,
-        pincode: patientData.pincode,
-        emergencyContactName: patientData.emergencyContactName,
-        emergencyContactPhone: patientData.emergencyContactPhone,
-        insuranceNumber: patientData.insuranceNumber,
-        expiryDate: patientData.expiryDate,
-        medicalHistory: Array.isArray(patientData.medicalHistory) ? patientData.medicalHistory : [],
-        allergies: patientData.allergies,
-        currentMedications: patientData.currentMedications,
-        chronicDiseases: patientData.chronicDiseases,
-        metadata: patientData.metadata,
-        ...patientData // Spread any additional fields
+      // Simplification: Just set the "patient" state with ID, let PatientView fetch.
+      // We will reuse "selectedPatient" state but just store the ID (or minimal object with ID).
+
+      // Let's store an object { _id: ... } compatible with what we pass to PatientView
+
+      const patientData = {
+        _id: patientId
       };
 
-      // Enrich with metadata if available
-      if (patientData.metadata) {
-        const metadata = patientData.metadata;
-
-        // Add emergency contacts from metadata if not in main record
-        if (!fullPatient.emergencyContactName && metadata.emergencyContactName) {
-          fullPatient.emergencyContactName = metadata.emergencyContactName;
-          fullPatient.emergencyContactPhone = metadata.emergencyContactPhone;
-          console.log('✅ Added emergency contact from metadata:', fullPatient.emergencyContactName);
-        }
-
-        // Add insurance from metadata if not in main record
-        if (!fullPatient.insuranceNumber && metadata.insurance) {
-          fullPatient.insuranceNumber = metadata.insurance.policyNumber;
-          fullPatient.expiryDate = metadata.insurance.validUntil;
-          console.log('✅ Added insurance from metadata:', fullPatient.insuranceNumber);
-        }
-
-        // Add medical history from metadata - ENSURE it's always an array
-        if (metadata.medicalHistory && fullPatient.medicalHistory.length === 0) {
-          if (Array.isArray(metadata.medicalHistory)) {
-            fullPatient.medicalHistory = metadata.medicalHistory;
-            console.log('✅ Added medical history from metadata (array):', fullPatient.medicalHistory);
-          } else if (typeof metadata.medicalHistory === 'object' && metadata.medicalHistory.currentConditions) {
-            fullPatient.medicalHistory = Array.isArray(metadata.medicalHistory.currentConditions)
-              ? metadata.medicalHistory.currentConditions
-              : [];
-            console.log('✅ Added medical history from metadata (currentConditions):', fullPatient.medicalHistory);
-          }
-        }
-      }
-
-      // Ensure medicalHistory is always an array
-      if (!Array.isArray(fullPatient.medicalHistory)) {
-        console.warn('⚠️ medicalHistory is not an array, converting:', fullPatient.medicalHistory);
-        fullPatient.medicalHistory = [];
-      }
-
-      console.log('✅ Transformed patient details:', fullPatient);
-
-      setSelectedPatient(fullPatient);
+      setSelectedPatient(patientData); // We will pass selectedPatient._id to PatientView
       setShowPatientDialog(true);
     } catch (error) {
-      console.error('❌ Error loading patient details:', error);
-      alert('Failed to load patient details: ' + error.message);
+      console.error('❌ Error handling patient click:', error);
     }
   };
 
@@ -1037,12 +975,11 @@ const Appointments = () => {
 
 
 
-      {/* Appointment Preview Dialog - Matches Flutter DoctorAppointmentPreview */}
-      <AppointmentPreviewDialog
-        patient={selectedPatient}
+      {/* Patient View - Replaces AppointmentPreviewDialog */}
+      <PatientView
+        patientId={selectedPatient?._id || selectedPatient?.id}
         isOpen={showPatientDialog}
         onClose={handleClosePatientDialog}
-        showBillingTab={false}
       />
 
       {/* Staff Detail Dialog - Show doctor/staff details */}

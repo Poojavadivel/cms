@@ -11,7 +11,7 @@ import patientsService from '../../../services/patientsService';
 import './Patients.css';
 import AddPatientModal from '../../../components/patient/addpatient';
 import EditPatientModal from '../../../components/patient/EditPatientModal';
-import PatientDetailsDialog from '../../../components/doctor/PatientDetailsDialog';
+import PatientView from '../../../components/patient/patientview';
 import StaffDetailEnterprise from '../staff/StaffDetailEnterprise';
 import doctorFemaleIcon from '../../../assets/doctor-femaleicon.png';
 import doctorMaleIcon from '../../../assets/doctor-male icon.png';
@@ -97,15 +97,15 @@ const Patients = () => {
   const [genderFilter, setGenderFilter] = useState('All');
   const [ageRangeFilter, setAgeRangeFilter] = useState('All');
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
-  
+
   // Modal state management - use single state to prevent multiple modals
   const [activeModal, setActiveModal] = useState(null);
   const [modalData, setModalData] = useState(null);
-  
+
   // Doctor dialog states (same as Appointments page)
   const [selectedDoctor, setSelectedDoctor] = useState(null);
   const [showDoctorDialog, setShowDoctorDialog] = useState(false);
-  
+
   // Refs for cleanup
   const abortControllerRef = useRef(null);
 
@@ -116,7 +116,7 @@ const Patients = () => {
     setIsLoading(true);
     try {
       const data = await patientsService.fetchPatients({ limit: CONFIG.MAX_FETCH_LIMIT });
-      
+
       if (process.env.NODE_ENV === 'development') {
         console.log('✅ Fetched patients:', data);
       }
@@ -217,7 +217,7 @@ const Patients = () => {
   // Load patients on mount and cleanup on unmount
   useEffect(() => {
     fetchPatients();
-    
+
     // Cleanup function to cancel pending requests
     return () => {
       if (abortControllerRef.current) {
@@ -225,13 +225,13 @@ const Patients = () => {
       }
     };
   }, [fetchPatients]);
-  
+
   // Debounce search input
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedSearch(searchQuery);
     }, CONFIG.DEBOUNCE_DELAY);
-    
+
     return () => clearTimeout(handler);
   }, [searchQuery]);
 
@@ -277,7 +277,7 @@ const Patients = () => {
       filtered = filtered.filter(patient => {
         const age = patient.age || 0;
         if (age < 0) return false; // Invalid age
-        
+
         switch (ageRangeFilter) {
           case '0-18': return age <= 18;
           case '19-35': return age >= 19 && age <= 35;
@@ -296,7 +296,7 @@ const Patients = () => {
   // Get unique doctors for filter with proper IDs
   const uniqueDoctors = useMemo(() => {
     const doctorMap = new Map();
-    
+
     patients.forEach(patient => {
       if (patient.doctor && patient.doctor.trim()) {
         const doctorName = patient.doctor;
@@ -308,7 +308,7 @@ const Patients = () => {
         }
       }
     });
-    
+
     const doctors = Array.from(doctorMap.values());
     return ['All', ...doctors.map(d => d.name)];
   }, [patients]);
@@ -327,7 +327,7 @@ const Patients = () => {
   }, []);
 
   // Check if any filter is active
-  const hasActiveFilters = useMemo(() => 
+  const hasActiveFilters = useMemo(() =>
     searchQuery ||
     doctorFilter !== 'All' ||
     genderFilter !== 'All' ||
@@ -363,35 +363,9 @@ const Patients = () => {
     setModalData(null);
   }, []);
 
-  const handleView = useCallback(async (patient) => {
-    // Cancel any pending requests
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-    
-    abortControllerRef.current = new AbortController();
-    setLoadingPatientId(patient.id);
-    
-    try {
-      const fullPatient = await patientsService.fetchPatientById(patient.id);
-      
-      if (process.env.NODE_ENV === 'development') {
-        console.log('View patient:', fullPatient);
-      }
-      
-      setActiveModal('view');
-      setModalData(fullPatient);
-    } catch (error) {
-      if (error.name === 'AbortError') {
-        console.log('Request cancelled');
-        return;
-      }
-      console.error('Failed to fetch patient details:', error);
-      toast.error('Failed to load patient details: ' + error.message);
-    } finally {
-      setLoadingPatientId(null);
-      abortControllerRef.current = null;
-    }
+  const handleView = useCallback((patient) => {
+    setActiveModal('view');
+    setModalData(patient);
   }, []);
 
   const handleEdit = useCallback(async (patient) => {
@@ -399,17 +373,17 @@ const Patients = () => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
-    
+
     abortControllerRef.current = new AbortController();
     setLoadingPatientId(patient.id);
-    
+
     try {
       const fullPatient = await patientsService.fetchPatientById(patient.id);
-      
+
       if (process.env.NODE_ENV === 'development') {
         console.log('Edit patient:', fullPatient);
       }
-      
+
       setActiveModal('edit');
       setModalData(fullPatient);
     } catch (error) {
@@ -453,16 +427,16 @@ const Patients = () => {
 
     try {
       setIsLoading(true);
-      
+
       // Optimistic update - remove from UI immediately (only on first attempt)
       if (retryCount === 0) {
         setPatients(prev => prev.filter(p => p.id !== patient.id));
         setFilteredPatients(prev => prev.filter(p => p.id !== patient.id));
       }
-      
+
       // Attempt to delete from backend
       const result = await patientsService.deletePatient(patient.id);
-      
+
       console.log('Delete result:', result);
 
       if (process.env.NODE_ENV === 'development') {
@@ -473,10 +447,10 @@ const Patients = () => {
 
       // Reset to first page
       setCurrentPage(0);
-      
+
       // Refresh patient list from backend to ensure sync
       await fetchPatients();
-      
+
     } catch (error) {
       console.error(`❌ Failed to delete patient (attempt ${retryCount + 1}):`, {
         error: error,
@@ -484,36 +458,36 @@ const Patients = () => {
         response: error.response?.data,
         patientId: patient.id
       });
-      
+
       // Rollback on error (if we have original data)
       if (originalPatients && originalFiltered) {
         setPatients(originalPatients);
         setFilteredPatients(originalFiltered);
       }
-      
-      const errorMessage = error.response?.data?.message 
-        || error.message 
+
+      const errorMessage = error.response?.data?.message
+        || error.message
         || 'Failed to delete patient';
-      
+
       // Retry logic - max 3 attempts with exponential backoff
       const maxRetries = 2;
       if (retryCount < maxRetries) {
         const retryDelay = Math.pow(2, retryCount) * 1000; // 1s, 2s, 4s
-        
+
         toast.error(`${errorMessage}. Retrying in ${retryDelay / 1000} seconds... (${retryCount + 1}/${maxRetries})`);
-        
+
         setTimeout(() => {
           handleDelete(patient, retryCount + 1);
         }, retryDelay);
       } else {
         // Final failure after all retries
         toast.error(`Delete failed after ${maxRetries + 1} attempts: ${errorMessage}`);
-        
+
         // Offer manual retry option
         const retry = window.confirm(
           `Failed to delete patient ${patient.name} after multiple attempts.\n\nWould you like to try again?`
         );
-        
+
         if (retry) {
           handleDelete(patient, 0); // Start fresh
         } else {
@@ -529,7 +503,7 @@ const Patients = () => {
   const handleDownload = useCallback(async (patient) => {
     // Add patient ID to downloading set
     setDownloadingPatients(prev => new Set(prev).add(patient.id));
-    
+
     try {
       // Use the reportService (matching Flutter's implementation)
       const token = localStorage.getItem('x-auth-token') || localStorage.getItem('authToken');
@@ -539,7 +513,7 @@ const Patients = () => {
       }
 
       const endpoint = `${process.env.REACT_APP_API_URL || 'https://hms-dev.onrender.com/api'}/reports-proper/patient/${patient.id}`;
-      
+
       const response = await fetch(endpoint, {
         method: 'GET',
         headers: {
@@ -590,7 +564,7 @@ const Patients = () => {
       });
     }
   }, []);
-  
+
   // Modal close handler
   const handleCloseModal = useCallback(() => {
     setActiveModal(null);
@@ -627,7 +601,7 @@ const Patients = () => {
         try {
           const freshPatientData = await patientsService.fetchPatientById(patient.id);
           console.log('📋 Fresh patient data:', freshPatientData);
-          
+
           // Check if doctor field is populated as object
           if (freshPatientData.doctor && typeof freshPatientData.doctor === 'object') {
             doctorData = freshPatientData.doctor;
@@ -643,12 +617,12 @@ const Patients = () => {
         try {
           console.log('🔄 Attempting to fetch all patients with populated doctor field...');
           const allPatients = await patientsService.fetchPatients({ limit: 1000 });
-          const patientWithDoctor = allPatients.find(p => 
-            (p.id === patient.id || p._id === patient.id) && 
-            p.doctor && 
+          const patientWithDoctor = allPatients.find(p =>
+            (p.id === patient.id || p._id === patient.id) &&
+            p.doctor &&
             typeof p.doctor === 'object'
           );
-          
+
           if (patientWithDoctor?.doctor) {
             doctorData = patientWithDoctor.doctor;
             console.log('✅ Found doctor data from all patients fetch:', doctorData);
@@ -669,7 +643,7 @@ const Patients = () => {
               'x-auth-token': localStorage.getItem('x-auth-token') || localStorage.getItem('authToken')
             }
           });
-          
+
           // Try staff endpoint first (doctors are staff members)
           try {
             const response = await axiosInstance.get(`/staff/${patient.doctorId}`);
@@ -698,21 +672,21 @@ const Patients = () => {
               'x-auth-token': localStorage.getItem('x-auth-token') || localStorage.getItem('authToken')
             }
           });
-          
+
           // Search staff by name
           const response = await axiosInstance.get(`/staff?search=${encodeURIComponent(patient.doctor)}`);
           const staffList = response.data.staff || response.data.data || response.data || [];
-          
+
           // Find exact or partial match
           const matchedStaff = staffList.find(s => {
             const fullName = `${s.firstName || ''} ${s.lastName || ''}`.trim();
             const name = s.name || fullName;
-            return name === patient.doctor || 
-                   name.toLowerCase() === patient.doctor.toLowerCase() ||
-                   fullName === patient.doctor ||
-                   fullName.toLowerCase() === patient.doctor.toLowerCase();
+            return name === patient.doctor ||
+              name.toLowerCase() === patient.doctor.toLowerCase() ||
+              fullName === patient.doctor ||
+              fullName.toLowerCase() === patient.doctor.toLowerCase();
           });
-          
+
           if (matchedStaff) {
             doctorData = matchedStaff;
             console.log('✅ Found doctor data from staff search by name:', doctorData);
@@ -733,24 +707,24 @@ const Patients = () => {
               'x-auth-token': localStorage.getItem('x-auth-token') || localStorage.getItem('authToken')
             }
           });
-          
+
           const response = await axiosInstance.get('/staff');
           const allStaff = response.data.staff || response.data.data || response.data || [];
-          
+
           // Search for doctor in all staff
           const matchedStaff = allStaff.find(s => {
             const fullName = `${s.firstName || ''} ${s.lastName || ''}`.trim();
             const name = s.name || fullName;
-            
+
             // Try multiple matching strategies
-            return name === patient.doctor || 
-                   name.toLowerCase() === patient.doctor.toLowerCase() ||
-                   fullName === patient.doctor ||
-                   fullName.toLowerCase() === patient.doctor.toLowerCase() ||
-                   name.includes(patient.doctor) ||
-                   patient.doctor.includes(name);
+            return name === patient.doctor ||
+              name.toLowerCase() === patient.doctor.toLowerCase() ||
+              fullName === patient.doctor ||
+              fullName.toLowerCase() === patient.doctor.toLowerCase() ||
+              name.includes(patient.doctor) ||
+              patient.doctor.includes(name);
           });
-          
+
           if (matchedStaff) {
             doctorData = matchedStaff;
             console.log('✅ Found doctor data from all staff list:', doctorData);
@@ -814,28 +788,28 @@ const Patients = () => {
   // Format date with proper validation
   const formatLastVisit = useCallback((dateString) => {
     if (!dateString) return 'N/A';
-    
+
     try {
       const date = new Date(dateString);
-      
+
       // Check if date is valid
       if (isNaN(date.getTime())) {
         return 'Invalid date';
       }
-      
+
       return date.toLocaleDateString('en-GB'); // dd/mm/yyyy
     } catch (error) {
       console.error('Date formatting error:', error);
       return 'Invalid date';
     }
   }, []);
-  
+
   // Keyboard navigation
   useEffect(() => {
     const handleKeyPress = (e) => {
       // Only handle if no modal is open
       if (activeModal) return;
-      
+
       if (e.key === 'ArrowLeft' && currentPage > 0) {
         handlePreviousPage();
       }
@@ -843,7 +817,7 @@ const Patients = () => {
         handleNextPage();
       }
     };
-    
+
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, [currentPage, totalPages, activeModal, handlePreviousPage, handleNextPage]);
@@ -1020,8 +994,8 @@ const Patients = () => {
                     {/* ACTIONS */}
                     <td>
                       <div className="action-buttons-group">
-                        <button 
-                          className="btn-action view" 
+                        <button
+                          className="btn-action view"
                           title="View patient details"
                           aria-label={`View details for ${patient.name}`}
                           onClick={() => handleView(patient)}
@@ -1029,8 +1003,8 @@ const Patients = () => {
                         >
                           {loadingPatientId === patient.id ? '...' : <Icons.Eye />}
                         </button>
-                        <button 
-                          className="btn-action edit" 
+                        <button
+                          className="btn-action edit"
                           title="Edit patient"
                           aria-label={`Edit ${patient.name}`}
                           onClick={() => handleEdit(patient)}
@@ -1038,8 +1012,8 @@ const Patients = () => {
                         >
                           <Icons.Edit />
                         </button>
-                        <button 
-                          className="btn-action delete" 
+                        <button
+                          className="btn-action delete"
                           title="Delete patient"
                           aria-label={`Delete ${patient.name}`}
                           onClick={() => handleDelete(patient)}
@@ -1047,11 +1021,11 @@ const Patients = () => {
                         >
                           <Icons.Delete />
                         </button>
-                        <button 
-                          className="btn-action download" 
+                        <button
+                          className="btn-action download"
                           title="Download report"
                           aria-label={`Download report for ${patient.name}`}
-                          onClick={() => handleDownload(patient)} 
+                          onClick={() => handleDownload(patient)}
                           disabled={downloadingPatients.has(patient.id)}
                         >
                           {downloadingPatients.has(patient.id) ? '...' : <Icons.Download />}
@@ -1116,11 +1090,10 @@ const Patients = () => {
       )}
 
       {activeModal === 'view' && modalData && (
-        <PatientDetailsDialog
-          patient={modalData}
+        <PatientView
+          patientId={modalData.id || modalData._id || modalData.patientId}
           isOpen={true}
           onClose={handleCloseModal}
-          showBillingTab={true}
         />
       )}
 

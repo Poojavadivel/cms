@@ -4,8 +4,8 @@
  * Matches Flutter's DoctorAppointmentPreview
  */
 
-import React, { useState, useEffect } from 'react';
-import { MdClose, MdEdit, MdPerson, MdMedicalServices, MdDescription, MdScience, MdPayment, MdPhone, MdEmail, MdLocationOn, MdWork, MdCalendarToday, MdMale, MdFemale } from 'react-icons/md';
+import React, { useState, useEffect, useMemo } from 'react';
+import { MdClose, MdPerson, MdPhone, MdEmail, MdLocationOn, MdWork, MdCalendarToday, MdMale, MdFemale, MdWarning, MdSearch } from 'react-icons/md';
 import './AppointmentViewModal.css';
 import appointmentsService from '../../services/appointmentsService';
 import patientsService from '../../services/patientsService';
@@ -14,17 +14,13 @@ import { getGenderAvatar } from '../../utils/avatarHelpers';
 const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdit, onPatientClick }) => {
   const [appointment, setAppointment] = useState(null);
   const [patient, setPatient] = useState(null);
-  const [activeTab, setActiveTab] = useState('profile');
+  const [activeTab, setActiveTab] = useState('appointments'); // ONLY tab
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const tabs = [
-    { id: 'profile', label: 'Profile', icon: <MdPerson /> },
-    { id: 'medical-history', label: 'Medical History', icon: <MdMedicalServices /> },
-    { id: 'prescription', label: 'Prescription', icon: <MdDescription /> },
-    { id: 'lab-results', label: 'Lab Results', icon: <MdScience /> },
-    { id: 'billings', label: 'Billings', icon: <MdPayment /> }
-  ];
+  // NEW: State for appointments list in the tab
+  const [patientAppointments, setPatientAppointments] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     if (isOpen) {
@@ -37,6 +33,7 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdi
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, appointmentId, patientId]);
 
+  // OLD: Fetch Logic from Step 4 (Original)
   const fetchAppointment = async () => {
     setIsLoading(true);
     setError('');
@@ -51,14 +48,12 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdi
         const patientObj = data.patientId;
         transformedData.clientName = `${patientObj.firstName || ''} ${patientObj.lastName || ''}`.trim();
 
-        // Handle phone (could be object or string)
         if (typeof patientObj.phone === 'object') {
           transformedData.phoneNumber = patientObj.phone?.phone || patientObj.phone?.number || '';
         } else {
           transformedData.phoneNumber = patientObj.phone || patientObj.phoneNumber || '';
         }
 
-        // Handle email (could be object or string)
         if (typeof patientObj.email === 'object') {
           transformedData.patientEmail = patientObj.email?.email || patientObj.email?.address || '';
         } else {
@@ -75,14 +70,12 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdi
           transformedData.metadata = { ...transformedData.metadata, ...patientObj.metadata };
         }
 
-        // Set patient data if already available
         setPatient(patientObj);
       } else if (typeof data.patientId === 'string') {
         patientIdToFetch = data.patientId;
         transformedData.patientObjectId = data.patientId;
       }
 
-      // Transform nested doctor object if present
       if (data.doctorId && typeof data.doctorId === 'object') {
         const doctor = data.doctorId;
         transformedData.doctorName = `${doctor.firstName || ''} ${doctor.lastName || ''}`.trim();
@@ -90,16 +83,16 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdi
 
       setAppointment(transformedData);
 
-      // Fetch full patient details if we have patientId and patient data is not complete
-      if (patientIdToFetch && !patient) {
-        try {
-          const patientData = await patientsService.fetchPatientById(patientIdToFetch);
-          setPatient(patientData);
-        } catch (patientErr) {
-          console.warn('Failed to fetch patient details:', patientErr);
-          // Continue without patient details
+      if (patientIdToFetch) {
+        await fetchPatientAppointments(patientIdToFetch); // Fetch list for the tab
+        if (!patient) {
+          try {
+            const patientData = await patientsService.fetchPatientById(patientIdToFetch);
+            setPatient(patientData);
+          } catch (e) { console.warn(e); }
         }
       }
+
     } catch (err) {
       setError(err.message || 'Failed to load appointment');
     } finally {
@@ -111,21 +104,23 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdi
     setIsLoading(true);
     setError('');
     try {
-      // Direct patient fetch without appointment context
       const patientData = await patientsService.fetchPatientById(patientId);
       setPatient(patientData);
 
-      // Create a dummy appointment object to satisfy render requirements without displaying appointment data
+      // Create a dummy appointment for header logic compatibility
       setAppointment({
         _id: 'view-only',
         patientId: patientData,
         clientName: `${patientData.firstName || patientData.name || ''} ${patientData.lastName || ''}`.trim(),
-        // Mock other fields to prevent crashes, but they will be hidden
-        date: null,
-        time: null,
-        appointmentType: null,
-        mode: null
+        gender: patientData.gender,
+        phoneNumber: patientData.phone,
+        patientEmail: patientData.email,
+        location: patientData.address?.city,
+        // ... populate other fields if needed by getPatientData
       });
+
+      await fetchPatientAppointments(patientId);
+
     } catch (err) {
       setError(err.message || 'Failed to load patient details');
     } finally {
@@ -133,13 +128,29 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdi
     }
   };
 
+  // NEW: Fetch all appointments for the patient
+  const fetchPatientAppointments = async (pId) => {
+    try {
+      const all = await appointmentsService.fetchAppointments();
+      const filtered = all.filter(appt => {
+        if (!appt.patientId) return false;
+        const apptPId = typeof appt.patientId === 'object' ? appt.patientId._id : appt.patientId;
+        return apptPId === pId;
+      });
+      setPatientAppointments(filtered);
+    } catch (e) {
+      console.error("Failed to fetch patient appointments", e);
+    }
+  };
+
+
   if (!isOpen) return null;
 
   const getGenderIcon = (gender) => {
     return gender?.toLowerCase() === 'female' ? <MdFemale size={16} /> : <MdMale size={16} />;
   };
 
-  // Extract patient data for header
+  // OLD: Logic to extract patient data for header (Restored)
   const getPatientData = () => {
     const patientData = patient || (appointment?.patientId && typeof appointment.patientId === 'object' ? appointment.patientId : null);
     const apptData = appointment || {};
@@ -150,7 +161,6 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdi
     const gender = apptData.gender || patientData?.gender || 'Male';
     const isFemale = gender.toLowerCase() === 'female';
 
-    // Phone
     let phone = '';
     if (apptData.phoneNumber) {
       phone = typeof apptData.phoneNumber === 'object'
@@ -162,7 +172,6 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdi
         : patientData.phone;
     }
 
-    // Email
     let email = '';
     if (apptData.patientEmail) {
       email = typeof apptData.patientEmail === 'object'
@@ -174,18 +183,15 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdi
         : patientData.email;
     }
 
-    // Location
     const location = patientData?.address?.city
       ? `${patientData.address.city}${patientData.address.state ? `, ${patientData.address.state}` : ''}`
       : apptData.location || patientData?.location || 'Location not set';
 
-    // Occupation
     const occupation = patientData?.profession ||
       patientData?.metadata?.profession ||
       apptData.occupation ||
       'Not specified';
 
-    // Date of Birth and Age
     let dob = '';
     let age = 0;
     if (patientData?.dateOfBirth) {
@@ -211,12 +217,10 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdi
       age = typeof apptData.patientAge === 'number' ? apptData.patientAge : parseInt(apptData.patientAge) || 0;
     }
 
-    // Vitals
     const weightKg = apptData.weightKg || patientData?.vitals?.weightKg || patientData?.weight || null;
     const heightCm = apptData.heightCm || patientData?.vitals?.heightCm || patientData?.height || null;
     const bp = apptData.bp || patientData?.vitals?.bp || patientData?.bp || '—';
 
-    // Calculate BMI
     let bmi = null;
     if (weightKg && heightCm) {
       bmi = (weightKg / Math.pow(heightCm / 100, 2)).toFixed(1);
@@ -228,7 +232,6 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdi
       bmi = parseFloat(patientData.bmi).toFixed(1);
     }
 
-    // Diagnosis (from appointment or patient)
     const diagnosis = apptData.diagnosis ||
       patientData?.diagnosis ||
       patientData?.metadata?.diagnosis ||
@@ -236,14 +239,12 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdi
       [];
     const diagnosisArray = Array.isArray(diagnosis) ? diagnosis : [];
 
-    // Health Barriers
     const barriers = apptData.barriers ||
       patientData?.barriers ||
       patientData?.metadata?.barriers ||
       [];
     const barriersArray = Array.isArray(barriers) ? barriers : [];
 
-    // Lifestyle indicators (from patient metadata - only show if explicitly set)
     const noAlcohol = patientData?.metadata?.noAlcohol === true || patientData?.metadata?.alcohol === false;
     const noSmoker = patientData?.metadata?.noSmoker === true || patientData?.metadata?.smoker === false;
 
@@ -269,6 +270,54 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdi
     };
   };
 
+  // Helper: Extract Condition (Logic copied from Appointments.jsx)
+  const extractCondition = (currPatient) => {
+    // Note: In the appointments list loop, we might have the patient object nested in appt.patientId
+    // Or we might rely on the main 'patient' state if the list is filtered for this patient.
+    // Actually, appointments in 'patientAppointments' have 'patientId' which might be the object.
+
+    // Use the passed patient object from the list item
+    const p = currPatient;
+    if (!p || typeof p !== 'object') return 'N/A';
+
+    if (p.condition && p.condition.trim()) return p.condition;
+
+    const formatArray = (arr) => {
+      if (!Array.isArray(arr) || arr.length === 0) return null;
+      if (arr.length === 1) return arr[0];
+      return `${arr[0]} +${arr.length - 1}`;
+    };
+
+    if (p.medicalHistory) {
+      if (Array.isArray(p.medicalHistory)) {
+        const res = formatArray(p.medicalHistory);
+        if (res) return res;
+      } else if (typeof p.medicalHistory === 'object' && p.medicalHistory.currentConditions) {
+        const res = formatArray(p.medicalHistory.currentConditions);
+        if (res) return res;
+      }
+    }
+
+    return 'N/A';
+  };
+
+  const getFilteredAppointments = () => {
+    if (!searchTerm) return patientAppointments;
+    return patientAppointments.filter(appt => {
+      // Search logic (date, status, condition?) user said "Search should filter appointments of the selected patient...". usually by date or status or condition. 
+      // Previous request said "Doctor, Date, Department".
+      // Current request says "Add one search input".
+      // I'll search across basic fields.
+      const date = appt.date || '';
+      const status = appt.status || '';
+
+      return date.includes(searchTerm) ||
+        status.toLowerCase().includes(searchTerm.toLowerCase());
+    });
+  };
+
+  const filteredList = getFilteredAppointments();
+
   return (
     <div className="appointment-view-overlay">
       {/* Floating Close Button */}
@@ -278,11 +327,10 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdi
 
       <div className="appointment-view-container">
 
-        {/* Content */}
         {isLoading ? (
           <div className="appointment-view-loading">
             <div className="spinner"></div>
-            <p>Loading appointment details...</p>
+            <p>Loading details...</p>
           </div>
         ) : error ? (
           <div className="appointment-view-error">
@@ -292,14 +340,13 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdi
         ) : appointment ? (
           <>
             {(() => {
-              // Calculate derived data here in render scope
               const patientData = getPatientData();
               const avatarSrc = patientData.avatarUrl || getGenderAvatar(patientData.gender);
 
               return (
                 <div className="appointment-view-header-new">
                   <div className="header-main-content">
-                    {/* Left Section: Avatar with Lifestyle Indicators */}
+                    {/* RESTORED OLD HEADER STRUCTURE */}
                     <div className="header-avatar-section">
                       <div className="patient-avatar-container">
                         <img
@@ -326,19 +373,9 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdi
                       </div>
                     </div>
 
-                    {/* Center Section: Patient Info */}
                     <div className="header-info-section">
-                      {/* Name with Contact Icons */}
                       <div className="patient-name-row">
-                        <h2
-                          className="patient-name-main"
-                          onClick={() => {
-                            const pId = appointment.patientObjectId ||
-                              (typeof appointment.patientId === 'object' ? appointment.patientId?._id : appointment.patientId) ||
-                              patientId; // Fallback to prop
-                            onPatientClick && pId && onPatientClick(pId);
-                          }}
-                        >
+                        <h2 className="patient-name-main" onClick={() => onPatientClick && onPatientClick(patient._id)}>
                           {patientData.name}
                         </h2>
                         <div className="contact-icons-group">
@@ -355,7 +392,6 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdi
                         </div>
                       </div>
 
-                      {/* Personal Information Pills */}
                       <div className="personal-info-pills">
                         <span className="info-pill">
                           {getGenderIcon(patientData.gender)}
@@ -377,7 +413,6 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdi
                         )}
                       </div>
 
-                      {/* Health Metrics Cards */}
                       <div className="health-metrics-row">
                         {patientData.bmi && (
                           <div className="health-metric-card">
@@ -405,289 +440,93 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdi
                         )}
                       </div>
                     </div>
-
-                    {/* Right Section: Edit Button (Only show if we have an appointment or if we handle patient edit) */}
-                    <div className="header-right-section">
-                      {(appointmentId || onEdit) && (
-                        <button className="edit-button-header" onClick={() => onEdit(appointment)}>
-                          <MdEdit size={14} />
-                          {/* If pure patient view, maybe say "Edit Patient"? For now keep "Edit" assuming generic edit handler */}
-                          <span>Edit</span>
-                        </button>
-                      )}
-
-                      {/* Own Diagnosis */}
-                      {patientData.diagnosis.length > 0 && (
-                        <div className="diagnosis-section">
-                          <span className="section-label">Own diagnosis</span>
-                          <div className="tags-container">
-                            {patientData.diagnosis.map((diag, idx) => (
-                              <span key={idx} className="diagnosis-tag">{diag}</span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Health Barriers */}
-                      {patientData.barriers.length > 0 && (
-                        <div className="barriers-section">
-                          <span className="section-label">Health barriers</span>
-                          <div className="tags-container">
-                            {patientData.barriers.map((barrier, idx) => (
-                              <span key={idx} className="barrier-tag">{barrier}</span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
                   </div>
                 </div>
               );
             })()}
 
-
-
-            {/* Appointment Details - only show if appointmentId is present (not in pure Patient View) */}
-            {appointmentId && (
-              <div className="appointment-details-card">
-                <div className="detail-item">
-                  <span className="detail-label">Date:</span>
-                  <span className="detail-value">{String(appointment.date || 'Not set')}</span>
-                </div>
-                <div className="detail-item">
-                  <span className="detail-label">Time:</span>
-                  <span className="detail-value">{String(appointment.time || 'Not set')}</span>
-                </div>
-                <div className="detail-item">
-                  <span className="detail-label">Type:</span>
-                  <span className="detail-value">{String(appointment.appointmentType || 'General')}</span>
-                </div>
-                <div className="detail-item">
-                  <span className="detail-label">Mode:</span>
-                  <span className="detail-value">{String(appointment.mode || 'In-clinic')}</span>
-                </div>
-              </div>
-            )}
-
-            {/* Tabs */}
+            {/* TAB SECTION - Single "Appointments" Tab */}
             <div className="appointment-tabs-section">
-              {/* Tab Headers */}
               <div className="tabs-header">
-                {tabs.map(tab => (
-                  <button
-                    key={tab.id}
-                    className={`tab-button ${activeTab === tab.id ? 'active' : ''}`}
-                    onClick={() => setActiveTab(tab.id)}
-                  >
-                    {tab.icon}
-                    <span>{tab.label}</span>
-                  </button>
-                ))}
+                <button className="tab-button active">
+                  <MdCalendarToday />
+                  <span>Appointments</span>
+                </button>
               </div>
 
-              {/* Tab Content */}
               <div className="tabs-content">
-                {activeTab === 'profile' && (
-                  <ProfileTab appointment={appointment} />
-                )}
-                {activeTab === 'medical-history' && (
-                  <MedicalHistoryTab appointment={appointment} />
-                )}
-                {activeTab === 'prescription' && (
-                  <PrescriptionTab appointment={appointment} />
-                )}
-                {activeTab === 'lab-results' && (
-                  <LabResultsTab appointment={appointment} />
-                )}
-                {activeTab === 'billings' && (
-                  <BillingsTab appointment={appointment} />
-                )}
+                <div className="tab-content-wrapper full-width-content">
+                  {/* Search Bar */}
+                  <div className="appointments-filter-bar simple">
+                    <div className="search-box">
+                      <MdSearch size={20} />
+                      <input
+                        type="text"
+                        placeholder="Search appointments..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Appointment List */}
+                  <div className="appointments-list-container">
+                    {filteredList.length > 0 ? (
+                      <table className="appointments-table">
+                        <thead>
+                          <tr>
+                            <th>Date</th>
+                            <th>Time</th>
+                            <th>Condition</th>
+                            <th>Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredList.map(appt => {
+                            // Condition Extraction Logic
+                            // If appt.patientId is object, use it. Else use 'patient' state if matches.
+                            let pObj = typeof appt.patientId === 'object' ? appt.patientId : null;
+                            if (!pObj && patient && (appt.patientId === patient._id || patient._id === patientId)) {
+                              pObj = patient;
+                            }
+                            const condition = extractCondition(pObj);
+
+                            return (
+                              <tr key={appt._id}>
+                                <td>
+                                  <span className="appt-date">
+                                    {new Date(appt.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                  </span>
+                                </td>
+                                <td>
+                                  <span className="appt-time">{appt.time}</span>
+                                </td>
+                                <td>
+                                  <span className="appt-condition">
+                                    {condition}
+                                  </span>
+                                </td>
+                                <td>
+                                  <span className={`status-badge ${appt.status?.toLowerCase() || 'pending'}`}>
+                                    {appt.status || 'Pending'}
+                                  </span>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    ) : (
+                      <div className="no-appointments">
+                        <p>No appointments found.</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           </>
-        ) : (
-          <div className="appointment-view-error">
-            <p>No appointment data available</p>
-            <button onClick={onClose} className="btn-error-close">Close</button>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-// Tab Components
-
-const ProfileTab = ({ appointment }) => {
-  return (
-    <div className="tab-content-wrapper">
-      <div className="info-section">
-        <h3>Personal Information</h3>
-        <div className="info-grid">
-          <div className="info-field">
-            <label>Full Name</label>
-            <p>{String(appointment.clientName || 'N/A')}</p>
-          </div>
-          <div className="info-field">
-            <label>Patient ID</label>
-            <p>{
-              (() => {
-                // Handle pure patient object if passed in appointment.patientId
-                if (appointment.patientId && !appointment.patientId._id && appointment.patientId.patientId) {
-                  return appointment.patientId.patientId;
-                }
-
-                if (typeof appointment.patientId === 'object' && appointment.patientId) {
-                  return String(appointment.patientId.metadata?.patientCode || appointment.patientId._id || 'N/A');
-                }
-                return String(appointment.patientId || 'N/A');
-              })()
-            }</p>
-          </div>
-          <div className="info-field">
-            <label>Phone Number</label>
-            <p>{
-              (() => {
-                if (typeof appointment.phoneNumber === 'object' && appointment.phoneNumber) {
-                  return String(appointment.phoneNumber.phone || appointment.phoneNumber.number || 'N/A');
-                }
-                return String(appointment.phoneNumber || 'N/A');
-              })()
-            }</p>
-          </div>
-          <div className="info-field">
-            <label>Gender</label>
-            <p>{
-              (() => {
-                if (typeof appointment.gender === 'object') {
-                  return 'N/A';
-                }
-                return String(appointment.gender || appointment.metadata?.gender || 'N/A');
-              })()
-            }</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="info-section">
-        <h3>Appointment Details</h3>
-        <div className="info-grid">
-          <div className="info-field">
-            <label>Chief Complaint</label>
-            <p>{String(appointment.chiefComplaint || 'None recorded')}</p>
-          </div>
-          <div className="info-field">
-            <label>Location</label>
-            <p>{String(appointment.location || 'N/A')}</p>
-          </div>
-          <div className="info-field">
-            <label>Duration</label>
-            <p>{String(appointment.durationMinutes || 30)} minutes</p>
-          </div>
-          <div className="info-field">
-            <label>Priority</label>
-            <p>{String(appointment.priority || 'Normal')}</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Vitals */}
-      {(appointment.heightCm || appointment.weightKg || appointment.bp || appointment.heartRate || appointment.spo2) && (
-        <div className="info-section">
-          <h3>Vitals</h3>
-          <div className="info-grid">
-            {appointment.heightCm && (
-              <div className="info-field">
-                <label>Height</label>
-                <p>{String(appointment.heightCm)} cm</p>
-              </div>
-            )}
-            {appointment.weightKg && (
-              <div className="info-field">
-                <label>Weight</label>
-                <p>{String(appointment.weightKg)} kg</p>
-              </div>
-            )}
-            {appointment.bp && (
-              <div className="info-field">
-                <label>Blood Pressure</label>
-                <p>{String(appointment.bp)}</p>
-              </div>
-            )}
-            {appointment.heartRate && (
-              <div className="info-field">
-                <label>Heart Rate</label>
-                <p>{String(appointment.heartRate)} bpm</p>
-              </div>
-            )}
-            {appointment.spo2 && (
-              <div className="info-field">
-                <label>SpO2</label>
-                <p>{String(appointment.spo2)}%</p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Notes */}
-      {appointment.notes && (
-        <div className="info-section">
-          <h3>Notes</h3>
-          <p className="notes-text">{String(appointment.notes)}</p>
-        </div>
-      )}
-    </div>
-  );
-};
-
-const MedicalHistoryTab = ({ appointment }) => {
-  return (
-    <div className="tab-content-wrapper">
-      <div className="empty-state">
-        <MdMedicalServices size={64} color="#CBD5E1" />
-        <h3>Medical History</h3>
-        <p>Medical history information will be displayed here</p>
-        <p className="empty-note">Feature coming soon</p>
-      </div>
-    </div>
-  );
-};
-
-const PrescriptionTab = ({ appointment }) => {
-  return (
-    <div className="tab-content-wrapper">
-      <div className="empty-state">
-        <MdDescription size={64} color="#CBD5E1" />
-        <h3>Prescriptions</h3>
-        <p>Prescription details will be displayed here</p>
-        <p className="empty-note">Feature coming soon</p>
-      </div>
-    </div>
-  );
-};
-
-const LabResultsTab = ({ appointment }) => {
-  return (
-    <div className="tab-content-wrapper">
-      <div className="empty-state">
-        <MdScience size={64} color="#CBD5E1" />
-        <h3>Lab Results</h3>
-        <p>Laboratory test results will be displayed here</p>
-        <p className="empty-note">Feature coming soon</p>
-      </div>
-    </div>
-  );
-};
-
-const BillingsTab = ({ appointment }) => {
-  return (
-    <div className="tab-content-wrapper">
-      <div className="empty-state">
-        <MdPayment size={64} color="#CBD5E1" />
-        <h3>Billing Information</h3>
-        <p>Billing and payment details will be displayed here</p>
-        <p className="empty-note">Feature coming soon</p>
+        ) : null}
       </div>
     </div>
   );
