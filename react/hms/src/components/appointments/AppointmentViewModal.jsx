@@ -26,8 +26,7 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdi
   useEffect(() => {
     if (isOpen) {
       if (appointmentData) {
-        // DIRECT MAPPING - No API call
-
+        // Map appointment-specific data
         const mappedAppt = {
           ...appointmentData,
           _id: appointmentData.id, // Ensure internal ID usage
@@ -35,30 +34,56 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdi
           condition: appointmentData.condition
         };
 
-        // Get or create patient object
-        let patientObj = appointmentData.patientIdObj || null;
-
-        if (!patientObj && appointmentData.patientId) {
-          patientObj = {
-            _id: appointmentData.patientIdObj?._id || appointmentData.patientId,
-            firstName: appointmentData.patientName?.split(' ')[0] || '',
-            lastName: appointmentData.patientName?.split(' ').slice(1).join(' ') || '',
-            gender: appointmentData.gender,
-          };
-        }
-
-        // Normalize vitals from appointment and patient data
-        const normalizedVitals = normalizeVitals(appointmentData, patientObj);
-
-        // Ensure patient has normalized vitals
-        if (patientObj) {
-          patientObj.vitals = normalizedVitals;
-        }
-
         setAppointment(mappedAppt);
-        setPatient(patientObj);
         setPatientAppointments([mappedAppt]);
-        setIsLoading(false);
+
+        // ALWAYS fetch full patient object
+        let pId = null;
+
+        // Priority 1: Object with _id
+        if (appointmentData.patientId && typeof appointmentData.patientId === 'object' && appointmentData.patientId._id) {
+          pId = appointmentData.patientId._id;
+        }
+        // Priority 2: patientObjectId field
+        else if (appointmentData.patientObjectId) {
+          pId = appointmentData.patientObjectId;
+        }
+        // Priority 3: patientIdObj field (Object with _id OR direct string ID)
+        else if (appointmentData.patientIdObj) {
+          if (typeof appointmentData.patientIdObj === 'object' && appointmentData.patientIdObj._id) {
+            pId = appointmentData.patientIdObj._id;
+          } else if (typeof appointmentData.patientIdObj === 'string') {
+            pId = appointmentData.patientIdObj;
+          }
+        }
+        // Priority 4: patientId string (if it looks like a MongoID, not "PAT-...")
+        else if (typeof appointmentData.patientId === 'string') {
+          // If it starts with "PAT-" or "PT-", it's likely a code, not a MongoID.
+          if (!appointmentData.patientId.startsWith('PAT-') && !appointmentData.patientId.startsWith('PT-')) {
+            pId = appointmentData.patientId;
+          } else {
+            console.warn("Patient ID looks like a code (" + appointmentData.patientId + "), skipping fetch by ID.");
+          }
+        }
+
+        if (pId) {
+          setIsLoading(true);
+          patientsService.fetchPatientById(pId)
+            .then(fetchedPatient => {
+              // Normalize vitals from the FULL fetched patient object
+              const normalizedVitals = normalizeVitals(null, fetchedPatient);
+              fetchedPatient.vitals = normalizedVitals;
+
+              setPatient(fetchedPatient);
+            })
+            .catch(err => {
+              console.error("Failed to fetch patient for header:", err);
+              setError("Failed to load patient details for header.");
+            })
+            .finally(() => setIsLoading(false));
+        } else {
+          setIsLoading(false);
+        }
 
       } else if (appointmentId) {
         fetchAppointment();
@@ -205,32 +230,25 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdi
    * @returns {Object} Normalized vitals { weightKg, heightCm, bmi, bp }
    */
   const normalizeVitals = (appointmentData, patientData) => {
+    // User requested: "Normalize vitals only from the full patient object, not from appointment data."
+    // So we ignore appointmentData arguments for vitals.
+
     const weightKg =
-      appointmentData?.vitals?.weightKg ||
-      appointmentData?.weightKg ||
-      appointmentData?.weight ||
       patientData?.vitals?.weightKg ||
       patientData?.weight ||
       null;
 
     const heightCm =
-      appointmentData?.vitals?.heightCm ||
-      appointmentData?.heightCm ||
-      appointmentData?.height ||
       patientData?.vitals?.heightCm ||
       patientData?.height ||
       null;
 
     const bp =
-      appointmentData?.vitals?.bp ||
-      appointmentData?.bp ||
       patientData?.vitals?.bp ||
       patientData?.bp ||
       '—';
 
     let bmi =
-      appointmentData?.vitals?.bmi ||
-      appointmentData?.bmi ||
       patientData?.vitals?.bmi ||
       patientData?.bmi ||
       null;
@@ -245,32 +263,25 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdi
 
   // OLD: Logic to extract patient data for header (Restored)
   const getPatientData = () => {
-    const patientData = patient || (appointment?.patientId && typeof appointment.patientId === 'object' ? appointment.patientId : null);
-    const apptData = appointment || {};
+    // STRICTLY use 'patient' state. No fallback to appointment object construction.
+    if (!patient) return null;
 
-    const name = apptData.clientName ||
-      (patientData ? `${patientData.firstName || ''} ${patientData.lastName || ''}`.trim() : 'Unknown Patient');
+    const patientData = patient;
 
-    const gender = apptData.gender || patientData?.gender || 'Male';
+    const name = `${patientData.firstName || ''} ${patientData.lastName || ''}`.trim() || patientData.name || 'Unknown Patient';
+
+    const gender = patientData.gender || 'Male';
     const isFemale = gender.toLowerCase() === 'female';
 
     let phone = '';
-    if (apptData.phoneNumber) {
-      phone = typeof apptData.phoneNumber === 'object'
-        ? (apptData.phoneNumber.phone || apptData.phoneNumber.number || '')
-        : apptData.phoneNumber;
-    } else if (patientData?.phone) {
+    if (patientData.phone) {
       phone = typeof patientData.phone === 'object'
         ? (patientData.phone.phone || patientData.phone.number || '')
         : patientData.phone;
     }
 
     let email = '';
-    if (apptData.patientEmail) {
-      email = typeof apptData.patientEmail === 'object'
-        ? (apptData.patientEmail.email || apptData.patientEmail.address || '')
-        : apptData.patientEmail;
-    } else if (patientData?.email) {
+    if (patientData.email) {
       email = typeof patientData.email === 'object'
         ? (patientData.email.email || patientData.email.address || '')
         : patientData.email;
@@ -278,16 +289,15 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdi
 
     const location = patientData?.address?.city
       ? `${patientData.address.city}${patientData.address.state ? `, ${patientData.address.state}` : ''}`
-      : apptData.location || patientData?.location || 'Location not set';
+      : patientData.location || 'Location not set';
 
-    const occupation = patientData?.profession ||
-      patientData?.metadata?.profession ||
-      apptData.occupation ||
+    const occupation = patientData.profession ||
+      patientData.metadata?.profession ||
       'Not specified';
 
     let dob = '';
     let age = 0;
-    if (patientData?.dateOfBirth) {
+    if (patientData.dateOfBirth) {
       try {
         const dobDate = new Date(patientData.dateOfBirth);
         dob = dobDate.toLocaleDateString('en-GB', {
@@ -304,32 +314,28 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdi
       } catch (e) {
         console.warn('Error parsing date of birth:', e);
       }
-    } else if (patientData?.age) {
+    } else if (patientData.age) {
       age = typeof patientData.age === 'number' ? patientData.age : parseInt(patientData.age) || 0;
-    } else if (apptData.patientAge) {
-      age = typeof apptData.patientAge === 'number' ? apptData.patientAge : parseInt(apptData.patientAge) || 0;
     }
 
-    const weightKg = patientData?.vitals?.weightKg || null;
-    const heightCm = patientData?.vitals?.heightCm || null;
-    const bmi = patientData?.vitals?.bmi || null;
-    const bp = patientData?.vitals?.bp || '—';
+    const weightKg = patientData.vitals?.weightKg || null;
+    const heightCm = patientData.vitals?.heightCm || null;
+    const bmi = patientData.vitals?.bmi || null;
+    const bp = patientData.vitals?.bp || '—';
 
-    const diagnosis = apptData.diagnosis ||
-      patientData?.diagnosis ||
-      patientData?.metadata?.diagnosis ||
-      patientData?.medicalHistory ||
+    const diagnosis = patientData.diagnosis ||
+      patientData.metadata?.diagnosis ||
+      patientData.medicalHistory ||
       [];
     const diagnosisArray = Array.isArray(diagnosis) ? diagnosis : [];
 
-    const barriers = apptData.barriers ||
-      patientData?.barriers ||
-      patientData?.metadata?.barriers ||
+    const barriers = patientData.barriers ||
+      patientData.metadata?.barriers ||
       [];
     const barriersArray = Array.isArray(barriers) ? barriers : [];
 
-    const noAlcohol = patientData?.metadata?.noAlcohol === true || patientData?.metadata?.alcohol === false;
-    const noSmoker = patientData?.metadata?.noSmoker === true || patientData?.metadata?.smoker === false;
+    const noAlcohol = patientData.metadata?.noAlcohol === true || patientData.metadata?.alcohol === false;
+    const noSmoker = patientData.metadata?.noSmoker === true || patientData.metadata?.smoker === false;
 
     return {
       name,
@@ -349,7 +355,7 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdi
       barriers: barriersArray,
       noAlcohol,
       noSmoker,
-      avatarUrl: patientData?.avatarUrl || patientData?.metadata?.avatarUrl || null,
+      avatarUrl: patientData.avatarUrl || patientData.metadata?.avatarUrl || null,
     };
   };
 
