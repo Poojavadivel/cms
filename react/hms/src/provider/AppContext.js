@@ -22,7 +22,7 @@ const AppContext = createContext(undefined);
 export const AppProvider = ({ children }) => {
   // State for current user (can be Admin, Doctor, Pharmacist, Pathologist, or null)
   const [user, setUserState] = useState(null);
-  
+
   // State for authentication token
   const [token, setTokenState] = useState(null);
 
@@ -37,13 +37,13 @@ export const AppProvider = ({ children }) => {
     const loadStoredAuth = () => {
       setIsCheckingAuth(true);
       try {
-        const storedToken = localStorage.getItem('authToken');
+        const storedToken = localStorage.getItem('auth_token');
         const storedUser = localStorage.getItem('authUser');
-        
-        if (storedToken && storedUser) {
+
+        if (storedToken && storedUser && storedUser !== 'undefined' && storedUser !== 'null') {
           const userData = JSON.parse(storedUser);
           setTokenState(storedToken);
-          
+
           // Reconstruct user object based on role
           let reconstructedUser = null;
           if (userData.role === 'admin' || userData.role === 'superadmin') {
@@ -54,19 +54,31 @@ export const AppProvider = ({ children }) => {
             reconstructedUser = Pharmacist.fromJSON(userData);
           } else if (userData.role === 'pathologist') {
             reconstructedUser = Pathologist.fromJSON(userData);
+          } else {
+            console.warn('⚠️ [AppContext] Unknown role in stored user:', userData.role);
           }
-          
+
           if (reconstructedUser) {
             setUserState(reconstructedUser);
             console.log('✅ [AppContext] Restored user from localStorage:', userData.fullName);
+          } else {
+            // Failed to reconstruct - clear
+            console.warn('⚠️ [AppContext] Failed to reconstruct user object');
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('authUser');
           }
         } else {
-          console.log('⚠️ [AppContext] No stored authentication found');
+          console.log('⚠️ [AppContext] No stored authentication found or invalid data');
+          // cleanup potential garbage
+          if (storedUser === 'undefined' || storedUser === 'null') {
+            localStorage.removeItem('authUser');
+            localStorage.removeItem('auth_token');
+          }
         }
       } catch (error) {
         console.error('❌ [AppContext] Error loading stored authentication:', error);
         // Clear corrupted data
-        localStorage.removeItem('authToken');
+        localStorage.removeItem('auth_token');
         localStorage.removeItem('authUser');
       } finally {
         setIsCheckingAuth(false);
@@ -83,11 +95,11 @@ export const AppProvider = ({ children }) => {
   const setUser = useCallback((newUser, newToken) => {
     setUserState(newUser);
     setTokenState(newToken);
-    
+
     // Persist to localStorage
     if (newUser && newToken) {
       try {
-        localStorage.setItem('authToken', newToken);
+        localStorage.setItem('auth_token', newToken);
         localStorage.setItem('authUser', JSON.stringify(newUser.toJSON()));
       } catch (error) {
         console.error('Error saving authentication:', error);
@@ -102,9 +114,9 @@ export const AppProvider = ({ children }) => {
   const signOut = useCallback(() => {
     setUserState(null);
     setTokenState(null);
-    
+
     // Clear from localStorage
-    localStorage.removeItem('authToken');
+    localStorage.removeItem('auth_token');
     localStorage.removeItem('authUser');
     localStorage.removeItem('selectedModule'); // Clear any cached module selection
   }, []);
@@ -115,7 +127,7 @@ export const AppProvider = ({ children }) => {
    */
   const updateUser = useCallback((updatedUser) => {
     setUserState(updatedUser);
-    
+
     // Update localStorage
     if (updatedUser) {
       try {
@@ -149,13 +161,13 @@ export const AppProvider = ({ children }) => {
     token,
     isLoading,
     isCheckingAuth,
-    
+
     // Actions
     setUser,
     signOut,
     updateUser,
     setIsLoading,
-    
+
     // Computed properties
     isLoggedIn,
     isAdmin,
@@ -188,12 +200,12 @@ export const useApp = () => {
 export const withAuth = (Component) => {
   return (props) => {
     const { isLoggedIn } = useApp();
-    
+
     if (!isLoggedIn) {
       // Redirect to login or show unauthorized message
       return <div>Unauthorized. Please log in.</div>;
     }
-    
+
     return <Component {...props} />;
   };
 };
@@ -204,15 +216,15 @@ export const withAuth = (Component) => {
 export const withRole = (Component, allowedRoles = []) => {
   return (props) => {
     const { isLoggedIn, userRole } = useApp();
-    
+
     if (!isLoggedIn) {
       return <div>Unauthorized. Please log in.</div>;
     }
-    
+
     if (allowedRoles.length > 0 && !allowedRoles.includes(userRole)) {
       return <div>Access Denied. Insufficient permissions.</div>;
     }
-    
+
     return <Component {...props} />;
   };
 };

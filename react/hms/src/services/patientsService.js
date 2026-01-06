@@ -44,23 +44,23 @@ const createAxiosInstance = () => {
 export const fetchPatients = async (options = {}) => {
   try {
     const { page = 0, limit = 50, q = '', status = '' } = options;
-    
+
     // Build query string
     const params = new URLSearchParams();
     params.append('page', page);
     params.append('limit', limit);
     if (q) params.append('q', q);
     if (status) params.append('status', status);
-    
+
     const url = `${PatientEndpoints.getAll}?${params.toString()}`;
-    
+
     logger.apiRequest('GET', url);
-    
+
     const axiosInstance = createAxiosInstance();
     const response = await axiosInstance.get(url);
-    
+
     logger.apiResponse('GET', url, response.status);
-    
+
     // Handle both array response and object with patients property
     let rawPatients = [];
     if (Array.isArray(response.data)) {
@@ -70,10 +70,10 @@ export const fetchPatients = async (options = {}) => {
     } else if (response.data.data) {
       rawPatients = response.data.data;
     }
-    
+
     // Transform each patient using PatientDetails.fromJSON for proper data extraction
     const patients = rawPatients.map(p => PatientDetails.fromJSON(p));
-    
+
     logger.success('PATIENTS', `Fetched ${patients.length} patients`);
     return patients;
   } catch (error) {
@@ -90,17 +90,17 @@ export const fetchPatients = async (options = {}) => {
 export const fetchPatientById = async (id) => {
   try {
     logger.apiRequest('GET', PatientEndpoints.getById(id));
-    
+
     const axiosInstance = createAxiosInstance();
     const response = await axiosInstance.get(PatientEndpoints.getById(id));
-    
+
     logger.apiResponse('GET', PatientEndpoints.getById(id), response.status);
-    
+
     const rawPatient = response.data.patient || response.data.data || response.data;
-    
+
     // Transform using PatientDetails.fromJSON to ensure proper data extraction
     const patient = PatientDetails.fromJSON(rawPatient);
-    
+
     logger.success('PATIENTS', `Fetched patient ${id} - Name: ${patient.name}, Age: ${patient.age}, Blood Group: ${patient.bloodGroup}`);
     return patient;
   } catch (error) {
@@ -117,13 +117,13 @@ export const fetchPatientById = async (id) => {
 export const createPatient = async (patientData) => {
   try {
     logger.apiRequest('POST', PatientEndpoints.create, patientData);
-    
+
     const axiosInstance = createAxiosInstance();
     const response = await axiosInstance.post(PatientEndpoints.create, patientData);
-    
+
     logger.apiResponse('POST', PatientEndpoints.create, response.status);
     logger.success('PATIENTS', 'Patient created successfully');
-    
+
     return response.data.patient || response.data.data || response.data;
   } catch (error) {
     logger.apiError('POST', PatientEndpoints.create, error);
@@ -140,13 +140,13 @@ export const createPatient = async (patientData) => {
 export const updatePatient = async (id, patientData) => {
   try {
     logger.apiRequest('PUT', PatientEndpoints.update(id), patientData);
-    
+
     const axiosInstance = createAxiosInstance();
     const response = await axiosInstance.put(PatientEndpoints.update(id), patientData);
-    
+
     logger.apiResponse('PUT', PatientEndpoints.update(id), response.status);
     logger.success('PATIENTS', `Patient ${id} updated successfully`);
-    
+
     return response.data.patient || response.data.data || response.data;
   } catch (error) {
     logger.apiError('PUT', PatientEndpoints.update(id), error);
@@ -162,13 +162,13 @@ export const updatePatient = async (id, patientData) => {
 export const deletePatient = async (id) => {
   try {
     logger.apiRequest('DELETE', PatientEndpoints.delete(id));
-    
+
     const axiosInstance = createAxiosInstance();
     const response = await axiosInstance.delete(PatientEndpoints.delete(id));
-    
+
     logger.apiResponse('DELETE', PatientEndpoints.delete(id), response.status);
     logger.success('PATIENTS', `Patient ${id} deleted successfully`);
-    
+
     return true;
   } catch (error) {
     logger.apiError('DELETE', PatientEndpoints.delete(id), error);
@@ -185,7 +185,7 @@ export const downloadPatientReport = async (patientId) => {
   try {
     const endpoint = ReportsEndpoints.patientReport(patientId);
     logger.apiRequest('GET', endpoint);
-    
+
     const token = getAuthToken();
     if (!token) {
       return {
@@ -193,7 +193,7 @@ export const downloadPatientReport = async (patientId) => {
         message: 'Authentication token not found. Please login again.'
       };
     }
-    
+
     const response = await axios.get(endpoint, {
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -201,7 +201,7 @@ export const downloadPatientReport = async (patientId) => {
       },
       responseType: 'blob'
     });
-    
+
     // Get filename from header or create default
     let filename = `Patient_Report_${Date.now()}.pdf`;
     const contentDisposition = response.headers['content-disposition'];
@@ -211,7 +211,7 @@ export const downloadPatientReport = async (patientId) => {
         filename = filenameMatch[1];
       }
     }
-    
+
     // Create blob link to download
     const url = window.URL.createObjectURL(new Blob([response.data]));
     const link = document.createElement('a');
@@ -221,9 +221,9 @@ export const downloadPatientReport = async (patientId) => {
     link.click();
     link.remove();
     window.URL.revokeObjectURL(url);
-    
+
     logger.success('PATIENTS', `Downloaded report for patient ${patientId}`);
-    
+
     return {
       success: true,
       message: 'Patient report downloaded successfully',
@@ -231,14 +231,14 @@ export const downloadPatientReport = async (patientId) => {
     };
   } catch (error) {
     logger.apiError('GET', ReportsEndpoints.patientReport(patientId), error);
-    
+
     if (error.response?.status === 404) {
       return {
         success: false,
         message: 'Patient not found'
       };
     }
-    
+
     return {
       success: false,
       message: error.response?.data?.message || `Failed to generate patient report: ${error.message}`
@@ -253,16 +253,16 @@ export const downloadPatientReport = async (patientId) => {
  */
 export const fetchPatientAppointments = async (patientId) => {
   try {
-    const url = `/api/appointments?patientId=${patientId}`;
+    const url = `/appointments?patientId=${patientId}`;
     logger.apiRequest('GET', url);
-    
+
     const axiosInstance = createAxiosInstance();
     const response = await axiosInstance.get(url);
-    
+
     logger.apiResponse('GET', url, response.status);
-    
+
     const appointments = response.data.appointments || response.data.data || response.data || [];
-    
+
     logger.success('PATIENTS', `Fetched ${appointments.length} appointments for patient ${patientId}`);
     return appointments;
   } catch (error) {
@@ -322,9 +322,9 @@ export const createFollowUp = async (patientId, followUpData) => {
     };
 
     logger.info('PATIENTS', `Creating follow-up for patient ${patientId}`, payload);
-    
+
     const response = await api.post('/appointments/follow-up', payload);
-    
+
     logger.success('PATIENTS', `Follow-up created successfully for patient ${patientId}`);
     return response.data;
   } catch (error) {

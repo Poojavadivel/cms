@@ -15,46 +15,52 @@ import './SplashScreen.css';
 const SplashScreen = () => {
   const navigate = useNavigate();
   const { setUser } = useApp();
+  const checkRun = React.useRef(false); // Ref to prevent double-execution
 
   /**
    * Check authentication status and navigate accordingly
-   * Equivalent to Flutter's _checkAuthStatus method
-   * 
-   * This validates the token with backend on every app load/refresh
    */
   const checkAuthStatus = useCallback(async () => {
+    // Prevent multiple runs
+    if (checkRun.current) return;
+    checkRun.current = true;
+
     try {
       console.log('🔍 [SPLASH] Starting authentication check...');
-      
+
       // Show splash screen for at least 2 seconds for better UX
       const minSplashTime = new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Check if we have a stored token
-      const storedToken = localStorage.getItem('authToken');
-      console.log(`🔑 [SPLASH] Stored token: ${storedToken ? 'EXISTS' : 'NONE'}`);
-      
-      // If we have a token, validate it with backend
-      // This is crucial for handling page refresh - we don't trust localStorage alone
-      let authResult = null;
-      
-      if (storedToken) {
-        console.log('🔄 [SPLASH] Validating token with backend...');
-        authResult = await authService.getUserData();
-      }
-      
-      // Wait for minimum splash time
-      await minSplashTime;
 
-      if (authResult) {
+      // Check if we have a stored token
+      const storedToken = localStorage.getItem('auth_token');
+      console.log(`🔑 [SPLASH] Stored token: ${storedToken ? 'EXISTS' : 'NONE'}`);
+
+      // Wait for minimum splash time BEFORE doing heavy logic if possible, 
+      // or at least wait for it before navigating
+      let authResult = null;
+
+      if (storedToken && storedToken !== 'undefined' && storedToken !== 'null') {
+        console.log('🔄 [SPLASH] Validating token with backend...');
+        try {
+          authResult = await authService.getUserData();
+        } catch (err) {
+          console.error('❌ [SPLASH] Validation threw error:', err);
+          authResult = null;
+        }
+      }
+
+      await minSplashTime; // Ensure minimum display time
+
+      if (authResult && authResult.user) {
         console.log('✅ [SPLASH] Token valid, user authenticated:', authResult.user.fullName);
-        
+
         // Update app context with validated user data
         setUser(authResult.user, authResult.token);
 
         // Navigate based on role
         const userRole = authResult.user.role;
         console.log(`👤 [SPLASH] User role: ${userRole}`);
-        
+
         if (userRole === 'admin' || userRole === 'superadmin') {
           console.log('➡️ [SPLASH] Navigating to Admin dashboard');
           navigate('/admin', { replace: true });
@@ -73,25 +79,24 @@ const SplashScreen = () => {
         }
       } else {
         console.log('⚠️ [SPLASH] No valid session or token expired, redirecting to login');
-        // Clear any stale data
-        localStorage.removeItem('authToken');
+        // Clear any stale data to be safe
+        localStorage.removeItem('auth_token');
         localStorage.removeItem('authUser');
         navigate('/login', { replace: true });
       }
     } catch (error) {
       console.error('❌ [SPLASH] Auth check failed:', error);
-      // Clear potentially corrupted data
-      localStorage.removeItem('authToken');
+      // Fallback safety - clear everything
+      localStorage.removeItem('auth_token');
       localStorage.removeItem('authUser');
       navigate('/login', { replace: true });
     }
   }, [navigate, setUser]);
 
   useEffect(() => {
-    // Start authentication check on mount
-    console.log('🚀 [SPLASH] Starting authentication check...');
     checkAuthStatus();
-  }, [checkAuthStatus]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty dependency array to run ONCE on mount
 
   return (
     <div className="splash-screen">
@@ -100,7 +105,7 @@ const SplashScreen = () => {
           <h1 className="splash-title">Karur Gastro Foundation</h1>
           <p className="splash-subtitle">Hospital Management System</p>
         </div>
-        
+
         <div className="splash-loader">
           <div className="spinner"></div>
           <p className="splash-loading-text">Loading...</p>

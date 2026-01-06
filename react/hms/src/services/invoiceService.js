@@ -40,22 +40,22 @@ const InvoiceEndpoints = {
 const fetchInvoices = async (params = {}) => {
   try {
     const { page = 0, limit = 100, q = '', status = '' } = params;
-    
+
     let url = InvoiceEndpoints.getAll;
     const queryParams = [];
     if (page) queryParams.push(`page=${page}`);
     if (limit) queryParams.push(`limit=${limit}`);
     if (q) queryParams.push(`q=${encodeURIComponent(q)}`);
     if (status) queryParams.push(`status=${encodeURIComponent(status)}`);
-    
+
     if (queryParams.length > 0) {
       url += `?${queryParams.join('&')}`;
     }
-    
+
     logger.apiRequest('GET', url);
     const response = await api.get(url);
     logger.apiResponse('GET', url, response.status, response.data);
-    
+
     let invoicesData;
     if (Array.isArray(response.data)) {
       invoicesData = response.data;
@@ -66,7 +66,7 @@ const fetchInvoices = async (params = {}) => {
     } else {
       invoicesData = [];
     }
-    
+
     return invoicesData.map(payroll => ({
       id: payroll._id || payroll.id,
       invoiceNumber: payroll.staffCode || payroll._id,
@@ -143,7 +143,7 @@ const downloadInvoice = async (id, invoiceNumber = 'invoice') => {
     const response = await api.get(InvoiceEndpoints.downloadInvoice(id), {
       responseType: 'blob'
     });
-    
+
     const url = window.URL.createObjectURL(new Blob([response.data]));
     const link = document.createElement('a');
     link.href = url;
@@ -151,7 +151,7 @@ const downloadInvoice = async (id, invoiceNumber = 'invoice') => {
     document.body.appendChild(link);
     link.click();
     link.remove();
-    
+
     logger.apiResponse('GET', InvoiceEndpoints.downloadInvoice(id), response.status, 'File downloaded');
     return response.data;
   } catch (error) {
@@ -172,6 +172,15 @@ const updatePayment = async (id, paymentData) => {
   }
 };
 
+const fetchInvoicesByPatient = async (patientId) => {
+  try {
+    return await fetchInvoices({ q: patientId });
+  } catch (error) {
+    logger.apiError('GET', `${InvoiceEndpoints.getAll}?patientId=${patientId}`, error);
+    return [];
+  }
+};
+
 const invoiceServiceExport = {
   fetchInvoices,
   fetchInvoiceById,
@@ -179,7 +188,8 @@ const invoiceServiceExport = {
   updateInvoice,
   deleteInvoice,
   downloadInvoice,
-  updatePayment
+  updatePayment,
+  fetchInvoicesByPatient
 };
 
 export default invoiceServiceExport;

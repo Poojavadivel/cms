@@ -1,257 +1,257 @@
 .payroll-page {
   padding: 24px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background-color: #f8f9fa;
+  /* Light gray background for whole page */
   min-height: 100vh;
+  font-family: 'Inter', sans-serif;
 }
 
-.page-header {
-  margin-bottom: 24px;
-}
-
-.header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 16px;
-}
-
-.header-text {
-  flex: 1;
-}
-
-.page-title {
-  font-size: 32px;
-  font-weight: 700;
-  color: white;
-  margin: 0 0 8px 0;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.page-subtitle {
-  font-size: 16px;
-  color: rgba(255, 255, 255, 0.8);
-  margin: 0;
-}
-
-.tabs-container {
-  margin-bottom: 24px;
-}
-
-.tabs {
-  display: flex;
-  gap: 8px;
-  background: rgba(255, 255, 255, 0.1);
-  padding: 4px;
-  border-radius: 12px;
-  backdrop-filter: blur(10px);
-}
-
-.tab {
-  flex: 1;
-  padding: 12px 24px;
-  background: transparent;
-  border: none;
-  border-radius: 10px;
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.tab:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
-}
-
-.tab.active {
-  background: rgba(255, 255, 255, 0.2);
-  color: white;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-}
-
+/* Summary Cards */
 .summary-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  grid-template-columns: repeat(5, 1fr);
+  /* 5 cards in a row */
   gap: 16px;
   margin-bottom: 24px;
 }
 
 .summary-card {
-  background: rgba(255, 255, 255, 0.15);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  border-radius: 16px;
+  border-radius: 12px;
   padding: 20px;
-  backdrop-filter: blur(10px);
-  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  /* Icon top, content below or flex-row based on design? Screenshot: Icon left? No, screenshot shows Icon top-left maybe or left. Let's look closer. */
+  /* Re-evaluating screenshot description: "Icon, Label, Value".  */
+  /* Actually, screenshot shows Icon on top or left. Usually: Icon (top left), Label (below icon), Value (below label). */
+  /* Or: Icon (left), Text (right). */
+  /* Let's go with Icon and Text stack based on typical dashboard cards or side-by-side. */
+  /* The code I wrote in JSX puts Icon in 'card-icon-wrapper' and Label/Value in 'card-content'. I will style them as block (stack) or flex. */
+  /* I will assume vertical stack for now as per common "stats" card, or row. Let's start with column for clarity if not specified, but usually row is better for space.  */
+  /* WAIT. The code I wrote has them detailed. Let's use Column layout for the card itself, but visually it looks like distinct items. */
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 120px;
+  /* Fixed height for uniformity */
+  border: 1px solid transparent;
 }
 
-.summary-card:hover {
-  background: rgba(255, 255, 255, 0.2);
-  transform: translateY(-4px);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+.card-blue-light {
+  background-color: #eaf1ff;
+  border-color: #c7d7ff;
 }
 
-.summary-card.primary {
-  background: rgba(76, 175, 80, 0.3);
-  border-color: rgba(76, 175, 80, 0.5);
+.card-green-light {
+  background-color: #ecfdf5;
+  /* Light green */
+  border-color: #d1fae5;
 }
 
-.summary-label {
-  color: rgba(255, 255, 255, 0.8);
+.card-red-light {
+  background-color: #fef2f2;
+  /* Light red */
+  border-color: #fee2e2;
+}
+
+.card-icon-wrapper {
+  margin-bottom: 12px;
+}
+
+.card-icon {
+  font-size: 24px;
+}
+
+.card-blue-light .card-icon {
+  color: #2563eb;
+}
+
+.card-green-light .card-icon {
+  color: #10b981;
+}
+
+.card-red-light .card-icon {
+  color: #ef4444;
+}
+
+.card-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.card-label {
   font-size: 14px;
+  color: #64748b;
+  margin-bottom: 4px;
   font-weight: 500;
-  margin-bottom: 8px;
 }
 
-.summary-value {
-  color: white;
-  font-size: 28px;
+.card-value {
+  font-size: 24px;
   font-weight: 700;
 }
 
-.btn-primary {
-  padding: 12px 24px;
-  background: rgba(255, 255, 255, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 12px;
+.value-blue {
+  color: #2563eb;
+}
+
+.value-green {
+  color: #10b981;
+}
+
+.value-red {
+  color: #ef4444;
+}
+
+
+/* Main Content Area */
+.payroll-content-area {
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e2e8f0;
+}
+
+/* Header */
+.payroll-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.header-icon-box {
+  background-color: #2563eb;
+  /* Dark blue icon bg */
   color: white;
-  font-size: 16px;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+}
+
+.header-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1e293b;
+  /* Dark slate */
+  text-transform: uppercase;
+  margin: 0;
+  letter-spacing: 0.5px;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.icon-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 20px;
+  color: #64748b;
+  padding: 8px;
+  border-radius: 8px;
+  transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon-btn:hover {
+  background-color: #f1f5f9;
+  color: #1e293b;
+}
+
+.search-control {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-control .search-icon {
+  position: absolute;
+  left: 12px;
+  color: #94a3b8;
+  font-size: 18px;
+}
+
+.search-control input {
+  padding: 10px 16px 10px 36px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+  width: 240px;
+  transition: border-color 0.2s;
+}
+
+.search-control input:focus {
+  border-color: #2563eb;
+}
+
+.add-new-btn {
+  background-color: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 8px;
-  transition: all 0.3s ease;
-  backdrop-filter: blur(10px);
+  transition: background 0.2s;
 }
 
-.btn-primary:hover {
-  background: rgba(255, 255, 255, 0.3);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+.add-new-btn:hover {
+  background-color: #1d4ed8;
 }
 
-.filter-section {
-  display: flex;
-  gap: 16px;
-  margin-bottom: 24px;
-  flex-wrap: wrap;
-}
-
-.search-box {
-  flex: 1;
-  min-width: 250px;
-}
-
-.search-input {
+/* Table Container Override */
+.payroll-table-container {
+  /* Ensure GenericDataTable fits well */
   width: 100%;
-  padding: 12px 16px;
-  background: rgba(255, 255, 255, 0.15);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  border-radius: 12px;
-  color: white;
-  font-size: 14px;
-  backdrop-filter: blur(10px);
-  transition: all 0.3s ease;
 }
 
-.search-input::placeholder {
-  color: rgba(255, 255, 255, 0.6);
-}
-
-.search-input:focus {
-  outline: none;
-  background: rgba(255, 255, 255, 0.2);
-  border-color: rgba(255, 255, 255, 0.4);
-}
-
-.filter-group {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: white;
-}
-
-.filter-group label {
-  font-size: 14px;
-  font-weight: 500;
-  white-space: nowrap;
-}
-
-.filter-select {
-  padding: 10px 16px;
-  background: rgba(255, 255, 255, 0.15);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  border-radius: 12px;
-  color: white;
-  font-size: 14px;
-  cursor: pointer;
-  backdrop-filter: blur(10px);
-  min-width: 120px;
-}
-
-.filter-select option {
-  background: #2d3748;
-  color: white;
-}
-
-.action-btn {
-  padding: 8px;
-  background: rgba(255, 255, 255, 0.15);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  border-radius: 8px;
-  color: white;
-  font-size: 16px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  backdrop-filter: blur(10px);
-}
-
-.action-btn:hover {
-  background: rgba(255, 255, 255, 0.25);
-  transform: translateY(-2px);
-}
-
-.process-btn {
-  background: rgba(76, 175, 80, 0.3);
-  border-color: rgba(76, 175, 80, 0.5);
-}
-
-.process-btn:hover {
-  background: rgba(76, 175, 80, 0.5);
-}
-
-.icon {
-  font-size: 24px;
+/* Responsive */
+@media (max-width: 1024px) {
+  .summary-cards {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
 
 @media (max-width: 768px) {
-  .payroll-page {
-    padding: 16px;
-  }
-
-  .page-title {
-    font-size: 24px;
-  }
-
-  .tabs {
-    flex-direction: column;
-  }
-
   .summary-cards {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr;
   }
 
-  .filter-section {
+  .payroll-header {
     flex-direction: column;
+    align-items: flex-start;
   }
 
-  .search-box,
-  .filter-group {
+  .header-right {
+    width: 100%;
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
+
+  .search-control input {
     width: 100%;
   }
 }

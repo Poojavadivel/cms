@@ -424,7 +424,20 @@ const MedicalHistoryTab = ({ patientId }) => {
         setLoading(true);
         try {
             const data = await patientsService.fetchPatientAppointments(patientId);
-            setHistoryData(Array.isArray(data) ? data : []);
+
+            // Map backend fields to UI fields
+            // Backend: appointmentDate, appointmentTime, condition, status, notes
+            // UI: title, date, category, notes, reason
+            const mappedData = (Array.isArray(data) ? data : []).map(apt => ({
+                ...apt,
+                title: apt.condition || apt.title || apt.reason || 'Medical Checkup',
+                date: apt.appointmentDate ? `${apt.appointmentDate} ${apt.appointmentTime || ''}` : apt.date,
+                reason: apt.notes || apt.reason || '',
+                category: apt.type || 'General',
+                status: apt.status || 'Scheduled'
+            }));
+
+            setHistoryData(mappedData);
         } catch (error) {
             console.error('Failed to fetch medical history:', error);
             setHistoryData([]);
@@ -560,7 +573,7 @@ const PrescriptionTab = ({ patientId }) => {
     const fetchPrescriptionsData = async () => {
         setLoading(true);
         try {
-            const data = await prescriptionService.fetchPrescriptions(patientId);
+            const data = await patientsService.fetchPatientPrescriptions(patientId);
             setPrescriptions(Array.isArray(data) ? data : []);
         } catch (error) {
             console.error('Failed to fetch prescriptions:', error);
@@ -817,7 +830,7 @@ const BillingsTab = ({ patientId }) => {
     const fetchBills = async () => {
         setLoading(true);
         try {
-            // Assumes invoiceService already exists in your project
+            // Use the safe method we added to invoiceService
             const data = await invoiceService.fetchInvoicesByPatient(patientId);
             setBills(Array.isArray(data) ? data : []);
         } catch (error) {

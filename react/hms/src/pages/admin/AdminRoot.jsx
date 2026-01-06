@@ -32,6 +32,7 @@ const AdminRoot = () => {
     { icon: <MdLocalHospital />, label: 'Patients', path: '/admin/patients' },
     { icon: <MdPeople />, label: 'Staff', path: '/admin/staff' },
     { icon: <MdReceipt />, label: 'Invoice', path: '/admin/invoice' },
+    { icon: <MdReceipt />, label: 'Payroll', path: '/admin/payroll' },
     { icon: <MdBiotech />, label: 'Pathology', path: '/admin/pathology' },
     { icon: <MdLocalPharmacy />, label: 'Pharmacy', path: '/admin/pharmacy' },
     { icon: <MdSettings />, label: 'Settings', path: '/admin/settings' },

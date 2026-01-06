@@ -43,10 +43,10 @@ class AuthService {
     if (AuthService.instance) {
       return AuthService.instance;
     }
-    
-    this.TOKEN_KEY = 'x-auth-token';
+
+    this.TOKEN_KEY = 'auth_token';
     this.USER_DATA_KEY = 'user_data';
-    
+
     AuthService.instance = this;
   }
 
@@ -122,7 +122,7 @@ class AuthService {
     const method = options.method || 'GET';
     const startTime = Date.now();
     const token = this.getToken();
-    
+
     const headers = {
       'Content-Type': 'application/json',
       ...(token && { 'x-auth-token': token }),
@@ -140,11 +140,11 @@ class AuthService {
     try {
       const response = await fetch(url, config);
       const duration = Date.now() - startTime;
-      
+
       // Handle non-JSON responses
       const contentType = response.headers.get('content-type');
       let data;
-      
+
       if (contentType && contentType.includes('application/json')) {
         data = await response.json();
       } else {
@@ -166,7 +166,7 @@ class AuthService {
     } catch (error) {
       const duration = Date.now() - startTime;
       apiLogger.logError(method, url, error, duration);
-      
+
       if (error instanceof ApiException) {
         throw error;
       }
@@ -182,7 +182,7 @@ class AuthService {
     try {
       logger.info('AUTH', `Login attempt for: ${email}`);
       apiLogger.logAuth('SIGN_IN_ATTEMPT', { email });
-      
+
       const response = await this.makeAuthRequest(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         body: JSON.stringify({ email, password }),
@@ -204,7 +204,7 @@ class AuthService {
       console.log('✅ [AUTH] Sign in successful:', user.fullName);
       logger.authLogin(email, user.role);
       apiLogger.logAuth('SIGN_IN_SUCCESS', { user: user.fullName, role: user.role });
-      
+
       return new AuthResult(user, accessToken);
     } catch (error) {
       console.error('❌ [AUTH] Sign in failed:', error.message);
@@ -230,9 +230,9 @@ class AuthService {
         return null;
       }
 
-      console.log('🔍 [AUTH] Validating token...');
+      console.log('🔍 [AUTH] Validating token with backend...');
       logger.info('AUTH', 'Validating stored token');
-      
+
       const response = await this.makeAuthRequest(
         `${API_BASE_URL}/auth/validate-token`,
         {
@@ -240,22 +240,35 @@ class AuthService {
         }
       );
 
-      if (!response || !response.role) {
-        console.log('⚠️ [AUTH] Invalid token response');
-        logger.warn('AUTH', 'Invalid token response from server');
-        return null;
+      // Validate response structure
+      if (!response) {
+        console.warn('⚠️ [AUTH] Empty response from validation');
+        throw new Error('Empty response from server');
+      }
+
+      // Handle case where response might be wrapped or flat
+      // Adjust based on your actual API response structure
+      const userData = response.user || response;
+
+      if (!userData || !userData.role) {
+        console.error('❌ [AUTH] Invalid user data received:', userData);
+        throw new Error('Invalid user data received');
       }
 
       // Parse user based on role
-      const user = this.parseUserRole(response);
+      const user = this.parseUserRole(userData);
 
       console.log('✅ [AUTH] Token validated for user:', user.fullName);
       logger.authTokenValidated(user.email || user.mobile, user.role);
+
+      // Return BOTH user and token (re-use existing token)
       return new AuthResult(user, token);
     } catch (error) {
       console.error('❌ [AUTH] Token validation failed:', error.message);
       logger.authTokenExpired();
-      // Clear invalid token
+
+      // CRITICAL: Clear invalid token to prevent infinite loops
+      // But purely return null so caller decides navigation
       this.clearToken();
       return null;
     }
@@ -269,7 +282,7 @@ class AuthService {
     try {
       // Optionally call backend to invalidate token
       const token = this.getToken();
-      
+
       if (token) {
         try {
           await this.makeAuthRequest(`${API_BASE_URL}/auth/logout`, {
@@ -337,10 +350,10 @@ class AuthService {
    */
   async uploadFile(path, file, additionalData = {}) {
     const token = this.getToken();
-    
+
     const formData = new FormData();
     formData.append('file', file);
-    
+
     // Add additional fields
     Object.entries(additionalData).forEach(([key, value]) => {
       formData.append(key, value);

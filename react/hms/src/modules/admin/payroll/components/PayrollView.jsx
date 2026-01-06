@@ -6,7 +6,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { MdClose, MdCheckCircle, MdCancel, MdPrint, MdDownload } from 'react-icons/md';
-import { authService } from '../../../../services/authService';
+import authService from '../../../../services/authService';
 import './PayrollView.css';
 
 const PayrollView = ({ payroll, isOpen, onClose }) => {
@@ -46,8 +46,8 @@ const PayrollView = ({ payroll, isOpen, onClose }) => {
 
     setIsSaving(true);
     try {
-      await authService.put(`/payrolls/${payrollData._id || payrollData.id}`, { 
-        status: 'Approved' 
+      await authService.put(`/payrolls/${payrollData._id || payrollData.id}`, {
+        status: 'Approved'
       });
       alert('Payroll approved successfully');
       const updated = { ...payrollData, status: 'Approved' };
@@ -67,7 +67,7 @@ const PayrollView = ({ payroll, isOpen, onClose }) => {
 
     setIsSaving(true);
     try {
-      await authService.put(`/payrolls/${payrollData._id || payrollData.id}`, { 
+      await authService.put(`/payrolls/${payrollData._id || payrollData.id}`, {
         status: 'Rejected',
         rejectionReason: reason
       });
@@ -135,22 +135,22 @@ const PayrollView = ({ payroll, isOpen, onClose }) => {
             <p className="payroll-code">{data.payrollCode || data.id}</p>
           </div>
           <div className="header-actions">
-            <button 
-              className="btn-icon" 
+            <button
+              className="btn-icon"
               onClick={handlePrint}
               title="Print"
             >
               <MdPrint size={20} />
             </button>
-            <button 
-              className="btn-icon" 
+            <button
+              className="btn-icon"
               onClick={handleDownload}
               title="Download PDF"
             >
               <MdDownload size={20} />
             </button>
-            <button 
-              className="btn-close-icon" 
+            <button
+              className="btn-close-icon"
               onClick={() => onClose && onClose()}
               disabled={isSaving}
             >
@@ -169,8 +169,8 @@ const PayrollView = ({ payroll, isOpen, onClose }) => {
             <>
               {/* Status Badge */}
               <div className="status-section">
-                <span 
-                  className="status-badge" 
+                <span
+                  className="status-badge"
                   style={{ backgroundColor: getStatusColor(data.status) }}
                 >
                   {data.status || 'Pending'}
@@ -287,16 +287,16 @@ const PayrollView = ({ payroll, isOpen, onClose }) => {
         <div className="payroll-view-footer">
           {data.status === 'Pending' && (
             <>
-              <button 
-                className="btn-reject" 
+              <button
+                className="btn-reject"
                 onClick={handleReject}
                 disabled={isSaving || isLoading}
               >
                 <MdCancel size={18} />
                 Reject
               </button>
-              <button 
-                className="btn-approve" 
+              <button
+                className="btn-approve"
                 onClick={handleApprove}
                 disabled={isSaving || isLoading}
               >
@@ -305,8 +305,8 @@ const PayrollView = ({ payroll, isOpen, onClose }) => {
               </button>
             </>
           )}
-          <button 
-            className="btn-secondary" 
+          <button
+            className="btn-secondary"
             onClick={() => onClose && onClose()}
             disabled={isSaving}
           >

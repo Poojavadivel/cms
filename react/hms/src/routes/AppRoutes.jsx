@@ -39,7 +39,7 @@ const AdminStaff = lazy(() => import('../modules/admin/staff/Staff'));
 const AdminPharmacy = lazy(() => import('../modules/admin/pharmacy/Pharmacy'));
 const AdminInvoice = lazy(() => import('../modules/admin/invoice/Invoice'));
 const AdminPathology = lazy(() => import('../modules/admin/pathology/Pathology'));
-// const AdminPayroll = lazy(() => import('../modules/admin/payroll/Payroll'));
+const AdminPayroll = lazy(() => import('../modules/admin/payroll/Payroll'));
 const AdminSettings = lazy(() => import('../modules/admin/settings/Settings'));
 
 // Doctor module pages (from modules folder)
@@ -71,12 +71,12 @@ const AppRoutes = () => {
         {/* ========== PUBLIC ROUTES ========== */}
         {/* Root - Splash screen checks auth and redirects */}
         <Route path="/" element={<SplashScreen />} />
-        
+
         {/* Authentication routes */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
-        
+
         {/* Error pages */}
         <Route path="/unauthorized" element={<UnauthorizedPage />} />
         <Route path="/404" element={<NotFoundPage />} />
@@ -118,7 +118,7 @@ const AppRoutes = () => {
           <Route path="pharmacy" element={<AdminPharmacy />} />
           <Route path="invoice" element={<AdminInvoice />} />
           <Route path="pathology" element={<AdminPathology />} />
-          <Route path="payroll" element={<div className="p-8 text-white">Payroll - Coming Soon</div>} />
+          <Route path="payroll" element={<AdminPayroll />} />
           <Route path="settings" element={<AdminSettings />} />
           <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
         </Route>
