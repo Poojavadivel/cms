@@ -8,9 +8,11 @@ import React, { useState } from 'react';
 import { 
   MdClose, MdBadge, MdBloodtype, MdMale, MdFemale, 
   MdCake, MdHeight, MdMonitorWeight, MdScale, 
-  MdMonitorHeart 
+  MdMonitorHeart, MdPhone, MdEmail, MdLocationOn,
+  MdWork, MdCalendarToday
 } from 'react-icons/md';
 import './PatientDetailsDialog.css';
+import { getGenderAvatar } from '../../utils/avatarHelpers';
 
 const PatientDetailsDialog = ({ patient, isOpen, onClose, showBillingTab = true }) => {
   const [activeTab, setActiveTab] = useState('profile');
@@ -30,6 +32,79 @@ const PatientDetailsDialog = ({ patient, isOpen, onClose, showBillingTab = true 
     ...(showBillingTab ? [{ id: 'billing', label: 'Billings' }] : [])
   ];
 
+  // Prepare modern patient data
+  const getPatientData = () => {
+    const name = `${patient.firstName || ''} ${patient.lastName || ''}`.trim() || patient.name || patient.clientName || 'Unknown Patient';
+
+    let phone = '';
+    if (typeof patient.phone === 'object') {
+      phone = patient.phone.phone || patient.phone.number || '';
+    } else {
+      phone = patient.phone || patient.phoneNumber || '';
+    }
+
+    let email = '';
+    if (typeof patient.email === 'object') {
+      email = patient.email.email || patient.email.address || '';
+    } else {
+      email = patient.email || '';
+    }
+
+    const gender = patient.gender || 'Male';
+
+    let location = 'Location not set';
+    if (patient.address?.city) {
+      location = patient.address.city;
+    }
+
+    const occupation = patient.profession || patient.metadata?.profession || 'Not specified';
+
+    let dob = '';
+    let age = patient.age || 0;
+    if (patient.dateOfBirth) {
+      const dobDate = new Date(patient.dateOfBirth);
+      dob = dobDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+      const today = new Date();
+      age = today.getFullYear() - dobDate.getFullYear();
+      const m = today.getMonth() - dobDate.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < dobDate.getDate())) {
+        age--;
+      }
+    }
+
+    // Vitals
+    const weightKg = patient.vitals?.weightKg || patient.weight || null;
+    const heightCm = patient.vitals?.heightCm || patient.height || null;
+    const bp = patient.vitals?.bp || patient.bp || '—';
+
+    // BMI
+    let bmi = null;
+    if (weightKg && heightCm) {
+      bmi = (weightKg / Math.pow(heightCm / 100, 2)).toFixed(1);
+    } else if (patient.vitals?.bmi || patient.bmi) {
+      bmi = patient.vitals?.bmi || patient.bmi;
+    }
+
+    // Lifestyle
+    const noAlcohol = patient.metadata?.noAlcohol === true || patient.metadata?.alcohol === false;
+    const noSmoker = patient.metadata?.noSmoker === true || patient.metadata?.smoker === false;
+
+    return {
+      name, phone, email, gender, location, occupation, dob, age,
+      weightKg, heightCm, bp, bmi,
+      noAlcohol, noSmoker,
+      bloodGroup: patient.bloodGroup,
+      avatarUrl: patient.avatarUrl || patient.metadata?.avatarUrl
+    };
+  };
+
+  const patientData = getPatientData();
+  const avatarSrc = patientData.avatarUrl || getGenderAvatar(patientData.gender);
+  
+  const getGenderIcon = (gender) => {
+    return gender?.toLowerCase() === 'female' ? <MdFemale size={14} /> : <MdMale size={14} />;
+  };
+
   return (
     <div className="patient-modal-overlay-flutter" onClick={onClose}>
       <div className="patient-modal-content-flutter" onClick={e => e.stopPropagation()}>
@@ -42,78 +117,88 @@ const PatientDetailsDialog = ({ patient, isOpen, onClose, showBillingTab = true 
         {/* Main Content Wrapper */}
         <div className="pd-flutter-wrapper">
           
-          {/* Header Card */}
-          <div className="pd-header-card-flutter">
-            
-            {/* Left: Avatar */}
-            <img 
-              src={isFemale ? '/girlicon.png' : '/boyicon.png'}
-              alt={patient.gender}
-              className="pd-avatar-flutter"
-              onError={(e) => {
-                e.target.style.display = 'none';
-                e.target.nextSibling.style.display = 'flex';
-              }}
-            />
-            <div className="pd-avatar-fallback-flutter" style={{ display: 'none' }}>
-              {isFemale ? '👩' : '👨'}
-            </div>
-
-            {/* Middle: Identity Block */}
-            <div className="pd-identity-flutter">
-              <h1 className="pd-name-flutter">
-                {patient.name || patient.clientName || 'Unknown'}
-              </h1>
-
-              {/* Patient Code Badge */}
-              <div className="pd-code-badge-flutter">
-                <MdBadge className="icon" />
-                <span className="text">{patient.patientId || patient.patientCode || 'NO-ID'}</span>
-              </div>
-
-              {/* Info Pills */}
-              <div className="pd-pills-flutter">
-                <div className="pd-pill-flutter blood">
-                  <MdBloodtype className="icon" />
-                  <span>Blood: {patient.bloodGroup || 'N/A'}</span>
-                </div>
-                <div className={`pd-pill-flutter ${isFemale ? 'female' : 'male'}`}>
-                  {isFemale ? <MdFemale className="icon" /> : <MdMale className="icon" />}
-                  <span>{patient.gender || 'N/A'}</span>
-                </div>
-                <div className="pd-pill-flutter age">
-                  <MdCake className="icon" />
-                  <span>{patient.age ? `${patient.age} yrs` : 'Age: N/A'}</span>
+          {/* Modern Header Card - Matching Admin PatientView */}
+          <div className="pv-summary-header">
+            <div className="pv-header-content">
+              
+              {/* Avatar Section */}
+              <div className="pv-avatar-section">
+                <div className="pv-avatar-container">
+                  <img
+                    src={avatarSrc}
+                    alt={patientData.name}
+                    className="pv-avatar-image"
+                    onError={(e) => { e.target.src = getGenderAvatar(patientData.gender); }}
+                  />
+                  <div className="pv-lifestyle-indicators">
+                    {patientData.noAlcohol && (
+                      <div className="pv-lifestyle-badge no-alcohol">
+                        <span className="pv-lifestyle-label">Alcohol</span>
+                      </div>
+                    )}
+                    {patientData.noSmoker && (
+                      <div className="pv-lifestyle-badge no-smoker">
+                        <span className="pv-lifestyle-label">Smoker</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Right: Vitals Grid */}
-            <div className="pd-vitals-grid-flutter">
-              <VitalCard 
-                icon={<MdHeight />} 
-                label="Height" 
-                value={f(patient.height, ' cm')} 
-                type="height"
-              />
-              <VitalCard 
-                icon={<MdMonitorWeight />} 
-                label="Weight" 
-                value={f(patient.weight, ' kg')} 
-                type="weight"
-              />
-              <VitalCard 
-                icon={<MdScale />} 
-                label="BMI" 
-                value={f(patient.bmi)} 
-                type="bmi"
-              />
-              <VitalCard 
-                icon={<MdMonitorHeart />} 
-                label="SpO₂" 
-                value={f(patient.oxygen, '%')} 
-                type="spo2"
-              />
+              {/* Info Section */}
+              <div className="pv-info-section">
+                <div className="pv-name-row">
+                  <h2 className="pv-name-main">{patientData.name}</h2>
+                  <div className="pv-contact-icons">
+                    {patientData.phone && <button className="pv-contact-btn" title={patientData.phone}><MdPhone size={14} /></button>}
+                    {patientData.email && <button className="pv-contact-btn" title={patientData.email}><MdEmail size={14} /></button>}
+                  </div>
+                </div>
+
+                <div className="pv-info-pills">
+                  <div className="pv-pill">
+                    {getGenderIcon(patientData.gender)} <span>{patientData.gender}</span>
+                  </div>
+                  <div className="pv-pill">
+                    <MdLocationOn size={14} /> <span>{patientData.location}</span>
+                  </div>
+                  <div className="pv-pill">
+                    <MdWork size={14} /> <span>{patientData.occupation}</span>
+                  </div>
+                  {patientData.dob && (
+                    <div className="pv-pill">
+                      <MdCalendarToday size={14} /> <span>{patientData.dob} ({patientData.age} years)</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="pv-metrics-row">
+                  <div className="pv-metric-card">
+                    <span className="pv-metric-val">{patientData.bmi || '—'}</span>
+                    <span className="pv-metric-lbl">BMI</span>
+                  </div>
+                  <div className="pv-metric-card">
+                    <span className="pv-metric-val">{patientData.weightKg || '—'} <small>kg</small></span>
+                    <span className="pv-metric-lbl">Weight</span>
+                  </div>
+                  <div className="pv-metric-card">
+                    <span className="pv-metric-val">{patientData.heightCm || '—'} <small>cm</small></span>
+                    <span className="pv-metric-lbl">Height</span>
+                  </div>
+                  <div className="pv-metric-card">
+                    <span className="pv-metric-val">{patientData.bp}</span>
+                    <span className="pv-metric-lbl">Blood Pressure</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Section - Blood Group Badge */}
+              <div className="pv-header-right">
+                <div className="pv-blood-group-badge">
+                  <MdBloodtype size={24} />
+                  <span className="pv-blood-text">{patientData.bloodGroup || 'N/A'}</span>
+                </div>
+              </div>
             </div>
           </div>
 
