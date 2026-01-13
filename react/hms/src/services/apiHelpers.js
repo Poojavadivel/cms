@@ -291,7 +291,7 @@ export const sleep = (ms) => {
  * @returns {Promise<Object>} - API response
  */
 export const apiCall = async (method, url, data = null, options = {}) => {
-  const token = localStorage.getItem('x-auth-token') || localStorage.getItem('authToken');
+  const token = localStorage.getItem('auth_token') || localStorage.getItem('x-auth-token') || localStorage.getItem('authToken');
   
   const headers = {
     'Content-Type': 'application/json',

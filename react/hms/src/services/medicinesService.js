@@ -12,7 +12,7 @@ const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://hms-dev.onrender.
  * Get auth token from localStorage
  */
 const getAuthToken = () => {
-  return localStorage.getItem('x-auth-token') || localStorage.getItem('authToken');
+  return localStorage.getItem('auth_token') || localStorage.getItem('x-auth-token') || localStorage.getItem('authToken');
 };
 
 /**

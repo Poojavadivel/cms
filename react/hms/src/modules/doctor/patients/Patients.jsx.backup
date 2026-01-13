@@ -204,24 +204,25 @@ const DoctorPatients = () => {
           <table className="modern-table">
             <thead>
               <tr>
-                <th style={{ width: '30%' }}>Patient</th>
+                <th style={{ width: '25%' }}>Patient</th>
                 <th style={{ width: '10%' }}>Age</th>
                 <th style={{ width: '12%' }}>Gender</th>
-                <th style={{ width: '18%' }}>Last Visit</th>
-                <th style={{ width: '18%' }}>Condition</th>
-                <th style={{ width: '12%' }}>Actions</th>
+                <th style={{ width: '15%' }}>Last Visit</th>
+                <th style={{ width: '18%' }}>Doctor</th>
+                <th style={{ width: '15%' }}>Condition</th>
+                <th style={{ width: '15%' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {isLoading ? (
                 <tr>
-                  <td colSpan="6" style={{ textAlign: 'center', padding: '48px' }}>
+                  <td colSpan="7" style={{ textAlign: 'center', padding: '48px' }}>
                     <div style={{ color: '#94A3AF', fontSize: '14px' }}>Loading patients...</div>
                   </td>
                 </tr>
               ) : paginatedPatients.length === 0 ? (
                 <tr>
-                  <td colSpan="6" style={{ textAlign: 'center', padding: '48px' }}>
+                  <td colSpan="7" style={{ textAlign: 'center', padding: '48px' }}>
                     <div style={{ color: '#94A3AF', fontSize: '14px' }}>No patients found</div>
                   </td>
                 </tr>
@@ -265,6 +266,9 @@ const DoctorPatients = () => {
                       {/* LAST VISIT COLUMN */}
                       <td className="cell-date">{formatDate(patient.lastVisit)}</td>
 
+                      {/* DOCTOR COLUMN */}
+                      <td className="cell-doctor">{patient.doctor || 'N/A'}</td>
+
                       {/* CONDITION COLUMN */}
                       <td className="cell-condition">{patient.condition}</td>
 
@@ -293,27 +297,30 @@ const DoctorPatients = () => {
           </table>
         </div>
 
-        {/* PAGINATION */}
-        <div className="pagination-footer">
-          <button
-            className="page-arrow-circle leading"
-            disabled={currentPage === 0}
-            onClick={handlePreviousPage}
-          >
-            <MdChevronLeft size={20} />
-          </button>
-
-          <div className="page-indicator-box">
-            Page {currentPage + 1} of {totalPages || 1}
+        {/* Pagination - EXACTLY like admin */}
+        <div className="pagination-bar">
+          <div className="pagination-info">
+            Showing <strong>{startIndex + 1}–{endIndex}</strong> of <strong>{filteredPatients.length}</strong> patients
           </div>
-
-          <button
-            className="page-arrow-circle trailing"
-            disabled={currentPage >= totalPages - 1 || totalPages === 0}
-            onClick={handleNextPage}
-          >
-            <MdChevronRight size={20} />
-          </button>
+          <div className="pagination-controls">
+            <button
+              className="pagination-btn"
+              onClick={handlePreviousPage}
+              disabled={currentPage === 0}
+            >
+              <MdChevronLeft size={18} />
+            </button>
+            <span className="pagination-page">
+              Page <strong>{currentPage + 1}</strong> of <strong>{totalPages || 1}</strong>
+            </span>
+            <button
+              className="pagination-btn"
+              onClick={handleNextPage}
+              disabled={currentPage >= totalPages - 1}
+            >
+              <MdChevronRight size={18} />
+            </button>
+          </div>
         </div>
       </div>
     </div>

@@ -6,7 +6,7 @@ import patientsService from '../../../services/patientsService';
 import AppointmentViewModal from '../../../components/appointments/AppointmentViewModal';
 import AppointmentEditModal from '../../../components/appointments/AppointmentEditModal';
 import AppointmentIntakeModal from '../../../components/appointments/AppointmentIntakeModal';
-import AppointmentPreviewDialog from '../../../components/doctor/AppointmentPreviewDialog';
+import PatientView from '../../../components/patient/patientview';
 
 // --- MOCK DATA (KEPT FOR FALLBACK) ---
 const MOCK_APPOINTMENTS = [
@@ -231,7 +231,7 @@ const Icons = {
 
 // --- COMPONENTS ---
 const Header = () => (
-  <div className="dashboard-header">
+  <div className="appointments-header">
     <div className="header-content">
       <h1 className="main-title">APPOINTMENTS</h1>
       <p className="main-subtitle">Manage bookings, schedules, and patient statuses</p>
@@ -836,12 +836,11 @@ const Appointments = () => {
         onSuccess={refreshAppointments}
       />
 
-      {/* Appointment Preview Dialog - Matches Flutter DoctorAppointmentPreview */}
-      <AppointmentPreviewDialog
+      {/* Patient View Dialog - Same as Admin Module */}
+      <PatientView
         patient={selectedPatient}
         isOpen={showPatientDialog}
         onClose={handleClosePatientDialog}
-        showBillingTab={false}
       />
     </div>
   );

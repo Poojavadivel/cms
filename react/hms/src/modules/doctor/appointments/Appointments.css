@@ -53,24 +53,27 @@ body {
   color: var(--text-body);
   font-family: 'Inter', -apple-system, sans-serif;
   margin: 0;
-  overflow: hidden;
-  /* CRITICAL: Prevent body scroll */
+  overflow-x: hidden;
+  /* Prevent horizontal scroll only */
 }
 
 .dashboard-container {
   max-width: 100%;
   padding: 16px 24px;
   /* Reduced padding */
-  height: 100vh;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
-  overflow: hidden;
+  overflow-y: auto;
   /* CRITICAL: Container handles frame */
 }
 
 /* --- HEADER --- */
-.dashboard-header {
+.appointments-header {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -78,6 +81,12 @@ body {
   margin-bottom: var(--space-3);
   flex-shrink: 0;
   /* Don't shrink header */
+  min-height: 60px;
+  position: relative;
+  z-index: 5;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
 }
 
 .main-title {

@@ -12,7 +12,7 @@ import logger from './loggerService';
  * Get auth token from localStorage
  */
 const getAuthToken = () => {
-  return localStorage.getItem('x-auth-token') || localStorage.getItem('authToken');
+  return localStorage.getItem('auth_token') || localStorage.getItem('x-auth-token') || localStorage.getItem('authToken');
 };
 
 /**

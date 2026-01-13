@@ -79,84 +79,77 @@ const PatientProfileHeaderCardContent = ({ patient, latestIntake, onEdit }) => {
   const bloodGroup = formatValue(patient?.bloodGroup);
   const age = patient?.age || 0;
   const ageDisplay = age === 0 ? '—' : `${age} yrs`;
-  const height = formatValue(patient?.height, ' cm');
-  const weight = formatValue(patient?.weight, ' kg');
   const bmi = formatValue(patient?.bmi);
-  const spo2 = formatValue(patient?.oxygen, '%');
+  const weight = formatValue(patient?.weight, ' kg');
+  const height = formatValue(patient?.height, ' cm');
+  const bp = patient?.bp || patient?.bloodPressure || '—';
 
   return (
-    <div className="patient-profile-header-card">
-      <div className="patient-card-container">
-        <div className="patient-card-content">
-          {/* Left Section: Avatar + Identity */}
-          <div className="patient-identity-section">
-            <div className="patient-avatar-container">
-              <img
-                src={avatar}
-                alt={name}
-                className="patient-avatar-img"
-                onError={(e) => {
-                  e.target.style.display = 'none';
-                  e.target.nextSibling.style.display = 'flex';
-                }}
-              />
-              <div className="patient-avatar-fallback" style={{ display: 'none' }}>
-                {getInitials(name)}
-              </div>
+    <div className="pv-summary-header">
+      <div className="pv-header-content">
+        {/* Avatar */}
+        <div className="pv-avatar-section">
+          <div className="pv-avatar-container">
+            <img
+              src={avatar}
+              alt={name}
+              className="pv-avatar-image"
+              onError={(e) => {
+                e.target.src = isFemale ? girlIcon : boyIcon;
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Info */}
+        <div className="pv-info-section">
+          <div className="pv-name-row">
+            <h2 className="pv-name-main">{name}</h2>
+          </div>
+
+          <div className="pv-info-pills">
+            <div className="pv-pill">
+              {isFemale ? <MdBadge /> : <MdBadge />} <span>{isFemale ? 'Female' : 'Male'}</span>
             </div>
-
-            <div className="patient-identity-info">
-              <h2 className="patient-name-title">{name}</h2>
-
-              {/* Patient Code Badge */}
-              <div className="patient-code-badge">
-                <MdBadge />
-                <span>{patient?.patientCode || patient?.patientId || 'N/A'}</span>
-              </div>
-
-              {/* Basic Info Pills */}
-              <div className="patient-basic-info">
-                <span className="info-pill gender">
-                  {isFemale ? '👩 Female' : '👨 Male'}
-                </span>
-                <span className="info-pill age">{ageDisplay}</span>
-                <span className="info-pill blood-group">{bloodGroup}</span>
-              </div>
+            <div className="pv-pill">
+              <MdBadge /> <span>Age: {ageDisplay}</span>
+            </div>
+            <div className="pv-pill">
+              <MdBadge /> <span>Blood: {bloodGroup}</span>
             </div>
           </div>
 
-          {/* Right Section: Vitals Grid */}
-          <div className="patient-vitals-section">
-            <div className="vitals-grid">
-              <VitalBox label="Height" value={height} icon={<MdHeight />} />
-              <VitalBox label="Weight" value={weight} icon={<MdMonitorWeight />} />
-              <VitalBox label="BMI" value={bmi} icon={<MdScale />} />
-              <VitalBox label="Oxygen (SpO₂)" value={spo2} icon={<MdMonitorHeart />} />
+          <div className="pv-metrics-row">
+            <div className="pv-metric-card">
+              <span className="pv-metric-val">{bmi}</span>
+              <span className="pv-metric-lbl">BMI</span>
+            </div>
+            <div className="pv-metric-card">
+              <span className="pv-metric-val">{weight.replace(' kg', '')} <small>kg</small></span>
+              <span className="pv-metric-lbl">Weight</span>
+            </div>
+            <div className="pv-metric-card">
+              <span className="pv-metric-val">{height.replace(' cm', '')} <small>Cm</small></span>
+              <span className="pv-metric-lbl">Height</span>
+            </div>
+            <div className="pv-metric-card">
+              <span className="pv-metric-val">{bp}</span>
+              <span className="pv-metric-lbl">Blood Pressure</span>
             </div>
           </div>
         </div>
 
-        {/* Edit Button */}
+        {/* Right Actions */}
         {onEdit && (
-          <button className="patient-edit-btn" onClick={onEdit} title="Edit Patient">
-            <MdEdit />
-          </button>
+          <div className="pv-header-right">
+            <button className="pv-edit-btn" onClick={onEdit}>
+              <MdEdit size={14} /> Edit
+            </button>
+          </div>
         )}
       </div>
     </div>
   );
 };
-
-const VitalBox = ({ label, value, icon }) => (
-  <div className="vital-box">
-    <div className="vital-icon-container">
-      <span className="vital-icon">{icon}</span>
-    </div>
-    <div className="vital-content">
-      <div className="vital-value">{value}</div>
-      <div className="vital-label">{label}</div>
-    </div>
-  </div>
-);
 
 export default PatientProfileHeaderCard;

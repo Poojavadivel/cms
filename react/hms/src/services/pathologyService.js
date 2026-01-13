@@ -7,7 +7,7 @@ import axios from 'axios';
 import logger from './loggerService';
 
 const getAuthToken = () => {
-  return localStorage.getItem('authToken');
+  return localStorage.getItem('auth_token') || localStorage.getItem('x-auth-token') || localStorage.getItem('authToken');
 };
 
 const api = axios.create({
