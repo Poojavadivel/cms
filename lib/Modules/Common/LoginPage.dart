@@ -870,7 +870,7 @@ class _LoginPageState extends State<LoginPage> {
             ),
             const SizedBox(height: 8),
             Center(
-              child: Text('v1.0.0 • © 2024 Karur Gastro Foundation', 
+              child: Text('v1.0.0 • © 2024 MOVI HOSPITAL', 
                   style: GoogleFonts.inter(
                     color: AppColors.grey400, 
                     fontSize: 11,

@@ -318,7 +318,7 @@ const DesktopLayout = (props) => {
                   </svg>
                 </div>
                 <div className="brand-text">
-                  <div className="brand-title">KARUR GASTRO</div>
+                  <div className="brand-title">MOVI HOSPITAL</div>
                   <div className="brand-subtitle">Healthcare Management</div>
                 </div>
               </div>
@@ -381,7 +381,7 @@ const MobileLayout = (props) => {
             <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/>
           </svg>
         </div>
-        <div className="mobile-brand-title">KARUR GASTRO</div>
+        <div className="mobile-brand-title">MOVI HOSPITAL</div>
         <div className="mobile-brand-subtitle">Healthcare Management System</div>
       </div>
 
@@ -423,7 +423,7 @@ const LoginForm = ({
             </svg>
           </div>
           <div className="form-brand-text">
-            <div className="form-brand-title">KARUR GASTRO</div>
+            <div className="form-brand-title">MOVI HOSPITAL</div>
             <div className="form-brand-subtitle">Healthcare Management</div>
           </div>
         </div>
@@ -573,7 +573,7 @@ const LoginForm = ({
               <span>Enterprise-grade Security</span>
             </div>
             <div className="copyright">
-              v1.0.0 • © 2024 Karur Gastro Foundation
+              v1.0.0 • © 2024 MOVI HOSPITAL
             </div>
           </div>
         </>

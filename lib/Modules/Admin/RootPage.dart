@@ -276,7 +276,7 @@ class _AdminSidebarNavigationState extends State<AdminSidebarNavigation> with Si
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          'Karur Gastro Foundation',
+                          'MOVI HOSPITAL',
                           overflow: TextOverflow.ellipsis,
                           style: GoogleFonts.lexend(
                             fontSize: 16,

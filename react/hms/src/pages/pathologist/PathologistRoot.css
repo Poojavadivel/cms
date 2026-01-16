@@ -26,14 +26,14 @@
 .sidebar-header {
   display: flex;
   align-items: center;
-  padding: 24px 16px;
-  gap: 12px;
-  min-height: 88px;
+  padding: 16px 12px;
+  gap: 10px;
+  min-height: 60px;
 }
 
 .toggle-btn {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -50,7 +50,7 @@
 }
 
 .sidebar-title {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
   color: #f59e0b;
   white-space: nowrap;
@@ -74,15 +74,15 @@
 .nav-item {
   display: flex;
   align-items: center;
-  width: calc(100% - 16px);
-  margin: 4px 8px;
-  padding: 14px 12px;
+  width: calc(100% - 12px);
+  margin: 3px 6px;
+  padding: 10px 10px;
   border: none;
   background: transparent;
-  border-radius: 12px;
+  border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s;
-  gap: 14px;
+  gap: 12px;
   text-align: left;
 }
 
@@ -98,7 +98,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 22px;
+  font-size: 20px;
   color: #6b7280;
   flex-shrink: 0;
 }
@@ -108,7 +108,7 @@
 }
 
 .nav-label {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 500;
   color: #1f2937;
   white-space: nowrap;
@@ -129,13 +129,13 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 16px;
-  gap: 8px;
+  padding: 12px;
+  gap: 6px;
 }
 
 .profile-avatar {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   background: rgba(245, 158, 11, 0.1);
   display: flex;
@@ -163,8 +163,8 @@
 .profile-expanded {
   display: flex;
   align-items: center;
-  padding: 16px;
-  gap: 12px;
+  padding: 12px;
+  gap: 10px;
 }
 
 .profile-info {

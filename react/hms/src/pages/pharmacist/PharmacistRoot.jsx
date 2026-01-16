@@ -16,7 +16,7 @@ import {
 const PharmacistRoot = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, logout } = useApp();
+  const { user, signOut } = useApp();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
 
@@ -41,7 +41,7 @@ const PharmacistRoot = () => {
   };
 
   const handleLogout = async () => {
-    await logout();
+    await signOut();
     navigate('/login');
   };
 
@@ -61,7 +61,7 @@ const PharmacistRoot = () => {
             {isCollapsed ? <MdMenuOpen size={24} /> : <MdMenu size={24} />}
           </button>
           {!isCollapsed && (
-            <span className="sidebar-title">Karur Gastro Foundation</span>
+            <span className="sidebar-title">MOVI HOSPITAL</span>
           )}
         </div>
 

@@ -379,7 +379,7 @@ class _DoctorSidebarNavigationState extends State<DoctorSidebarNavigation>
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          'Karur Gastro Foundation',
+                          'MOVI HOSPITAL',
                           overflow: TextOverflow.ellipsis,
                           style: GoogleFonts.lexend(
                             fontSize: 16,

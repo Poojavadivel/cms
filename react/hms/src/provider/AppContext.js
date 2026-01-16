@@ -111,7 +111,7 @@ export const AppProvider = ({ children }) => {
    * Clears user session data
    * Equivalent to Flutter's signOut() method
    */
-  const signOut = useCallback(() => {
+  const signOut = useCallback(async () => {
     setUserState(null);
     setTokenState(null);
 
@@ -119,6 +119,8 @@ export const AppProvider = ({ children }) => {
     localStorage.removeItem('auth_token');
     localStorage.removeItem('authUser');
     localStorage.removeItem('selectedModule'); // Clear any cached module selection
+    
+    return Promise.resolve();
   }, []);
 
   /**

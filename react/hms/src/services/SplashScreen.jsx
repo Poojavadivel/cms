@@ -102,7 +102,7 @@ const SplashScreen = () => {
     <div className="splash-screen">
       <div className="splash-content">
         <div className="splash-logo">
-          <h1 className="splash-title">Karur Gastro Foundation</h1>
+          <h1 className="splash-title">MOVI HOSPITAL</h1>
           <p className="splash-subtitle">Hospital Management System</p>
         </div>
 

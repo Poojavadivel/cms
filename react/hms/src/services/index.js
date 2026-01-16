@@ -26,3 +26,6 @@ export { default as patientsService } from './patientsService';
 
 // Report service (NEW - equivalent to Flutter's ReportService)
 export { default as reportService } from './reportService';
+
+// Pathology service (Lab Reports Management)
+export { default as pathologyService } from './pathologyService';

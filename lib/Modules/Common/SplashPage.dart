@@ -102,7 +102,7 @@ class _SplashPageState extends State<SplashPage> {
           children: [
             // Your App Logo/Name
             Text(
-              'Karur Gastro Foundation',
+              'MOVI HOSPITAL',
               style: GoogleFonts.inter(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,

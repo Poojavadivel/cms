@@ -74,7 +74,7 @@ const AdminRoot = () => {
             {isCollapsed ? <MdMenuOpen size={24} /> : <MdMenu size={24} />}
           </button>
           {!isCollapsed && (
-            <span className="sidebar-title">Karur Gastro Foundation</span>
+            <span className="sidebar-title">MOVI HOSPITAL</span>
           )}
         </div>
 

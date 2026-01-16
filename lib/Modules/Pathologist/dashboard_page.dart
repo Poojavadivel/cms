@@ -76,14 +76,14 @@ class _PathologistDashboardPageState extends State<PathologistDashboardPage> {
         final availableWidth = constraints.maxWidth;
         
         // Calculate responsive dimensions
-        final headerHeight = 60.0;
-        final statsHeight = 110.0;
-        final spacing = 16.0;
+        final headerHeight = 50.0;
+        final statsHeight = 90.0;
+        final spacing = 12.0;
         final contentHeight = availableHeight - headerHeight - statsHeight - (spacing * 3);
         
         return Container(
           color: const Color(0xFFF8FAFC),
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
@@ -236,7 +236,7 @@ class _PathologistDashboardPageState extends State<PathologistDashboardPage> {
 
   Widget _buildStatCard(String title, String value, IconData icon, Color color, Color bgColor) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -252,14 +252,14 @@ class _PathologistDashboardPageState extends State<PathologistDashboardPage> {
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: bgColor,
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(icon, color: color, size: 20),
+            child: Icon(icon, color: color, size: 18),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -268,7 +268,7 @@ class _PathologistDashboardPageState extends State<PathologistDashboardPage> {
                 Text(
                   value,
                   style: GoogleFonts.inter(
-                    fontSize: 24,
+                    fontSize: 20,
                     fontWeight: FontWeight.w700,
                     color: const Color(0xFF0F172A),
                     letterSpacing: -0.5,
@@ -278,7 +278,7 @@ class _PathologistDashboardPageState extends State<PathologistDashboardPage> {
                 Text(
                   title,
                   style: GoogleFonts.inter(
-                    fontSize: 11,
+                    fontSize: 10,
                     color: const Color(0xFF64748B),
                     fontWeight: FontWeight.w600,
                   ),
@@ -309,7 +309,7 @@ class _PathologistDashboardPageState extends State<PathologistDashboardPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(16),
             child: Row(
               children: [
                 Container(
@@ -353,9 +353,9 @@ class _PathologistDashboardPageState extends State<PathologistDashboardPage> {
                     ),
                   )
                 : ListView.separated(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(12),
                     itemCount: _labReports.length.clamp(0, 10),
-                    separatorBuilder: (context, index) => const SizedBox(height: 10),
+                    separatorBuilder: (context, index) => const SizedBox(height: 8),
                     itemBuilder: (context, index) {
                       final report = _labReports[index];
                       return _buildReportItem(report);
@@ -370,23 +370,23 @@ class _PathologistDashboardPageState extends State<PathologistDashboardPage> {
   Widget _buildReportItem(dynamic report) {
     final hasFile = report['fileRef'] != null;
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
       child: Row(
         children: [
           Container(
-            width: 8,
-            height: 8,
+            width: 7,
+            height: 7,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: hasFile ? const Color(0xFF10B981) : const Color(0xFFF59E0B),
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -394,18 +394,18 @@ class _PathologistDashboardPageState extends State<PathologistDashboardPage> {
                 Text(
                   report['testType'] ?? 'Lab Test',
                   style: GoogleFonts.inter(
-                    fontSize: 13,
+                    fontSize: 12,
                     fontWeight: FontWeight.w600,
                     color: const Color(0xFF0F172A),
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 3),
                 Text(
                   report['patientName'] ?? 'Unknown Patient',
                   style: GoogleFonts.inter(
-                    fontSize: 11,
+                    fontSize: 10,
                     color: const Color(0xFF64748B),
                   ),
                   maxLines: 1,
@@ -423,7 +423,7 @@ class _PathologistDashboardPageState extends State<PathologistDashboardPage> {
             child: Text(
               hasFile ? 'Done' : 'Pending',
               style: GoogleFonts.inter(
-                fontSize: 10,
+                fontSize: 9,
                 fontWeight: FontWeight.w600,
                 color: hasFile ? const Color(0xFF10B981) : const Color(0xFFF59E0B),
               ),
@@ -442,7 +442,7 @@ class _PathologistDashboardPageState extends State<PathologistDashboardPage> {
     }
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -472,14 +472,14 @@ class _PathologistDashboardPageState extends State<PathologistDashboardPage> {
               Text(
                 'Test Distribution',
                 style: GoogleFonts.lexend(
-                  fontSize: 16,
+                  fontSize: 14,
                   fontWeight: FontWeight.w700,
                   color: const Color(0xFF0F172A),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           Expanded(
             child: testTypes.isEmpty
                 ? Center(
@@ -494,7 +494,7 @@ class _PathologistDashboardPageState extends State<PathologistDashboardPage> {
                 : PieChart(
                     PieChartData(
                       sectionsSpace: 2,
-                      centerSpaceRadius: 30,
+                      centerSpaceRadius: 25,
                       sections: testTypes.entries.take(5).map((entry) {
                         final colors = [
                           const Color(0xFF6366F1),
@@ -508,9 +508,9 @@ class _PathologistDashboardPageState extends State<PathologistDashboardPage> {
                           color: colors[index % colors.length],
                           value: entry.value.toDouble(),
                           title: '${entry.value}',
-                          radius: 50,
+                          radius: 40,
                           titleStyle: GoogleFonts.inter(
-                            fontSize: 11,
+                            fontSize: 10,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
                           ),
@@ -526,7 +526,7 @@ class _PathologistDashboardPageState extends State<PathologistDashboardPage> {
 
   Widget _buildQuickStats() {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -556,14 +556,14 @@ class _PathologistDashboardPageState extends State<PathologistDashboardPage> {
               Text(
                 'Quick Stats',
                 style: GoogleFonts.lexend(
-                  fontSize: 16,
+                  fontSize: 14,
                   fontWeight: FontWeight.w700,
                   color: const Color(0xFF0F172A),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           Expanded(
             child: Column(
               children: [
@@ -573,7 +573,7 @@ class _PathologistDashboardPageState extends State<PathologistDashboardPage> {
                   Iconsax.percentage_circle,
                   const Color(0xFF10B981),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 10),
                 _buildQuickStatItem(
                   'Today\'s Reports',
                   '${_labReports.where((r) {
@@ -583,7 +583,7 @@ class _PathologistDashboardPageState extends State<PathologistDashboardPage> {
                   Iconsax.calendar,
                   const Color(0xFF6366F1),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 10),
                 _buildQuickStatItem(
                   'Urgent Tests',
                   '${_stats['urgent']}',
@@ -600,28 +600,28 @@ class _PathologistDashboardPageState extends State<PathologistDashboardPage> {
 
   Widget _buildQuickStatItem(String label, String value, IconData icon, Color color) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(7),
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(7),
             ),
-            child: Icon(icon, color: color, size: 18),
+            child: Icon(icon, color: color, size: 16),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 10),
           Expanded(
             child: Text(
               label,
               style: GoogleFonts.inter(
-                fontSize: 12,
+                fontSize: 11,
                 color: const Color(0xFF64748B),
                 fontWeight: FontWeight.w500,
               ),
@@ -630,7 +630,7 @@ class _PathologistDashboardPageState extends State<PathologistDashboardPage> {
           Text(
             value,
             style: GoogleFonts.inter(
-              fontSize: 18,
+              fontSize: 16,
               fontWeight: FontWeight.w700,
               color: const Color(0xFF0F172A),
             ),

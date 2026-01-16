@@ -53,9 +53,11 @@ const DoctorSettings = lazy(() => import('../modules/doctor/settings/Settings'))
 // const PharmacyInventory = lazy(() => import('../pages/pharmacist/Inventory'));
 // const PharmacyPrescriptions = lazy(() => import('../pages/pharmacist/Prescriptions'));
 
-// Pathologist module pages (TODO: Implement these pages)
-// const PathologyTests = lazy(() => import('../pages/pathologist/Tests'));
-// const PathologyReports = lazy(() => import('../pages/pathologist/Reports'));
+// Pathologist module pages (from modules folder)
+const PathologistDashboard = lazy(() => import('../modules/pathologist/dashboard/Dashboard'));
+const PathologistTestReports = lazy(() => import('../modules/pathologist/test-reports/TestReports'));
+const PathologistPatients = lazy(() => import('../modules/pathologist/patients/Patients'));
+const PathologistSettings = lazy(() => import('../modules/pathologist/settings/Settings'));
 
 // Shared pages (TODO: Implement these pages)
 // const ProfilePage = lazy(() => import('../pages/common/ProfilePage'));
@@ -168,10 +170,10 @@ const AppRoutes = () => {
           }
         >
           <Route index element={<Navigate to="dashboard" replace />} />
-          <Route path="dashboard" element={<div>Pathologist Dashboard - Coming Soon</div>} />
-          <Route path="test-reports" element={<div>Test Reports - Coming Soon</div>} />
-          <Route path="patients" element={<div>Patients - Coming Soon</div>} />
-          <Route path="settings" element={<div>Settings - Coming Soon</div>} />
+          <Route path="dashboard" element={<PathologistDashboard />} />
+          <Route path="test-reports" element={<PathologistTestReports />} />
+          <Route path="patients" element={<PathologistPatients />} />
+          <Route path="settings" element={<PathologistSettings />} />
           <Route path="*" element={<Navigate to="/pathologist/dashboard" replace />} />
         </Route>
 
