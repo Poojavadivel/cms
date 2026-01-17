@@ -49,9 +49,10 @@ const DoctorAppointments = lazy(() => import('../modules/doctor/appointments/App
 const DoctorSchedule = lazy(() => import('../modules/doctor/schedule/Schedule'));
 const DoctorSettings = lazy(() => import('../modules/doctor/settings/Settings'));
 
-// Pharmacist module pages (TODO: Implement these pages)
-// const PharmacyInventory = lazy(() => import('../pages/pharmacist/Inventory'));
-// const PharmacyPrescriptions = lazy(() => import('../pages/pharmacist/Prescriptions'));
+// Pharmacist module pages (from modules folder - Table Style)
+const PharmacistDashboard = lazy(() => import('../modules/pharmacist/Dashboard_Flutter'));
+const PharmacistMedicines = lazy(() => import('../modules/pharmacist/Medicines_Table'));
+const PharmacistPrescriptions = lazy(() => import('../modules/pharmacist/Prescriptions_Flutter'));
 
 // Pathologist module pages (from modules folder)
 const PathologistDashboard = lazy(() => import('../modules/pathologist/dashboard/Dashboard'));
@@ -153,9 +154,9 @@ const AppRoutes = () => {
           }
         >
           <Route index element={<Navigate to="dashboard" replace />} />
-          <Route path="dashboard" element={<div>Pharmacist Dashboard - Coming Soon</div>} />
-          <Route path="medicines" element={<div>Medicines - Coming Soon</div>} />
-          <Route path="prescriptions" element={<div>Prescriptions - Coming Soon</div>} />
+          <Route path="dashboard" element={<PharmacistDashboard />} />
+          <Route path="medicines" element={<PharmacistMedicines />} />
+          <Route path="prescriptions" element={<PharmacistPrescriptions />} />
           <Route path="settings" element={<div>Settings - Coming Soon</div>} />
           <Route path="*" element={<Navigate to="/pharmacist/dashboard" replace />} />
         </Route>

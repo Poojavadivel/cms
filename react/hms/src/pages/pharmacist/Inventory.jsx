@@ -1,1 +1,13 @@
-import React from 'react'; const Inventory = () => <div style={{padding:'2rem'}}>Inventory Page - Coming Soon</div>; export default Inventory;
+/**
+ * Pharmacist Inventory Page
+ * Wrapper for the pharmacist medicines/inventory module component
+ */
+
+import React from 'react';
+import { PharmacistMedicines } from '../../modules/pharmacist';
+
+const Inventory = () => {
+  return <PharmacistMedicines />;
+};
+
+export default Inventory;

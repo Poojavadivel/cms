@@ -118,10 +118,13 @@ export const PharmacyEndpoints = {
   createMedicine: `${API_BASE_URL}/pharmacy/medicines`,
   updateMedicine: (id) => `${API_BASE_URL}/pharmacy/medicines/${id}`,
   deleteMedicine: (id) => `${API_BASE_URL}/pharmacy/medicines/${id}`,
+  getBatches: `${API_BASE_URL}/pharmacy/batches`,
+  createBatch: `${API_BASE_URL}/pharmacy/batches`,
   getPrescriptions: `${API_BASE_URL}/pharmacy/prescriptions`,
+  getPendingPrescriptions: `${API_BASE_URL}/pharmacy/pending-prescriptions`,
   getPrescriptionById: (id) => `${API_BASE_URL}/pharmacy/prescriptions/${id}`,
   createPrescriptionFromIntake: `${API_BASE_URL}/pharmacy/prescriptions/create-from-intake`,
-  dispensePrescription: (id) => `${API_BASE_URL}/pharmacy/prescriptions/${id}/dispense`,
+  dispensePrescription: (intakeId) => `${API_BASE_URL}/pharmacy/prescriptions/${intakeId}/dispense`,
 };
 
 /**
