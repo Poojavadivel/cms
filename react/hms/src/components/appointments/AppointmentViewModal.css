@@ -388,10 +388,33 @@
 .appt-date {
   font-weight: 600;
   color: #0f172a;
+  display: block;
 }
 
-.appt-time {
+.appt-date-time {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.appt-time-sub {
+  font-size: 12px;
   color: #64748b;
+  font-weight: 500;
+}
+
+.appt-doctor-cell {
+  font-weight: 500;
+  color: #334155;
+}
+
+.appt-service-cell {
+  background: #f1f5f9;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
 }
 
 .appt-condition {
@@ -427,6 +450,21 @@
 .status-badge.pending {
   background: #fef9c3;
   color: #ca8a04;
+}
+
+.status-badge.completed {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.status-badge.rescheduled {
+  background: #f5f3ff;
+  color: #7c3aed;
+}
+
+.status-badge.no-show {
+  background: #fef2f2;
+  color: #991b1b;
 }
 
 .helper-text {

@@ -1,7 +1,7 @@
-// routes/patients.js
 const express = require('express');
 const { Patient } = require('../Models');
 const auth = require('../Middleware/Auth');
+const { getNextSequence, formatCode } = require('../utils/sequence');
 const router = express.Router();
 
 // -------------------------
@@ -24,51 +24,57 @@ router.post('/', auth, async (req, res) => {
     const address = data.address && typeof data.address === 'object'
       ? data.address
       : {
-          houseNo: data.houseNo || '',
-          street: data.street || '',
-          line1: data.address || '',
-          city: data.city || '',
-          state: data.state || '',
-          pincode: data.pincode || '',
-          country: data.country || '',
-        };
-    
+        houseNo: data.houseNo || '',
+        street: data.street || '',
+        line1: data.address || '',
+        city: data.city || '',
+        state: data.state || '',
+        pincode: data.pincode || '',
+        country: data.country || '',
+      };
+
     console.log('🏠 [PATIENT CREATE] Address object:', JSON.stringify(address, null, 2));
 
     // Build vitals object (handle both structured and flat formats)
     const vitals = data.vitals && typeof data.vitals === 'object'
       ? data.vitals
       : {
-          heightCm: data.height ? parseFloat(data.height) : null,
-          weightKg: data.weight ? parseFloat(data.weight) : null,
-          bmi: data.bmi ? parseFloat(data.bmi) : null,
-          bp: data.bp || null,
-          temp: data.temp ? parseFloat(data.temp) : null,
-          pulse: data.pulse ? parseInt(data.pulse) : null,
-          spo2: data.oxygen ? parseFloat(data.oxygen) : (data.spo2 ? parseFloat(data.spo2) : null),
-        };
+        heightCm: data.height ? parseFloat(data.height) : null,
+        weightKg: data.weight ? parseFloat(data.weight) : null,
+        bmi: data.bmi ? parseFloat(data.bmi) : null,
+        bp: data.bp || null,
+        temp: data.temp ? parseFloat(data.temp) : null,
+        pulse: data.pulse ? parseInt(data.pulse) : null,
+        spo2: data.oxygen ? parseFloat(data.oxygen) : (data.spo2 ? parseFloat(data.spo2) : null),
+      };
+
+    // Generate human-readable Patient Code (corrected numeric format: PAT-00001)
+    const seq = await getNextSequence('patientCode');
+    const patientCode = formatCode('PAT', seq, 5);
 
     const payload = {
+      patientCode,
       firstName: data.firstName.trim(),
       lastName: (data.lastName || '').trim(),
       dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : null,
       gender: data.gender || null,
       phone: data.phone,
       email: data.email || null,
-      
+
       // Address object
       address: address,
-      
+
       // Vitals object
       vitals: vitals,
-      
+
       doctorId: data.doctorId || req.user.id || null,
       allergies: Array.isArray(data.allergies) ? data.allergies : [],
       prescriptions: Array.isArray(data.prescriptions) ? data.prescriptions : [],
       notes: data.notes || '',
-      
+
       // Metadata object (prioritize nested metadata, fallback to top-level)
       metadata: {
+        patientCode: patientCode, // Store in both places for safety
         age: data.metadata?.age ?? data.age ?? null,
         bloodGroup: data.metadata?.bloodGroup ?? data.bloodGroup ?? null,
         insuranceNumber: data.metadata?.insuranceNumber ?? data.insuranceNumber ?? null,
@@ -83,16 +89,16 @@ router.post('/', auth, async (req, res) => {
     console.log('💾 [PATIENT CREATE] Storing payload:', JSON.stringify(payload, null, 2));
 
     const created = await Patient.create(payload);
-    
+
     console.log('✅ [PATIENT CREATE] Success:', created._id);
     return res.status(201).json(created);
   } catch (err) {
     console.error('💥 [PATIENT CREATE] Error:', err);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Failed to create patient', 
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to create patient',
       error: err.message,
-      errorCode: 5000 
+      errorCode: 5000
     });
   }
 });
@@ -129,6 +135,8 @@ router.get('/', auth, async (req, res) => {
         { 'address.city': regex },
         { 'metadata.bloodGroup': regex },
         { 'metadata.emergencyContactPhone': regex },
+        { patientCode: regex },
+        { 'metadata.patientCode': regex }
       ];
     }
 
@@ -152,17 +160,45 @@ router.get('/', auth, async (req, res) => {
     console.timeEnd('⏱️ [DB Query Time]');
 
     console.log(`📊 Query Result: Found ${items.length} patients (of ${total} total)`);
-    
+
     // Log first item's doctor population for debugging
     if (items.length > 0 && items[0].doctorId) {
       console.log('👨‍⚕️ First patient doctor:', JSON.stringify(items[0].doctorId, null, 2));
     }
 
-    // Enrich results - CRITICAL: Keep doctorId as object AND add doctor field
-    const enriched = items.map(p => ({
-      ...p,
-      doctor: p.doctorId, // ✅ ADD THIS: Mirror doctorId to doctor field for frontend
-      doctorName: p.doctorId ? `${p.doctorId.firstName} ${p.doctorId.lastName}`.trim() : '',
+    // Enrich results and ensure every patient has a "CORRECT" numeric patientCode
+    // We do this in a loop to assign codes to legacy data on the fly
+    const enriched = await Promise.all(items.map(async (p) => {
+      let code = p.patientCode || p.metadata?.patientCode;
+
+      // If code is missing or not in a "clean" numeric format (like those PAT-SLICE fallbacks), assign a new one
+      const isClean = code && /^PAT-\d{5}$/.test(code);
+
+      if (!isClean) {
+        try {
+          const seq = await getNextSequence('patientCode');
+          code = formatCode('PAT', seq, 5);
+
+          // Update database in the background (no await here to keep response fast)
+          // but we use the new code for the current response
+          Patient.updateOne(
+            { _id: p._id },
+            { $set: { patientCode: code, 'metadata.patientCode': code } }
+          ).catch(e => console.error('Failed to sync patientCode:', e));
+
+          console.log(`✅ [SYNC] Assigned correct numeric code ${code} to patient ${p._id}`);
+        } catch (err) {
+          console.error('Failed to generate code during list sync:', err);
+          code = code || `PAT-${String(p._id).slice(0, 6).toUpperCase()}`;
+        }
+      }
+
+      return {
+        ...p,
+        patientCode: code,
+        doctor: p.doctorId, // ✅ Mirror doctorId to doctor field for frontend
+        doctorName: p.doctorId ? `${p.doctorId.firstName} ${p.doctorId.lastName}`.trim() : '',
+      };
     }));
 
     // Optional metadata logging
@@ -215,9 +251,28 @@ router.get('/:id', auth, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Patient not found', errorCode: 3007 });
     }
 
+    // Generate human-readable Patient Code if missing (numeric format PAT-00001)
+    let code = patient.patientCode || patient.metadata?.patientCode;
+    const isClean = code && /^PAT-\d{5}$/.test(code);
+
+    if (!isClean) {
+      try {
+        const seq = await getNextSequence('patientCode');
+        code = formatCode('PAT', seq, 5);
+        await Patient.updateOne(
+          { _id: patient._id },
+          { $set: { patientCode: code, 'metadata.patientCode': code } }
+        );
+        patient.patientCode = code;
+      } catch (err) {
+        console.error('Failed to sync patientCode on single fetch:', err);
+      }
+    }
+
     // ✅ CRITICAL: Add doctor field mirroring doctorId for frontend compatibility
     const enrichedPatient = {
       ...patient,
+      patientCode: code || patient.patientCode,
       doctor: patient.doctorId // Mirror doctorId to doctor field
     };
 
@@ -261,15 +316,15 @@ router.put('/:id', auth, async (req, res) => {
       address = typeof data.address === 'object'
         ? data.address
         : {
-            houseNo: data.houseNo || '',
-            street: data.street || '',
-            line1: data.address || '',
-            city: data.city || '',
-            state: data.state || '',
-            pincode: data.pincode || '',
-            country: data.country || '',
-          };
-      
+          houseNo: data.houseNo || '',
+          street: data.street || '',
+          line1: data.address || '',
+          city: data.city || '',
+          state: data.state || '',
+          pincode: data.pincode || '',
+          country: data.country || '',
+        };
+
       console.log('🏠 [PATIENT UPDATE] Address object:', JSON.stringify(address, null, 2));
     }
 
@@ -279,15 +334,15 @@ router.put('/:id', auth, async (req, res) => {
       vitals = data.vitals && typeof data.vitals === 'object'
         ? data.vitals
         : {
-            heightCm: data.height ? parseFloat(data.height) : undefined,
-            weightKg: data.weight ? parseFloat(data.weight) : undefined,
-            bmi: data.bmi ? parseFloat(data.bmi) : undefined,
-            bp: data.bp || undefined,
-            temp: data.temp ? parseFloat(data.temp) : undefined,
-            pulse: data.pulse ? parseInt(data.pulse) : undefined,
-            spo2: data.oxygen ? parseFloat(data.oxygen) : (data.spo2 ? parseFloat(data.spo2) : undefined),
-          };
-      
+          heightCm: data.height ? parseFloat(data.height) : undefined,
+          weightKg: data.weight ? parseFloat(data.weight) : undefined,
+          bmi: data.bmi ? parseFloat(data.bmi) : undefined,
+          bp: data.bp || undefined,
+          temp: data.temp ? parseFloat(data.temp) : undefined,
+          pulse: data.pulse ? parseInt(data.pulse) : undefined,
+          spo2: data.oxygen ? parseFloat(data.oxygen) : (data.spo2 ? parseFloat(data.spo2) : undefined),
+        };
+
       // Remove undefined fields from vitals
       if (vitals) {
         Object.keys(vitals).forEach(k => vitals[k] === undefined && delete vitals[k]);
@@ -303,30 +358,40 @@ router.put('/:id', auth, async (req, res) => {
       bloodGroup: data.bloodGroup || data.metadata?.bloodGroup || undefined,  // ✅ Save to root level
       phone: data.phone,
       email: data.email,
-      
+
       // Address object
       address: address,
-      
+
       // Vitals object
       vitals: vitals,
-      
+
       doctorId: data.doctorId,
       allergies: data.allergies,
       prescriptions: data.prescriptions,
       notes: data.notes,
-      
+
       // Metadata object (keep for backward compatibility)
-      metadata: data.metadata || {
-        age: data.age || undefined,
-        bloodGroup: data.bloodGroup || undefined,
-        insuranceNumber: data.insuranceNumber || undefined,
-        expiryDate: data.expiryDate || undefined,
-        emergencyContactName: data.emergencyContactName || undefined,
-        emergencyContactPhone: data.emergencyContactPhone || undefined,
-        avatarUrl: data.avatarUrl || undefined,
-        medicalHistory: data.medicalHistory || undefined,
-      },
+      metadata: {
+        ...(data.metadata || {}),
+        patientCode: data.patientCode || data.metadata?.patientCode // Ensure patientCode is preserved in metadata
+      }
     };
+
+    // --- CRITICAL: Protect patientCode from being changed during update ---
+    // Fetch existing patient to get current code
+    const existingPatient = await Patient.findById(req.params.id).lean();
+    if (existingPatient && existingPatient.patientCode) {
+      update.patientCode = existingPatient.patientCode; // Always keep the original code
+      if (update.metadata) {
+        update.metadata.patientCode = existingPatient.patientCode;
+      }
+    } else if (existingPatient && existingPatient.metadata?.patientCode) {
+      update.patientCode = existingPatient.metadata.patientCode;
+      if (update.metadata) {
+        update.metadata.patientCode = existingPatient.metadata.patientCode;
+      }
+    }
+    // ----------------------------------------------------------------------
 
     // Remove undefined fields
     Object.keys(update).forEach(k => update[k] === undefined && delete update[k]);
@@ -337,18 +402,18 @@ router.put('/:id', auth, async (req, res) => {
     console.log('💾 [PATIENT UPDATE] Payload:', JSON.stringify(update, null, 2));
 
     const updated = await Patient.findByIdAndUpdate(
-      req.params.id, 
-      update, 
+      req.params.id,
+      update,
       { new: true, runValidators: true }
     )
       .populate('doctorId', 'firstName lastName email phone gender role department designation')
       .lean();
 
     if (!updated) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Patient not found', 
-        errorCode: 3007 
+      return res.status(404).json({
+        success: false,
+        message: 'Patient not found',
+        errorCode: 3007
       });
     }
 
@@ -362,11 +427,11 @@ router.put('/:id', auth, async (req, res) => {
     return res.status(200).json(enrichedPatient);
   } catch (err) {
     console.error('❌ [PATIENT UPDATE] Error:', err);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Failed to update patient', 
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to update patient',
       error: err.message,
-      errorCode: 5003 
+      errorCode: 5003
     });
   }
 });
@@ -381,7 +446,7 @@ router.patch('/:id', auth, async (req, res) => {
 
     // Build update object only with provided fields
     const update = {};
-    
+
     if (data.firstName !== undefined) update.firstName = data.firstName;
     if (data.lastName !== undefined) update.lastName = data.lastName;
     if (data.dateOfBirth !== undefined) update.dateOfBirth = new Date(data.dateOfBirth);
@@ -398,6 +463,11 @@ router.patch('/:id', auth, async (req, res) => {
     if (data.metadata !== undefined) {
       update.metadata = data.metadata;
     }
+
+    // --- CRITICAL: Protect patientCode from being changed during patch ---
+    delete update.patientCode;
+    if (update.metadata) delete update.metadata.patientCode;
+    // ---------------------------------------------------------------------
 
     // Remove undefined fields
     Object.keys(update).forEach(key => update[key] === undefined && delete update[key]);

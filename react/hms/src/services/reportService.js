@@ -23,7 +23,10 @@ const createAxiosInstance = () => {
     baseURL: process.env.REACT_APP_API_URL || 'https://hms-dev.onrender.com/api',
     headers: {
       'Content-Type': 'application/json',
-      ...(token && { 'x-auth-token': token })
+      ...(token && {
+        'x-auth-token': token,
+        'Authorization': `Bearer ${token}`
+      })
     }
   });
 };
@@ -47,9 +50,9 @@ class ReportService {
       // Extract filename from content-disposition header
       const contentDisposition = response.headers['content-disposition'];
       let filename = `Patient_Report_${Date.now()}.pdf`;
-      
+
       if (contentDisposition) {
-        const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
+        const filenameMatch = contentDisposition.match(/filename="?([^";]+)"?/);
         if (filenameMatch && filenameMatch[1]) {
           filename = filenameMatch[1];
         }
@@ -97,9 +100,9 @@ class ReportService {
 
       const contentDisposition = response.headers['content-disposition'];
       let filename = `Doctor_Report_${Date.now()}.pdf`;
-      
+
       if (contentDisposition) {
-        const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
+        const filenameMatch = contentDisposition.match(/filename="?([^";]+)"?/);
         if (filenameMatch && filenameMatch[1]) {
           filename = filenameMatch[1];
         }
@@ -146,9 +149,9 @@ class ReportService {
 
       const contentDisposition = response.headers['content-disposition'];
       let filename = `Staff_Report_${Date.now()}.pdf`;
-      
+
       if (contentDisposition) {
-        const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
+        const filenameMatch = contentDisposition.match(/filename="?([^";]+)"?/);
         if (filenameMatch && filenameMatch[1]) {
           filename = filenameMatch[1];
         }
@@ -196,9 +199,9 @@ class ReportService {
 
       const contentDisposition = response.headers['content-disposition'];
       let filename = `Prescription_${patientName}_${Date.now()}.pdf`;
-      
+
       if (contentDisposition) {
-        const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
+        const filenameMatch = contentDisposition.match(/filename="?([^";]+)"?/);
         if (filenameMatch && filenameMatch[1]) {
           filename = filenameMatch[1];
         }
@@ -251,7 +254,22 @@ class ReportService {
   }
 
   /**
-   * Upload test report file
+   * View PDF in a new tab
+   * Uses the public PDF endpoint for easy browser viewing
+   * @param {string} pdfId - The PDF ID from database
+   */
+  viewPdf(pdfId) {
+    if (!pdfId) {
+      console.error('No PDF ID provided');
+      return;
+    }
+    const baseUrl = process.env.REACT_APP_API_URL || 'https://hms-dev.onrender.com/api';
+    const url = `${baseUrl}/scanner-enterprise/pdf-public/${pdfId}`;
+    window.open(url, '_blank');
+  }
+
+  /**
+   * Download test report file
    * @param {FormData} formData - Form data with file and metadata
    * @returns {Promise<Object>} Response with success status
    */
@@ -264,12 +282,12 @@ class ReportService {
           ...(token && { 'Authorization': `Bearer ${token}` })
         }
       });
-      
+
       const response = await axiosInstance.post(
         ReportsEndpoints.uploadTestReport,
         formData
       );
-      
+
       return {
         success: true,
         message: 'Test report uploaded successfully',

@@ -366,13 +366,41 @@
   padding: 24px;
 }
 
+.pd-card-header-with-action {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
 .pd-card-title {
   font-size: 14px;
   font-weight: 700;
   color: #1E293B;
-  margin: 0 0 16px 0;
+  margin: 0;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+}
+
+.pv-btn-outline-small {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border: 1px solid #E2E8F0;
+  background: white;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #64748B;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.pv-btn-outline-small:hover {
+  background: #F8FAFC;
+  border-color: #CBD5E1;
+  color: #1E293B;
 }
 
 .pd-field-group-flutter {
@@ -479,6 +507,7 @@
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -489,6 +518,7 @@
     opacity: 0;
     transform: scale(0.95);
   }
+
   to {
     opacity: 1;
     transform: scale(1);
@@ -503,11 +533,11 @@
   .pd-header-card-flutter {
     flex-direction: column;
   }
-  
+
   .pd-vitals-grid-flutter {
     grid-template-columns: repeat(4, 1fr);
   }
-  
+
   .pd-info-grid {
     grid-template-columns: 1fr;
   }
@@ -519,20 +549,20 @@
     height: 100vh;
     border-radius: 0;
   }
-  
+
   .btn-close-floating-flutter {
     top: 8px;
     right: 8px;
   }
-  
+
   .pd-vitals-grid-flutter {
     grid-template-columns: repeat(2, 1fr);
   }
-  
+
   .pd-tabs-flutter {
     padding: 0 4px;
   }
-  
+
   .pd-tab-flutter {
     padding: 12px 16px;
     font-size: 12px;
@@ -668,16 +698,62 @@
 }
 
 .pv-contact-btn {
-  width: 24px;
-  height: 24px;
-  border-radius: 6px;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
   background: #F1F5F9;
   border: 1px solid #E2E8F0;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #64748B;
-  cursor: default;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.pv-contact-btn:hover {
+  background: #E2E8F0;
+  color: #1E293B;
+}
+
+.pv-name-id-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pv-patient-code-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #EFF6FF;
+  border: 1px solid #DBEAFE;
+  color: #1E40AF;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  width: fit-content;
+  transition: all 0.2s;
+}
+
+.pv-patient-code-badge:hover {
+  background: #DBEAFE;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.pv-code-prefix {
+  opacity: 0.7;
+  font-size: 10px;
+}
+
+.pv-code-copy-icon {
+  opacity: 0.5;
+}
+
+.pv-patient-code-badge:hover .pv-code-copy-icon {
+  opacity: 1;
 }
 
 /* Pills */
@@ -774,4 +850,145 @@
   font-weight: 700;
   color: white;
   letter-spacing: 0.5px;
+}
+
+/* Timeline and Data Grid Styles */
+.pd-timeline-flutter {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.pd-history-item-flutter {
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid #e2e8f0;
+}
+
+.pd-history-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.pd-history-date {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.pd-history-tag {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: #e2e8f0;
+  color: #475569;
+  padding: 2px 8px;
+  border-radius: 100px;
+}
+
+.pd-history-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 6px 0;
+}
+
+.pd-history-notes {
+  font-size: 13px;
+  color: #475569;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.pd-view-pdf-btn {
+  margin-left: auto;
+  background: #fee2e2;
+  color: #ef4444;
+  border: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.pd-view-pdf-btn:hover {
+  background: #fecaca;
+  transform: scale(1.05);
+}
+
+.pd-grid-flutter {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.pd-card-header-flex {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.pd-date-tag {
+  display: inline-block;
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 12px;
+}
+
+.pd-status-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: #dcfce7;
+  color: #166534;
+}
+
+.pd-notes-small {
+  font-size: 12px;
+  color: #64748b;
+  font-style: italic;
+  margin-top: 8px;
+}
+
+.empty-state-flutter {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+  background: #f8fafc;
+  border-radius: 16px;
+  border: 2px dashed #e2e8f0;
+  margin-top: 20px;
+}
+
+.empty-icon {
+  font-size: 40px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.empty-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #475569;
+  margin-bottom: 8px;
+}
+
+.empty-subtitle {
+  font-size: 14px;
+  color: #94a3b8;
+  max-width: 300px;
 }

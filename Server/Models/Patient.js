@@ -9,6 +9,7 @@ const Schema = mongoose.Schema;
 
 const PatientSchema = new Schema({
   _id: { type: String, default: () => uuidv4() },
+  patientCode: { type: String, unique: true, sparse: true, index: true },
   firstName: { type: String, required: true, index: true },
   lastName: { type: String, default: '' },
   dateOfBirth: { type: Date },

@@ -4,10 +4,11 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { MdSearch, MdChevronLeft, MdChevronRight } from 'react-icons/md';
 import patientsService from '../../../services/patientsService';
+import reportService from '../../../services/reportService';
 import PatientDetailsDialog from '../../../components/doctor/PatientDetailsDialog';
 import FollowUpDialog from '../../../components/doctor/FollowUpDialog';
+import { MdSearch, MdChevronLeft, MdChevronRight, MdPictureAsPdf } from 'react-icons/md';
 import './Patients.css';
 
 // Custom SVG Icons (matching admin)
@@ -46,7 +47,7 @@ const DoctorPatients = () => {
     setIsLoading(true);
     try {
       const data = await patientsService.fetchPatients({ limit: 100 });
-      
+
       const transformed = data.map(p => ({
         id: p._id || p.id,
         name: p.name || `${p.firstName || ''} ${p.lastName || ''}`.trim(),
@@ -57,7 +58,7 @@ const DoctorPatients = () => {
         condition: p.condition || p.reason || 'N/A',
         patientId: p.patientId || p.patientCode || p._id,
       }));
-      
+
       setPatients(transformed);
       setFilteredPatients(transformed);
     } catch (error) {
@@ -139,6 +140,21 @@ const DoctorPatients = () => {
     setShowFollowUpDialog(true);
   };
 
+  const handleDownloadReport = async (patient, event) => {
+    event.stopPropagation();
+    try {
+      const result = await reportService.downloadPatientReport(patient.id);
+      if (result.success) {
+        alert(result.message);
+      } else {
+        alert(result.message);
+      }
+    } catch (err) {
+      console.error('Download error:', err);
+      alert('Failed to download report');
+    }
+  };
+
   const handleCloseFollowUpDialog = () => {
     setShowFollowUpDialog(false);
     setSelectedFollowUpPatient(null);
@@ -161,162 +177,170 @@ const DoctorPatients = () => {
           </div>
         </div>
 
-      {/* Search & Filter Bar - EXACTLY like admin */}
-      <div className="filter-bar-container">
-        <div className="search-wrapper">
-          <span className="search-icon-lg"><MdSearch size={18} /></span>
-          <input
-            type="text"
-            placeholder="Search by patient name, doctor, or ID..."
-            className="search-input-lg"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
+        {/* Search & Filter Bar - EXACTLY like admin */}
+        <div className="filter-bar-container">
+          <div className="search-wrapper">
+            <span className="search-icon-lg"><MdSearch size={18} /></span>
+            <input
+              type="text"
+              placeholder="Search by patient name, doctor, or ID..."
+              className="search-input-lg"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
 
-        <div className="filter-right-group">
-          <div className="tabs-wrapper">
-            <button
-              className={`tab-btn ${genderFilter === 'All' ? 'active' : ''}`}
-              onClick={() => setGenderFilter('All')}
-            >
-              All
-            </button>
-            <button
-              className={`tab-btn ${genderFilter === 'Male' ? 'active' : ''}`}
-              onClick={() => setGenderFilter('Male')}
-            >
-              Male
-            </button>
-            <button
-              className={`tab-btn ${genderFilter === 'Female' ? 'active' : ''}`}
-              onClick={() => setGenderFilter('Female')}
-            >
-              Female
-            </button>
+          <div className="filter-right-group">
+            <div className="tabs-wrapper">
+              <button
+                className={`tab-btn ${genderFilter === 'All' ? 'active' : ''}`}
+                onClick={() => setGenderFilter('All')}
+              >
+                All
+              </button>
+              <button
+                className={`tab-btn ${genderFilter === 'Male' ? 'active' : ''}`}
+                onClick={() => setGenderFilter('Male')}
+              >
+                Male
+              </button>
+              <button
+                className={`tab-btn ${genderFilter === 'Female' ? 'active' : ''}`}
+                onClick={() => setGenderFilter('Female')}
+              >
+                Female
+              </button>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Table Card - EXACTLY like admin */}
-      <div className="table-card">
-        <div className="modern-table-wrapper">
-          <table className="modern-table">
-            <thead>
-              <tr>
-                <th style={{ width: '30%' }}>Patient</th>
-                <th style={{ width: '10%' }}>Age</th>
-                <th style={{ width: '12%' }}>Gender</th>
-                <th style={{ width: '18%' }}>Last Visit</th>
-                <th style={{ width: '18%' }}>Condition</th>
-                <th style={{ width: '12%' }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {isLoading ? (
+        {/* Table Card - EXACTLY like admin */}
+        <div className="table-card">
+          <div className="modern-table-wrapper">
+            <table className="modern-table">
+              <thead>
                 <tr>
-                  <td colSpan="6" style={{ textAlign: 'center', padding: '48px' }}>
-                    <div style={{ color: '#94A3AF', fontSize: '14px' }}>Loading patients...</div>
-                  </td>
+                  <th style={{ width: '30%' }}>Patient</th>
+                  <th style={{ width: '10%' }}>Age</th>
+                  <th style={{ width: '12%' }}>Gender</th>
+                  <th style={{ width: '18%' }}>Last Visit</th>
+                  <th style={{ width: '18%' }}>Condition</th>
+                  <th style={{ width: '12%' }}>Actions</th>
                 </tr>
-              ) : paginatedPatients.length === 0 ? (
-                <tr>
-                  <td colSpan="6" style={{ textAlign: 'center', padding: '48px' }}>
-                    <div style={{ color: '#94A3AF', fontSize: '14px' }}>No patients found</div>
-                  </td>
-                </tr>
-              ) : (
-                paginatedPatients.map((patient, index) => {
-                  const genderStr = (patient.gender || '').toLowerCase().trim();
-                  const avatarSrc = genderStr.includes('female') || genderStr.startsWith('f')
-                    ? '/girlicon.png'
-                    : '/boyicon.png';
+              </thead>
+              <tbody>
+                {isLoading ? (
+                  <tr>
+                    <td colSpan="6" style={{ textAlign: 'center', padding: '48px' }}>
+                      <div style={{ color: '#94A3AF', fontSize: '14px' }}>Loading patients...</div>
+                    </td>
+                  </tr>
+                ) : paginatedPatients.length === 0 ? (
+                  <tr>
+                    <td colSpan="6" style={{ textAlign: 'center', padding: '48px' }}>
+                      <div style={{ color: '#94A3AF', fontSize: '14px' }}>No patients found</div>
+                    </td>
+                  </tr>
+                ) : (
+                  paginatedPatients.map((patient, index) => {
+                    const genderStr = (patient.gender || '').toLowerCase().trim();
+                    const avatarSrc = genderStr.includes('female') || genderStr.startsWith('f')
+                      ? '/girlicon.png'
+                      : '/boyicon.png';
 
-                  return (
-                    <tr key={patient.id || index}>
-                      {/* PATIENT COLUMN - Clickable */}
-                      <td 
-                        className="cell-patient clickable" 
-                        onClick={() => handlePatientClick(patient)}
-                        style={{ cursor: 'pointer' }}
-                      >
-                        <img
-                          src={avatarSrc}
-                          alt={patient.name}
-                          className="avatar-img"
-                          onError={(e) => { e.target.src = '/boyicon.png'; }}
-                        />
-                        <div className="patient-details">
-                          <span className="patient-name">{patient.name}</span>
-                          <span className="patient-id">ID: {patient.patientId}</span>
-                        </div>
-                      </td>
-
-                      {/* AGE COLUMN */}
-                      <td className="cell-age">{patient.age}</td>
-
-                      {/* GENDER COLUMN */}
-                      <td className="cell-gender">
-                        <span className={`badge-gender badge-${genderStr.startsWith('m') ? 'male' : genderStr.startsWith('f') ? 'female' : 'other'}`}>
-                          {patient.gender}
-                        </span>
-                      </td>
-
-                      {/* LAST VISIT COLUMN */}
-                      <td className="cell-date">{formatDate(patient.lastVisit)}</td>
-
-                      {/* CONDITION COLUMN */}
-                      <td className="cell-condition">{patient.condition}</td>
-
-                      {/* ACTIONS COLUMN */}
-                      <td className="cell-actions">
-                        <button 
-                          className="action-btn action-view" 
-                          title="View Details"
+                    return (
+                      <tr key={patient.id || index}>
+                        {/* PATIENT COLUMN - Clickable */}
+                        <td
+                          className="cell-patient clickable"
                           onClick={() => handlePatientClick(patient)}
+                          style={{ cursor: 'pointer' }}
                         >
-                          <Icons.Eye />
-                        </button>
-                        <button 
-                          className="action-btn action-appt" 
-                          title="Schedule Follow-Up"
-                          onClick={(e) => handleFollowUpClick(patient, e)}
-                        >
-                          <Icons.Calendar />
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+                          <img
+                            src={avatarSrc}
+                            alt={patient.name}
+                            className="avatar-img"
+                            onError={(e) => { e.target.src = '/boyicon.png'; }}
+                          />
+                          <div className="patient-details">
+                            <span className="patient-name">{patient.name}</span>
+                            <span className="patient-id">ID: {patient.patientId}</span>
+                          </div>
+                        </td>
 
-        {/* PAGINATION */}
-        <div className="pagination-footer">
-          <button
-            className="page-arrow-circle leading"
-            disabled={currentPage === 0}
-            onClick={handlePreviousPage}
-          >
-            <MdChevronLeft size={20} />
-          </button>
+                        {/* AGE COLUMN */}
+                        <td className="cell-age">{patient.age}</td>
 
-          <div className="page-indicator-box">
-            Page {currentPage + 1} of {totalPages || 1}
+                        {/* GENDER COLUMN */}
+                        <td className="cell-gender">
+                          <span className={`badge-gender badge-${genderStr.startsWith('m') ? 'male' : genderStr.startsWith('f') ? 'female' : 'other'}`}>
+                            {patient.gender}
+                          </span>
+                        </td>
+
+                        {/* LAST VISIT COLUMN */}
+                        <td className="cell-date">{formatDate(patient.lastVisit)}</td>
+
+                        {/* CONDITION COLUMN */}
+                        <td className="cell-condition">{patient.condition}</td>
+
+                        {/* ACTIONS COLUMN */}
+                        <td className="cell-actions">
+                          <button
+                            className="action-btn action-view"
+                            title="View Details"
+                            onClick={() => handlePatientClick(patient)}
+                          >
+                            <Icons.Eye />
+                          </button>
+                          <button
+                            className="action-btn action-download"
+                            title="Download Report"
+                            onClick={(e) => handleDownloadReport(patient, e)}
+                            style={{ color: '#EF4444' }}
+                          >
+                            <MdPictureAsPdf size={16} />
+                          </button>
+                          <button
+                            className="action-btn action-appt"
+                            title="Schedule Follow-Up"
+                            onClick={(e) => handleFollowUpClick(patient, e)}
+                          >
+                            <Icons.Calendar />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
           </div>
 
-          <button
-            className="page-arrow-circle trailing"
-            disabled={currentPage >= totalPages - 1 || totalPages === 0}
-            onClick={handleNextPage}
-          >
-            <MdChevronRight size={20} />
-          </button>
+          {/* PAGINATION */}
+          <div className="pagination-footer">
+            <button
+              className="page-arrow-circle leading"
+              disabled={currentPage === 0}
+              onClick={handlePreviousPage}
+            >
+              <MdChevronLeft size={20} />
+            </button>
+
+            <div className="page-indicator-box">
+              Page {currentPage + 1} of {totalPages || 1}
+            </div>
+
+            <button
+              className="page-arrow-circle trailing"
+              disabled={currentPage >= totalPages - 1 || totalPages === 0}
+              onClick={handleNextPage}
+            >
+              <MdChevronRight size={20} />
+            </button>
+          </div>
         </div>
       </div>
-    </div>
 
       {/* Patient Details Dialog */}
       <PatientDetailsDialog

@@ -16,11 +16,11 @@ const AppointmentSchema = new Schema({
   startAt: { type: Date, required: true, index: true },
   endAt: { type: Date },
   location: { type: String, default: '' },
-  status: { type: String, enum: ['Scheduled', 'Completed', 'Cancelled', 'No-Show', 'Rescheduled'], default: 'Scheduled', index: true },
+  status: { type: String, enum: ['Scheduled', 'Confirmed', 'Pending', 'Completed', 'Cancelled', 'No-Show', 'Rescheduled'], default: 'Scheduled', index: true },
   vitals: { type: Schema.Types.Mixed, default: {} },
   notes: { type: String, default: '' },
   metadata: { type: Schema.Types.Mixed, default: {} },
-  
+
   // Enhanced Follow-up Management System (Medical Software Standard)
   followUp: {
     isFollowUp: { type: Boolean, default: false, index: true },
@@ -33,11 +33,11 @@ const AppointmentSchema = new Schema({
     reminderSent: { type: Boolean, default: false },
     reminderDate: { type: Date, default: null },
     completedDate: { type: Date, default: null },
-    
+
     // Medical tracking
     diagnosis: { type: String, default: '' }, // Diagnosis requiring follow-up
     treatmentPlan: { type: String, default: '' }, // Treatment being monitored
-    
+
     // Tests and Procedures
     labTests: [{
       testName: String,
@@ -48,7 +48,7 @@ const AppointmentSchema = new Schema({
       results: String,
       resultStatus: { type: String, enum: ['Pending', 'Normal', 'Abnormal', 'Critical'], default: 'Pending' }
     }],
-    
+
     imaging: [{
       imagingType: String, // X-Ray, CT, MRI, Ultrasound, etc.
       ordered: { type: Boolean, default: false },
@@ -58,7 +58,7 @@ const AppointmentSchema = new Schema({
       findings: String,
       findingsStatus: { type: String, enum: ['Pending', 'Normal', 'Abnormal', 'Critical'], default: 'Pending' }
     }],
-    
+
     procedures: [{
       procedureName: String,
       scheduled: { type: Boolean, default: false },
@@ -67,20 +67,20 @@ const AppointmentSchema = new Schema({
       completedDate: Date,
       notes: String
     }],
-    
+
     // Medication management
     prescriptionReview: { type: Boolean, default: false }, // Review medications
     medicationCompliance: { type: String, enum: ['Good', 'Fair', 'Poor', 'Unknown'], default: 'Unknown' },
-    
+
     // Appointment chain
     previousAppointmentId: { type: String, ref: 'Appointment', default: null },
     nextAppointmentId: { type: String, ref: 'Appointment', default: null },
-    
+
     // Outcome tracking
     outcome: { type: String, enum: ['Improved', 'Stable', 'Worsened', 'Resolved', 'Pending'], default: 'Pending' },
     outcomeNotes: { type: String, default: '' }
   },
-  
+
   // Telegram-specific fields
   telegramUserId: { type: String, index: true },
   telegramChatId: { type: String, index: true },
@@ -88,7 +88,7 @@ const AppointmentSchema = new Schema({
 }, Object.assign({}, commonOptions));
 
 // Generate appointment code before saving
-AppointmentSchema.pre('save', function(next) {
+AppointmentSchema.pre('save', function (next) {
   if (!this.appointmentCode) {
     const timestamp = Date.now().toString(36).toUpperCase();
     const random = Math.random().toString(36).substring(2, 6).toUpperCase();

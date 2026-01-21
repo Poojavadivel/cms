@@ -18,7 +18,9 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // --- Core Middleware ---
-app.use(cors());
+app.use(cors({
+  exposedHeaders: ['Content-Disposition']
+}));
 app.use(express.json());
 const webAppPath = path.join(__dirname, 'web');
 
@@ -207,10 +209,10 @@ const createInitialPathologist = async () => {
 const syncDoctorsToStaff = async () => {
   try {
     const { User, Staff } = require('./Models');
-    
+
     // Find all doctors in User collection
     const doctors = await User.find({ role: 'doctor' }).lean();
-    
+
     if (doctors.length === 0) {
       console.log('ℹ️  No doctors found in User collection to sync.');
       return;
@@ -220,11 +222,11 @@ const syncDoctorsToStaff = async () => {
     for (const doctor of doctors) {
       // Check if staff record already exists with this email
       const existingStaff = await Staff.findOne({ email: doctor.email }).lean();
-      
+
       if (!existingStaff) {
         // Create new staff record for this doctor
         const staffData = {
-          name: doctor.firstName && doctor.lastName 
+          name: doctor.firstName && doctor.lastName
             ? `${doctor.firstName} ${doctor.lastName}`.trim()
             : doctor.firstName || 'Doctor',
           email: doctor.email,
@@ -238,13 +240,13 @@ const syncDoctorsToStaff = async () => {
             syncedAt: new Date().toISOString()
           }
         };
-        
+
         await Staff.create(staffData);
         synced++;
         console.log(`✓ Synced doctor to Staff: ${staffData.name} (${doctor.email})`);
       }
     }
-    
+
     if (synced > 0) {
       console.log(`🔄 Synced ${synced} doctor(s) to Staff collection.`);
     }

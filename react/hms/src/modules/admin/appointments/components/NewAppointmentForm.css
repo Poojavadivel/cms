@@ -731,3 +731,53 @@
     align-items: center;
     padding: 10px 20px;
 }
+
+/* Status Clickable Buttons */
+.status-selection-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-top: 10px;
+}
+
+.status-click-btn {
+    padding: 12px;
+    border: 2px solid #e2e8f0;
+    background: white;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+}
+
+.status-click-btn:hover {
+    border-color: #cbd5e1;
+    background: #f8fafc;
+}
+
+.status-click-btn.active {
+    color: white;
+}
+
+.status-click-btn.active.scheduled {
+    background: #3b82f6;
+    border-color: #2563eb;
+}
+
+.status-click-btn.active.confirmed {
+    background: #10b981;
+    border-color: #059669;
+}
+
+.status-click-btn.active.pending {
+    background: #f59e0b;
+    border-color: #d97706;
+}
+
+.status-click-btn.active.cancelled {
+    background: #ef4444;
+    border-color: #dc2626;
+}

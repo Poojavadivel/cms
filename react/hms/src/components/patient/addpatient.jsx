@@ -14,7 +14,7 @@ import {
     MdLocalHospital
 } from 'react-icons/md';
 import {
-  FiUser, FiPhone, FiHeart, FiActivity, FiCheck, FiX, FiAlertCircle, FiArrowRight
+    FiUser, FiPhone, FiHeart, FiActivity, FiCheck, FiX, FiAlertCircle, FiArrowRight
 } from 'react-icons/fi';
 import patientsService from '../../services/patientsService';
 import doctorService from '../../services/doctorService';
@@ -45,20 +45,20 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
     const [fetchingData, setFetchingData] = useState(false);
     const [errors, setErrors] = useState({});
     const [fieldErrors, setFieldErrors] = useState({});
-    
+
     // NEW: Doctor dropdown state
     const [doctors, setDoctors] = useState([]);
     const [loadingDoctors, setLoadingDoctors] = useState(false);
-    
+
     // NEW: File upload and scanner state
     const [uploadedFiles, setUploadedFiles] = useState([]);
     const [uploading, setUploading] = useState(false);
     const [scannerError, setScannerError] = useState(null);
     const [scannedData, setScannedData] = useState(null);
-    
+
     // Generate temp patient ID for linking documents during creation
     const [tempPatientId] = useState(`temp-${Math.floor(Math.random() * 999999)}`);
-    
+
     const [formData, setFormData] = useState({
         // Step 1: Personal
         firstName: '',
@@ -96,11 +96,12 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
         bp: '',
         pulse: '',
         spo2: '',
-        
+
         // Step 5: Insurance (NEW)
         insuranceNumber: '',
         insuranceProvider: '',
-        insuranceExpiry: ''
+        insuranceExpiry: '',
+        patientCode: ''
     });
 
     // Reset form when modal opens
@@ -119,7 +120,7 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                 firstName: '', lastName: '', dateOfBirth: '', age: '', gender: '', bloodGroup: '',
                 phone: '', email: '', emergencyContactName: '', emergencyContactPhone: '',
                 houseNo: '', street: '', city: '', state: '', pincode: '', country: 'India',
-                assignedDoctor: '', knownConditions: '', allergies: '', currentMedications: '', 
+                assignedDoctor: '', knownConditions: '', allergies: '', currentMedications: '',
                 pastSurgeries: '', notes: '', lastVisit: '',
                 height: '', weight: '', bmi: '', bp: '', pulse: '', spo2: '',
                 insuranceNumber: '', insuranceProvider: '', insuranceExpiry: ''
@@ -161,7 +162,8 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                         spo2: patient.vitals?.spo2 || patient.oxygen || '',
                         insuranceNumber: patient.insuranceNumber || patient.metadata?.insuranceNumber || '',
                         insuranceProvider: patient.insuranceProvider || patient.metadata?.insuranceProvider || '',
-                        insuranceExpiry: patient.insuranceExpiry || patient.metadata?.insuranceExpiry || ''
+                        insuranceExpiry: patient.insuranceExpiry || patient.metadata?.insuranceExpiry || '',
+                        patientCode: patient.patientCode || patient.metadata?.patientCode || ''
                     });
                     setFetchingData(false);
                 }).catch(error => {
@@ -174,12 +176,12 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                 // Add Mode: Reset
                 setFormData(initialData);
             }
-            
+
             // Fetch doctors list
             fetchDoctors();
         }
     }, [isOpen, patientId, onClose]);
-    
+
     // ESC key handler for closing modal
     useEffect(() => {
         const handleEscape = (e) => {
@@ -187,26 +189,26 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                 onClose();
             }
         };
-        
+
         document.addEventListener('keydown', handleEscape);
         return () => document.removeEventListener('keydown', handleEscape);
     }, [isOpen, loading, onClose]);
-    
+
     // Fetch doctors for dropdown
     const fetchDoctors = useCallback(async () => {
         setLoadingDoctors(true);
         try {
             console.log('🔍 [DOCTOR DROPDOWN] Fetching doctors from API...');
-            
+
             // Call real doctor service
             const doctors = await doctorService.fetchAllDoctors();
-            
+
             console.log(`✅ [DOCTOR DROPDOWN] Received ${doctors.length} doctors:`, doctors);
-            
+
             setDoctors(doctors);
         } catch (error) {
             console.error('❌ [DOCTOR DROPDOWN] Failed to fetch doctors:', error);
-            
+
             // Fallback to mock data if API fails (for development)
             console.warn('⚠️ [DOCTOR DROPDOWN] Using mock data as fallback');
             setDoctors([
@@ -218,26 +220,26 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
             setLoadingDoctors(false);
         }
     }, []);
-    
+
     // Validation helper functions
     const validateEmail = useCallback((email) => {
         if (!email) return true; // optional field
         const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         return re.test(email);
     }, []);
-    
+
     const validatePhone = useCallback((phone) => {
         if (!phone) return false; // required field
         const cleaned = phone.replace(/\D/g, '');
         return cleaned.length >= 10;
     }, []);
-    
+
     const validateBP = useCallback((bp) => {
         if (!bp) return true; // optional field
         const re = /^\d{2,3}\/\d{2,3}$/;
         return re.test(bp);
     }, []);
-    
+
     // Calculate age from date of birth
     const calculateAge = useCallback((dob) => {
         if (!dob) return '';
@@ -245,11 +247,11 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
         const today = new Date();
         let age = today.getFullYear() - birthDate.getFullYear();
         const monthDiff = today.getMonth() - birthDate.getMonth();
-        
+
         if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
             age--;
         }
-        
+
         return age.toString();
     }, []);
 
@@ -257,7 +259,7 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
 
     const handleInputChange = useCallback((e) => {
         const { name, value } = e.target;
-        
+
         // Clear field error when user starts typing
         if (fieldErrors[name]) {
             setFieldErrors(prev => {
@@ -266,10 +268,10 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                 return updated;
             });
         }
-        
+
         setFormData(prev => {
             const newData = { ...prev, [name]: value };
-            
+
             // Auto-calculate age from DOB
             if (name === 'dateOfBirth') {
                 newData.age = calculateAge(value);
@@ -279,7 +281,7 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
             if (name === 'height' || name === 'weight') {
                 const h = name === 'height' ? value : prev.height;
                 const w = name === 'weight' ? value : prev.weight;
-                
+
                 // Only calculate if both values are positive numbers
                 if (h && w && parseFloat(h) > 0 && parseFloat(w) > 0) {
                     const heightM = parseFloat(h) / 100;
@@ -289,14 +291,14 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                     newData.bmi = '';
                 }
             }
-            
+
             return newData;
         });
     }, [calculateAge, fieldErrors]);
 
     const handleSelectGender = useCallback((gender) => {
         setFormData(prev => ({ ...prev, gender }));
-        
+
         // Clear error
         if (fieldErrors.gender) {
             setFieldErrors(prev => {
@@ -309,7 +311,7 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
 
     const validateStep = () => {
         const newErrors = {};
-        
+
         // Step 1: Personal Info
         if (currentStep === 0) {
             if (!formData.firstName?.trim()) newErrors.firstName = true;
@@ -317,13 +319,13 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
             if (!formData.age) newErrors.age = true;
             if (!formData.gender) newErrors.gender = true;
         }
-        
+
         // Step 2: Contact
         if (currentStep === 1) {
             if (!formData.phone?.trim()) newErrors.phone = true;
             if (!formData.city?.trim()) newErrors.city = true;
         }
-        
+
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
@@ -345,7 +347,7 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
         if (!validateStep()) {
             return;
         }
-        
+
         setLoading(true);
         try {
             // Basic validation strict check
@@ -495,7 +497,7 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
 
     const removeUploadedFile = (index) => {
         setUploadedFiles(prev => prev.filter((_, i) => i !== index));
-        
+
         // Clear scanned data if all files are removed
         if (uploadedFiles.length === 1) {
             setScannedData(null);
@@ -529,8 +531,18 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                 <div className="w-80 bg-white border-r border-slate-200 flex flex-col hidden md:flex">
                     <div className="p-8 border-b border-slate-100">
                         <h2 className="text-xl font-bold text-slate-900 tracking-tight">Patient Editor</h2>
-                        <p className="text-xs text-slate-500 mt-1 font-mono uppercase tracking-wider">
-                            {patientId ? `ID: ${patientId}` : 'New Entry'}
+                        <p className="text-xs text-slate-500 mt-1 font-mono uppercase tracking-wider flex items-center gap-2">
+                            {formData.patientCode ? (
+                                <>
+                                    <span className="bg-blue-50 text-blue-600 px-2 py-0.5 rounded border border-blue-100 font-bold">
+                                        ID: {formData.patientCode}
+                                    </span>
+                                </>
+                            ) : patientId ? (
+                                <span className="opacity-50">ID: {patientId.slice(0, 8)}...</span>
+                            ) : (
+                                'New Entry'
+                            )}
                         </p>
                     </div>
 
@@ -571,7 +583,7 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
 
                 {/* RIGHT CONTENT - FORM FOCUS */}
                 <div className="flex-1 flex flex-col relative bg-slate-50">
-                
+
                     {/* Loading Overlay */}
                     {fetchingData && (
                         <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center z-50">
@@ -590,11 +602,11 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
 
                     {/* Scrollable Form Area */}
                     <div className="flex-1 overflow-y-auto p-8 md:p-12 no-scrollbar">
-                        <form 
+                        <form
                             onSubmit={(e) => {
                                 e.preventDefault();
                                 // Prevent auto-submit - user must click the button
-                            }} 
+                            }}
                             className="max-w-2xl mx-auto space-y-8"
                         >
                             {/* STEP 1: Personal Info */}
@@ -607,48 +619,48 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
 
                                     <div className="grid grid-cols-2 gap-4">
                                         <InputGroup label="First Name" error={fieldErrors.firstName} required className="col-span-1">
-                                            <input 
-                                                name="firstName" 
-                                                value={formData.firstName} 
-                                                onChange={handleInputChange} 
-                                                className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300 font-medium" 
-                                                placeholder="e.g. John" 
+                                            <input
+                                                name="firstName"
+                                                value={formData.firstName}
+                                                onChange={handleInputChange}
+                                                className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300 font-medium"
+                                                placeholder="e.g. John"
                                             />
                                             {fieldErrors.firstName && <span className="text-red-500 text-xs mt-1">{fieldErrors.firstName}</span>}
                                         </InputGroup>
 
                                         <InputGroup label="Last Name" error={fieldErrors.lastName} required className="col-span-1">
-                                            <input 
-                                                name="lastName" 
-                                                value={formData.lastName} 
-                                                onChange={handleInputChange} 
-                                                className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" 
-                                                placeholder="e.g. Doe" 
+                                            <input
+                                                name="lastName"
+                                                value={formData.lastName}
+                                                onChange={handleInputChange}
+                                                className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300"
+                                                placeholder="e.g. Doe"
                                             />
                                             {fieldErrors.lastName && <span className="text-red-500 text-xs mt-1">{fieldErrors.lastName}</span>}
                                         </InputGroup>
 
                                         <InputGroup label="Date of Birth" error={fieldErrors.dateOfBirth} required>
-                                            <input 
-                                                type="date" 
-                                                name="dateOfBirth" 
-                                                value={formData.dateOfBirth} 
-                                                onChange={handleInputChange} 
-                                                className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" 
+                                            <input
+                                                type="date"
+                                                name="dateOfBirth"
+                                                value={formData.dateOfBirth}
+                                                onChange={handleInputChange}
+                                                className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300"
                                                 max={new Date().toISOString().split('T')[0]}
                                             />
                                             {fieldErrors.dateOfBirth && <span className="text-red-500 text-xs mt-1">{fieldErrors.dateOfBirth}</span>}
                                         </InputGroup>
 
                                         <InputGroup label="Age" error={fieldErrors.age}>
-                                            <input 
-                                                type="number" 
-                                                name="age" 
-                                                value={formData.age} 
-                                                onChange={handleInputChange} 
-                                                className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" 
-                                                placeholder="Auto-calculated from DOB" 
-                                                min="1" 
+                                            <input
+                                                type="number"
+                                                name="age"
+                                                value={formData.age}
+                                                onChange={handleInputChange}
+                                                className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300"
+                                                placeholder="Auto-calculated from DOB"
+                                                min="1"
                                                 max="120"
                                                 readOnly={formData.dateOfBirth !== ''}
                                             />
@@ -675,33 +687,30 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                                                 <button
                                                     type="button"
                                                     onClick={() => handleSelectGender('Male')}
-                                                    className={`flex-1 py-2 px-4 rounded-lg border-2 font-medium transition-all ${
-                                                        formData.gender === 'Male' 
-                                                            ? 'border-blue-500 bg-blue-50 text-blue-700' 
+                                                    className={`flex-1 py-2 px-4 rounded-lg border-2 font-medium transition-all ${formData.gender === 'Male'
+                                                            ? 'border-blue-500 bg-blue-50 text-blue-700'
                                                             : 'border-slate-200 hover:border-slate-300'
-                                                    }`}
+                                                        }`}
                                                 >
                                                     Male
                                                 </button>
                                                 <button
                                                     type="button"
                                                     onClick={() => handleSelectGender('Female')}
-                                                    className={`flex-1 py-2 px-4 rounded-lg border-2 font-medium transition-all ${
-                                                        formData.gender === 'Female' 
-                                                            ? 'border-blue-500 bg-blue-50 text-blue-700' 
+                                                    className={`flex-1 py-2 px-4 rounded-lg border-2 font-medium transition-all ${formData.gender === 'Female'
+                                                            ? 'border-blue-500 bg-blue-50 text-blue-700'
                                                             : 'border-slate-200 hover:border-slate-300'
-                                                    }`}
+                                                        }`}
                                                 >
                                                     Female
                                                 </button>
                                                 <button
                                                     type="button"
                                                     onClick={() => handleSelectGender('Other')}
-                                                    className={`flex-1 py-2 px-4 rounded-lg border-2 font-medium transition-all ${
-                                                        formData.gender === 'Other' 
-                                                            ? 'border-blue-500 bg-blue-50 text-blue-700' 
+                                                    className={`flex-1 py-2 px-4 rounded-lg border-2 font-medium transition-all ${formData.gender === 'Other'
+                                                            ? 'border-blue-500 bg-blue-50 text-blue-700'
                                                             : 'border-slate-200 hover:border-slate-300'
-                                                    }`}
+                                                        }`}
                                                 >
                                                     Other
                                                 </button>
@@ -721,25 +730,25 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
 
                                     <div className="grid grid-cols-2 gap-4">
                                         <InputGroup label="Phone Number" error={fieldErrors.phone} required className="col-span-1">
-                                            <input 
+                                            <input
                                                 type="tel"
-                                                name="phone" 
-                                                value={formData.phone} 
-                                                onChange={handleInputChange} 
-                                                className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" 
-                                                placeholder="+1 555 000 0000" 
+                                                name="phone"
+                                                value={formData.phone}
+                                                onChange={handleInputChange}
+                                                className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300"
+                                                placeholder="+1 555 000 0000"
                                             />
                                             {fieldErrors.phone && <span className="text-red-500 text-xs mt-1">{fieldErrors.phone}</span>}
                                         </InputGroup>
 
                                         <InputGroup label="Email Address" error={fieldErrors.email} className="col-span-1">
-                                            <input 
+                                            <input
                                                 type="email"
-                                                name="email" 
-                                                value={formData.email} 
-                                                onChange={handleInputChange} 
-                                                className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" 
-                                                placeholder="patient@email.com" 
+                                                name="email"
+                                                value={formData.email}
+                                                onChange={handleInputChange}
+                                                className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300"
+                                                placeholder="patient@email.com"
                                             />
                                             {fieldErrors.email && <span className="text-red-500 text-xs mt-1">{fieldErrors.email}</span>}
                                         </InputGroup>
@@ -762,13 +771,13 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                                         </InputGroup>
 
                                         <InputGroup label="Pincode/Zipcode" error={fieldErrors.pincode} required className="col-span-1">
-                                            <input 
+                                            <input
                                                 type="text"
-                                                name="pincode" 
-                                                value={formData.pincode} 
-                                                onChange={handleInputChange} 
-                                                className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" 
-                                                placeholder="e.g. 560001" 
+                                                name="pincode"
+                                                value={formData.pincode}
+                                                onChange={handleInputChange}
+                                                className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300"
+                                                placeholder="e.g. 560001"
                                                 maxLength="6"
                                                 pattern="[0-9]{6}"
                                             />
@@ -776,10 +785,10 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                                         </InputGroup>
 
                                         <InputGroup label="Country" error={fieldErrors.country} required className="col-span-1">
-                                            <select 
-                                                name="country" 
-                                                value={formData.country} 
-                                                onChange={handleInputChange} 
+                                            <select
+                                                name="country"
+                                                value={formData.country}
+                                                onChange={handleInputChange}
                                                 className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0"
                                             >
                                                 <option value="India">India</option>
@@ -814,10 +823,10 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
 
                                     <div className="grid grid-cols-2 gap-4">
                                         <InputGroup label="Assign Doctor" error={fieldErrors.assignedDoctor} required className="col-span-2">
-                                            <select 
-                                                name="assignedDoctor" 
-                                                value={formData.assignedDoctor} 
-                                                onChange={handleInputChange} 
+                                            <select
+                                                name="assignedDoctor"
+                                                value={formData.assignedDoctor}
+                                                onChange={handleInputChange}
                                                 className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0"
                                                 disabled={loadingDoctors}
                                             >
@@ -833,12 +842,12 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                                         </InputGroup>
 
                                         <InputGroup label="Last Visit Date" error={fieldErrors.lastVisit} className="col-span-2">
-                                            <input 
-                                                type="date" 
-                                                name="lastVisit" 
-                                                value={formData.lastVisit} 
-                                                onChange={handleInputChange} 
-                                                className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" 
+                                            <input
+                                                type="date"
+                                                name="lastVisit"
+                                                value={formData.lastVisit}
+                                                onChange={handleInputChange}
+                                                className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300"
                                                 max={new Date().toISOString().split('T')[0]}
                                             />
                                             {fieldErrors.lastVisit && <span className="text-red-500 text-xs mt-1">{fieldErrors.lastVisit}</span>}
@@ -997,12 +1006,12 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                                         </InputGroup>
 
                                         <InputGroup label="Blood Pressure" error={fieldErrors.bp}>
-                                            <input 
+                                            <input
                                                 type="text"
-                                                name="bp" 
-                                                value={formData.bp} 
-                                                onChange={handleInputChange} 
-                                                className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300 font-mono" 
+                                                name="bp"
+                                                value={formData.bp}
+                                                onChange={handleInputChange}
+                                                className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300 font-mono"
                                                 placeholder="120/80"
                                                 pattern="[0-9]{2,3}/[0-9]{2,3}"
                                             />
@@ -1031,36 +1040,36 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
 
                                     <div className="grid grid-cols-2 gap-4">
                                         <InputGroup label="Insurance Number" error={fieldErrors.insuranceNumber} className="col-span-2">
-                                            <input 
-                                                type="text" 
-                                                name="insuranceNumber" 
-                                                value={formData.insuranceNumber} 
-                                                onChange={handleInputChange} 
-                                                className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" 
-                                                placeholder="e.g. INS-123456789" 
+                                            <input
+                                                type="text"
+                                                name="insuranceNumber"
+                                                value={formData.insuranceNumber}
+                                                onChange={handleInputChange}
+                                                className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300"
+                                                placeholder="e.g. INS-123456789"
                                             />
                                             {fieldErrors.insuranceNumber && <span className="text-red-500 text-xs mt-1">{fieldErrors.insuranceNumber}</span>}
                                         </InputGroup>
 
                                         <InputGroup label="Insurance Provider" error={fieldErrors.insuranceProvider}>
-                                            <input 
-                                                type="text" 
-                                                name="insuranceProvider" 
-                                                value={formData.insuranceProvider} 
-                                                onChange={handleInputChange} 
-                                                className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" 
-                                                placeholder="e.g. HDFC ERGO, Star Health" 
+                                            <input
+                                                type="text"
+                                                name="insuranceProvider"
+                                                value={formData.insuranceProvider}
+                                                onChange={handleInputChange}
+                                                className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300"
+                                                placeholder="e.g. HDFC ERGO, Star Health"
                                             />
                                             {fieldErrors.insuranceProvider && <span className="text-red-500 text-xs mt-1">{fieldErrors.insuranceProvider}</span>}
                                         </InputGroup>
 
                                         <InputGroup label="Insurance Expiry Date" error={fieldErrors.insuranceExpiry}>
-                                            <input 
-                                                type="date" 
-                                                name="insuranceExpiry" 
-                                                value={formData.insuranceExpiry} 
-                                                onChange={handleInputChange} 
-                                                className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" 
+                                            <input
+                                                type="date"
+                                                name="insuranceExpiry"
+                                                value={formData.insuranceExpiry}
+                                                onChange={handleInputChange}
+                                                className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300"
                                                 min={new Date().toISOString().split('T')[0]}
                                             />
                                             {fieldErrors.insuranceExpiry && <span className="text-red-500 text-xs mt-1">{fieldErrors.insuranceExpiry}</span>}

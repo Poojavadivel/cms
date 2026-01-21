@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import Calendar from 'react-calendar';
+import 'react-calendar/dist/Calendar.css';
 // import { useNavigate } from 'react-router-dom'; // Reserved for future navigation
 import './Appointments.css';
 import appointmentsService from '../../../services/appointmentsService';
@@ -239,58 +241,118 @@ const Header = () => (
   </div>
 );
 
-const FilterBar = ({ activeTab, onTabChange, searchQuery, onSearchChange }) => (
-  <div className="filter-bar-container">
-    <div className="search-wrapper">
-      <span className="search-icon-lg"><Icons.Search /></span>
-      <input
-        type="text"
-        placeholder="Search by patient name, doctor, or status..."
-        className="search-input-lg"
-        value={searchQuery}
-        onChange={(e) => onSearchChange(e.target.value)}
-      />
-    </div>
+const FilterBar = ({
+  activeTab,
+  onTabChange,
+  searchQuery,
+  onSearchChange,
+  selectedDate,
+  onDateChange,
+  showCalendar,
+  setShowCalendar
+}) => {
+  const calendarRef = useRef(null);
 
-    <div className="filter-right-group">
-      <div className="tabs-wrapper">
-        <button
-          className={`tab-btn ${activeTab === 'all' ? 'active' : ''}`}
-          onClick={() => onTabChange('all')}
-        >
-          All
-        </button>
-        <button
-          className={`tab-btn ${activeTab === 'scheduled' ? 'active' : ''}`}
-          onClick={() => onTabChange('scheduled')}
-        >
-          Scheduled
-        </button>
-        <button
-          className={`tab-btn ${activeTab === 'confirmed' ? 'active' : ''}`}
-          onClick={() => onTabChange('confirmed')}
-        >
-          Confirmed
-        </button>
-        <button
-          className={`tab-btn ${activeTab === 'pending' ? 'active' : ''}`}
-          onClick={() => onTabChange('pending')}
-        >
-          Pending
-        </button>
-        <button
-          className={`tab-btn ${activeTab === 'cancelled' ? 'active' : ''}`}
-          onClick={() => onTabChange('cancelled')}
-        >
-          Cancelled
-        </button>
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (calendarRef.current && !calendarRef.current.contains(event.target)) {
+        setShowCalendar(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [setShowCalendar]);
+
+  const handleDateSelect = (date) => {
+    const localDate = new Date(date.getTime() - (date.getTimezoneOffset() * 60000))
+      .toISOString().split('T')[0];
+
+    // Toggle behavior: If clicking the already selected date, clear the filter
+    if (localDate === selectedDate) {
+      onDateChange(null);
+    } else {
+      onDateChange(localDate);
+    }
+    setShowCalendar(false);
+  };
+
+  return (
+    <div className="filter-bar-container">
+      <div className="search-wrapper">
+        <span className="search-icon-lg"><Icons.Search /></span>
+        <input
+          type="text"
+          placeholder="Search by patient name, doctor, or status..."
+          className="search-input-lg"
+          value={searchQuery}
+          onChange={(e) => onSearchChange(e.target.value)}
+        />
       </div>
-      <button className="btn-filter-date">
-        Filter by Date <span style={{ fontSize: '11px', marginLeft: '2px' }}>▼</span>
-      </button>
+
+      <div className="filter-right-group">
+        <div className="tabs-wrapper">
+          <button
+            className={`tab-btn ${activeTab === 'all' ? 'active' : ''}`}
+            onClick={() => onTabChange('all')}
+          >
+            All
+          </button>
+          <button
+            className={`tab-btn ${activeTab === 'scheduled' ? 'active' : ''}`}
+            onClick={() => onTabChange('scheduled')}
+          >
+            Scheduled
+          </button>
+          <button
+            className={`tab-btn ${activeTab === 'confirmed' ? 'active' : ''}`}
+            onClick={() => onTabChange('confirmed')}
+          >
+            Confirmed
+          </button>
+          <button
+            className={`tab-btn ${activeTab === 'pending' ? 'active' : ''}`}
+            onClick={() => onTabChange('pending')}
+          >
+            Pending
+          </button>
+          <button
+            className={`tab-btn ${activeTab === 'cancelled' ? 'active' : ''}`}
+            onClick={() => onTabChange('cancelled')}
+          >
+            Cancelled
+          </button>
+        </div>
+
+        <div className="calendar-filter-wrapper" ref={calendarRef}>
+          <button
+            className={`btn-filter-date ${selectedDate ? 'active' : ''}`}
+            onClick={() => setShowCalendar(!showCalendar)}
+          >
+            <Icons.Calendar />
+            {selectedDate ? formatDate(selectedDate) : 'Filter by Date'}
+            <span style={{ fontSize: '11px', marginLeft: '4px' }}>▼</span>
+          </button>
+
+          {selectedDate && (
+            <button className="btn-clear-date-mini" onClick={() => onDateChange(null)} title="Clear date filter">
+              <Icons.Close />
+            </button>
+          )}
+
+          {showCalendar && (
+            <div className="calendar-dropdown">
+              <Calendar
+                onChange={handleDateSelect}
+                value={selectedDate ? new Date(selectedDate) : new Date()}
+                className="premium-calendar"
+              />
+            </div>
+          )}
+        </div>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 // --- HELPER FUNCTIONS ---
 
@@ -337,19 +399,19 @@ const transformAppointment = (apt, index) => {
   } else if (typeof apt.doctor === 'string') {
     doctorName = apt.doctor;
   }
-  
+
   // Extract patient field safely - EXACTLY like Flutter
   let patientIdStr = '';
   let patientFullName = '';
   let gender = '';
   let patientCode = '';
-  
+
   if (apt.patientId && typeof apt.patientId === 'object') {
     const p = apt.patientId;
     patientIdStr = p._id || '';
     patientFullName = `${p.firstName || ''} ${p.lastName || ''}`.trim();
     gender = p.gender || '';
-    
+
     // Extract patient code from metadata
     if (p.metadata && typeof p.metadata === 'object') {
       patientCode = p.metadata.patientCode || '';
@@ -358,18 +420,18 @@ const transformAppointment = (apt, index) => {
     patientIdStr = apt.patientId;
     patientFullName = apt.clientName || '';
   }
-  
+
   // CRITICAL: In your API, gender is stored in appointment metadata, not patient record
   // This overrides any patient gender (which is usually empty anyway)
   if (apt.metadata && apt.metadata.gender) {
     gender = apt.metadata.gender;
   }
-  
+
   // Fallback: If still no gender, default to Male (matching Flutter behavior)
   if (!gender) {
     gender = 'Male';
   }
-  
+
   // Debug: Log gender extraction for first few records
   if (index < 3) {
     console.log(`📝 Transform ${index}:`, {
@@ -380,16 +442,16 @@ const transformAppointment = (apt, index) => {
       aptId: apt._id
     });
   }
-  
+
   // If patientFullName is still empty, try clientName
   if (!patientFullName && apt.clientName) {
     patientFullName = apt.clientName;
   }
-  
+
   // Parse date/time - EXACTLY like Flutter
   let date = apt.date || '';
   let time = apt.time || '';
-  
+
   // If date/time not present, try startAt
   if (!date && apt.startAt) {
     try {
@@ -400,7 +462,7 @@ const transformAppointment = (apt, index) => {
       // Ignore parse errors
     }
   }
-  
+
   // Extract reason/chiefComplaint
   let reason = '';
   if (apt.chiefComplaint) {
@@ -414,7 +476,7 @@ const transformAppointment = (apt, index) => {
   } else if (apt.notes) {
     reason = String(apt.notes).trim();
   }
-  
+
   // Store both display ID and actual patient object for lookup
   return {
     id: String(apt._id || apt.id || index),
@@ -426,10 +488,11 @@ const transformAppointment = (apt, index) => {
     doctorColor: getDoctorColor(index),
     doctorTextColor: getDoctorTextColor(index),
     date: formatDate(date),
+    rawDate: date, // Keep raw YYYY-MM-DD for filtering
     time: time || 'Not set',
     service: apt.appointmentType || reason || 'Consultation',
     reason: reason || 'Not specified', // Add reason field
-    status: apt.status || 'Scheduled',
+    status: apt.status ? (apt.status.charAt(0).toUpperCase() + apt.status.slice(1).toLowerCase()) : 'Scheduled',
     gender: gender || 'Male'
   };
 };
@@ -440,18 +503,26 @@ const Appointments = () => {
   // const navigate = useNavigate(); // Reserved for future navigation
   const [activeTab, setActiveTab] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedDate, setSelectedDate] = useState(null);
+  const [showCalendar, setShowCalendar] = useState(false);
   const [allAppointments, setAllAppointments] = useState([]);
   const [filteredAppointments, setFilteredAppointments] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage] = useState(8);
   const [isLoading, setIsLoading] = useState(true);
-  
+  const [notification, setNotification] = useState(null);
+
+  const showNotification = (message, type = 'success') => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), 3000);
+  };
+
   // Modal states
   const [showViewModal, setShowViewModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showIntakeModal, setShowIntakeModal] = useState(false);
   const [selectedAppointmentId, setSelectedAppointmentId] = useState(null);
-  
+
   // Patient dialog states
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [showPatientDialog, setShowPatientDialog] = useState(false);
@@ -463,23 +534,23 @@ const Appointments = () => {
         setIsLoading(true);
         const data = await appointmentsService.fetchAppointments();
         console.log('✅ Fetched appointments from API:', data);
-        
+
         // Log first appointment to see structure
         if (data && data.length > 0) {
           console.log('📊 First appointment structure:', JSON.stringify(data[0], null, 2));
         }
-        
+
         // Transform API data to match component's expected format
         const transformed = data.map((apt, index) => transformAppointment(apt, index));
-        
+
         // Log transformed data
         console.log('🔄 Transformed appointments:', transformed);
-        
+
         setAllAppointments(transformed);
         setFilteredAppointments(transformed);
       } catch (error) {
         console.error('❌ Failed to fetch appointments:', error);
-        alert('Failed to load appointments: ' + error.message);
+        showNotification('Failed to load appointments from server.', 'error');
         // Fallback to mock data if API fails
         setAllAppointments(MOCK_APPOINTMENTS);
         setFilteredAppointments(MOCK_APPOINTMENTS);
@@ -487,7 +558,7 @@ const Appointments = () => {
         setIsLoading(false);
       }
     };
-    
+
     fetchData();
   }, []);
 
@@ -495,19 +566,24 @@ const Appointments = () => {
   useEffect(() => {
     let result = allAppointments;
     if (activeTab !== 'all') {
-      result = result.filter(a => a.status.toLowerCase() === activeTab);
+      result = result.filter(a => a.status.toLowerCase() === activeTab.toLowerCase());
+    }
+
+    if (selectedDate) {
+      result = result.filter(a => a.rawDate === selectedDate);
     }
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       result = result.filter(a =>
         a.patientName.toLowerCase().includes(q) ||
         a.patientId.toLowerCase().includes(q) ||
-        a.doctor.toLowerCase().includes(q)
+        a.doctor.toLowerCase().includes(q) ||
+        a.status.toLowerCase().includes(q)
       );
     }
     setFilteredAppointments(result);
     setCurrentPage(1);
-  }, [activeTab, searchQuery, allAppointments]);
+  }, [activeTab, searchQuery, selectedDate, allAppointments]);
 
   const indexOfLastRow = currentPage * rowsPerPage;
   const indexOfFirstRow = indexOfLastRow - rowsPerPage;
@@ -539,62 +615,61 @@ const Appointments = () => {
     setSelectedAppointmentId(appointment.id);
     setShowEditModal(true);
   };
-  
+
   // Handle intake form
   const handleIntake = (appointment) => {
     setSelectedAppointmentId(appointment.id);
     setShowIntakeModal(true);
   };
-  
+
   // Handle patient name click - open patient details dialog
   const handlePatientNameClick = async (appointment) => {
     try {
       console.log('🔍 [handlePatientNameClick] Full appointment data:', appointment);
-      
+
       // Extract patient UUID (_id) from appointment - NOT patientCode!
       let patientUUID = null;
-      
+
       // Try to get from the original appointment data stored in the transform
       const originalApt = allAppointments.find(a => a.id === appointment.id);
       console.log('📦 [handlePatientNameClick] Original appointment:', originalApt);
-      
+
       if (originalApt && originalApt.patientIdObj) {
         patientUUID = originalApt.patientIdObj._id;
         console.log('✅ Found patient UUID from patientIdObj:', patientUUID);
       }
-      
+
       if (!patientUUID) {
         console.error('❌ Could not extract patient UUID from appointment');
         console.error('Available appointment data:', appointment);
-        alert('Unable to load patient details. Patient ID not found.');
         return;
       }
-      
+
       console.log('🔄 Fetching patient by UUID:', patientUUID);
-      
+
       // Fetch full patient details using UUID
       const fullPatient = await patientsService.fetchPatientById(patientUUID);
       console.log('✅ Fetched full patient:', fullPatient);
-      
+
       // Enrich patient data with info from appointment if available
       if (originalApt && originalApt.patientIdObj && originalApt.patientIdObj.metadata) {
         const appointmentMetadata = originalApt.patientIdObj.metadata;
         console.log('📦 Enriching with appointment metadata:', appointmentMetadata);
-        
+
         // Add emergency contacts from appointment metadata if not in patient record
         if (!fullPatient.emergencyContactName && appointmentMetadata.emergencyContactName) {
           fullPatient.emergencyContactName = appointmentMetadata.emergencyContactName;
           fullPatient.emergencyContactPhone = appointmentMetadata.emergencyContactPhone;
           console.log('✅ Added emergency contact:', fullPatient.emergencyContactName);
         }
-        
+
         // Add insurance from appointment metadata if not in patient record
         if (!fullPatient.insuranceNumber && appointmentMetadata.insurance) {
           fullPatient.insuranceNumber = appointmentMetadata.insurance.policyNumber;
           fullPatient.expiryDate = appointmentMetadata.insurance.validUntil;
           console.log('✅ Added insurance:', fullPatient.insuranceNumber);
         }
-        
+
         // Add medical history from appointment metadata - ENSURE it's always an array
         if (appointmentMetadata.medicalHistory) {
           if (Array.isArray(appointmentMetadata.medicalHistory)) {
@@ -609,19 +684,18 @@ const Appointments = () => {
             console.log('✅ Added medical history (from currentConditions):', fullPatient.medicalHistory);
           }
         }
-        
+
         // Ensure medicalHistory is always an array
         if (!Array.isArray(fullPatient.medicalHistory)) {
           console.warn('⚠️ medicalHistory is not an array, converting:', fullPatient.medicalHistory);
           fullPatient.medicalHistory = [];
         }
       }
-      
+
       setSelectedPatient(fullPatient);
       setShowPatientDialog(true);
     } catch (error) {
       console.error('❌ Error fetching patient details:', error);
-      alert('Failed to load patient details: ' + error.message);
     }
   };
 
@@ -630,21 +704,40 @@ const Appointments = () => {
     setSelectedPatient(null);
   };
 
+  // Handle quick status toggle from table
+  const handleStatusToggle = async (appointment) => {
+    const statuses = ['Scheduled', 'Confirmed', 'Completed', 'Cancelled', 'Pending'];
+    const currentIndex = statuses.indexOf(appointment.status);
+    const nextIndex = (currentIndex + 1) % statuses.length;
+    const nextStatus = statuses[nextIndex];
+
+    try {
+      console.log(`🔄 Toggling status for ${appointment.id}: ${appointment.status} -> ${nextStatus}`);
+      await appointmentsService.updateAppointmentStatus(appointment.id, nextStatus);
+      showNotification(`Appointment status updated to ${nextStatus}`, 'success');
+      await refreshAppointments();
+    } catch (error) {
+      console.error('❌ Failed to update status:', error);
+      showNotification('Failed to update status', 'error');
+    }
+  };
+
   // Handle delete appointment
   const handleDelete = async (appointment) => {
-    const confirmed = window.confirm(`Delete appointment for ${appointment.patientName}?`);
-    if (!confirmed) return;
+    if (!window.confirm(`Are you sure you want to delete the appointment for ${appointment.patientName}?`)) {
+      return;
+    }
     try {
       setIsLoading(true);
       await appointmentsService.deleteAppointment(appointment.id);
       console.log('✅ Deleted appointment:', appointment.id);
-      alert(`Deleted appointment for ${appointment.patientName}`);
-      
+      showNotification('Appointment deleted successfully', 'success');
+
       // Refresh appointments list
       await refreshAppointments();
     } catch (error) {
       console.error('❌ Failed to delete appointment:', error);
-      alert('Failed to delete appointment: ' + error.message);
+      showNotification('Failed to delete appointment', 'error');
       setIsLoading(false);
     }
   };
@@ -652,11 +745,26 @@ const Appointments = () => {
   return (
     <div className="dashboard-container">
       <Header />
+      {notification && (
+        <div className={`modern-notification ${notification.type}`}>
+          <div className="notif-content">
+            <span className="notif-icon">
+              {notification.type === 'success' ? '✅' : '❌'}
+            </span>
+            <span className="notif-msg">{notification.message}</span>
+          </div>
+          <button className="notif-close" onClick={() => setNotification(null)}>×</button>
+        </div>
+      )}
       <FilterBar
         activeTab={activeTab}
         onTabChange={setActiveTab}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
+        selectedDate={selectedDate}
+        onDateChange={setSelectedDate}
+        showCalendar={showCalendar}
+        setShowCalendar={setShowCalendar}
       />
       <div className="table-card">
         <div className="modern-table-wrapper">
@@ -681,7 +789,7 @@ const Appointments = () => {
                 } else {
                   avatarSrc = '/boyicon.png';
                 }
-                
+
                 // Debug EVERY row
                 if (idx < 5) { // Only log first 5 to avoid console spam
                   console.log(`🎨 Row ${idx}:`, {
@@ -692,77 +800,81 @@ const Appointments = () => {
                     fullObject: apt
                   });
                 }
-                
+
                 return (
-                <tr key={apt.id}>
-                  {/* PATIENT COLUMN - Clickable */}
-                  <td 
-                    className="cell-patient clickable" 
-                    onClick={() => handlePatientNameClick(apt)}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    <img 
-                      src={avatarSrc} 
-                      alt={apt.gender}
-                      className="patient-avatar"
-                      onError={(e) => {
-                        // Fallback if image doesn't load
-                        e.target.style.display = 'none';
-                        e.target.nextElementSibling.style.display = 'flex';
-                      }}
-                    />
-                    <div className="gender-icon-box" style={{ display: 'none' }}>
-                      {apt.gender === 'Female' ? <Icons.Female /> : <Icons.Male />}
-                    </div>
-                    <div className="info-group">
-                      <span className="primary patient-name-clickable">
-                        {apt.patientName}
+                  <tr key={apt.id}>
+                    {/* PATIENT COLUMN - Clickable */}
+                    <td
+                      className="cell-patient clickable"
+                      onClick={() => handlePatientNameClick(apt)}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <img
+                        src={avatarSrc}
+                        alt={apt.gender}
+                        className="patient-avatar"
+                        onError={(e) => {
+                          // Fallback if image doesn't load
+                          e.target.style.display = 'none';
+                          e.target.nextElementSibling.style.display = 'flex';
+                        }}
+                      />
+                      <div className="gender-icon-box" style={{ display: 'none' }}>
+                        {apt.gender === 'Female' ? <Icons.Female /> : <Icons.Male />}
+                      </div>
+                      <div className="info-group">
+                        <span className="primary patient-name-clickable">
+                          {apt.patientName}
+                        </span>
+                        <span className="secondary">{apt.patientId}</span>
+                      </div>
+                    </td>
+
+                    {/* DATE COLUMN */}
+                    <td>
+                      <div className="info-group">
+                        <span className="primary">{apt.date}</span>
+                        <span className="secondary">{apt.time}</span>
+                      </div>
+                    </td>
+
+                    {/* SERVICE */}
+                    <td style={{ fontWeight: 500, color: '#334155' }}>{apt.service}</td>
+
+                    {/* REASON */}
+                    <td style={{ fontWeight: 500, color: '#64748b', fontStyle: apt.reason === 'Not specified' ? 'italic' : 'normal' }}>
+                      {apt.reason}
+                    </td>
+
+                    {/* STATUS */}
+                    <td>
+                      <span
+                        className={`status-pill ${apt.status.toLowerCase()} status-editable clickable`}
+                        onClick={() => handleStatusToggle(apt)}
+                        title="Click to change status"
+                      >
+                        {apt.status}
                       </span>
-                      <span className="secondary">{apt.patientId}</span>
-                    </div>
-                  </td>
+                    </td>
 
-                  {/* DATE COLUMN */}
-                  <td>
-                    <div className="info-group">
-                      <span className="primary">{apt.date}</span>
-                      <span className="secondary">{apt.time}</span>
-                    </div>
-                  </td>
-
-                  {/* SERVICE */}
-                  <td style={{ fontWeight: 500, color: '#334155' }}>{apt.service}</td>
-
-                  {/* REASON */}
-                  <td style={{ fontWeight: 500, color: '#64748b', fontStyle: apt.reason === 'Not specified' ? 'italic' : 'normal' }}>
-                    {apt.reason}
-                  </td>
-
-                  {/* STATUS */}
-                  <td>
-                    <span className={`status-pill ${apt.status.toLowerCase()}`}>
-                      {apt.status}
-                    </span>
-                  </td>
-
-                  {/* ACTIONS */}
-                  <td>
-                    <div className="action-buttons-group">
-                      <button className="btn-action intake" title="Intake" onClick={() => handleIntake(apt)}>
-                        <Icons.Intake />
-                      </button>
-                      <button className="btn-action edit" title="Edit" onClick={() => handleEdit(apt)}>
-                        <Icons.Edit />
-                      </button>
-                      <button className="btn-action view" title="View" onClick={() => handleView(apt)}>
-                        <Icons.Eye />
-                      </button>
-                      <button className="btn-action delete" title="Delete" onClick={() => handleDelete(apt)}>
-                        <Icons.Delete />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
+                    {/* ACTIONS */}
+                    <td>
+                      <div className="action-buttons-group">
+                        <button className="btn-action intake" title="Intake" onClick={() => handleIntake(apt)}>
+                          <Icons.Intake />
+                        </button>
+                        <button className="btn-action edit" title="Edit" onClick={() => handleEdit(apt)}>
+                          <Icons.Edit />
+                        </button>
+                        <button className="btn-action view" title="View" onClick={() => handleView(apt)}>
+                          <Icons.Eye />
+                        </button>
+                        <button className="btn-action delete" title="Delete" onClick={() => handleDelete(apt)}>
+                          <Icons.Delete />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
                 );
               })}
               {isLoading && (

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import appointmentsService from '../../../../services/appointmentsService';
@@ -114,11 +114,6 @@ const TimePicker = ({ value, onChange, onClose }) => {
     const center = 128; // center of 256x256 box
     for (let i = 1; i <= count; i++) {
       const val = isHour ? i : (i === 12 ? 0 : i * 5); // 1-12 or 0, 5, 10
-      // Correct angle: 12 is at -90deg (top), but in sin/cos logic 0 is typically right.
-      // We want 12 at top (270 deg or -90 deg), 3 at right (0 deg).
-      // Angle per step = 30 deg.
-      // 12 -> -90, 1 -> -60, 2 -> -30, 3 -> 0.
-      // Formula: angle = (i * 30) - 90
       const angleDeg = (i * 30) - 90;
       const angleRad = angleDeg * (Math.PI / 180);
       const x = center + radius * Math.cos(angleRad);
@@ -136,12 +131,6 @@ const TimePicker = ({ value, onChange, onClose }) => {
       );
     }
     // Hand
-    const currentVal = isHour ? selectedHour : selectedMinute;
-    // Calculate angle for hand
-    // For hour: 1->30deg, 12->360(0). Normalized 12 to 0 for calc?
-    // Actually mapped 1..12 to i..12 in loop.
-    // Logic: (val / 12) * 360 for hours? but 12 is top.
-    // Minute: (val / 60) * 360.
     let degrees = 0;
     if (isHour) {
       degrees = (selectedHour % 12) * 30; // 12 -> 0, 3 -> 90
@@ -222,12 +211,12 @@ const NewAppointmentForm = ({ onClose, onSave }) => {
   // Date/Time State
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedTime, setSelectedTime] = useState('09:00'); // Default 9 AM
+  const [status, setStatus] = useState('Scheduled');
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const loadPatients = useCallback(async () => {
     setIsLoading(true);
     try {
-      // Use appointmentsService to fetch patients
       const patientsList = await appointmentsService.fetchPatients();
       const mappedPatients = patientsList.map(p => ({
         id: p._id || p.id,
@@ -271,19 +260,17 @@ const NewAppointmentForm = ({ onClose, onSave }) => {
     if (!reason.trim()) return alert('Please enter a reason');
     setIsSaving(true);
     try {
-      // Format DateTime
       const dateStr = selectedDate.toISOString().split('T')[0];
       const payload = {
         patientId: selectedPatient.id,
         clientName: selectedPatient.name,
-        date: new Date(dateStr + 'T' + selectedTime), // local time construction
+        date: new Date(dateStr + 'T' + selectedTime),
         time: selectedTime,
         appointmentType: 'Consultation',
-        mode: 'In-clinic', // default
+        mode: 'In-clinic',
         chiefComplaint: reason,
         notes: notes,
-        status: 'Scheduled',
-        // Backend compatibility fields
+        status: status,
         reason: reason,
         startAt: new Date(dateStr + 'T' + selectedTime).toISOString(),
       };
@@ -296,20 +283,14 @@ const NewAppointmentForm = ({ onClose, onSave }) => {
       setIsSaving(false);
     }
   };
-  // UI Helpers
   const getAvatar = (p) => {
     if (p.avatar) return p.avatar;
     return (p.gender?.toLowerCase() === 'female') ? '/girlicon.png' : '/boyicon.png';
   };
-  // Format Date for Display
   const formatDateDisplay = (date) => {
-    // e.g. "Sat, Dec 20"
     return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
   };
-  // Format Time for Display
   const formatTimeDisplay = (timeStr) => {
-    // timeStr is HH:mm (24h)
-    // Convert to 12h AM/PM
     if (!timeStr) return '';
     const [h, m] = timeStr.split(':');
     let hr = parseInt(h);
@@ -320,13 +301,11 @@ const NewAppointmentForm = ({ onClose, onSave }) => {
   };
   return (
     <div className="new-appt-overlay">
-      {/* Floating Close Button - Matches AppointmentViewModal */}
       <button className="appointment-close-floating" onClick={onClose}>
         <Icons.Close />
       </button>
 
       <div className="new-appt-modal">
-        {/* LEFT PANEL */}
         <div className="left-panel">
           <div className="panel-header">
             <div className="header-icon-box"><Icons.User /></div>
@@ -360,7 +339,6 @@ const NewAppointmentForm = ({ onClose, onSave }) => {
             ))}
           </div>
         </div>
-        {/* RIGHT PANEL */}
         <div className={`right-panel ${!selectedPatient ? 'disabled' : ''}`}>
           <div className="panel-content">
             <div className="rp-header">
@@ -370,7 +348,6 @@ const NewAppointmentForm = ({ onClose, onSave }) => {
                 <p className="subtitle">Select a patient to continue</p>
               </div>
             </div>
-            {/* Schedule */}
             <h3 className="section-title">Schedule</h3>
             <div className="form-row">
               <div className="form-group half">
@@ -390,7 +367,6 @@ const NewAppointmentForm = ({ onClose, onSave }) => {
                 </div>
               </div>
             </div>
-            {/* Details */}
             <h3 className="section-title">Appointment Details</h3>
             <div className="form-group">
               <label>Reason / Chief Complaint *</label>
@@ -414,6 +390,20 @@ const NewAppointmentForm = ({ onClose, onSave }) => {
                 />
               </div>
             </div>
+
+            <h3 className="section-title">Status</h3>
+            <div className="status-selection-grid">
+              {['Scheduled', 'Confirmed', 'Pending', 'Cancelled'].map(s => (
+                <button
+                  key={s}
+                  type="button"
+                  className={`status-click-btn ${status === s ? 'active ' + s.toLowerCase() : ''}`}
+                  onClick={() => setStatus(s)}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
           </div>
           <div className="rp-footer">
             <button className="btn-cancel" onClick={onClose}>
@@ -425,7 +415,6 @@ const NewAppointmentForm = ({ onClose, onSave }) => {
           </div>
         </div>
       </div>
-      {/* DATE PICKER POPUP */}
       {showDatePicker && (
         <div className="date-picker-overlay" onClick={() => setShowDatePicker(false)}>
           <div className="date-picker-modal" onClick={e => e.stopPropagation()}>
@@ -437,8 +426,6 @@ const NewAppointmentForm = ({ onClose, onSave }) => {
               onChange={(d) => { setSelectedDate(d); setShowDatePicker(false); }}
               value={selectedDate}
               minDate={new Date()}
-              next2Label={null}
-              prev2Label={null}
             />
             <div className="dp-actions">
               <button onClick={() => setShowDatePicker(false)}>Cancel</button>
@@ -447,7 +434,6 @@ const NewAppointmentForm = ({ onClose, onSave }) => {
           </div>
         </div>
       )}
-      {/* TIME PICKER POPUP */}
       {showTimePicker && (
         <TimePicker
           value={selectedTime}

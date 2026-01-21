@@ -68,6 +68,9 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdi
 
         if (pId) {
           setIsLoading(true);
+          // Fetch full clinical history for this patient
+          fetchPatientAppointments(pId);
+
           patientsService.fetchPatientById(pId)
             .then(fetchedPatient => {
               // Normalize vitals from the FULL fetched patient object
@@ -209,7 +212,10 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdi
         const apptPId = typeof appt.patientId === 'object' ? appt.patientId._id : appt.patientId;
         return apptPId === pId;
       });
-      setPatientAppointments(filtered);
+
+      // Sort by date descending
+      const sorted = filtered.sort((a, b) => new Date(b.date || b.startAt) - new Date(a.date || a.startAt));
+      setPatientAppointments(sorted);
     } catch (e) {
       console.error("Failed to fetch patient appointments", e);
     }
@@ -565,31 +571,69 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdi
                       <table className="appointments-table">
                         <thead>
                           <tr>
-                            <th>Date</th>
-                            <th>Time</th>
-                            <th>Condition</th>
+                            <th>Date & Time</th>
+                            <th>Doctor</th>
+                            <th>Service</th>
+                            <th>Condition/Reason</th>
                             <th>Status</th>
                           </tr>
                         </thead>
                         <tbody>
                           {filteredList.map(appt => {
-                            // Condition Extraction Logic
+                            // Helper to extract nested doctor name
+                            let drName = appt.doctor || 'Not Assigned';
+                            if (appt.doctorId && typeof appt.doctorId === 'object') {
+                              drName = `${appt.doctorId.firstName || ''} ${appt.doctorId.lastName || ''}`.trim();
+                            } else if (appt.doctorName) {
+                              drName = appt.doctorName;
+                            }
+
+                            // Helper to extract service/reason
+                            const apptService = appt.service || appt.appointmentType || 'Consultation';
+
+                            // Extract reason for condition
+                            let reason = '';
+                            if (appt.chiefComplaint) reason = appt.chiefComplaint;
+                            else if (appt.reason) reason = appt.reason;
+                            else if (appt.metadata?.chiefComplaint) reason = appt.metadata.chiefComplaint;
+                            else if (appt.metadata?.reason) reason = appt.metadata.reason;
+                            else if (appt.notes) reason = appt.notes;
+
                             // If appt.patientId is object, use it. Else use 'patient' state if matches.
                             let pObj = typeof appt.patientId === 'object' ? appt.patientId : null;
                             if (!pObj && patient && (appt.patientId === patient._id || patient._id === patientId)) {
                               pObj = patient;
                             }
-                            const condition = appt.condition || extractCondition(pObj);
+                            const condition = appt.condition || reason || extractCondition(pObj);
+
+                            // Date formatting help
+                            const formatRowDate = (dStr) => {
+                              if (!dStr) return 'N/A';
+                              try {
+                                // Handle YYYY-MM-DD to avoid UTC shift
+                                if (/^\d{4}-\d{2}-\d{2}$/.test(dStr)) {
+                                  const [y, m, d] = dStr.split('-').map(Number);
+                                  return new Date(y, m - 1, d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+                                }
+                                const d = new Date(dStr);
+                                if (isNaN(d.getTime())) return dStr;
+                                return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+                              } catch (e) { return dStr; }
+                            };
 
                             return (
-                              <tr key={appt._id}>
+                              <tr key={appt._id || appt.id}>
                                 <td>
-                                  <span className="appt-date">
-                                    {new Date(appt.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
-                                  </span>
+                                  <div className="appt-date-time">
+                                    <span className="appt-date">{formatRowDate(appt.date || appt.startAt)}</span>
+                                    <span className="appt-time-sub">{appt.time || (appt.startAt && new Date(appt.startAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))}</span>
+                                  </div>
                                 </td>
                                 <td>
-                                  <span className="appt-time">{appt.time}</span>
+                                  <span className="appt-doctor-cell">{drName}</span>
+                                </td>
+                                <td>
+                                  <span className="appt-service-cell">{apptService}</span>
                                 </td>
                                 <td>
                                   <span className="appt-condition">
@@ -597,8 +641,8 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdi
                                   </span>
                                 </td>
                                 <td>
-                                  <span className={`status-badge ${appt.status?.toLowerCase() || 'pending'}`}>
-                                    {appt.status || 'Pending'}
+                                  <span className={`status-badge ${appt.status?.toLowerCase() || 'scheduled'}`}>
+                                    {appt.status ? (appt.status.charAt(0).toUpperCase() + appt.status.slice(1).toLowerCase()) : 'Scheduled'}
                                   </span>
                                 </td>
                               </tr>

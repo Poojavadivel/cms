@@ -1,5 +1,5 @@
 const express = require('express');
-const { Appointment,Patient } = require('../Models'); // Mongoose models
+const { Appointment, Patient } = require('../Models'); // Mongoose models
 const auth = require('../Middleware/Auth'); // loads fresh user + role
 const router = express.Router();
 
@@ -23,30 +23,31 @@ function calculateAge(dateOfBirth) {
   const today = new Date();
   const birthDate = new Date(dateOfBirth);
   if (isNaN(birthDate.getTime())) return 0;
-  
+
   let age = today.getFullYear() - birthDate.getFullYear();
   const monthDiff = today.getMonth() - birthDate.getMonth();
-  
+
   if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
     age--;
   }
-  
+
   return age > 0 ? age : 0;
 }
 
-// Normalize appointments to include doctor string and patient age
+// Normalize appointments to include doctor string, patient age, and patientCode
 function normalizeAppointments(arr) {
   return arr.map(a => {
     const normalized = {
       ...a,
       doctor: extractDoctorName(a.doctorId),
+      patientCode: a.patientId?.patientCode || a.patientId?.metadata?.patientCode || 'N/A'
     };
-    
+
     // Calculate age from patient dateOfBirth if available
     if (a.patientId && typeof a.patientId === 'object' && a.patientId.dateOfBirth) {
       normalized.patientAge = calculateAge(a.patientId.dateOfBirth);
     }
-    
+
     return normalized;
   });
 }
@@ -128,7 +129,7 @@ router.post('/', auth, async (req, res) => {
     console.log("✅ Appointment created:", appointment._id);
 
     appointment = await Appointment.findById(appointment._id)
-      .populate('patientId', 'firstName lastName phone email')
+      .populate('patientId', 'firstName lastName phone email patientCode metadata')
       .populate('doctorId', 'firstName lastName email')
       .lean();
 
@@ -168,21 +169,21 @@ router.get('/', auth, async (req, res) => {
     } else if (role === 'doctor') {
       query.doctorId = userId;
     }
-    
+
     // Filter by patientId if provided
     if (patientId) {
       query.patientId = patientId;
     }
-    
+
     // Filter by follow-up if requested
     if (hasFollowUp === 'true') {
       query['followUp.isRequired'] = true;
     }
-    
+
     console.log("🔎 Appointment query:", query);
 
     const appointments = await Appointment.find(query)
-      .populate('patientId', 'firstName lastName phone email bloodGroup metadata dateOfBirth gender')
+      .populate('patientId', 'firstName lastName phone email bloodGroup metadata dateOfBirth gender patientCode')
       .populate('doctorId', 'firstName lastName email')
       .sort({ startAt: -1 }) // Sort by date, newest first
       .lean();
@@ -345,7 +346,7 @@ router.put('/:id', auth, async (req, res) => {
         ...appointment.followUp,
         ...data.followUp,
       };
-      
+
       // If follow-up is required, set the flag
       if (data.followUp.isRequired) {
         updateObj.followUp.isFollowUp = false; // This is the original appointment
@@ -476,7 +477,7 @@ router.get('/patient/:patientId/follow-ups', auth, async (req, res) => {
 
     // Find all appointments for this patient
     let query = { patientId, isFollowUp: true };
-    
+
     // If doctor, only show their own follow-ups
     if (role === 'doctor') {
       query.doctorId = userId;

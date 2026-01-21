@@ -8,6 +8,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { MdChevronLeft, MdChevronRight, MdSearch } from 'react-icons/md';
 import axios from 'axios';
 import patientsService from '../../../services/patientsService';
+import reportService from '../../../services/reportService';
 import './Patients.css';
 import AddPatientModal from '../../../components/patient/addpatient';
 import EditPatientModal from '../../../components/patient/EditPatientModal';
@@ -369,16 +370,22 @@ const Patients = () => {
   }, []);
 
   const handleEdit = useCallback(async (patient) => {
+    const id = patient.id || patient.patientId || patient._id;
+    if (!id) {
+      toast.error('Invalid patient data');
+      return;
+    }
+
     // Cancel any pending requests
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
 
     abortControllerRef.current = new AbortController();
-    setLoadingPatientId(patient.id);
+    setLoadingPatientId(id);
 
     try {
-      const fullPatient = await patientsService.fetchPatientById(patient.id);
+      const fullPatient = await patientsService.fetchPatientById(id);
 
       if (process.env.NODE_ENV === 'development') {
         console.log('Edit patient:', fullPatient);
@@ -400,7 +407,8 @@ const Patients = () => {
   }, []);
 
   const handleDelete = useCallback(async (patient, retryCount = 0) => {
-    if (!patient || !patient.id) {
+    const id = patient?.id || patient?.patientId || patient?._id;
+    if (!patient || !id) {
       toast.error('Invalid patient data');
       return;
     }
@@ -430,17 +438,17 @@ const Patients = () => {
 
       // Optimistic update - remove from UI immediately (only on first attempt)
       if (retryCount === 0) {
-        setPatients(prev => prev.filter(p => p.id !== patient.id));
-        setFilteredPatients(prev => prev.filter(p => p.id !== patient.id));
+        setPatients(prev => prev.filter(p => (p.id || p.patientId || p._id) !== id));
+        setFilteredPatients(prev => prev.filter(p => (p.id || p.patientId || p._id) !== id));
       }
 
       // Attempt to delete from backend
-      const result = await patientsService.deletePatient(patient.id);
+      const result = await patientsService.deletePatient(id);
 
       console.log('Delete result:', result);
 
       if (process.env.NODE_ENV === 'development') {
-        console.log('✅ Deleted patient:', patient.id);
+        console.log('✅ Deleted patient:', id);
       }
 
       toast.success(`Successfully deleted patient: ${patient.name}`);
@@ -456,7 +464,7 @@ const Patients = () => {
         error: error,
         message: error.message,
         response: error.response?.data,
-        patientId: patient.id
+        patientId: id
       });
 
       // Rollback on error (if we have original data)
@@ -500,57 +508,27 @@ const Patients = () => {
     }
   }, [fetchPatients, patients, filteredPatients]);
 
+  /**
+   * Handle Patient Report Download
+   * Uses centralized reportService
+   */
   const handleDownload = useCallback(async (patient) => {
+    const id = patient?.id || patient?.patientId || patient?._id;
+    if (!patient || !id) {
+      toast.error('Invalid patient data for download');
+      return;
+    }
+
     // Add patient ID to downloading set
-    setDownloadingPatients(prev => new Set(prev).add(patient.id));
+    setDownloadingPatients(prev => new Set(prev).add(id));
 
     try {
-      // Use the reportService (matching Flutter's implementation)
-      const token = localStorage.getItem('x-auth-token') || localStorage.getItem('authToken');
-      if (!token) {
-        toast.error('Authentication token not found. Please login again.');
-        return;
-      }
+      const result = await reportService.downloadPatientReport(id);
 
-      const endpoint = `${process.env.REACT_APP_API_URL || 'https://hms-dev.onrender.com/api'}/reports-proper/patient/${patient.id}`;
-
-      const response = await fetch(endpoint, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'x-auth-token': token,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (response.ok) {
-        // Get filename from header or create default
-        let filename = `Patient_Report_${patient.name}_${Date.now()}.pdf`;
-        const contentDisposition = response.headers.get('content-disposition');
-        if (contentDisposition) {
-          const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
-          if (filenameMatch && filenameMatch[1]) {
-            filename = filenameMatch[1];
-          }
-        }
-
-        // Create blob and trigger download
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.setAttribute('download', filename);
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        window.URL.revokeObjectURL(url);
-
-        toast.success('Patient report downloaded successfully');
-      } else if (response.status === 404) {
-        toast.error('Patient not found');
+      if (result.success) {
+        toast.success(result.message || 'Patient report downloaded successfully');
       } else {
-        const errorData = await response.text();
-        toast.error(`Failed to download report: ${response.status}`);
+        toast.error(result.message || 'Failed to download report');
       }
     } catch (error) {
       console.error('❌ Failed to download report:', error);
@@ -953,7 +931,9 @@ const Patients = () => {
                       />
                       <div className="info-group">
                         <span className="primary">{patient.name}</span>
-                        <span className="secondary">{patient.patientCode || patient.patientId || patient.id}</span>
+                        <span className="secondary">
+                          {patient.patientCode || 'PAT-SYNCING...'}
+                        </span>
                       </div>
                     </td>
 
@@ -1094,6 +1074,7 @@ const Patients = () => {
           patientId={modalData.id || modalData._id || modalData.patientId}
           isOpen={true}
           onClose={handleCloseModal}
+          onEdit={handleEdit}
         />
       )}
 

@@ -33,12 +33,14 @@ import patientsService from '../../services/patientsService';
 import prescriptionService from '../../services/prescriptionService';
 import pathologyService from '../../services/pathologyService';
 import invoiceService from '../../services/invoiceService';
+import reportService from '../../services/reportService';
 import { getGenderAvatar } from '../../utils/avatarHelpers';
 
 const PatientView = ({ isOpen, onClose, patientId, onEdit }) => {
     const [patient, setPatient] = useState(null);
     const [activeTab, setActiveTab] = useState('profile');
     const [isLoading, setIsLoading] = useState(true);
+    const [isDownloading, setIsDownloading] = useState(false);
     const [error, setError] = useState('');
 
     const tabs = [
@@ -48,13 +50,6 @@ const PatientView = ({ isOpen, onClose, patientId, onEdit }) => {
         { id: 'lab-results', label: 'Lab Results', icon: <MdScience /> },
         { id: 'billings', label: 'Billings', icon: <MdPayment /> }
     ];
-
-    useEffect(() => {
-        if (isOpen && patientId) {
-            fetchPatient();
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isOpen, patientId]);
 
     const fetchPatient = async () => {
         setIsLoading(true);
@@ -67,6 +62,29 @@ const PatientView = ({ isOpen, onClose, patientId, onEdit }) => {
             setError(err.message || 'Failed to load patient details');
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (isOpen && patientId) {
+            fetchPatient();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isOpen, patientId]);
+
+    const handleDownloadReport = async () => {
+        if (!patientId) return;
+        setIsDownloading(true);
+        try {
+            const result = await reportService.downloadPatientReport(patientId);
+            if (!result.success) {
+                alert(result.message);
+            }
+        } catch (err) {
+            console.error('Download error:', err);
+            alert('Failed to download report: ' + err.message);
+        } finally {
+            setIsDownloading(false);
         }
     };
 
@@ -98,9 +116,20 @@ const PatientView = ({ isOpen, onClose, patientId, onEdit }) => {
 
         let gender = patient.gender || 'Male';
 
+        // Location: prioritize street, then district/city
         let location = 'Location not set';
-        if (patient.address?.city) {
+        if (patient.address?.street) {
+            location = patient.address.street;
+        } else if (patient.street) {
+            location = patient.street;
+        } else if (patient.address?.city) {
             location = patient.address.city;
+        } else if (patient.city) {
+            location = patient.city;
+        } else if (patient.address?.state) {
+            location = patient.address.state;
+        } else if (patient.state) {
+            location = patient.state;
         }
 
         let occupation = patient.profession || patient.metadata?.profession || 'Not specified';
@@ -140,14 +169,64 @@ const PatientView = ({ isOpen, onClose, patientId, onEdit }) => {
         const noAlcohol = patient.metadata?.noAlcohol === true || patient.metadata?.alcohol === false;
         const noSmoker = patient.metadata?.noSmoker === true || patient.metadata?.smoker === false;
 
+        const patientCode = patient.patientCode ||
+            patient.metadata?.patientCode ||
+            patient.patient_code ||
+            'PAT-SYNCING...';
+
         return {
             name, phone, email, gender, location, occupation, dob, age,
             weightKg, heightCm, bp, bmi,
             diagnosis: Array.isArray(diagnosis) ? diagnosis : [],
             barriers: Array.isArray(barriers) ? barriers : [],
             noAlcohol, noSmoker,
-            avatarUrl: patient.avatarUrl || patient.metadata?.avatarUrl
+            avatarUrl: patient.avatarUrl || patient.metadata?.avatarUrl,
+            patientCode
         };
+    };
+
+    const copyToClipboard = (text, label) => {
+        if (!text) {
+            alert(`No ${label} information available to copy`);
+            return;
+        }
+
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text)
+                .then(() => {
+                    alert(`${label} copied to clipboard!`);
+                })
+                .catch((err) => {
+                    console.error(`Failed to copy ${label}:`, err);
+                    fallbackCopyTextToClipboard(text, label);
+                });
+        } else {
+            fallbackCopyTextToClipboard(text, label);
+        }
+    };
+
+    const fallbackCopyTextToClipboard = (text, label) => {
+        try {
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            // Ensure textArea is not visible but still part of the DOM
+            textArea.style.position = "fixed";
+            textArea.style.left = "-9999px";
+            textArea.style.top = "0";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            const successful = document.execCommand('copy');
+            document.body.removeChild(textArea);
+            if (successful) {
+                alert(`${label} copied to clipboard!`);
+            } else {
+                throw new Error('Copy command was unsuccessful');
+            }
+        } catch (err) {
+            console.error('Fallback copy failed:', err);
+            alert(`Failed to copy ${label}. Please select and copy manually.`);
+        }
     };
 
     const patientData = getPatientData();
@@ -202,10 +281,33 @@ const PatientView = ({ isOpen, onClose, patientId, onEdit }) => {
                                 {/* Info */}
                                 <div className="pv-info-section">
                                     <div className="pv-name-row">
-                                        <h2 className="pv-name-main">{patientData.name}</h2>
+                                        <div className="pv-name-id-group">
+                                            <h2 className="pv-name-main">{patientData.name}</h2>
+                                            <div className="pv-patient-code-badge" onClick={() => copyToClipboard(patientData.patientCode, 'Patient Code')} title="Click to copy Patient Code">
+                                                <span className="pv-code-prefix">ID:</span>
+                                                <span className="pv-code-val">{patientData.patientCode}</span>
+                                                <MdContentCopy size={12} className="pv-code-copy-icon" />
+                                            </div>
+                                        </div>
                                         <div className="pv-contact-icons">
-                                            {patientData.phone && <button className="pv-contact-btn" title={patientData.phone}><MdPhone size={14} /></button>}
-                                            {patientData.email && <button className="pv-contact-btn" title={patientData.email}><MdEmail size={14} /></button>}
+                                            {patientData.phone && (
+                                                <button
+                                                    className="pv-contact-btn"
+                                                    title={`Copy Phone: ${patientData.phone}`}
+                                                    onClick={() => copyToClipboard(patientData.phone, 'Phone Number')}
+                                                >
+                                                    <MdPhone size={14} />
+                                                </button>
+                                            )}
+                                            {patientData.email && (
+                                                <button
+                                                    className="pv-contact-btn"
+                                                    title={`Copy Email: ${patientData.email}`}
+                                                    onClick={() => copyToClipboard(patientData.email, 'Email Address')}
+                                                >
+                                                    <MdEmail size={14} />
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
 
@@ -248,6 +350,14 @@ const PatientView = ({ isOpen, onClose, patientId, onEdit }) => {
 
                                 {/* Right Actions */}
                                 <div className="pv-header-right">
+                                    <button
+                                        className={`pv-btn-fill ${isDownloading ? 'loading' : ''}`}
+                                        onClick={handleDownloadReport}
+                                        disabled={isDownloading}
+                                    >
+                                        <MdPictureAsPdf size={14} /> {isDownloading ? 'Downloading...' : 'Medical Report'}
+                                    </button>
+
                                     <button className="pv-edit-btn" onClick={() => onEdit && onEdit(patient)}>
                                         <MdEdit size={14} /> Edit
                                     </button>
@@ -288,7 +398,7 @@ const PatientView = ({ isOpen, onClose, patientId, onEdit }) => {
 
                         {/* 3. TAB CONTENT (Scrollable) */}
                         <div className="patient-tab-content">
-                            {activeTab === 'profile' && <ProfileTab patient={patient} />}
+                            {activeTab === 'profile' && <ProfileTab patient={patient} copyToClipboard={copyToClipboard} />}
                             {activeTab === 'medical-history' && <MedicalHistoryTab patientId={patientId} />}
                             {activeTab === 'prescription' && <PrescriptionTab patientId={patientId} />}
                             {activeTab === 'lab-results' && <LabResultTab patientId={patientId} />}
@@ -297,22 +407,92 @@ const PatientView = ({ isOpen, onClose, patientId, onEdit }) => {
                     </>
                 )}
             </div>
-        </div>
+        </div >
     );
 };
 
 // --- PROFILE TAB ---
-const ProfileTab = ({ patient }) => {
+const ProfileTab = ({ patient, copyToClipboard }) => {
     const address = patient.address || {};
 
     const copyAddress = () => {
-        const fullAddr = `${address.houseNumber || ''} ${address.street || ''} ${address.city || ''} ${address.state || ''} ${address.pincode || ''} ${address.country || ''}`;
-        navigator.clipboard.writeText(fullAddr);
+        // Build address from multiple possible field locations
+        let addressParts = [];
+
+        // Check address object first
+        if (address.houseNumber || address.houseNo) {
+            addressParts.push(address.houseNumber || address.houseNo);
+        }
+        if (address.street) {
+            addressParts.push(address.street);
+        }
+        if (address.city) {
+            addressParts.push(address.city);
+        }
+        if (address.state) {
+            addressParts.push(address.state);
+        }
+        if (address.pincode) {
+            addressParts.push(address.pincode);
+        }
+        if (address.country) {
+            addressParts.push(address.country);
+        }
+
+        // Fallback to direct patient fields if address object is empty
+        if (addressParts.length === 0) {
+            if (patient.houseNo) addressParts.push(patient.houseNo);
+            if (patient.street) addressParts.push(patient.street);
+            if (patient.city) addressParts.push(patient.city);
+            if (patient.state) addressParts.push(patient.state);
+            if (patient.pincode) addressParts.push(patient.pincode);
+            if (patient.country) addressParts.push(patient.country);
+        }
+
+        const fullAddr = addressParts.join(', ').trim();
+        copyToClipboard(fullAddr, 'Address');
     };
 
     const openMaps = () => {
-        const fullAddr = `${address.houseNumber || ''} ${address.street || ''}, ${address.city || ''}`;
-        window.open(`https://maps.google.com/?q=${encodeURIComponent(fullAddr)}`, '_blank');
+        // Try to build address from multiple possible field locations
+        let addressParts = [];
+
+        // Check address object first
+        if (address.houseNumber || address.houseNo) {
+            addressParts.push(address.houseNumber || address.houseNo);
+        }
+        if (address.street) {
+            addressParts.push(address.street);
+        }
+        if (address.city) {
+            addressParts.push(address.city);
+        }
+        if (address.state) {
+            addressParts.push(address.state);
+        }
+        if (address.pincode) {
+            addressParts.push(address.pincode);
+        }
+
+        // Fallback to direct patient fields if address object is empty
+        if (addressParts.length === 0) {
+            if (patient.houseNo) addressParts.push(patient.houseNo);
+            if (patient.street) addressParts.push(patient.street);
+            if (patient.city) addressParts.push(patient.city);
+            if (patient.state) addressParts.push(patient.state);
+            if (patient.pincode) addressParts.push(patient.pincode);
+        }
+
+        const fullAddr = addressParts.join(', ').trim();
+
+        if (!fullAddr || fullAddr === '') {
+            alert('No address information available to open in maps');
+            return;
+        }
+
+        // Open Google Maps with the address
+        const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddr)}`;
+        window.open(mapsUrl, '_blank');
     };
 
     return (
@@ -423,21 +603,45 @@ const MedicalHistoryTab = ({ patientId }) => {
     const fetchHistory = async () => {
         setLoading(true);
         try {
-            const data = await patientsService.fetchPatientAppointments(patientId);
+            // Fetch both appointments and scanned medical history
+            const [appointments, scannedHistory] = await Promise.all([
+                patientsService.fetchPatientAppointments(patientId),
+                prescriptionService.fetchMedicalHistory(patientId)
+            ]);
 
-            // Map backend fields to UI fields
-            // Backend: appointmentDate, appointmentTime, condition, status, notes
-            // UI: title, date, category, notes, reason
-            const mappedData = (Array.isArray(data) ? data : []).map(apt => ({
-                ...apt,
+            // Map backend appointments to UI fields
+            const mappedAppointments = (Array.isArray(appointments) ? appointments : []).map(apt => ({
+                id: apt._id || apt.id,
                 title: apt.condition || apt.title || apt.reason || 'Medical Checkup',
-                date: apt.appointmentDate ? `${apt.appointmentDate} ${apt.appointmentTime || ''}` : apt.date,
+                date: apt.startAt || (apt.appointmentDate ? `${apt.appointmentDate} ${apt.appointmentTime || ''}` : apt.date),
                 reason: apt.notes || apt.reason || '',
-                category: apt.type || 'General',
-                status: apt.status || 'Scheduled'
+                category: apt.appointmentType || apt.type || 'Consultation',
+                notes: apt.notes || '',
+                status: apt.status || 'Scheduled',
+                pdfId: apt.pdfId || (apt.metadata && apt.metadata.pdfId),
+                type: 'appointment'
             }));
 
-            setHistoryData(mappedData);
+            // Map scanned history records
+            const mappedScanned = (Array.isArray(scannedHistory) ? scannedHistory : []).map(record => ({
+                id: record._id || record.id,
+                title: record.title || 'Scanned Record',
+                date: record.recordDate || record.reportDate || record.uploadDate,
+                reason: record.diagnosis || record.notes || '',
+                category: record.category || record.intent || 'Medical History',
+                notes: record.notes || record.diagnosis || '',
+                pdfId: record.pdfId,
+                type: 'scanned'
+            }));
+
+            // Combine and sort by date descending
+            const combined = [...mappedAppointments, ...mappedScanned].sort((a, b) => {
+                const dateA = new Date(a.date || 0);
+                const dateB = new Date(b.date || 0);
+                return dateB - dateA;
+            });
+
+            setHistoryData(combined);
         } catch (error) {
             console.error('Failed to fetch medical history:', error);
             setHistoryData([]);
@@ -483,7 +687,6 @@ const MedicalHistoryTab = ({ patientId }) => {
                             <th>Date</th>
                             <th>Category</th>
                             <th>Notes</th>
-                            <th>Document</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -492,7 +695,7 @@ const MedicalHistoryTab = ({ patientId }) => {
                         {/* Loading */}
                         {loading && (
                             <tr>
-                                <td colSpan="6" className="text-center">
+                                <td colSpan="5" className="text-center">
                                     Loading medical history...
                                 </td>
                             </tr>
@@ -501,7 +704,7 @@ const MedicalHistoryTab = ({ patientId }) => {
                         {/* No Data */}
                         {!loading && filteredData.length === 0 && (
                             <tr>
-                                <td colSpan="6" className="text-center">
+                                <td colSpan="5" className="text-center">
                                     No Records Found
                                 </td>
                             </tr>
@@ -528,16 +731,19 @@ const MedicalHistoryTab = ({ patientId }) => {
                                         {item.notes || item.description || '—'}
                                     </td>
                                     <td>
-                                        {item.reportStatus === 'completed' && (
-                                            <button className="pv-btn-text-icon red">
-                                                <MdPictureAsPdf className="icon-red" /> View
+                                        {item.pdfId ? (
+                                            <button
+                                                className="pv-btn-action-circle"
+                                                onClick={() => reportService.viewPdf(item.pdfId)}
+                                                title="View Document"
+                                            >
+                                                <MdPictureAsPdf className="icon-red" />
+                                            </button>
+                                        ) : (
+                                            <button className="pv-btn-action-circle" title="View Details">
+                                                <MdVisibility />
                                             </button>
                                         )}
-                                    </td>
-                                    <td>
-                                        <button className="pv-btn-action-circle">
-                                            <MdVisibility />
-                                        </button>
                                     </td>
                                 </tr>
                             ))}
@@ -610,7 +816,6 @@ const PrescriptionTab = ({ patientId }) => {
                             <th>Duration</th>
                             <th>Instructions</th>
                             <th>Date</th>
-                            <th>Document</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -619,7 +824,7 @@ const PrescriptionTab = ({ patientId }) => {
                         {/* Loading */}
                         {loading && (
                             <tr>
-                                <td colSpan="8" className="text-center">
+                                <td colSpan="7" className="text-center">
                                     Loading prescriptions...
                                 </td>
                             </tr>
@@ -628,7 +833,7 @@ const PrescriptionTab = ({ patientId }) => {
                         {/* No Data */}
                         {!loading && prescriptions.length === 0 && (
                             <tr>
-                                <td colSpan="8" className="text-center">
+                                <td colSpan="7" className="text-center">
                                     No Prescriptions Found
                                 </td>
                             </tr>
@@ -653,14 +858,19 @@ const PrescriptionTab = ({ patientId }) => {
                                             : '—'}
                                     </td>
                                     <td>
-                                        <button className="pv-btn-text-icon red">
-                                            <MdPictureAsPdf className="icon-red" /> View
-                                        </button>
-                                    </td>
-                                    <td>
-                                        <button className="pv-btn-action-circle">
-                                            <MdVisibility />
-                                        </button>
+                                        {item.pdfId ? (
+                                            <button
+                                                className="pv-btn-action-circle"
+                                                onClick={() => reportService.viewPdf(item.pdfId)}
+                                                title="View Prescription"
+                                            >
+                                                <MdPictureAsPdf className="icon-red" />
+                                            </button>
+                                        ) : (
+                                            <button className="pv-btn-action-circle" title="View Details">
+                                                <MdVisibility />
+                                            </button>
+                                        )}
                                     </td>
                                 </tr>
                             ))}
@@ -791,9 +1001,19 @@ const LabResultTab = ({ patientId }) => {
                                         </span>
                                     </td>
                                     <td>
-                                        <button className="pv-btn-action-circle">
-                                            <MdVisibility />
-                                        </button>
+                                        {item.pdfId ? (
+                                            <button
+                                                className="pv-btn-action-circle"
+                                                onClick={() => reportService.viewPdf(item.pdfId)}
+                                                title="View Report"
+                                            >
+                                                <MdPictureAsPdf />
+                                            </button>
+                                        ) : (
+                                            <button className="pv-btn-action-circle" disabled title="No PDF available">
+                                                <MdVisibility />
+                                            </button>
+                                        )}
                                     </td>
                                 </tr>
                             ))}

@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-// import { useNavigate } from 'react-router-dom'; // Reserved for future navigation
+import React, { useState, useEffect, useRef } from 'react';
+import Calendar from 'react-calendar';
+import 'react-calendar/dist/Calendar.css';
 import './Appointments.css';
 import appointmentsService from '../../../services/appointmentsService';
 // import patientsService from '../../../services/patientsService'; // Reserved for future use
@@ -251,58 +252,118 @@ const Header = () => (
   </div>
 );
 
-const FilterBar = ({ activeTab, onTabChange, searchQuery, onSearchChange }) => (
-  <div className="filter-bar-container">
-    <div className="search-wrapper">
-      <span className="search-icon-lg"><Icons.Search /></span>
-      <input
-        type="text"
-        placeholder="Search by patient name, doctor, or status..."
-        className="search-input-lg"
-        value={searchQuery}
-        onChange={(e) => onSearchChange(e.target.value)}
-      />
-    </div>
+const FilterBar = ({
+  activeTab,
+  onTabChange,
+  searchQuery,
+  onSearchChange,
+  selectedDate,
+  onDateChange,
+  showCalendar,
+  setShowCalendar
+}) => {
+  const calendarRef = useRef(null);
 
-    <div className="filter-right-group">
-      <div className="tabs-wrapper">
-        <button
-          className={`tab-btn ${activeTab === 'all' ? 'active' : ''}`}
-          onClick={() => onTabChange('all')}
-        >
-          All
-        </button>
-        <button
-          className={`tab-btn ${activeTab === 'scheduled' ? 'active' : ''}`}
-          onClick={() => onTabChange('scheduled')}
-        >
-          Scheduled
-        </button>
-        <button
-          className={`tab-btn ${activeTab === 'confirmed' ? 'active' : ''}`}
-          onClick={() => onTabChange('confirmed')}
-        >
-          Confirmed
-        </button>
-        <button
-          className={`tab-btn ${activeTab === 'pending' ? 'active' : ''}`}
-          onClick={() => onTabChange('pending')}
-        >
-          Pending
-        </button>
-        <button
-          className={`tab-btn ${activeTab === 'cancelled' ? 'active' : ''}`}
-          onClick={() => onTabChange('cancelled')}
-        >
-          Cancelled
-        </button>
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (calendarRef.current && !calendarRef.current.contains(event.target)) {
+        setShowCalendar(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [setShowCalendar]);
+
+  const handleDateSelect = (date) => {
+    const localDate = new Date(date.getTime() - (date.getTimezoneOffset() * 60000))
+      .toISOString().split('T')[0];
+
+    // Toggle behavior: If clicking the already selected date, clear the filter
+    if (localDate === selectedDate) {
+      onDateChange(null);
+    } else {
+      onDateChange(localDate);
+    }
+    setShowCalendar(false);
+  };
+
+  return (
+    <div className="filter-bar-container">
+      <div className="search-wrapper">
+        <span className="search-icon-lg"><Icons.Search /></span>
+        <input
+          type="text"
+          placeholder="Search by patient name, doctor, or status..."
+          className="search-input-lg"
+          value={searchQuery}
+          onChange={(e) => onSearchChange(e.target.value)}
+        />
       </div>
-      <button className="btn-filter-date">
-        Filter by Date <span style={{ fontSize: '11px', marginLeft: '2px' }}>▼</span>
-      </button>
+
+      <div className="filter-right-group">
+        <div className="tabs-wrapper">
+          <button
+            className={`tab-btn ${activeTab === 'all' ? 'active' : ''}`}
+            onClick={() => onTabChange('all')}
+          >
+            All
+          </button>
+          <button
+            className={`tab-btn ${activeTab === 'scheduled' ? 'active' : ''}`}
+            onClick={() => onTabChange('scheduled')}
+          >
+            Scheduled
+          </button>
+          <button
+            className={`tab-btn ${activeTab === 'confirmed' ? 'active' : ''}`}
+            onClick={() => onTabChange('confirmed')}
+          >
+            Confirmed
+          </button>
+          <button
+            className={`tab-btn ${activeTab === 'pending' ? 'active' : ''}`}
+            onClick={() => onTabChange('pending')}
+          >
+            Pending
+          </button>
+          <button
+            className={`tab-btn ${activeTab === 'cancelled' ? 'active' : ''}`}
+            onClick={() => onTabChange('cancelled')}
+          >
+            Cancelled
+          </button>
+        </div>
+
+        <div className="calendar-filter-wrapper" ref={calendarRef}>
+          <button
+            className={`btn-filter-date ${selectedDate ? 'active' : ''}`}
+            onClick={() => setShowCalendar(!showCalendar)}
+          >
+            <Icons.Calendar />
+            {selectedDate ? formatDate(selectedDate) : 'Filter by Date'}
+            <span style={{ fontSize: '11px', marginLeft: '4px' }}>▼</span>
+          </button>
+
+          {selectedDate && (
+            <button className="btn-clear-date-mini" onClick={() => onDateChange(null)} title="Clear date filter">
+              <Icons.Close />
+            </button>
+          )}
+
+          {showCalendar && (
+            <div className="calendar-dropdown">
+              <Calendar
+                onChange={handleDateSelect}
+                value={selectedDate ? new Date(selectedDate) : new Date()}
+                className="premium-calendar"
+              />
+            </div>
+          )}
+        </div>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 // --- HELPER FUNCTIONS ---
 
@@ -330,6 +391,16 @@ const getDoctorTextColor = (index) => {
 const formatDate = (dateStr) => {
   if (!dateStr) return 'Not set';
   try {
+    // Check for YYYY-MM-DD format
+    const ymdRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (ymdRegex.test(dateStr)) {
+      const [year, month, day] = dateStr.split('-').map(Number);
+      // Create date object using local components (months are 0-indexed)
+      const date = new Date(year, month - 1, day);
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    // Fallback for other formats
     const date = new Date(dateStr);
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   } catch {
@@ -417,10 +488,8 @@ const transformAppointment = (apt, index) => {
     patientFullName = `${p.firstName || ''} ${p.lastName || ''}`.trim();
     gender = p.gender || '';
 
-    // Extract patient code from metadata
-    if (p.metadata && typeof p.metadata === 'object') {
-      patientCode = p.metadata.patientCode || '';
-    }
+    // Extract patient code from root or metadata
+    patientCode = p.patientCode || (p.metadata && typeof p.metadata === 'object' ? p.metadata.patientCode : '');
   } else if (typeof apt.patientId === 'string') {
     patientIdStr = apt.patientId;
     patientFullName = apt.clientName || '';
@@ -495,11 +564,12 @@ const transformAppointment = (apt, index) => {
     doctorColor: getDoctorColor(index),
     doctorTextColor: getDoctorTextColor(index),
     date: formatDate(date),
+    rawDate: date, // Keep raw YYYY-MM-DD for filtering
     time: time || 'Not set',
     service: apt.appointmentType || reason || 'Consultation',
-    status: apt.status || 'Scheduled',
+    status: apt.status ? (apt.status.charAt(0).toUpperCase() + apt.status.slice(1).toLowerCase()) : 'Scheduled',
     gender: gender || 'Male',
-    condition: extractCondition(apt.patientId)
+    condition: reason || extractCondition(apt.patientId) // Prioritize appointment reason over general condition
   };
 };
 
@@ -509,11 +579,19 @@ const Appointments = () => {
   // const navigate = useNavigate(); // Reserved for future navigation
   const [activeTab, setActiveTab] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedDate, setSelectedDate] = useState(null);
+  const [showCalendar, setShowCalendar] = useState(false);
   const [allAppointments, setAllAppointments] = useState([]);
   const [filteredAppointments, setFilteredAppointments] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage] = useState(8);
   const [isLoading, setIsLoading] = useState(true);
+  const [notification, setNotification] = useState(null);
+
+  const showNotification = (message, type = 'success') => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), 3000);
+  };
 
   // Modal states
   const [showViewModal, setShowViewModal] = useState(false);
@@ -553,7 +631,7 @@ const Appointments = () => {
         setFilteredAppointments(transformed);
       } catch (error) {
         console.error('❌ Failed to fetch appointments:', error);
-        alert('Failed to load appointments: ' + error.message);
+        showNotification('Failed to load appointments from server.', 'error');
         // Fallback to mock data if API fails
         setAllAppointments(MOCK_APPOINTMENTS);
         setFilteredAppointments(MOCK_APPOINTMENTS);
@@ -577,19 +655,24 @@ const Appointments = () => {
   useEffect(() => {
     let result = allAppointments;
     if (activeTab !== 'all') {
-      result = result.filter(a => a.status.toLowerCase() === activeTab);
+      result = result.filter(a => a.status.toLowerCase() === activeTab.toLowerCase());
+    }
+
+    if (selectedDate) {
+      result = result.filter(a => a.rawDate === selectedDate);
     }
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       result = result.filter(a =>
         a.patientName.toLowerCase().includes(q) ||
         a.patientId.toLowerCase().includes(q) ||
-        a.doctor.toLowerCase().includes(q)
+        a.doctor.toLowerCase().includes(q) ||
+        a.status.toLowerCase().includes(q)
       );
     }
     setFilteredAppointments(result);
     setCurrentPage(1);
-  }, [activeTab, searchQuery, allAppointments]);
+  }, [activeTab, searchQuery, selectedDate, allAppointments]);
 
   const indexOfLastRow = currentPage * rowsPerPage;
   const indexOfFirstRow = indexOfLastRow - rowsPerPage;
@@ -707,7 +790,6 @@ const Appointments = () => {
       if (!doctorData || typeof doctorData !== 'object') {
         console.error('❌ Could not extract doctor data from appointment');
         console.error('Available appointment data:', appointment);
-        alert('Unable to load doctor details. Doctor information not found.');
         return;
       }
 
@@ -740,7 +822,6 @@ const Appointments = () => {
       setShowDoctorDialog(true);
     } catch (error) {
       console.error('❌ Error loading doctor details:', error);
-      alert('Failed to load doctor details: ' + error.message);
     }
   };
 
@@ -749,21 +830,81 @@ const Appointments = () => {
     setSelectedDoctor(null);
   };
 
+  // Handle quick status toggle from table
+  const handleStatusToggle = async (appointment) => {
+    // Only cycle through statuses that match the main page tabs and form options
+    const statuses = ['Scheduled', 'Confirmed', 'Pending', 'Cancelled'];
+
+    console.log('🎯 [handleStatusToggle] Starting status toggle for appointment:', {
+      appointmentId: appointment.id,
+      currentStatus: appointment.status,
+      availableStatuses: statuses
+    });
+
+    const currentIndex = statuses.indexOf(appointment.status);
+
+    if (currentIndex === -1) {
+      console.warn('⚠️ Current status not in cycle list, defaulting to Scheduled');
+      const nextStatus = 'Scheduled';
+
+      try {
+        console.log(`🔄 Setting status to: ${nextStatus}`);
+        await appointmentsService.updateAppointmentStatus(appointment.id, nextStatus);
+        showNotification(`Appointment status updated to ${nextStatus}`, 'success');
+        await refreshAppointments();
+      } catch (error) {
+        console.error('❌ Failed to update status:', error);
+        console.error('Error details:', {
+          message: error.message,
+          response: error.response?.data,
+          status: error.response?.status
+        });
+        showNotification(`Failed to update status: ${error.response?.data?.message || error.message}`, 'error');
+      }
+      return;
+    }
+
+    const nextIndex = (currentIndex + 1) % statuses.length;
+    const nextStatus = statuses[nextIndex];
+
+    try {
+      console.log(`🔄 Toggling status: ${appointment.status} -> ${nextStatus}`);
+      console.log(`📡 Calling API: updateAppointmentStatus(${appointment.id}, ${nextStatus})`);
+
+      const result = await appointmentsService.updateAppointmentStatus(appointment.id, nextStatus);
+
+      console.log('✅ Status update successful:', result);
+      showNotification(`Appointment status updated to ${nextStatus}`, 'success');
+      await refreshAppointments();
+    } catch (error) {
+      console.error('❌ Failed to update status:', error);
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        appointmentId: appointment.id,
+        attemptedStatus: nextStatus
+      });
+      showNotification(`Failed to update status: ${error.response?.data?.message || error.message}`, 'error');
+    }
+  };
+
   // Handle delete appointment
   const handleDelete = async (appointment) => {
-    const confirmed = window.confirm(`Delete appointment for ${appointment.patientName}?`);
-    if (!confirmed) return;
+    if (!window.confirm(`Are you sure you want to delete the appointment for ${appointment.patientName}?`)) {
+      return;
+    }
     try {
       setIsLoading(true);
       await appointmentsService.deleteAppointment(appointment.id);
       console.log('✅ Deleted appointment:', appointment.id);
-      alert(`Deleted appointment for ${appointment.patientName}`);
+      showNotification('Appointment deleted successfully', 'success');
 
       // Refresh appointments list
       await refreshAppointments();
     } catch (error) {
       console.error('❌ Failed to delete appointment:', error);
-      alert('Failed to delete appointment: ' + error.message);
+      showNotification('Failed to delete appointment', 'error');
       setIsLoading(false);
     }
   };
@@ -771,11 +912,26 @@ const Appointments = () => {
   return (
     <div className="dashboard-container">
       <Header />
+      {notification && (
+        <div className={`modern-notification ${notification.type}`}>
+          <div className="notif-content">
+            <span className="notif-icon">
+              {notification.type === 'success' ? '✅' : '❌'}
+            </span>
+            <span className="notif-msg">{notification.message}</span>
+          </div>
+          <button className="notif-close" onClick={() => setNotification(null)}>×</button>
+        </div>
+      )}
       <FilterBar
         activeTab={activeTab}
         onTabChange={setActiveTab}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
+        selectedDate={selectedDate}
+        onDateChange={setSelectedDate}
+        showCalendar={showCalendar}
+        setShowCalendar={setShowCalendar}
       />
       <div className="table-card">
         <div className="modern-table-wrapper">
@@ -873,7 +1029,11 @@ const Appointments = () => {
 
                     {/* STATUS */}
                     <td>
-                      <span className={`status-pill ${apt.status.toLowerCase()}`}>
+                      <span
+                        className={`status-pill ${apt.status.toLowerCase()} status-editable clickable`}
+                        onClick={() => handleStatusToggle(apt)}
+                        title="Click to change status"
+                      >
                         {apt.status}
                       </span>
                     </td>

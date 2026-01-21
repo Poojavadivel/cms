@@ -8,6 +8,7 @@ import React, { useState, useEffect } from 'react';
 import { MdClose, MdSave, MdDelete } from 'react-icons/md';
 import './AppointmentEditModal.css';
 import appointmentsService from '../../services/appointmentsService';
+import { AppointmentDraft } from '../../models/AppointmentDraft';
 
 const AppointmentEditModal = ({ isOpen, onClose, appointmentId, onSuccess }) => {
   // eslint-disable-next-line no-unused-vars
@@ -63,9 +64,9 @@ const AppointmentEditModal = ({ isOpen, onClose, appointmentId, onSuccess }) => 
         const patient = data.patientId;
         clientName = `${patient.firstName || ''} ${patient.lastName || ''}`.trim();
         phoneNumber = patient.phone || patient.phoneNumber || '';
-        patientIdValue = patient.metadata?.patientCode || patient._id || '';
+        patientIdValue = patient._id || '';
         if (patient.gender) gender = patient.gender;
-        
+
         console.log('✅ Extracted patient details:', {
           clientName,
           phoneNumber,
@@ -77,7 +78,7 @@ const AppointmentEditModal = ({ isOpen, onClose, appointmentId, onSuccess }) => 
       // Extract date and time from startAt if date/time not present
       let appointmentDate = data.date || '';
       let appointmentTime = data.time || '';
-      
+
       if (!appointmentDate && data.startAt) {
         const startDate = new Date(data.startAt);
         appointmentDate = startDate.toISOString().split('T')[0]; // YYYY-MM-DD
@@ -109,7 +110,7 @@ const AppointmentEditModal = ({ isOpen, onClose, appointmentId, onSuccess }) => 
         heartRate: data.heartRate || '',
         spo2: data.spo2 || ''
       });
-      
+
       console.log('✅ Form data populated successfully');
     } catch (err) {
       console.error('❌ Failed to load appointment:', err);
@@ -130,14 +131,31 @@ const AppointmentEditModal = ({ isOpen, onClose, appointmentId, onSuccess }) => 
     setError('');
 
     try {
-      const updateData = {
-        ...formData,
-        metadata: {
-          ...formData.metadata,
-          gender: formData.gender
-        }
-      };
+      // Use AppointmentDraft to structure the data correctly for the backend
+      const draft = new AppointmentDraft({
+        id: appointmentId,
+        clientName: formData.clientName,
+        patientId: formData.patientId,
+        phoneNumber: formData.phoneNumber,
+        gender: formData.gender,
+        date: formData.date,
+        time: formData.time,
+        appointmentType: formData.appointmentType,
+        mode: formData.mode,
+        priority: formData.priority,
+        status: formData.status,
+        durationMinutes: parseInt(formData.durationMinutes) || 20,
+        location: formData.location,
+        chiefComplaint: formData.chiefComplaint,
+        notes: formData.notes,
+        heightCm: formData.heightCm ? parseFloat(formData.heightCm) : null,
+        weightKg: formData.weightKg ? parseFloat(formData.weightKg) : null,
+        bp: formData.bp || null,
+        heartRate: formData.heartRate ? parseInt(formData.heartRate) : null,
+        spo2: formData.spo2 ? parseInt(formData.spo2) : null
+      });
 
+      const updateData = draft.toJSON();
       await appointmentsService.updateAppointment(appointmentId, updateData);
 
       if (onSuccess) await onSuccess();
@@ -186,12 +204,12 @@ const AppointmentEditModal = ({ isOpen, onClose, appointmentId, onSuccess }) => 
         {/* NEO BODY */}
         <div className="neo-body">
           {error && (
-            <div style={{ 
-              padding: '12px 16px', 
-              backgroundColor: '#FEE2E2', 
-              border: '1px solid #FCA5A5', 
-              borderRadius: '8px', 
-              color: '#991B1B', 
+            <div style={{
+              padding: '12px 16px',
+              backgroundColor: '#FEE2E2',
+              border: '1px solid #FCA5A5',
+              borderRadius: '8px',
+              color: '#991B1B',
               marginBottom: '16px',
               fontSize: '14px'
             }}>
@@ -206,98 +224,99 @@ const AppointmentEditModal = ({ isOpen, onClose, appointmentId, onSuccess }) => 
               </div>
             </div>
           ) : (
-          <form onSubmit={handleSubmit} id="editForm">
-            <div className="neo-form-grid">
+            <form onSubmit={handleSubmit} id="editForm">
+              <div className="neo-form-grid">
 
-              {/* Patient Info */}
-              <div className="neo-input-group">
-                <div className="neo-input-box">
-                  <label className="neo-input-label">Patient Name</label>
-                  <input 
-                    className="neo-input" 
-                    name="clientName" 
-                    value={formData.clientName} 
-                    onChange={handleChange} 
-                    required 
-                    disabled={isSaving}
-                    readOnly
-                    style={{ backgroundColor: '#F9FAFB', cursor: 'not-allowed' }}
-                  />
+                {/* Patient Info */}
+                <div className="neo-input-group">
+                  <div className="neo-input-box">
+                    <label className="neo-input-label">Patient Name</label>
+                    <input
+                      className="neo-input"
+                      name="clientName"
+                      value={formData.clientName}
+                      onChange={handleChange}
+                      required
+                      disabled={isSaving}
+                      readOnly
+                      style={{ backgroundColor: '#F9FAFB', cursor: 'not-allowed' }}
+                    />
+                  </div>
                 </div>
-              </div>
 
-              <div className="neo-input-group">
-                <div className="neo-input-box">
-                  <label className="neo-input-label">Contact Number</label>
-                  <input 
-                    className="neo-input" 
-                    name="phoneNumber" 
-                    value={formData.phoneNumber} 
-                    onChange={handleChange} 
-                    disabled={isSaving}
-                    readOnly
-                    style={{ backgroundColor: '#F9FAFB', cursor: 'not-allowed' }}
-                  />
+                <div className="neo-input-group">
+                  <div className="neo-input-box">
+                    <label className="neo-input-label">Contact Number</label>
+                    <input
+                      className="neo-input"
+                      name="phoneNumber"
+                      value={formData.phoneNumber}
+                      onChange={handleChange}
+                      disabled={isSaving}
+                      readOnly
+                      style={{ backgroundColor: '#F9FAFB', cursor: 'not-allowed' }}
+                    />
+                  </div>
                 </div>
-              </div>
 
-              {/* Date & Time */}
-              <div className="neo-input-group">
-                <div className="neo-input-box">
-                  <label className="neo-input-label">Appointment Date</label>
-                  <input type="date" className="neo-input" name="date" value={formData.date} onChange={handleChange} required disabled={isSaving} />
+                {/* Date & Time */}
+                <div className="neo-input-group">
+                  <div className="neo-input-box">
+                    <label className="neo-input-label">Appointment Date</label>
+                    <input type="date" className="neo-input" name="date" value={formData.date} onChange={handleChange} required disabled={isSaving} />
+                  </div>
                 </div>
-              </div>
 
-              <div className="neo-input-group">
-                <div className="neo-input-box">
-                  <label className="neo-input-label">Time</label>
-                  <input type="time" className="neo-input" name="time" value={formData.time} onChange={handleChange} required disabled={isSaving} />
+                <div className="neo-input-group">
+                  <div className="neo-input-box">
+                    <label className="neo-input-label">Time</label>
+                    <input type="time" className="neo-input" name="time" value={formData.time} onChange={handleChange} required disabled={isSaving} />
+                  </div>
                 </div>
-              </div>
 
-              {/* Status & Type */}
-              <div className="neo-input-group">
-                <div className="neo-input-box">
-                  <label className="neo-input-label">Type</label>
-                  <select className="neo-input" name="appointmentType" value={formData.appointmentType} onChange={handleChange} disabled={isSaving}>
-                    <option value="">Select Type</option>
-                    <option value="Consultation">Consultation</option>
-                    <option value="Follow-up">Follow-up</option>
-                    <option value="Emergency">Emergency</option>
-                  </select>
+                {/* Status & Type */}
+                <div className="neo-input-group">
+                  <div className="neo-input-box">
+                    <label className="neo-input-label">Type</label>
+                    <select className="neo-input" name="appointmentType" value={formData.appointmentType} onChange={handleChange} disabled={isSaving}>
+                      <option value="">Select Type</option>
+                      <option value="Consultation">Consultation</option>
+                      <option value="Follow-up">Follow-up</option>
+                      <option value="Emergency">Emergency</option>
+                    </select>
+                  </div>
                 </div>
-              </div>
 
-              <div className="neo-input-group">
-                <div className="neo-input-box">
-                  <label className="neo-input-label">Status</label>
-                  <select className="neo-input" name="status" value={formData.status} onChange={handleChange} disabled={isSaving}>
-                    <option value="Scheduled">Scheduled</option>
-                    <option value="Confirmed">Confirmed</option>
-                    <option value="Cancelled">Cancelled</option>
-                    <option value="Completed">Completed</option>
-                  </select>
+                <div className="neo-input-group">
+                  <div className="neo-input-box">
+                    <label className="neo-input-label">Status</label>
+                    <select className="neo-input" name="status" value={formData.status} onChange={handleChange} disabled={isSaving}>
+                      <option value="Scheduled">Scheduled</option>
+                      <option value="Confirmed">Confirmed</option>
+                      <option value="Pending">Pending</option>
+                      <option value="Cancelled">Cancelled</option>
+                      <option value="Completed">Completed</option>
+                    </select>
+                  </div>
                 </div>
-              </div>
 
-              {/* Notes - Full Width */}
-              <div className="neo-input-group neo-full-width">
-                <div className="neo-input-box">
-                  <label className="neo-input-label">Chief Complaint / Notes</label>
-                  <textarea className="neo-input" rows="3" name="chiefComplaint" value={formData.chiefComplaint} onChange={handleChange} disabled={isSaving} placeholder="Reason for visit..." />
+                {/* Notes - Full Width */}
+                <div className="neo-input-group neo-full-width">
+                  <div className="neo-input-box">
+                    <label className="neo-input-label">Chief Complaint / Notes</label>
+                    <textarea className="neo-input" rows="3" name="chiefComplaint" value={formData.chiefComplaint} onChange={handleChange} disabled={isSaving} placeholder="Reason for visit..." />
+                  </div>
                 </div>
-              </div>
 
-              <div className="neo-input-group neo-full-width">
-                <div className="neo-input-box">
-                  <label className="neo-input-label">Doctor's Internal Notes</label>
-                  <textarea className="neo-input" rows="2" name="notes" value={formData.notes} onChange={handleChange} disabled={isSaving} placeholder="Private notes..." />
+                <div className="neo-input-group neo-full-width">
+                  <div className="neo-input-box">
+                    <label className="neo-input-label">Doctor's Internal Notes</label>
+                    <textarea className="neo-input" rows="2" name="notes" value={formData.notes} onChange={handleChange} disabled={isSaving} placeholder="Private notes..." />
+                  </div>
                 </div>
-              </div>
 
-            </div>
-          </form>
+              </div>
+            </form>
           )}
         </div>
 

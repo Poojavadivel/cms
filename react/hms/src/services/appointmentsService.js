@@ -37,17 +37,17 @@ const createAxiosInstance = () => {
 export const fetchAppointments = async () => {
   try {
     logger.apiRequest('GET', AppointmentEndpoints.getAll);
-    
+
     const axiosInstance = createAxiosInstance();
     const response = await axiosInstance.get(AppointmentEndpoints.getAll);
-    
+
     logger.apiResponse('GET', AppointmentEndpoints.getAll, response.status);
-    
+
     // Handle both array response and object with data property
-    const appointments = Array.isArray(response.data) 
-      ? response.data 
+    const appointments = Array.isArray(response.data)
+      ? response.data
       : response.data.appointments || response.data.data || [];
-    
+
     logger.success('APPOINTMENTS', `Fetched ${appointments.length} appointments`);
     return appointments;
   } catch (error) {
@@ -64,14 +64,14 @@ export const fetchAppointments = async () => {
 export const fetchAppointmentById = async (id) => {
   try {
     logger.apiRequest('GET', AppointmentEndpoints.getById(id));
-    
+
     const axiosInstance = createAxiosInstance();
     const response = await axiosInstance.get(AppointmentEndpoints.getById(id));
-    
+
     logger.apiResponse('GET', AppointmentEndpoints.getById(id), response.status);
-    
+
     const appointment = response.data.appointment || response.data.data || response.data;
-    
+
     logger.success('APPOINTMENTS', `Fetched appointment ${id}`);
     return appointment;
   } catch (error) {
@@ -88,13 +88,13 @@ export const fetchAppointmentById = async (id) => {
 export const createAppointment = async (appointmentData) => {
   try {
     logger.apiRequest('POST', AppointmentEndpoints.create, appointmentData);
-    
+
     const axiosInstance = createAxiosInstance();
     const response = await axiosInstance.post(AppointmentEndpoints.create, appointmentData);
-    
+
     logger.apiResponse('POST', AppointmentEndpoints.create, response.status);
     logger.success('APPOINTMENTS', 'Appointment created successfully');
-    
+
     return response.data.appointment || response.data.data || response.data;
   } catch (error) {
     logger.apiError('POST', AppointmentEndpoints.create, error);
@@ -111,13 +111,13 @@ export const createAppointment = async (appointmentData) => {
 export const updateAppointment = async (id, appointmentData) => {
   try {
     logger.apiRequest('PUT', AppointmentEndpoints.update(id), appointmentData);
-    
+
     const axiosInstance = createAxiosInstance();
     const response = await axiosInstance.put(AppointmentEndpoints.update(id), appointmentData);
-    
+
     logger.apiResponse('PUT', AppointmentEndpoints.update(id), response.status);
     logger.success('APPOINTMENTS', `Appointment ${id} updated successfully`);
-    
+
     return response.data.appointment || response.data.data || response.data;
   } catch (error) {
     logger.apiError('PUT', AppointmentEndpoints.update(id), error);
@@ -133,13 +133,13 @@ export const updateAppointment = async (id, appointmentData) => {
 export const deleteAppointment = async (id) => {
   try {
     logger.apiRequest('DELETE', AppointmentEndpoints.delete(id));
-    
+
     const axiosInstance = createAxiosInstance();
     const response = await axiosInstance.delete(AppointmentEndpoints.delete(id));
-    
+
     logger.apiResponse('DELETE', AppointmentEndpoints.delete(id), response.status);
     logger.success('APPOINTMENTS', `Appointment ${id} deleted successfully`);
-    
+
     return true;
   } catch (error) {
     logger.apiError('DELETE', AppointmentEndpoints.delete(id), error);
@@ -154,16 +154,16 @@ export const deleteAppointment = async (id) => {
 export const fetchPatients = async () => {
   try {
     logger.apiRequest('GET', PatientEndpoints.getAll);
-    
+
     const axiosInstance = createAxiosInstance();
     const response = await axiosInstance.get(PatientEndpoints.getAll);
-    
+
     logger.apiResponse('GET', PatientEndpoints.getAll, response.status);
-    
-    const patients = Array.isArray(response.data) 
-      ? response.data 
+
+    const patients = Array.isArray(response.data)
+      ? response.data
       : response.data.patients || response.data.data || [];
-    
+
     logger.success('PATIENTS', `Fetched ${patients.length} patients`);
     return patients;
   } catch (error) {
@@ -181,13 +181,13 @@ export const fetchPatients = async () => {
 export const updateAppointmentStatus = async (id, status) => {
   try {
     logger.apiRequest('PATCH', AppointmentEndpoints.updateStatus(id), { status });
-    
+
     const axiosInstance = createAxiosInstance();
     const response = await axiosInstance.patch(AppointmentEndpoints.updateStatus(id), { status });
-    
+
     logger.apiResponse('PATCH', AppointmentEndpoints.updateStatus(id), response.status);
     logger.success('APPOINTMENTS', `Appointment ${id} status updated to ${status}`);
-    
+
     return response.data.appointment || response.data.data || response.data;
   } catch (error) {
     logger.apiError('PATCH', AppointmentEndpoints.updateStatus(id), error);
@@ -202,16 +202,16 @@ export const updateAppointmentStatus = async (id, status) => {
 export const fetchTodayAppointments = async () => {
   try {
     logger.apiRequest('GET', AppointmentEndpoints.getToday);
-    
+
     const axiosInstance = createAxiosInstance();
     const response = await axiosInstance.get(AppointmentEndpoints.getToday);
-    
+
     logger.apiResponse('GET', AppointmentEndpoints.getToday, response.status);
-    
-    const appointments = Array.isArray(response.data) 
-      ? response.data 
+
+    const appointments = Array.isArray(response.data)
+      ? response.data
       : response.data.appointments || response.data.data || [];
-    
+
     logger.success('APPOINTMENTS', `Fetched ${appointments.length} today's appointments`);
     return appointments;
   } catch (error) {
@@ -227,16 +227,16 @@ export const fetchTodayAppointments = async () => {
 export const fetchUpcomingAppointments = async () => {
   try {
     logger.apiRequest('GET', AppointmentEndpoints.getUpcoming);
-    
+
     const axiosInstance = createAxiosInstance();
     const response = await axiosInstance.get(AppointmentEndpoints.getUpcoming);
-    
+
     logger.apiResponse('GET', AppointmentEndpoints.getUpcoming, response.status);
-    
-    const appointments = Array.isArray(response.data) 
-      ? response.data 
+
+    const appointments = Array.isArray(response.data)
+      ? response.data
       : response.data.appointments || response.data.data || [];
-    
+
     logger.success('APPOINTMENTS', `Fetched ${appointments.length} upcoming appointments`);
     return appointments;
   } catch (error) {
@@ -259,13 +259,13 @@ export const addIntake = async (payload, patientId) => {
 
     const endpoint = IntakeEndpoints.create(patientId);
     logger.apiRequest('POST', endpoint, payload);
-    
+
     const axiosInstance = createAxiosInstance();
     const response = await axiosInstance.post(endpoint, payload);
-    
+
     logger.apiResponse('POST', endpoint, response.status);
     logger.success('INTAKE', 'Intake data saved successfully');
-    
+
     // Normalize response shape
     const result = response.data.data || response.data.intake || response.data;
     return result;

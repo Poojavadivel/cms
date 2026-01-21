@@ -1,46 +1,11 @@
-// routes/doctors.js
 const express = require('express');
 const mongoose = require('mongoose');
 const { User, Patient, Appointment } = require('../Models'); // expects Mongoose models
 const auth = require('../Middleware/Auth');
+const { getNextSequence, formatCode } = require('../utils/sequence');
 const router = express.Router();
 
-/**
- * Helper: atomically increment and return next sequence for given key.
- * Robustly handles driver responses where result.value may be undefined.
- */
-async function getNextSequence(key) {
-  const col = mongoose.connection.collection('counters');
 
-  // Try atomic increment with upsert
-  const result = await col.findOneAndUpdate(
-    { _id: key },
-    { $inc: { seq: 1 } },
-    { returnDocument: 'after', upsert: true } // 'after' for modern drivers; older drivers use { returnOriginal: false }
-  );
-
-  // result may be { value: { _id, seq } } or result.value may be undefined depending on driver/version.
-  if (result && result.value && typeof result.value.seq === 'number') {
-    return result.value.seq;
-  }
-
-  // Fallback: read the document (in case driver didn't return value)
-  const doc = await col.findOne({ _id: key });
-  if (doc && typeof doc.seq === 'number') {
-    return doc.seq;
-  }
-
-  // If still missing (extremely unlikely), create initial counter document and return 1
-  await col.insertOne({ _id: key, seq: 1 });
-  return 1;
-}
-
-/**
- * Format seq into PAT-xxx (zero-padded to 3 digits, extend width as needed)
- */
-function formatPatientCode(seq, width = 3) {
-  return `PAT-${String(seq).padStart(width, '0')}`;
-}
 
 // -----------------------------
 // GET /doctors
@@ -140,21 +105,31 @@ router.get('/patients/my', auth, async (req, res) => {
       try {
         p.metadata = p.metadata || {};
 
-        if (!p.metadata.patientCode) {
+        if (!p.patientCode && !p.metadata.patientCode) {
           const seq = await getNextSequence('patientCode');
-          const code = formatPatientCode(seq, 3);
-          await Patient.updateOne({ _id: p._id }, { $set: { 'metadata.patientCode': code } });
+          const code = formatCode('PAT', seq, 5);
+          await Patient.updateOne(
+            { _id: p._id },
+            { $set: { patientCode: code, 'metadata.patientCode': code } }
+          );
+          p.patientCode = code;
           p.metadata.patientCode = code;
           console.log(`🔖 Assigned patientCode=${code} to patient ${p._id}`);
+        } else if (!p.patientCode && p.metadata.patientCode) {
+          // Sync metadata to root if root is missing
+          const code = p.metadata.patientCode;
+          await Patient.updateOne({ _id: p._id }, { $set: { patientCode: code } });
+          p.patientCode = code;
         }
       } catch (err) {
         console.error('💥 Failed to generate/save patientCode for', p._id, err);
-        if (!p.metadata.patientCode) {
-          p.metadata.patientCode = `PAT-${String(p._id).slice(0, 6).toUpperCase()}`;
+        if (!p.patientCode && !p.metadata.patientCode) {
+          p.patientCode = `PAT-${String(p._id).slice(0, 6).toUpperCase()}`;
+          p.metadata.patientCode = p.patientCode;
         }
       }
 
-      p.patientCode = p.metadata.patientCode;
+      p.patientCode = p.patientCode || p.metadata.patientCode;
       const lv = lastVisitMap[p._id];
       p.lastVisitDate = lv ? new Date(lv).toISOString() : null;
     }

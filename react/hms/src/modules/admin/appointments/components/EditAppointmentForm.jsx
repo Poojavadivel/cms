@@ -39,7 +39,8 @@ const EditAppointmentForm = ({ appointmentId, onClose, onUpdate, onDelete }) => 
     spo2: '',
     phoneNumber: '',
     gender: 'Male',
-    sendReminder: true
+    sendReminder: true,
+    patientCode: ''
   });
 
   const loadAppointment = useCallback(async () => {
@@ -65,11 +66,13 @@ const EditAppointmentForm = ({ appointmentId, onClose, onUpdate, onDelete }) => 
       let patientId = '';
       let phoneNumber = '';
       let gender = 'Male';
+      let patientCode = '';
 
       if (data.patientId && typeof data.patientId === 'object') {
         const p = data.patientId;
         patientName = `${p.firstName || ''} ${p.lastName || ''}`.trim();
-        patientId = p.metadata?.patientCode || p._id || '';
+        patientId = p._id || '';
+        patientCode = p.metadata?.patientCode || p._id || '';
 
         if (typeof p.phone === 'object') {
           phoneNumber = p.phone?.phone || p.phone?.number || '';
@@ -81,6 +84,7 @@ const EditAppointmentForm = ({ appointmentId, onClose, onUpdate, onDelete }) => 
       } else if (data.patientId) {
         patientId = data.patientId;
         patientName = data.clientName || '';
+        patientCode = data.patientId;
       }
 
       const metadata = data.metadata || {};
@@ -106,7 +110,8 @@ const EditAppointmentForm = ({ appointmentId, onClose, onUpdate, onDelete }) => 
         spo2: vitals.spo2 || '',
         phoneNumber: metadata.phoneNumber || phoneNumber,
         gender: metadata.gender || gender,
-        sendReminder: metadata.reminder !== undefined ? metadata.reminder : true
+        sendReminder: metadata.reminder !== undefined ? metadata.reminder : true,
+        patientCode: patientCode
       });
     } catch (error) {
       console.error('Failed to load appointment:', error);
@@ -145,13 +150,13 @@ const EditAppointmentForm = ({ appointmentId, onClose, onUpdate, onDelete }) => 
         chiefComplaint: formData.chiefComplaint,
         mode: formData.mode,
         priority: formData.priority,
-        durationMinutes: formData.duration,
+        durationMinutes: parseInt(formData.duration) || 20,
         status: formData.status,
-        heightCm: formData.heightCm || null,
-        weightKg: formData.weightKg || null,
+        heightCm: formData.heightCm ? parseFloat(formData.heightCm) : null,
+        weightKg: formData.weightKg ? parseFloat(formData.weightKg) : null,
         bp: formData.bp || null,
-        heartRate: formData.heartRate || null,
-        spo2: formData.spo2 || null,
+        heartRate: formData.heartRate ? parseInt(formData.heartRate) : null,
+        spo2: formData.spo2 ? parseInt(formData.spo2) : null,
         phoneNumber: formData.phoneNumber,
         gender: formData.gender,
         reminder: formData.sendReminder
@@ -299,8 +304,8 @@ const EditAppointmentForm = ({ appointmentId, onClose, onUpdate, onDelete }) => 
                 />
                 <InputField
                   label="Patient ID"
-                  value={formData.patientId}
-                  onChange={(val) => handleChange('patientId', val)}
+                  value={formData.patientCode}
+                  onChange={() => { }}
                   placeholder="ID"
                   disabled
                 />
@@ -388,18 +393,27 @@ const EditAppointmentForm = ({ appointmentId, onClose, onUpdate, onDelete }) => 
                     { value: 'High', label: 'High' }
                   ]}
                 />
-                <SelectField
-                  label="Status"
-                  value={formData.status}
-                  onChange={(val) => handleChange('status', val)}
-                  options={[
-                    { value: 'Scheduled', label: 'Scheduled' },
-                    { value: 'Confirmed', label: 'Confirmed' },
-                    { value: 'Pending', label: 'Pending' },
-                    { value: 'Cancelled', label: 'Cancelled' },
-                    { value: 'Completed', label: 'Completed' }
-                  ]}
-                />
+                <div className="flex flex-col">
+                  <label className="text-sm font-semibold text-gray-700 mb-2">Status</label>
+                  <div className="grid grid-cols-2 gap-4">
+                    {['Scheduled', 'Confirmed', 'Pending', 'Cancelled'].map(s => (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => handleChange('status', s)}
+                        className={`py-3 px-4 rounded-xl border-2 font-bold transition-all text-center ${formData.status === s
+                          ? s === 'Scheduled' ? 'border-blue-600 bg-blue-50 text-blue-700'
+                            : s === 'Confirmed' ? 'border-green-600 bg-green-50 text-green-700'
+                              : s === 'Pending' ? 'border-amber-600 bg-amber-50 text-amber-700'
+                                : 'border-red-600 bg-red-50 text-red-700'
+                          : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                          }`}
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
             </FormSection>
 

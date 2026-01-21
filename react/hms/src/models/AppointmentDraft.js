@@ -49,8 +49,8 @@ export class AppointmentDraft {
   }
 
   get dateTime() {
-    const timeObj = typeof this.time === 'string' 
-      ? this._parseTimeString(this.time) 
+    const timeObj = typeof this.time === 'string'
+      ? this._parseTimeString(this.time)
       : this.time;
     return new Date(
       this.date.getFullYear(),
@@ -70,10 +70,10 @@ export class AppointmentDraft {
   }
 
   toJSON() {
-    const timeObj = typeof this.time === 'string' 
-      ? this._parseTimeString(this.time) 
+    const timeObj = typeof this.time === 'string'
+      ? this._parseTimeString(this.time)
       : this.time;
-    
+
     const startAt = new Date(
       this.date.getFullYear(),
       this.date.getMonth(),
@@ -83,7 +83,7 @@ export class AppointmentDraft {
     );
 
     return {
-      _id: this.id,
+      // _id: this.id, // ID is usually in the URL for PUT/PATCH, removing from body to avoid strict server errors
       patientId: this.patientId,
       appointmentType: this.appointmentType,
       startAt: startAt.toISOString(),
