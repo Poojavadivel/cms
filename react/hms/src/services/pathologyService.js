@@ -11,7 +11,7 @@ const getAuthToken = () => {
 };
 
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'https://hms-dev.onrender.com/api',
+  baseURL: (process.env.REACT_APP_API_URL || 'https://hms-dev.onrender.com/api').replace(/\/$/, '') + '/',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -25,7 +25,7 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-const API_BASE = '/pathology';
+const API_BASE = 'pathology';
 
 const PathologyEndpoints = {
   getAll: `${API_BASE}/reports`,
@@ -35,27 +35,28 @@ const PathologyEndpoints = {
   delete: (id) => `${API_BASE}/reports/${id}`,
   downloadReport: (id) => `${API_BASE}/reports/${id}/download`,
   uploadReport: `${API_BASE}/reports/upload`,
+  properReport: (id) => `reports-proper/pathology/${id}`,
 };
 
 const fetchReports = async (params = {}) => {
   try {
     const { page = 0, limit = 100, q = '', status = '' } = params;
-    
+
     let url = PathologyEndpoints.getAll;
     const queryParams = [];
     if (page) queryParams.push(`page=${page}`);
     if (limit) queryParams.push(`limit=${limit}`);
     if (q) queryParams.push(`q=${encodeURIComponent(q)}`);
     if (status) queryParams.push(`status=${encodeURIComponent(status)}`);
-    
+
     if (queryParams.length > 0) {
       url += `?${queryParams.join('&')}`;
     }
-    
+
     logger.apiRequest('GET', url);
     const response = await api.get(url);
     logger.apiResponse('GET', url, response.status, response.data);
-    
+
     let reportsData;
     if (Array.isArray(response.data)) {
       reportsData = response.data;
@@ -66,7 +67,7 @@ const fetchReports = async (params = {}) => {
     } else {
       reportsData = [];
     }
-    
+
     return reportsData.map(report => ({
       id: report._id || report.id,
       reportId: report.reportId || report.reportNumber || report._id,
@@ -80,6 +81,7 @@ const fetchReports = async (params = {}) => {
       doctorName: report.doctorName || report.doctor?.name || '',
       technician: report.technician || report.uploaderName || '',
       fileRef: report.fileRef || report.file || null,
+      patientCode: report.patientCode || 'PAT-00',
       remarks: report.remarks || report.notes || ''
     }));
   } catch (error) {
@@ -94,7 +96,28 @@ const fetchReportById = async (id) => {
     logger.apiRequest('GET', PathologyEndpoints.getById(id));
     const response = await api.get(PathologyEndpoints.getById(id));
     logger.apiResponse('GET', PathologyEndpoints.getById(id), response.status, response.data);
-    return response.data;
+
+    // Map the response to match UI expectations
+    const report = response.data.report || response.data;
+    return {
+      id: report._id || report.id,
+      reportId: report.reportId || report.reportNumber || report._id,
+      patientName: report.patientName || report.patient?.name || 'Unknown',
+      patientId: report.patientId || report.patient?._id || '',
+      patientCode: report.patientCode || 'PAT-00',
+      patientAge: report.patientAge || report.patient?.age || 'N/A',
+      patientGender: report.patientGender || report.patient?.gender || 'N/A',
+      testName: report.testName || report.testType || 'N/A',
+      testType: report.testType || report.category || 'General',
+      collectionDate: report.collectionDate || report.createdAt || '',
+      reportDate: report.reportDate || report.updatedAt || '',
+      status: report.status || (report.fileRef ? 'Completed' : 'Pending'),
+      doctorName: report.doctorName || report.doctor?.name || 'N/A',
+      technician: report.technician || report.uploaderName || 'N/A',
+      fileRef: report.fileRef || report.file || null,
+      remarks: report.remarks || report.notes || '',
+      testResults: report.testResults || report.results || []
+    };
   } catch (error) {
     logger.apiError('GET', PathologyEndpoints.getById(id), error);
     throw new Error(error.response?.data?.message || 'Failed to fetch report');
@@ -103,8 +126,12 @@ const fetchReportById = async (id) => {
 
 const createReport = async (reportData) => {
   try {
+    const isFormData = reportData instanceof FormData;
+    // Let browser set the boundary for FormData
+    const config = isFormData ? { headers: { 'Content-Type': undefined } } : {};
+
     logger.apiRequest('POST', PathologyEndpoints.create, reportData);
-    const response = await api.post(PathologyEndpoints.create, reportData);
+    const response = await api.post(PathologyEndpoints.create, reportData, config);
     logger.apiResponse('POST', PathologyEndpoints.create, response.status, response.data);
     return response.data;
   } catch (error) {
@@ -115,8 +142,12 @@ const createReport = async (reportData) => {
 
 const updateReport = async (id, reportData) => {
   try {
+    const isFormData = reportData instanceof FormData;
+    // Let browser set the boundary for FormData
+    const config = isFormData ? { headers: { 'Content-Type': undefined } } : {};
+
     logger.apiRequest('PUT', PathologyEndpoints.update(id), reportData);
-    const response = await api.put(PathologyEndpoints.update(id), reportData);
+    const response = await api.put(PathologyEndpoints.update(id), reportData, config);
     logger.apiResponse('PUT', PathologyEndpoints.update(id), response.status, response.data);
     return response.data;
   } catch (error) {
@@ -137,26 +168,164 @@ const deleteReport = async (id) => {
   }
 };
 
-const downloadReport = async (id, reportName = 'report') => {
+const downloadReport = async (id, fileName) => {
   try {
     logger.apiRequest('GET', PathologyEndpoints.downloadReport(id));
     const response = await api.get(PathologyEndpoints.downloadReport(id), {
       responseType: 'blob'
     });
-    
-    const url = window.URL.createObjectURL(new Blob([response.data]));
+
+    // Check if the response type is JSON (server error)
+    if (response.data.type === 'application/json') {
+      const text = await response.data.text();
+      const errorData = JSON.parse(text);
+      throw new Error(errorData.message || 'Report file not found on server');
+    }
+
+    // Extract filename from header if possible
+    let finalFileName = fileName || `report_${id}.pdf`;
+    const contentDisposition = response.headers['content-disposition'];
+    if (contentDisposition) {
+      const fileNameMatch = contentDisposition.match(/filename="?(.+)"?/);
+      if (fileNameMatch?.[1]) finalFileName = fileNameMatch[1];
+    }
+
+    // Ensure .pdf extension
+    if (!finalFileName.toLowerCase().endsWith('.pdf')) {
+      finalFileName += '.pdf';
+    }
+
+    const url = window.URL.createObjectURL(response.data);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `${reportName}_${id}.pdf`);
+    link.setAttribute('download', finalFileName);
     document.body.appendChild(link);
     link.click();
     link.remove();
-    
+    window.URL.revokeObjectURL(url);
+
     logger.apiResponse('GET', PathologyEndpoints.downloadReport(id), response.status, 'File downloaded');
-    return response.data;
+    return true;
   } catch (error) {
     logger.apiError('GET', PathologyEndpoints.downloadReport(id), error);
-    throw new Error(error.response?.data?.message || 'Failed to download report');
+
+    // Attempt to extract descriptive error message
+    let message = 'Failed to download report';
+    if (error.response?.data instanceof Blob && error.response.data.type === 'application/json') {
+      const text = await error.response.data.text();
+      const errorData = JSON.parse(text);
+      message = errorData.message || message;
+    } else if (error.message) {
+      message = error.message;
+    }
+
+    throw new Error(message);
+  }
+};
+
+// New helper to fetch the PDF blob and print it directly
+const printReport = async (id) => {
+  try {
+    logger.apiRequest('GET', PathologyEndpoints.downloadReport(id));
+    const response = await api.get(PathologyEndpoints.downloadReport(id), {
+      responseType: 'blob'
+    });
+
+    // Check if the response type is JSON (server error)
+    if (response.data.type === 'application/json') {
+      const text = await response.data.text();
+      const errorData = JSON.parse(text);
+      throw new Error(errorData.message || 'Report file not available for printing');
+    }
+
+    const url = window.URL.createObjectURL(response.data);
+
+    // Create a hidden iframe for printing
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    iframe.src = url;
+    document.body.appendChild(iframe);
+
+    iframe.onload = () => {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+      // Clean up after small delay to ensure print dialog opened
+      setTimeout(() => {
+        document.body.removeChild(iframe);
+        window.URL.revokeObjectURL(url);
+      }, 2000);
+    };
+
+    logger.apiResponse('GET', PathologyEndpoints.downloadReport(id), response.status, 'Print triggered');
+    return true;
+  } catch (error) {
+    logger.apiError('GET', PathologyEndpoints.downloadReport(id), error);
+
+    let message = 'Failed to print report';
+    if (error.response?.data instanceof Blob && error.response.data.type === 'application/json') {
+      const text = await error.response.data.text();
+      const errorData = JSON.parse(text);
+      message = errorData.message || message;
+    } else if (error.message) {
+      message = error.message;
+    }
+
+    throw new Error(message);
+  }
+};
+
+const downloadProperReport = async (id, fileName) => {
+  try {
+    const url = PathologyEndpoints.properReport(id);
+    const response = await api.get(url, { responseType: 'blob' });
+    const urlBlob = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = urlBlob;
+    link.setAttribute('download', fileName || `Report_${id}.pdf`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(urlBlob);
+    return true;
+  } catch (error) {
+    if (error.response?.data instanceof Blob && error.response.data.type === 'application/json') {
+      const text = await error.response.data.text();
+      const errorData = JSON.parse(text);
+      console.error('❌ Server error during PDF download:', errorData);
+      throw new Error(errorData.message || errorData.error || 'Failed to download report');
+    }
+    console.error('Failed to download proper report:', error);
+    throw error;
+  }
+};
+
+const printProperReport = async (id) => {
+  try {
+    const url = PathologyEndpoints.properReport(id);
+    const response = await api.get(url, { responseType: 'blob' });
+    const pdfUrl = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    iframe.src = pdfUrl;
+    document.body.appendChild(iframe);
+    iframe.onload = () => {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+      setTimeout(() => {
+        document.body.removeChild(iframe);
+        window.URL.revokeObjectURL(pdfUrl);
+      }, 2000);
+    };
+    return true;
+  } catch (error) {
+    if (error.response?.data instanceof Blob && error.response.data.type === 'application/json') {
+      const text = await error.response.data.text();
+      const errorData = JSON.parse(text);
+      console.error('❌ Server error during PDF print:', errorData);
+      throw new Error(errorData.message || errorData.error || 'Failed to print report');
+    }
+    console.error('Failed to print proper report:', error);
+    throw error;
   }
 };
 
@@ -166,7 +335,10 @@ const pathologyServiceExport = {
   createReport,
   updateReport,
   deleteReport,
-  downloadReport
+  downloadReport,
+  printReport,
+  downloadProperReport,
+  printProperReport
 };
 
 export default pathologyServiceExport;

@@ -2,10 +2,7 @@
 // PROPER PDF reports using pdfmake
 const express = require('express');
 const router = express.Router();
-const Patient = require('../Models/Patient');
-const User = require('../Models/User');
-const Staff = require('../Models/Staff');
-const Appointment = require('../Models/Appointment');
+const { Patient, User, Staff, Appointment, LabReport, Payroll } = require('../Models');
 const auth = require('../Middleware/Auth');
 const properPdfGen = require('../utils/properPdfGenerator');
 
@@ -47,7 +44,7 @@ router.get('/patient/:patientId', auth, async (req, res) => {
 
     // Generate PDF
     const docDefinition = properPdfGen.generatePatientReport(patient, doctor, appointments);
-    
+
     // Set response headers
     const filename = `${patientName.replace(/\s+/g, '_')}_Medical_Report_${Date.now()}.pdf`;
     res.setHeader('Content-Type', 'application/pdf');
@@ -56,7 +53,7 @@ router.get('/patient/:patientId', auth, async (req, res) => {
     // Stream PDF using browser-compatible approach
     const PdfPrinter = require('pdfmake');
     const vfsFonts = require('pdfmake/build/vfs_fonts');
-    
+
     const printer = new PdfPrinter({
       Roboto: {
         normal: Buffer.from(vfsFonts['Roboto-Regular.ttf'], 'base64'),
@@ -65,7 +62,7 @@ router.get('/patient/:patientId', auth, async (req, res) => {
         bolditalics: Buffer.from(vfsFonts['Roboto-MediumItalic.ttf'], 'base64')
       }
     });
-    
+
     const pdfDoc = printer.createPdfKitDocument(docDefinition);
     pdfDoc.pipe(res);
     pdfDoc.end();
@@ -73,10 +70,10 @@ router.get('/patient/:patientId', auth, async (req, res) => {
   } catch (error) {
     console.error('Error generating patient report:', error);
     if (!res.headersSent) {
-      res.status(500).json({ 
-        success: false, 
+      res.status(500).json({
+        success: false,
         message: 'Failed to generate report',
-        error: error.message 
+        error: error.message
       });
     }
   }
@@ -110,33 +107,33 @@ router.get('/doctor/:doctorId', auth, async (req, res) => {
     const doctorName = `${doctor.firstName} ${doctor.lastName || ''}`.trim();
 
     console.log(`\n[Proper Report] Original Doctor ID: ${doctorId}`);
-    
+
     // SMART ID RESOLUTION
     let queryDoctorId = doctorId;
-    
+
     // Check if doctor is from Staff, then find User
     const isFromUser = await User.findById(doctorId).select('_id').lean();
     if (!isFromUser && doctor.email) {
       console.log(`[Proper Report] Staff ID detected - searching for User...`);
-      const userDoctor = await User.findOne({ 
-        email: doctor.email, 
-        role: 'doctor' 
+      const userDoctor = await User.findOne({
+        email: doctor.email,
+        role: 'doctor'
       }).select('_id').lean();
-      
+
       if (userDoctor) {
         queryDoctorId = userDoctor._id;
         console.log(`[Proper Report] ✅ Using User ID: ${queryDoctorId}`);
       }
     }
-    
+
     // Fetch patients using RESOLVED doctor ID
-    const patients = await Patient.find({ 
-      doctorId: queryDoctorId, 
-      deleted_at: null 
+    const patients = await Patient.find({
+      doctorId: queryDoctorId,
+      deleted_at: null
     })
-    .select('firstName lastName age gender bloodGroup phone email address vitals allergies createdAt')
-    .lean();
-    
+      .select('firstName lastName age gender bloodGroup phone email address vitals allergies createdAt')
+      .lean();
+
     console.log(`[Proper Report] Found ${patients.length} patients for doctorId: ${queryDoctorId}`);
 
     // Fetch ALL appointments using RESOLVED doctor ID
@@ -145,17 +142,17 @@ router.get('/doctor/:doctorId', auth, async (req, res) => {
       .populate('patientId', 'firstName lastName phone')
       .sort({ startAt: -1 })
       .lean();
-    
+
     console.log(`[Proper Report] Total appointments found: ${totalAppointments.length}`);
 
     // Filter weekly appointments (last 7 days)
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
-    
-    const weekAppointments = totalAppointments.filter(apt => 
+
+    const weekAppointments = totalAppointments.filter(apt =>
       new Date(apt.startAt) >= weekAgo
     );
-    
+
     console.log(`[Proper Report] Weekly appointments found: ${weekAppointments.length}`);
 
     // Add patient names to both appointment lists
@@ -176,11 +173,11 @@ router.get('/doctor/:doctorId', auth, async (req, res) => {
 
     // Get active patients (patients with upcoming appointments)
     const now = new Date();
-    
+
     // DEBUG: Check if doctorId exists in appointments collection
     const anyAppointment = await Appointment.findOne().select('doctorId').lean();
     console.log(`[Doctor Report] Sample appointment doctorId: ${anyAppointment?.doctorId}`);
-    
+
     const upcomingAppointmentsGrouped = await Appointment.aggregate([
       {
         $match: {
@@ -200,7 +197,7 @@ router.get('/doctor/:doctorId', auth, async (req, res) => {
         }
       }
     ]);
-    
+
     console.log(`[Doctor Report] Active patients (with upcoming appointments): ${upcomingAppointmentsGrouped.length}`);
 
     const activePatientIds = upcomingAppointmentsGrouped.map(a => a._id);
@@ -229,9 +226,9 @@ router.get('/doctor/:doctorId', auth, async (req, res) => {
     console.log(`  - Week Appointments: ${weekAppointments.length}`);
     console.log(`  - Total Appointments: ${totalAppointments.length}`);
     console.log(`  - Active Patients: ${activePatients.length}`);
-    
+
     const docDefinition = properPdfGen.generateDoctorReport(doctor, patients, weekAppointments, totalAppointments, activePatients);
-    
+
     // Set response headers
     const filename = `${doctorName.replace(/\s+/g, '_')}_Performance_Report_${Date.now()}.pdf`;
     res.setHeader('Content-Type', 'application/pdf');
@@ -240,7 +237,7 @@ router.get('/doctor/:doctorId', auth, async (req, res) => {
     // Stream PDF
     const PdfPrinter = require('pdfmake');
     const vfsFonts = require('pdfmake/build/vfs_fonts');
-    
+
     const printer = new PdfPrinter({
       Roboto: {
         normal: Buffer.from(vfsFonts['Roboto-Regular.ttf'], 'base64'),
@@ -249,7 +246,7 @@ router.get('/doctor/:doctorId', auth, async (req, res) => {
         bolditalics: Buffer.from(vfsFonts['Roboto-MediumItalic.ttf'], 'base64')
       }
     });
-    
+
     const pdfDoc = printer.createPdfKitDocument(docDefinition);
     pdfDoc.pipe(res);
     pdfDoc.end();
@@ -281,7 +278,7 @@ router.get('/staff/:staffId', auth, async (req, res) => {
 
     // Generate PDF with staff information
     const docDefinition = properPdfGen.generateStaffReport(staff);
-    
+
     // Set response headers
     const filename = `${staffName.replace(/\s+/g, '_')}_Staff_Report_${Date.now()}.pdf`;
     res.setHeader('Content-Type', 'application/pdf');
@@ -290,7 +287,7 @@ router.get('/staff/:staffId', auth, async (req, res) => {
     // Stream PDF
     const PdfPrinter = require('pdfmake');
     const vfsFonts = require('pdfmake/build/vfs_fonts');
-    
+
     const printer = new PdfPrinter({
       Roboto: {
         normal: Buffer.from(vfsFonts['Roboto-Regular.ttf'], 'base64'),
@@ -299,7 +296,7 @@ router.get('/staff/:staffId', auth, async (req, res) => {
         bolditalics: Buffer.from(vfsFonts['Roboto-MediumItalic.ttf'], 'base64')
       }
     });
-    
+
     const pdfDoc = printer.createPdfKitDocument(docDefinition);
     pdfDoc.pipe(res);
     pdfDoc.end();
@@ -311,6 +308,132 @@ router.get('/staff/:staffId', auth, async (req, res) => {
         success: false,
         message: 'Failed to generate staff report',
         error: error.message
+      });
+    }
+  }
+});
+
+// Payroll Payslip Report
+router.get('/payroll/:id', auth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { Payroll } = require('../Models');
+
+    // Fetch payroll
+    const payroll = await Payroll.findById(id).lean();
+    if (!payroll) {
+      return res.status(404).json({ success: false, message: 'Payroll record not found' });
+    }
+
+    const filename = `Payslip_${payroll.staffName.replace(/\s+/g, '_')}_${payroll.payPeriodMonth}_${payroll.payPeriodYear}.pdf`;
+
+    // Generate PDF
+    const docDefinition = properPdfGen.generatePayslip(payroll);
+
+    // Set response headers
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+
+    // Stream PDF
+    const PdfPrinter = require('pdfmake');
+    const vfsFonts = require('pdfmake/build/vfs_fonts');
+
+    const printer = new PdfPrinter({
+      Roboto: {
+        normal: Buffer.from(vfsFonts['Roboto-Regular.ttf'], 'base64'),
+        bold: Buffer.from(vfsFonts['Roboto-Medium.ttf'], 'base64'),
+        italics: Buffer.from(vfsFonts['Roboto-Italic.ttf'], 'base64'),
+        bolditalics: Buffer.from(vfsFonts['Roboto-MediumItalic.ttf'], 'base64')
+      }
+    });
+
+    const pdfDoc = printer.createPdfKitDocument(docDefinition);
+    pdfDoc.pipe(res);
+    pdfDoc.end();
+
+  } catch (error) {
+    console.error('Error generating payslip:', error);
+    if (!res.headersSent) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to generate payslip',
+        error: error.message
+      });
+    }
+  }
+});
+
+// Pathology Report
+router.get('/pathology/:id', auth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { LabReport, Patient } = require('../Models');
+
+    // Fetch lab report
+    console.log(`[Pathology Report] Fetching lab report: ${id}`);
+    const report = await LabReport.findById(id).lean();
+    if (!report) {
+      console.warn(`[Pathology Report] Lab report not found: ${id}`);
+      return res.status(404).json({ success: false, message: 'Lab report not found' });
+    }
+
+    // Fetch patient
+    console.log(`[Pathology Report] Fetching patient: ${report.patientId}`);
+    const patient = await Patient.findById(report.patientId).lean();
+    if (!patient) {
+      console.warn(`[Pathology Report] Patient not found: ${report.patientId}`);
+      return res.status(404).json({ success: false, message: 'Patient not found' });
+    }
+
+    const filename = `Report_${(report.patientName || 'Patient').replace(/\s+/g, '_')}_${(report.testName || 'Test').replace(/\s+/g, '_')}.pdf`;
+
+    // Generate PDF
+    console.log(`[Pathology Report] Generating PDF definition...`);
+    const docDefinition = properPdfGen.generatePathologyReport(report, patient);
+
+    // Set response headers
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+
+    // Stream PDF
+    console.log(`[Pathology Report] Creating PDF printer and streaming...`);
+    const PdfPrinter = require('pdfmake');
+    const vfsFonts = require('pdfmake/build/vfs_fonts');
+
+    const printer = new PdfPrinter({
+      Roboto: {
+        normal: Buffer.from(vfsFonts['Roboto-Regular.ttf'], 'base64'),
+        bold: Buffer.from(vfsFonts['Roboto-Medium.ttf'], 'base64'),
+        italics: Buffer.from(vfsFonts['Roboto-Italic.ttf'], 'base64'),
+        bolditalics: Buffer.from(vfsFonts['Roboto-MediumItalic.ttf'], 'base64')
+      }
+    });
+
+    const pdfDoc = printer.createPdfKitDocument(docDefinition);
+    pdfDoc.pipe(res);
+    pdfDoc.end();
+    console.log(`[Pathology Report] ✅ PDF successfully streamed`);
+
+  } catch (error) {
+    console.error('❌ Error generating pathology report:', error);
+    const errorLog = {
+      message: error.message,
+      stack: error.stack,
+      reportId: req.params.id,
+      timestamp: new Date().toISOString()
+    };
+    try {
+      require('fs').writeFileSync('pathology_error.json', JSON.stringify(errorLog, null, 2));
+    } catch (fsErr) {
+      console.error('Failed to write error log file:', fsErr);
+    }
+
+    if (!res.headersSent) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to generate pathology report',
+        error: error.message,
+        stack: error.stack
       });
     }
   }

@@ -69,18 +69,25 @@ const fetchInvoices = async (params = {}) => {
 
     return invoicesData.map(payroll => ({
       id: payroll._id || payroll.id,
-      invoiceNumber: payroll.staffCode || payroll._id,
-      patientName: payroll.staffName || 'Unknown',
-      patientId: payroll.staffId || '',
+      invoiceNumber: payroll.metadata?.payrollCode || payroll.staffCode || payroll._id,
+      staffName: payroll.staffName || 'Unknown',
+      staffId: payroll.staffId || '',
+      staffCode: payroll.staffCode || '',
+      department: payroll.department || '',
+      designation: payroll.designation || '',
       date: payroll.paymentDate || payroll.createdAt || '',
+      month: payroll.payPeriodMonth,
+      year: payroll.payPeriodYear,
+      periodDisplay: payroll.payPeriodDisplay || `${payroll.payPeriodMonth}/${payroll.payPeriodYear}`,
       amount: parseFloat(payroll.grossSalary || payroll.totalEarnings || 0),
       paidAmount: parseFloat(payroll.netSalary || 0),
       balanceAmount: parseFloat((payroll.grossSalary || 0) - (payroll.netSalary || 0)),
       status: payroll.status || 'Pending',
       paymentMethod: payroll.paymentMode || '',
-      items: [],
+      items: (payroll.earnings || []).concat(payroll.deductions || []),
       discount: parseFloat(payroll.totalDeductions || 0),
-      tax: 0
+      tax: 0,
+      historyLog: payroll.historyLog || []
     }));
   } catch (error) {
     logger.apiError('GET', InvoiceEndpoints.getAll, error);

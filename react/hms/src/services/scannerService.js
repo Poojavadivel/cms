@@ -24,37 +24,40 @@ const getAuthToken = () => {
 export const scanAndExtractMedicalData = async (file, patientId) => {
   try {
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append('image', file);  // Backend expects 'image' field
     formData.append('patientId', patientId);
 
-    logger.apiRequest('POST', ScannerEndpoints.upload);
+    const endpoint = `${ScannerEndpoints.upload.replace('/upload', '/scan-medical')}`;
+    logger.apiRequest('POST', endpoint);
 
     const token = getAuthToken();
-    const response = await axios.post(ScannerEndpoints.upload, formData, {
+    const response = await axios.post(endpoint, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
         ...(token && { 'x-auth-token': token })
       }
     });
 
-    logger.apiResponse('POST', ScannerEndpoints.upload, response.status);
+    logger.apiResponse('POST', endpoint, response.status);
 
     const result = response.data;
-    
+
     logger.success('SCANNER', `Document scanned successfully for patient ${patientId}`);
 
+    // Handle the response from /scan-medical endpoint
     return {
-      medicalHistory: result.medicalHistory || '',
-      allergies: result.allergies || '',
-      medications: result.medications || '',
-      diagnosis: result.diagnosis || '',
-      testResults: result.testResults || [],
+      medicalHistory: result.extractedData?.medicalHistory || '',
+      allergies: result.extractedData?.allergies || '',
+      medications: result.extractedData?.medications || '',
+      diagnosis: result.extractedData?.diagnosis || '',
+      testResults: result.extractedData?.testResults || [],
       savedToPatient: result.savedToPatient || { saved: true },
-      warning: result.warning || null
+      warning: result.warning || null,
+      success: result.success || false
     };
   } catch (error) {
-    logger.apiError('POST', ScannerEndpoints.upload, error);
-    throw new Error(error.response?.data?.message || 'Failed to scan document');
+    logger.apiError('POST', 'scan-medical', error);
+    throw new Error(error.response?.data?.message || error.message || 'Failed to scan document');
   }
 };
 
@@ -76,7 +79,7 @@ export const getPatientReports = async (patientId) => {
     });
 
     logger.apiResponse('GET', ScannerEndpoints.getReports(patientId), response.status);
-    
+
     return response.data.reports || response.data || [];
   } catch (error) {
     logger.apiError('GET', ScannerEndpoints.getReports(patientId), error);

@@ -4,7 +4,7 @@
  * Shows complete pathology report details in a modal/page
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import pathologyService from '../../../services/pathologyService';
 import './PathologyDetail.css';
 
@@ -13,22 +13,23 @@ const PathologyDetail = ({ reportId, report, onClose }) => {
   const [isLoading, setIsLoading] = useState(!report);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('details');
+  const reportRef = useRef(null);
 
   useEffect(() => {
     if (!report && reportId) {
       loadReport();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reportId, report]);
 
   // Prevent body scroll when modal is open
   useEffect(() => {
     const htmlEl = document.documentElement;
     const bodyEl = document.body;
-    
+
     htmlEl.style.overflow = 'hidden';
     bodyEl.style.overflow = 'hidden';
-    
+
     return () => {
       htmlEl.style.overflow = '';
       bodyEl.style.overflow = '';
@@ -49,16 +50,34 @@ const PathologyDetail = ({ reportId, report, onClose }) => {
   };
 
   const handleDownload = async () => {
+    if (!reportData?.id) return;
     try {
-      await pathologyService.downloadReport(reportData.id, reportData.reportId);
-      alert('Report downloaded successfully!');
-    } catch (error) {
-      alert('Failed to download report: ' + error.message);
+      // 1. Try to download original file first
+      await pathologyService.downloadReport(reportData.id);
+    } catch (err) {
+      console.warn('No original file found, using professional generator fallback.');
+      try {
+        // 2. Fallback to professional generator
+        const fileName = `Report_${(reportData.patientName || 'Patient').replace(/\s+/g, '_')}_${(reportData.testName || 'Test').replace(/\s+/g, '_')}.pdf`;
+        await pathologyService.downloadProperReport(reportData.id, fileName);
+      } catch (genError) {
+        console.error('Download failed:', genError);
+        alert('Failed to download report: ' + genError.message);
+      }
     }
   };
 
-  const handlePrint = () => {
-    window.print();
+  const handlePrint = async () => {
+    if (!reportData?.id) {
+      alert('Report data not loaded yet.');
+      return;
+    }
+    try {
+      await pathologyService.printProperReport(reportData.id);
+    } catch (error) {
+      console.error('Print failed:', error);
+      alert('Failed to print report: ' + error.message);
+    }
   };
 
   const formatDate = (dateString) => {
@@ -117,12 +136,12 @@ const PathologyDetail = ({ reportId, report, onClose }) => {
 
   return (
     <div className="pathology-detail-overlay" onClick={onClose}>
-      <div className="pathology-detail-modal" onClick={(e) => e.stopPropagation()}>
+      <div className="pathology-detail-modal" onClick={(e) => e.stopPropagation()} ref={reportRef}>
         {/* Header */}
         <div className="detail-header">
           <div className="header-left">
-            <h2>Pathology Report</h2>
-            <span 
+            <h2>Pathology Report - {reportData.patientName}</h2>
+            <span
               className="status-badge"
               style={{ backgroundColor: getStatusColor(reportData.status) }}
             >
@@ -157,19 +176,19 @@ const PathologyDetail = ({ reportId, report, onClose }) => {
 
         {/* Tabs */}
         <div className="detail-tabs">
-          <button 
+          <button
             className={`tab ${activeTab === 'details' ? 'active' : ''}`}
             onClick={() => setActiveTab('details')}
           >
             Details
           </button>
-          <button 
+          <button
             className={`tab ${activeTab === 'results' ? 'active' : ''}`}
             onClick={() => setActiveTab('results')}
           >
             Test Results
           </button>
-          <button 
+          <button
             className={`tab ${activeTab === 'history' ? 'active' : ''}`}
             onClick={() => setActiveTab('history')}
           >
@@ -191,7 +210,7 @@ const PathologyDetail = ({ reportId, report, onClose }) => {
                   </div>
                   <div className="info-item">
                     <label>Patient ID</label>
-                    <p>{reportData.patientId || 'N/A'}</p>
+                    <p>{reportData.patientCode || reportData.patientId || 'N/A'}</p>
                   </div>
                   <div className="info-item">
                     <label>Age/Gender</label>
@@ -226,7 +245,7 @@ const PathologyDetail = ({ reportId, report, onClose }) => {
                   </div>
                   <div className="info-item">
                     <label>Status</label>
-                    <p><span 
+                    <p><span
                       className="status-pill"
                       style={{ backgroundColor: getStatusColor(reportData.status) }}
                     >{reportData.status}</span></p>
@@ -305,6 +324,7 @@ const PathologyDetail = ({ reportId, report, onClose }) => {
           )}
         </div>
       </div>
+
     </div>
   );
 };

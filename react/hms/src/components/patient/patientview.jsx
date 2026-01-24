@@ -592,6 +592,8 @@ const MedicalHistoryTab = ({ patientId }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [historyData, setHistoryData] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [selectedItem, setSelectedItem] = useState(null);
+    const [showDetailModal, setShowDetailModal] = useState(false);
 
     useEffect(() => {
         if (patientId) {
@@ -656,6 +658,16 @@ const MedicalHistoryTab = ({ patientId }) => {
             .toLowerCase()
             .includes(searchTerm.toLowerCase())
     );
+
+    const handleViewDetails = (item) => {
+        setSelectedItem(item);
+        setShowDetailModal(true);
+    };
+
+    const handleCloseDetailModal = () => {
+        setShowDetailModal(false);
+        setSelectedItem(null);
+    };
 
     return (
         <div className="pv-tab-container">
@@ -740,7 +752,11 @@ const MedicalHistoryTab = ({ patientId }) => {
                                                 <MdPictureAsPdf className="icon-red" />
                                             </button>
                                         ) : (
-                                            <button className="pv-btn-action-circle" title="View Details">
+                                            <button
+                                                className="pv-btn-action-circle"
+                                                title="View Details"
+                                                onClick={() => handleViewDetails(item)}
+                                            >
                                                 <MdVisibility />
                                             </button>
                                         )}
@@ -751,14 +767,367 @@ const MedicalHistoryTab = ({ patientId }) => {
                 </table>
             </div>
 
-            {/* Pagination (static for now) */}
-            <div className="pv-pagination">
-                <span>Page 1 of 1</span>
-                <div className="pv-page-controls">
-                    <button className="pv-page-btn" disabled>&lt;</button>
-                    <button className="pv-page-btn" disabled>&gt;</button>
+
+            {/* Medical History Detail Modal */}
+            {showDetailModal && selectedItem && (
+                <div
+                    style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: 9999,
+                        backdropFilter: 'blur(4px)',
+                        animation: 'fadeIn 0.2s ease-in-out'
+                    }}
+                    onClick={handleCloseDetailModal}
+                >
+                    <div
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                            backgroundColor: 'white',
+                            borderRadius: '16px',
+                            width: '90%',
+                            maxWidth: '700px',
+                            maxHeight: '85vh',
+                            overflow: 'hidden',
+                            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            animation: 'slideUp 0.3s ease-out'
+                        }}
+                    >
+                        {/* Modal Header */}
+                        <div style={{
+                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                            padding: '24px 28px',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
+                        }}>
+                            <div>
+                                <h2 style={{
+                                    margin: 0,
+                                    fontSize: '22px',
+                                    fontWeight: '700',
+                                    color: 'white',
+                                    letterSpacing: '-0.5px'
+                                }}>
+                                    Medical History Details
+                                </h2>
+                                <p style={{
+                                    margin: '4px 0 0 0',
+                                    fontSize: '13px',
+                                    color: 'rgba(255, 255, 255, 0.85)',
+                                    fontWeight: '400'
+                                }}>
+                                    {selectedItem.type === 'appointment' ? 'Appointment Record' : 'Scanned Medical Record'}
+                                </p>
+                            </div>
+                            <button
+                                onClick={handleCloseDetailModal}
+                                style={{
+                                    background: 'rgba(255, 255, 255, 0.2)',
+                                    border: 'none',
+                                    borderRadius: '50%',
+                                    width: '40px',
+                                    height: '40px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    cursor: 'pointer',
+                                    color: 'white',
+                                    transition: 'all 0.2s',
+                                    backdropFilter: 'blur(10px)'
+                                }}
+                                onMouseEnter={(e) => e.target.style.background = 'rgba(255, 255, 255, 0.3)'}
+                                onMouseLeave={(e) => e.target.style.background = 'rgba(255, 255, 255, 0.2)'}
+                            >
+                                <MdClose size={24} />
+                            </button>
+                        </div>
+
+                        {/* Modal Body */}
+                        <div style={{
+                            padding: '28px',
+                            overflowY: 'auto',
+                            flex: 1
+                        }}>
+                            {/* Title Card */}
+                            <div style={{
+                                background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
+                                padding: '20px',
+                                borderRadius: '12px',
+                                marginBottom: '24px',
+                                border: '1px solid #e2e8f0'
+                            }}>
+                                <h3 style={{
+                                    margin: 0,
+                                    fontSize: '18px',
+                                    fontWeight: '600',
+                                    color: '#1e293b',
+                                    lineHeight: '1.4'
+                                }}>
+                                    {selectedItem.title || 'Medical Record'}
+                                </h3>
+                            </div>
+
+                            {/* Details Grid */}
+                            <div style={{ display: 'grid', gap: '20px' }}>
+                                {/* Date */}
+                                <div style={{
+                                    display: 'flex',
+                                    alignItems: 'flex-start',
+                                    padding: '16px',
+                                    background: '#f8fafc',
+                                    borderRadius: '10px',
+                                    border: '1px solid #e2e8f0'
+                                }}>
+                                    <div style={{
+                                        background: '#3b82f6',
+                                        borderRadius: '8px',
+                                        padding: '10px',
+                                        marginRight: '16px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center'
+                                    }}>
+                                        <MdCalendarToday size={20} color="white" />
+                                    </div>
+                                    <div style={{ flex: 1 }}>
+                                        <div style={{
+                                            fontSize: '12px',
+                                            fontWeight: '600',
+                                            color: '#64748b',
+                                            textTransform: 'uppercase',
+                                            letterSpacing: '0.5px',
+                                            marginBottom: '4px'
+                                        }}>
+                                            Date
+                                        </div>
+                                        <div style={{
+                                            fontSize: '15px',
+                                            fontWeight: '600',
+                                            color: '#1e293b'
+                                        }}>
+                                            {selectedItem.date
+                                                ? new Date(selectedItem.date).toLocaleDateString('en-US', {
+                                                    weekday: 'long',
+                                                    year: 'numeric',
+                                                    month: 'long',
+                                                    day: 'numeric'
+                                                })
+                                                : 'Not specified'
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Category */}
+                                <div style={{
+                                    display: 'flex',
+                                    alignItems: 'flex-start',
+                                    padding: '16px',
+                                    background: '#f8fafc',
+                                    borderRadius: '10px',
+                                    border: '1px solid #e2e8f0'
+                                }}>
+                                    <div style={{
+                                        background: '#10b981',
+                                        borderRadius: '8px',
+                                        padding: '10px',
+                                        marginRight: '16px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center'
+                                    }}>
+                                        <MdMedicalServices size={20} color="white" />
+                                    </div>
+                                    <div style={{ flex: 1 }}>
+                                        <div style={{
+                                            fontSize: '12px',
+                                            fontWeight: '600',
+                                            color: '#64748b',
+                                            textTransform: 'uppercase',
+                                            letterSpacing: '0.5px',
+                                            marginBottom: '4px'
+                                        }}>
+                                            Category
+                                        </div>
+                                        <div style={{
+                                            fontSize: '15px',
+                                            fontWeight: '600',
+                                            color: '#1e293b'
+                                        }}>
+                                            {selectedItem.category || 'General'}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Reason (if available) */}
+                                {selectedItem.reason && (
+                                    <div style={{
+                                        padding: '16px',
+                                        background: '#fef3c7',
+                                        borderRadius: '10px',
+                                        border: '1px solid #fbbf24'
+                                    }}>
+                                        <div style={{
+                                            fontSize: '12px',
+                                            fontWeight: '600',
+                                            color: '#92400e',
+                                            textTransform: 'uppercase',
+                                            letterSpacing: '0.5px',
+                                            marginBottom: '8px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '6px'
+                                        }}>
+                                            <MdDescription size={16} />
+                                            Reason / Chief Complaint
+                                        </div>
+                                        <div style={{
+                                            fontSize: '14px',
+                                            color: '#78350f',
+                                            lineHeight: '1.6',
+                                            fontWeight: '500'
+                                        }}>
+                                            {selectedItem.reason}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Notes (if available) */}
+                                {selectedItem.notes && (
+                                    <div style={{
+                                        padding: '16px',
+                                        background: '#f0fdf4',
+                                        borderRadius: '10px',
+                                        border: '1px solid #86efac'
+                                    }}>
+                                        <div style={{
+                                            fontSize: '12px',
+                                            fontWeight: '600',
+                                            color: '#166534',
+                                            textTransform: 'uppercase',
+                                            letterSpacing: '0.5px',
+                                            marginBottom: '8px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '6px'
+                                        }}>
+                                            <MdDescription size={16} />
+                                            Clinical Notes
+                                        </div>
+                                        <div style={{
+                                            fontSize: '14px',
+                                            color: '#14532d',
+                                            lineHeight: '1.7',
+                                            whiteSpace: 'pre-wrap',
+                                            fontWeight: '400'
+                                        }}>
+                                            {selectedItem.notes}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Status (if available) */}
+                                {selectedItem.status && (
+                                    <div style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        padding: '16px',
+                                        background: '#f8fafc',
+                                        borderRadius: '10px',
+                                        border: '1px solid #e2e8f0'
+                                    }}>
+                                        <div style={{
+                                            fontSize: '12px',
+                                            fontWeight: '600',
+                                            color: '#64748b',
+                                            textTransform: 'uppercase',
+                                            letterSpacing: '0.5px'
+                                        }}>
+                                            Status
+                                        </div>
+                                        <div style={{
+                                            padding: '6px 16px',
+                                            borderRadius: '20px',
+                                            fontSize: '13px',
+                                            fontWeight: '600',
+                                            background: selectedItem.status === 'Completed' ? '#dcfce7' : '#fef3c7',
+                                            color: selectedItem.status === 'Completed' ? '#166534' : '#92400e',
+                                            border: `1px solid ${selectedItem.status === 'Completed' ? '#86efac' : '#fbbf24'}`
+                                        }}>
+                                            {selectedItem.status}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Modal Footer */}
+                        <div style={{
+                            padding: '20px 28px',
+                            borderTop: '1px solid #e2e8f0',
+                            background: '#f8fafc',
+                            display: 'flex',
+                            justifyContent: 'flex-end',
+                            gap: '12px'
+                        }}>
+                            <button
+                                onClick={handleCloseDetailModal}
+                                style={{
+                                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                    color: 'white',
+                                    border: 'none',
+                                    padding: '12px 32px',
+                                    borderRadius: '10px',
+                                    cursor: 'pointer',
+                                    fontWeight: '600',
+                                    fontSize: '14px',
+                                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                                    transition: 'all 0.2s'
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.target.style.transform = 'translateY(-2px)';
+                                    e.target.style.boxShadow = '0 10px 15px -3px rgba(0, 0, 0, 0.2)';
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.target.style.transform = 'translateY(0)';
+                                    e.target.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1)';
+                                }}
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+
+                    <style>{`
+                        @keyframes fadeIn {
+                            from { opacity: 0; }
+                            to { opacity: 1; }
+                        }
+                        @keyframes slideUp {
+                            from { 
+                                opacity: 0;
+                                transform: translateY(20px);
+                            }
+                            to { 
+                                opacity: 1;
+                                transform: translateY(0);
+                            }
+                        }
+                    `}</style>
                 </div>
-            </div>
+            )}
         </div>
     );
 };

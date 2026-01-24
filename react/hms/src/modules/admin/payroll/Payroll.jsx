@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import Calendar from 'react-calendar';
+import 'react-calendar/dist/Calendar.css';
 import payrollService from '../../../services/payrollService';
 import GenericDataTable from '../../../components/GenericDataTable';
 import CreatePayrollModal from './components/CreatePayrollModal';
 import PayrollView from './components/PayrollView';
-import { MdDescription, MdAttachMoney, MdMoneyOff, MdCheckCircleOutline, MdCalendarToday, MdGridView, MdFilterList, MdSearch, MdAdd } from 'react-icons/md';
+import { MdDescription, MdAttachMoney, MdMoneyOff, MdCheckCircleOutline, MdCalendarToday, MdGridView, MdFilterList, MdSearch, MdAdd, MdClose } from 'react-icons/md';
 import './Payroll.css';
 
 const Payroll = () => {
@@ -15,9 +17,23 @@ const Payroll = () => {
   const [selectedPayroll, setSelectedPayroll] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showView, setShowView] = useState(false);
+  const [activeTab, setActiveTab] = useState('all');
+  const [selectedDate, setSelectedDate] = useState(null);
+  const [showCalendar, setShowCalendar] = useState(false);
+  const calendarRef = useRef(null);
 
   // Pagination config
-  const itemsPerPage = 25;
+  const itemsPerPage = 15;
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (calendarRef.current && !calendarRef.current.contains(event.target)) {
+        setShowCalendar(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   useEffect(() => {
     fetchPayrolls();
@@ -25,7 +41,7 @@ const Payroll = () => {
 
   useEffect(() => {
     filterPayrolls();
-  }, [payrolls, searchQuery]);
+  }, [payrolls, searchQuery, activeTab, selectedDate]);
 
   const fetchPayrolls = async () => {
     setIsLoading(true);
@@ -36,27 +52,39 @@ const Payroll = () => {
       let payrollsList = [];
       if (Array.isArray(response)) {
         payrollsList = response;
-      } else if (response && Array.isArray(response.payrolls)) {
-        payrollsList = response.payrolls;
+      } else if (response && Array.isArray(response.payroll)) {
+        payrollsList = response.payroll;
       } else if (response && Array.isArray(response.data)) {
         payrollsList = response.data;
       } else {
         payrollsList = [];
       }
 
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
       // Map strict columns: Code, Staff Name, Department, Period, Gross, Deductions, Net, Status
-      const mappedPayrolls = payrollsList.map(p => ({
-        id: p._id || p.id,
-        payrollCode: p.payrollCode || p.id || `PAY-${p._id?.substring(0, 6) || '000'}`,
-        staffName: p.staffName || '',
-        department: p.department || '',
-        period: p.payPeriod || '',
-        grossSalary: parseFloat(p.grossSalary || 0),
-        deductions: parseFloat(p.totalDeductions || p.deductions || 0),
-        netSalary: parseFloat(p.netSalary || 0),
-        status: p.status || 'DRAFT',
-        rawData: p
-      }));
+      const mappedPayrolls = payrollsList.map(p => {
+        let paymentDateRaw = null;
+        if (p.paymentDate) {
+          paymentDateRaw = new Date(p.paymentDate).toISOString().split('T')[0];
+        } else if (p.createdAt) {
+          paymentDateRaw = new Date(p.createdAt).toISOString().split('T')[0];
+        }
+
+        return {
+          id: p._id || p.id,
+          payrollCode: p.metadata?.payrollCode || p.staffCode || p.id || `PAY-${p._id?.substring(0, 6) || '000'}`,
+          staffName: p.staffName || '',
+          department: p.department || '',
+          period: p.payPeriodMonth ? `${months[p.payPeriodMonth - 1]} ${p.payPeriodYear}` : 'N/A',
+          paymentDateRaw,
+          grossSalary: parseFloat(p.grossSalary || 0),
+          deductions: parseFloat(p.totalDeductions || 0),
+          netSalary: parseFloat(p.netSalary || 0),
+          status: (p.status || 'DRAFT').toUpperCase(),
+          rawData: p
+        };
+      });
 
       // Sort by newest first
       mappedPayrolls.sort((a, b) => new Date(b.rawData.createdAt) - new Date(a.rawData.createdAt));
@@ -70,19 +98,50 @@ const Payroll = () => {
   };
 
   const filterPayrolls = () => {
-    const q = searchQuery.toLowerCase().trim();
-    let filtered = payrolls;
+    let result = [...payrolls];
 
-    if (q) {
-      filtered = filtered.filter(p =>
+    // Status Filter (Tabs)
+    if (activeTab !== 'all') {
+      result = result.filter(p => p.status.toLowerCase() === activeTab.toLowerCase());
+    }
+
+    // Date/Month Filter
+    if (selectedDate) {
+      const [year, month] = selectedDate.split('-');
+      result = result.filter(p => {
+        const pDate = new Date(p.rawData.paymentDate || p.rawData.createdAt);
+        return pDate.getFullYear() === parseInt(year) && (pDate.getMonth() + 1) === parseInt(month);
+      });
+    }
+
+    // Search Query
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase().trim();
+      result = result.filter(p =>
         p.staffName.toLowerCase().includes(q) ||
         p.department.toLowerCase().includes(q) ||
         p.payrollCode.toLowerCase().includes(q)
       );
     }
 
-    setFilteredPayrolls(filtered);
+    setFilteredPayrolls(result);
     setCurrentPage(0);
+  };
+
+  const handleDateSelect = (date) => {
+    // Picking a month
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const monthYear = `${year}-${month}`;
+    setSelectedDate(monthYear === selectedDate ? null : monthYear);
+    setShowCalendar(false);
+  };
+
+  const formatDateDisplay = (dateStr) => {
+    if (!dateStr) return '';
+    const [year, month] = dateStr.split('-');
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${months[parseInt(month) - 1]} ${year}`;
   };
 
   const handleCreateSuccess = () => {
@@ -104,6 +163,22 @@ const Payroll = () => {
     setShowView(true);
   };
 
+  const handleDownload = async (item) => {
+    try {
+      const blob = await payrollService.downloadPayslip(item.id);
+      const url = window.URL.createObjectURL(new Blob([blob]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `Payslip-${item.staffName}-${item.period}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+    } catch (error) {
+      console.error('Failed to download payslip:', error);
+      alert('Failed to download payslip');
+    }
+  };
+
   const handleDeletePayroll = async (payroll) => {
     if (!window.confirm(`Are you sure you want to delete payroll for ${payroll.staffName}?`)) return;
     try {
@@ -116,10 +191,9 @@ const Payroll = () => {
   };
 
   const columns = [
-    { key: 'payrollCode', label: 'CODE', sortable: true },
     { key: 'staffName', label: 'STAFF NAME', sortable: true },
-    { key: 'department', label: 'DEPARTMENT', sortable: true },
-    { key: 'period', label: 'PERIOD (Month + Year)', sortable: true },
+    { key: 'department', label: 'DEPT', sortable: true },
+    { key: 'period', label: 'PERIOD', sortable: true },
     { key: 'grossSalary', label: 'GROSS', sortable: true, format: (val) => `₹${val.toLocaleString()}` },
     { key: 'deductions', label: 'DEDUCTIONS', sortable: true, format: (val) => `₹${val.toLocaleString()}` },
     { key: 'netSalary', label: 'NET SALARY', sortable: true, format: (val) => `₹${val.toLocaleString()}` },
@@ -205,23 +279,62 @@ const Payroll = () => {
           </div>
 
           <div className="header-right">
-            <button className="icon-btn" title="Calendar"><MdCalendarToday /></button>
-            <button className="icon-btn" title="Grid View"><MdGridView /></button>
-            <button className="icon-btn" title="Filter"><MdFilterList /></button>
+            <div className="tabs-wrapper" style={{ display: 'flex', gap: '4px', marginRight: '12px' }}>
+              {['all', 'paid', 'approved', 'pending', 'rejected'].map(tab => (
+                <button
+                  key={tab}
+                  className={`tab-btn ${activeTab === tab ? 'active' : ''}`}
+                  onClick={() => setActiveTab(tab)}
+                  style={{ textTransform: 'capitalize' }}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
+
+            <div className="calendar-filter-wrapper" ref={calendarRef} style={{ position: 'relative', marginRight: '12px' }}>
+              <button
+                className={`btn-filter-date ${selectedDate ? 'active' : ''}`}
+                onClick={() => setShowCalendar(!showCalendar)}
+                style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+              >
+                <MdCalendarToday />
+                {selectedDate ? formatDateDisplay(selectedDate) : 'Filter Period'}
+                <span style={{ fontSize: '10px' }}>▼</span>
+              </button>
+
+              {selectedDate && (
+                <button
+                  className="btn-clear-date-mini"
+                  onClick={(e) => { e.stopPropagation(); setSelectedDate(null); }}
+                  style={{ position: 'absolute', right: '30px', top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'none', cursor: 'pointer', color: '#ef4444' }}
+                >
+                  <MdClose size={14} />
+                </button>
+              )}
+
+              {showCalendar && (
+                <div className="calendar-dropdown" style={{ position: 'absolute', right: 0, top: '45px', zIndex: 100, background: 'white', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', borderRadius: '12px', padding: '8px' }}>
+                  <Calendar
+                    onChange={handleDateSelect}
+                    view="year"
+                    maxDetail="year"
+                  />
+                </div>
+              )}
+            </div>
 
             <div className="search-control">
               <MdSearch className="search-icon" />
               <input
                 type="text"
-                placeholder="Search Payroll..."
+                placeholder="Search name, code, dept..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
 
-            <button className="add-new-btn" onClick={() => setShowCreateModal(true)}>
-              <MdAdd /> Add New
-            </button>
+
           </div>
         </div>
 
@@ -234,8 +347,15 @@ const Payroll = () => {
             itemsPerPage={itemsPerPage}
             onPageChange={setCurrentPage}
             onView={handleViewPayroll}
-            onEdit={handleEditPayroll}
-            onDelete={handleDeletePayroll}
+            customActions={(item) => (
+              <button
+                className="btn-icon download"
+                onClick={(e) => { e.stopPropagation(); handleDownload(item); }}
+                title="Download Payslip"
+              >
+                <MdDescription />
+              </button>
+            )}
           />
         </div>
       </div>

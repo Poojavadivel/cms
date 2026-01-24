@@ -341,20 +341,54 @@
   }
 }
 
-/* Print Styles */
+/* Print Styles - Focus only on the payslip content */
 @media print {
-  .payroll-view-overlay {
-    position: static;
-    background: white;
+  body * {
+    visibility: hidden;
+  }
+
+  .printable-payslip,
+  .printable-payslip * {
+    visibility: visible;
+  }
+
+  .printable-payslip {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    background: white !important;
+    z-index: 10000;
   }
 
   .payroll-view-dialog {
     max-width: 100%;
+    width: 100%;
+    height: auto;
+    max-height: none;
     box-shadow: none;
+    border: none;
+    margin: 0;
+    padding: 20px;
   }
 
   .payroll-view-header .header-actions,
-  .payroll-view-footer {
-    display: none;
+  .payroll-view-footer,
+  .btn-close-icon {
+    display: none !important;
+  }
+
+  .payroll-view-content {
+    overflow: visible;
+    padding: 0;
+  }
+
+  /* Force white background for header icon box if any, but better plain for print */
+  .status-badge {
+    border: 1px solid #ccc;
+    color: black !important;
+    background: transparent !important;
   }
 }

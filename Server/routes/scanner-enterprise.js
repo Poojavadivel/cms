@@ -191,17 +191,17 @@ async function cleanupTempFile(filePath) {
  */
 async function processPDFDocument(buffer, batchId, startTime) {
   logh(batchId, '📄 [PDF PROCESSOR] Starting enterprise PDF processing');
-  
+
   try {
     // Strategy 1: Text-based PDF extraction with pdf-parse
     const textResult = await extractTextFromPDF(buffer, batchId);
-    
+
     if (textResult.success && textResult.text.length > 50) {
       logh(batchId, `✅ [PDF PROCESSOR] Text extraction successful: ${textResult.text.length} chars, ${textResult.pages} pages`);
-      
+
       // Determine engine based on extraction method
       const engine = textResult.metadata?.method === 'direct-parsing' ? 'vision' : 'gemini';
-      
+
       return {
         text: textResult.text,
         engine: engine,
@@ -215,13 +215,13 @@ async function processPDFDocument(buffer, batchId, startTime) {
         }
       };
     }
-    
+
     // Strategy 2: Minimal text found - likely scanned PDF
     if (textResult.success && textResult.text.length > 0) {
       logh(batchId, `⚠️ [PDF PROCESSOR] Minimal text found (${textResult.text.length} chars) - possibly scanned PDF`);
-      
+
       const engine = textResult.metadata?.method === 'direct-parsing' ? 'vision' : 'gemini';
-      
+
       return {
         text: textResult.text,
         engine: engine,
@@ -236,11 +236,11 @@ async function processPDFDocument(buffer, batchId, startTime) {
         }
       };
     }
-    
+
     // Strategy 3: No text layer detected
     logh(batchId, '⚠️ [PDF PROCESSOR] No text layer detected - scanned/image-based PDF');
     logh(batchId, '💡 [PDF PROCESSOR] Recommendation: Convert to JPG/PNG for OCR processing');
-    
+
     return {
       text: '',
       engine: 'manual',
@@ -254,10 +254,10 @@ async function processPDFDocument(buffer, batchId, startTime) {
         requiresOCR: true
       }
     };
-    
+
   } catch (error) {
     logh(batchId, `❌ [PDF PROCESSOR] Processing failed: ${error.message}`);
-    
+
     return {
       text: '',
       engine: 'manual',
@@ -283,23 +283,23 @@ async function processPDFDocument(buffer, batchId, startTime) {
  */
 async function extractTextFromPDF(buffer, batchId) {
   logh(batchId, '🔧 [PDF EXTRACTOR] Initializing bulletproof PDF extraction');
-  
+
   // Strategy 1: Try pdf-parse library
   const pdfParseResult = await tryPDFParseExtraction(buffer, batchId);
   if (pdfParseResult.success) {
     return pdfParseResult;
   }
-  
+
   // Strategy 2: Try direct PDF parsing
   logh(batchId, '🔄 [PDF EXTRACTOR] Trying direct PDF parsing');
   const directResult = await tryDirectPDFParsing(buffer, batchId);
   if (directResult.success) {
     return directResult;
   }
-  
+
   // Strategy 3: Check if PDF is valid
   const validationResult = await validatePDFStructure(buffer, batchId);
-  
+
   // All strategies failed - return structured failure
   return {
     success: false,
@@ -320,13 +320,13 @@ async function extractTextFromPDF(buffer, batchId) {
 async function tryPDFParseExtraction(buffer, batchId) {
   try {
     logh(batchId, '📚 [STRATEGY 1] Loading pdf-parse library');
-    
+
     // Import pdf-parse module
     const pdfParseModule = await import('pdf-parse/node');
-    
+
     // Try multiple ways to get the parser
     let parser = null;
-    
+
     // Method 1: Check for PDFParse class
     if (pdfParseModule.PDFParse) {
       logh(batchId, '🔍 [STRATEGY 1] Found PDFParse class, instantiating...');
@@ -347,7 +347,7 @@ async function tryPDFParseExtraction(buffer, batchId) {
       logh(batchId, '🔍 [STRATEGY 1] Using module directly');
       parser = pdfParseModule;
     }
-    
+
     // Try to parse with instantiated class
     let parsed;
     if (parser && parser.parse) {
@@ -363,12 +363,12 @@ async function tryPDFParseExtraction(buffer, batchId) {
     } else {
       throw new Error('No valid parser method found');
     }
-    
+
     const text = (parsed?.text || '').trim();
     const pages = parsed?.numpages || parsed?.pages || 0;
-    
+
     logh(batchId, `✅ [STRATEGY 1] SUCCESS: Extracted ${text.length} chars from ${pages} pages`);
-    
+
     return {
       success: true,
       text,
@@ -378,7 +378,7 @@ async function tryPDFParseExtraction(buffer, batchId) {
         ...parsed.metadata
       }
     };
-    
+
   } catch (error) {
     logh(batchId, `❌ [STRATEGY 1] Failed: ${error.message}`);
     return { success: false };
@@ -392,24 +392,24 @@ async function tryPDFParseExtraction(buffer, batchId) {
 async function tryDirectPDFParsing(buffer, batchId) {
   try {
     logh(batchId, '🔧 [STRATEGY 2] Attempting direct PDF text extraction');
-    
+
     // Convert buffer to string for regex search
     const pdfString = buffer.toString('binary');
-    
+
     // Check if it's a valid PDF
     if (!pdfString.startsWith('%PDF-')) {
       logh(batchId, '❌ [STRATEGY 2] Not a valid PDF file');
       return { success: false };
     }
-    
+
     // Extract PDF version
     const versionMatch = pdfString.match(/%PDF-(\d\.\d)/);
     const version = versionMatch ? versionMatch[1] : 'unknown';
     logh(batchId, `📋 [STRATEGY 2] PDF version: ${version}`);
-    
+
     // Try to extract text from stream objects
     const textMatches = [];
-    
+
     // Method 1: Look for BT...ET (Text objects)
     const btPattern = /BT\s+(.*?)\s+ET/gs;
     let match;
@@ -426,7 +426,7 @@ async function tryDirectPDFParsing(buffer, batchId) {
         });
       }
     }
-    
+
     // Method 2: Look for stream contents
     const streamPattern = /stream\s+([\s\S]*?)\s+endstream/g;
     while ((match = streamPattern.exec(pdfString)) !== null) {
@@ -437,17 +437,17 @@ async function tryDirectPDFParsing(buffer, batchId) {
         textMatches.push(...readableText);
       }
     }
-    
+
     // Combine and clean extracted text
     const extractedText = textMatches
       .join(' ')
       .replace(/\s+/g, ' ')
       .trim();
-    
+
     // Try to count pages
     const pageCountMatch = pdfString.match(/\/Count\s+(\d+)/);
     const pages = pageCountMatch ? parseInt(pageCountMatch[1]) : 1;
-    
+
     if (extractedText.length > 10) {
       logh(batchId, `✅ [STRATEGY 2] SUCCESS: Extracted ${extractedText.length} chars from ${pages} pages`);
       return {
@@ -460,10 +460,10 @@ async function tryDirectPDFParsing(buffer, batchId) {
         }
       };
     }
-    
+
     logh(batchId, '⚠️ [STRATEGY 2] Minimal text found, likely scanned PDF');
     return { success: false };
-    
+
   } catch (error) {
     logh(batchId, `❌ [STRATEGY 2] Failed: ${error.message}`);
     return { success: false };
@@ -477,33 +477,33 @@ async function tryDirectPDFParsing(buffer, batchId) {
 async function validatePDFStructure(buffer, batchId) {
   try {
     logh(batchId, '🔍 [VALIDATION] Checking PDF structure');
-    
+
     const pdfString = buffer.toString('binary');
-    
+
     // Check PDF header
     const isValid = pdfString.startsWith('%PDF-');
     if (!isValid) {
       logh(batchId, '❌ [VALIDATION] Invalid PDF header');
       return { isValid: false, error: 'Invalid PDF file' };
     }
-    
+
     // Extract version
     const versionMatch = pdfString.match(/%PDF-(\d\.\d)/);
     const version = versionMatch ? versionMatch[1] : 'unknown';
-    
+
     // Count pages
     const pageCountMatch = pdfString.match(/\/Count\s+(\d+)/);
     const pages = pageCountMatch ? parseInt(pageCountMatch[1]) : 0;
-    
+
     // Check for encryption
     const isEncrypted = pdfString.includes('/Encrypt');
-    
+
     // Check for text content
     const hasTextObjects = pdfString.includes('BT') && pdfString.includes('ET');
     const hasStreams = pdfString.includes('stream');
-    
+
     logh(batchId, `📊 [VALIDATION] PDF Info: v${version}, ${pages} pages, encrypted: ${isEncrypted}, hasText: ${hasTextObjects}`);
-    
+
     return {
       isValid: true,
       version,
@@ -513,7 +513,7 @@ async function validatePDFStructure(buffer, batchId) {
       hasStreams,
       error: isEncrypted ? 'PDF is encrypted' : hasTextObjects ? 'PDF is scanned/image-based' : 'Unknown error'
     };
-    
+
   } catch (error) {
     logh(batchId, `❌ [VALIDATION] Failed: ${error.message}`);
     return { isValid: false, error: error.message };
@@ -525,62 +525,117 @@ async function validatePDFStructure(buffer, batchId) {
 // ============================================================================
 async function performOCR(filePath, mimetype, batchId) {
   const t0 = Date.now();
-  
+
   try {
     // Read file
     const buffer = await fs.readFile(filePath);
-    
+
     // Handle PDF
     if (mimetype === 'application/pdf') {
       return await processPDFDocument(buffer, batchId, t0);
     }
-    
-    // Handle Images
-    if (!visionClient) {
-      throw new Error('Vision API not configured');
-    }
-    
-    logh(batchId, '🖼️ Processing image with Vision API...');
-    
-    // Preprocess image
-    const preprocessed = await sharp(buffer)
-      .rotate()
-      .grayscale()
-      .normalize()
-      .png()
-      .toBuffer();
-    
-    const [response] = await visionClient.documentTextDetection({
-      image: { content: preprocessed }
-    });
-    
-    const text = response?.fullTextAnnotation?.text || '';
-    
-    // Calculate confidence
-    let sum = 0, count = 0;
-    response?.fullTextAnnotation?.pages?.forEach(page => {
-      page.blocks?.forEach(block => {
-        block.paragraphs?.forEach(para => {
-          para.words?.forEach(word => {
-            if (word.confidence != null) {
-              sum += word.confidence;
-              count++;
-            }
+
+    // Handle Images - Try Vision API first, fallback to Gemini
+    let visionError = null;
+
+    if (visionClient) {
+      try {
+        logh(batchId, '🖼️ Processing image with Vision API...');
+
+        // Preprocess image
+        const preprocessed = await sharp(buffer)
+          .rotate()
+          .grayscale()
+          .normalize()
+          .png()
+          .toBuffer();
+
+        const [response] = await visionClient.documentTextDetection({
+          image: { content: preprocessed }
+        });
+
+        const text = response?.fullTextAnnotation?.text || '';
+
+        // Calculate confidence
+        let sum = 0, count = 0;
+        response?.fullTextAnnotation?.pages?.forEach(page => {
+          page.blocks?.forEach(block => {
+            block.paragraphs?.forEach(para => {
+              para.words?.forEach(word => {
+                if (word.confidence != null) {
+                  sum += word.confidence;
+                  count++;
+                }
+              });
+            });
           });
         });
-      });
-    });
-    
-    const confidence = count ? sum / count : 0;
-    
-    logh(batchId, `✅ Vision OCR: ${text.length} chars, confidence: ${(confidence * 100).toFixed(1)}%`);
-    
-    return {
-      text,
-      engine: 'vision',
-      confidence,
-      tookMs: Date.now() - t0
-    };
+
+        const confidence = count ? sum / count : 0;
+
+        logh(batchId, `✅ Vision OCR: ${text.length} chars, confidence: ${(confidence * 100).toFixed(1)}%`);
+
+        return {
+          text,
+          engine: 'vision',
+          confidence,
+          tookMs: Date.now() - t0
+        };
+      } catch (error) {
+        visionError = error;
+        logh(batchId, `⚠️ Vision API failed: ${error.message}`);
+
+        // Check if it's a billing error
+        if (error.message.includes('PERMISSION_DENIED') || error.message.includes('billing')) {
+          logh(batchId, '💡 Billing issue detected, falling back to Gemini...');
+        }
+      }
+    }
+
+    // Fallback to Gemini Vision
+    if (genAI) {
+      try {
+        logh(batchId, '🤖 Using Gemini Vision as fallback...');
+
+        const model = genAI.getGenerativeModel({
+          model: 'gemini-1.5-flash'
+        });
+
+        // Convert buffer to base64
+        const base64Image = buffer.toString('base64');
+        const mimeType = mimetype || 'image/png';
+
+        const result = await model.generateContent([
+          {
+            inlineData: {
+              data: base64Image,
+              mimeType: mimeType
+            }
+          },
+          'Extract all text from this medical document. Return only the extracted text, no explanations.'
+        ]);
+
+        const response = await result.response;
+        const text = response.text();
+
+        logh(batchId, `✅ Gemini OCR: ${text.length} chars`);
+
+        return {
+          text,
+          engine: 'gemini',
+          confidence: 0.85, // Gemini doesn't provide confidence, use estimated value
+          tookMs: Date.now() - t0,
+          fallback: true,
+          originalError: visionError?.message
+        };
+      } catch (geminiError) {
+        logh(batchId, `❌ Gemini fallback also failed: ${geminiError.message}`);
+        throw new Error(`Both Vision API and Gemini failed. Vision: ${visionError?.message}, Gemini: ${geminiError.message}`);
+      }
+    }
+
+    // No OCR available
+    throw new Error(visionError?.message || 'No OCR service available');
   } catch (error) {
     logh(batchId, '❌ OCR failed:', error.message);
     throw error;
@@ -594,9 +649,9 @@ async function detectIntent(ocrText, batchId) {
   if (!genAI) {
     throw new Error('Gemini API not configured');
   }
-  
+
   logh(batchId, '🎯 Detecting test intent...');
-  
+
   const model = genAI.getGenerativeModel({
     model: CONFIG.GEMINI_MODEL,
     generationConfig: {
@@ -604,7 +659,7 @@ async function detectIntent(ocrText, batchId) {
       responseMimeType: "application/json",
     }
   });
-  
+
   const intentPrompt = `You are a medical lab report classifier. Analyze the OCR text and determine the PRIMARY test type.
 
 Available test types:
@@ -628,9 +683,9 @@ OUTPUT (JSON only):`;
     const response = await result.response;
     const jsonText = response.text().replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
     const intentData = JSON.parse(jsonText);
-    
+
     logh(batchId, `✅ Intent detected: ${intentData.primaryIntent} (${(intentData.confidence * 100).toFixed(0)}%)`);
-    
+
     return intentData;
   } catch (error) {
     logh(batchId, '⚠️ Intent detection failed, using GENERAL:', error.message);
@@ -725,12 +780,12 @@ function buildSpecializedPrompt(intent, ocrText) {
   const testConfig = TEST_INTENTS[intent] || {};
   const expectedFields = testConfig.fields || [];
   const category = testConfig.category || 'General';
-  
+
   // Special handling for PRESCRIPTION
   if (intent === 'PRESCRIPTION') {
     return buildPrescriptionPrompt(ocrText);
   }
-  
+
   return `You are an expert medical lab report data extraction AI specialized in ${intent} tests.
 
 **EXTRACTION TASK:**
@@ -815,9 +870,9 @@ async function extractWithIntent(ocrText, intent, batchId) {
   if (!genAI) {
     throw new Error('Gemini API not configured');
   }
-  
+
   logh(batchId, `📊 Extracting data with ${intent} specialization...`);
-  
+
   const model = genAI.getGenerativeModel({
     model: CONFIG.GEMINI_MODEL,
     generationConfig: {
@@ -825,18 +880,18 @@ async function extractWithIntent(ocrText, intent, batchId) {
       responseMimeType: "application/json",
     }
   });
-  
+
   const prompt = buildSpecializedPrompt(intent, ocrText);
-  
+
   try {
     const t0 = Date.now();
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const jsonText = response.text().replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
     const structuredData = JSON.parse(jsonText);
-    
+
     const extractionTime = Date.now() - t0;
-    
+
     // Add extraction metadata
     structuredData.extractionMetadata = {
       intent,
@@ -844,9 +899,9 @@ async function extractWithIntent(ocrText, intent, batchId) {
       model: CONFIG.GEMINI_MODEL,
       timestamp: new Date().toISOString()
     };
-    
+
     logh(batchId, `✅ Extraction complete: ${structuredData.labReport?.results?.length || 0} parameters (${extractionTime}ms)`);
-    
+
     return structuredData;
   } catch (error) {
     logh(batchId, '❌ Extraction failed:', error.message);
@@ -859,7 +914,7 @@ async function extractWithIntent(ocrText, intent, batchId) {
 // ============================================================================
 async function matchOrCreatePatient(session, patientData, batchId) {
   let { firstName, lastName, phone, dateOfBirth, gender, email, address } = patientData;
-  
+
   // Normalize phone
   if (phone) {
     phone = phone.replace(/[^\d+]/g, '');
@@ -867,10 +922,10 @@ async function matchOrCreatePatient(session, patientData, batchId) {
       phone = '+91' + phone;
     }
   }
-  
+
   let patient = null;
   let matchedBy = null;
-  
+
   // Try name match
   if (firstName && firstName !== 'Unknown') {
     const query = { firstName: new RegExp(`^${firstName}$`, 'i') };
@@ -883,7 +938,7 @@ async function matchOrCreatePatient(session, patientData, batchId) {
       logh(batchId, `✅ Patient matched by name: ${patient._id}`);
     }
   }
-  
+
   // Try phone match
   if (!patient && phone) {
     patient = await Patient.findOne({ phone }).session(session);
@@ -892,7 +947,7 @@ async function matchOrCreatePatient(session, patientData, batchId) {
       logh(batchId, `✅ Patient matched by phone: ${patient._id}`);
     }
   }
-  
+
   // Update existing patient with new info
   if (patient) {
     let updated = false;
@@ -912,15 +967,15 @@ async function matchOrCreatePatient(session, patientData, batchId) {
       patient.email = email;
       updated = true;
     }
-    
+
     if (updated) {
       await patient.save({ session });
       logh(batchId, '✅ Patient updated with new information');
     }
-    
+
     return { patient, action: 'matched', matchedBy };
   }
-  
+
   // Create new patient
   try {
     const newPatient = await Patient.create([{
@@ -932,7 +987,7 @@ async function matchOrCreatePatient(session, patientData, batchId) {
       email,
       address
     }], { session });
-    
+
     logh(batchId, `✅ New patient created: ${newPatient[0]._id}`);
     return { patient: newPatient[0], action: 'created', matchedBy: 'new' };
   } catch (error) {
@@ -956,9 +1011,9 @@ async function matchOrCreatePatient(session, patientData, batchId) {
 router.post('/upload', auth, upload.array('files'), async (req, res) => {
   const batchId = uuidv4().slice(0, 8);
   const t0 = Date.now();
-  
+
   logh(batchId, `🚀 Starting enterprise scan: ${req.files?.length || 0} files`);
-  
+
   if (!req.files || req.files.length === 0) {
     return res.status(400).json({
       ok: false,
@@ -966,47 +1021,47 @@ router.post('/upload', auth, upload.array('files'), async (req, res) => {
       batchId
     });
   }
-  
+
   const results = [];
   const failures = [];
   let session = null;
-  
+
   try {
     session = await startSession();
     logh(batchId, '✅ Database session started');
-    
+
     for (const file of req.files) {
       const fileId = uuidv4().slice(0, 6);
       let tempPath = file.path;
-      
+
       try {
         await session.withTransaction(async () => {
           logh(batchId, `📁 Processing: ${file.originalname}`);
-          
+
           // STEP 1: OCR
           const ocrResult = await performOCR(tempPath, file.mimetype, `${batchId}-${fileId}`);
-          
+
           if (!ocrResult.text || ocrResult.text.length < 50) {
             throw new Error('OCR text too short or empty');
           }
-          
+
           // STEP 2: Intent Detection
           const intentResult = await detectIntent(ocrResult.text, `${batchId}-${fileId}`);
-          
+
           // STEP 3: Specialized Extraction
           const extractedData = await extractWithIntent(
             ocrResult.text,
             intentResult.primaryIntent,
             `${batchId}-${fileId}`
           );
-          
+
           // STEP 4: Match/Create Patient
           const { patient, action, matchedBy } = await matchOrCreatePatient(
             session,
             extractedData.patient,
             `${batchId}-${fileId}`
           );
-          
+
           // STEP 5: Store PDF
           const pdfBuffer = await fs.readFile(tempPath);
           const pdfDoc = await PatientPDF.create([{
@@ -1017,9 +1072,9 @@ router.post('/upload', auth, upload.array('files'), async (req, res) => {
             data: pdfBuffer,
             size: file.size
           }], { session });
-          
+
           logh(batchId, `✅ PDF stored: ${pdfDoc[0]._id}`);
-          
+
           // STEP 6: Create Lab Report
           const labReport = await LabReport.create([{
             patientId: patient._id,
@@ -1041,9 +1096,9 @@ router.post('/upload', auth, upload.array('files'), async (req, res) => {
               ...extractedData.metadata
             }
           }], { session });
-          
+
           logh(batchId, `✅ Lab report created: ${labReport[0]._id}`);
-          
+
           results.push({
             file: file.originalname,
             success: true,
@@ -1082,10 +1137,10 @@ router.post('/upload', auth, upload.array('files'), async (req, res) => {
         await cleanupTempFile(tempPath);
       }
     }
-    
+
     const totalTime = Date.now() - t0;
     logh(batchId, `🏁 Batch complete: ${results.length} success, ${failures.length} failed (${totalTime}ms)`);
-    
+
     return res.json({
       ok: failures.length === 0,
       batchId,
@@ -1095,7 +1150,7 @@ router.post('/upload', auth, upload.array('files'), async (req, res) => {
       results,
       failures: failures.length > 0 ? failures : undefined
     });
-    
+
   } catch (error) {
     logh(batchId, '💥 Fatal error:', error.message);
     return res.status(500).json({
@@ -1119,32 +1174,32 @@ router.post('/upload', auth, upload.array('files'), async (req, res) => {
 router.post('/scan-medical', auth, upload.single('image'), async (req, res) => {
   const batchId = `scan-${Date.now()}`;
   const t0 = Date.now();
-  
+
   try {
     if (!req.file) {
       return res.status(400).json({ success: false, message: 'No image file uploaded' });
     }
-    
+
     // Check if patientId is provided for saving to patient record
     const patientId = req.body.patientId;
-    
+
     logh(batchId, `📸 Processing single image for auto-fill: ${req.file.originalname}`);
     if (patientId) {
       logh(batchId, `👤 Patient ID provided: ${patientId} - Will save to patient record`);
     }
-    
+
     // STEP 1: OCR
     const ocrResult = await performOCR(req.file.path, req.file.mimetype, batchId);
-    
+
     // Check if OCR returned a warning (e.g., scanned PDF)
     if (ocrResult.warning) {
       logh(batchId, `⚠️ OCR Warning: ${ocrResult.warning}`);
     }
-    
+
     // If no text extracted, return early with warning
     if (!ocrResult.text || ocrResult.text.length < 10) {
       logh(batchId, '⚠️ Minimal or no text extracted');
-      
+
       // Still save the PDF to patient record if patientId provided
       if (patientId) {
         try {
@@ -1167,9 +1222,9 @@ router.post('/scan-medical', auth, upload.single('image'), async (req, res) => {
           logh(batchId, `⚠️ Failed to save PDF: ${saveError.message}`);
         }
       }
-      
+
       await cleanupTempFile(req.file.path);
-      
+
       return res.json({
         success: true,
         warning: ocrResult.warning || 'No text could be extracted from this document. Please upload an image (JPG/PNG) or PDF with text layer.',
@@ -1189,29 +1244,29 @@ router.post('/scan-medical', auth, upload.single('image'), async (req, res) => {
         }
       });
     }
-    
+
     // STEP 2: Intent Detection
     const intentResult = await detectIntent(ocrResult.text, batchId);
-    
+
     // STEP 3: Extract Data
     const extractedData = await extractWithIntent(ocrResult.text, intentResult.primaryIntent, batchId);
-    
+
     let savedImagePath = null;
     let reportId = null;
-    
+
     // STEP 4: If patientId provided, save to patient record AND MongoDB
     if (patientId) {
       try {
         // Find patient
         const patient = await Patient.findById(patientId);
-        
+
         if (!patient) {
           logh(batchId, `❌ Patient not found: ${patientId}`);
           // Continue without saving, just return extracted data
         } else {
           // Read file buffer
           const fileBuffer = await fs.readFile(req.file.path);
-          
+
           // Store PDF/Image in MongoDB
           const patientPDF = new PatientPDF({
             patientId: patientId,
@@ -1222,13 +1277,13 @@ router.post('/scan-medical', auth, upload.single('image'), async (req, res) => {
             size: fileBuffer.length,
             uploadedAt: new Date()
           });
-          
+
           await patientPDF.save();
           const pdfIdString = patientPDF._id.toString();
           savedImagePath = pdfIdString; // Store PDF ID, not file path
-          
+
           logh(batchId, `💾 Image saved to MongoDB: ${pdfIdString}`);
-          
+
           // Map intent to valid reportType enum
           const reportTypeMap = {
             'THYROID': 'LAB_REPORT',
@@ -1247,9 +1302,9 @@ router.post('/scan-medical', auth, upload.single('image'), async (req, res) => {
             'RADIOLOGY': 'RADIOLOGY_REPORT',
             'GENERIC': 'GENERAL'
           };
-          
+
           const reportType = reportTypeMap[intentResult.primaryIntent] || 'LAB_REPORT';
-          
+
           // Save to appropriate collection based on document type
           if (intentResult.primaryIntent === 'PRESCRIPTION') {
             // Save to PrescriptionDocument collection
@@ -1279,11 +1334,11 @@ router.post('/scan-medical', auth, upload.single('image'), async (req, res) => {
               uploadedBy: req.user?._id || null,
               uploadDate: new Date()
             });
-            
+
             await prescriptionDoc.save();
             reportId = prescriptionDoc._id.toString();
             logh(batchId, `💊 Created PrescriptionDocument: ${reportId}`);
-            
+
           } else if (intentResult.primaryIntent === 'MEDICAL_HISTORY' || intentResult.primaryIntent === 'DISCHARGE') {
             // Save to MedicalHistoryDocument collection
             const patientData = extractedData.patient || {};
@@ -1312,11 +1367,11 @@ router.post('/scan-medical', auth, upload.single('image'), async (req, res) => {
               uploadedBy: req.user?._id || null,
               uploadDate: new Date()
             });
-            
+
             await medicalHistoryDoc.save();
             reportId = medicalHistoryDoc._id.toString();
             logh(batchId, `📋 Created MedicalHistoryDocument: ${reportId}`);
-            
+
           } else {
             // Save to LabReportDocument collection (for lab reports)
             const labReportDoc = new LabReportDocument({
@@ -1343,12 +1398,12 @@ router.post('/scan-medical', auth, upload.single('image'), async (req, res) => {
               uploadedBy: req.user?._id || null,
               uploadDate: new Date()
             });
-            
+
             await labReportDoc.save();
             reportId = labReportDoc._id.toString();
             logh(batchId, `🧪 Created LabReportDocument: ${reportId}`);
           }
-          
+
           // Create LabReport entry (for backward compatibility)
           const labReport = new LabReport({
             patientId: patientId,
@@ -1366,11 +1421,11 @@ router.post('/scan-medical', auth, upload.single('image'), async (req, res) => {
               testCategory: TEST_INTENTS[intentResult.primaryIntent]?.category || 'General'
             }
           });
-          
+
           await labReport.save();
-          
+
           logh(batchId, `📊 Created LabReport (legacy): ${labReport._id}`);
-          
+
           // Add report to patient record (store PDF ID as string)
           patient.medicalReports.push({
             reportId: reportId,
@@ -1382,9 +1437,9 @@ router.post('/scan-medical', auth, upload.single('image'), async (req, res) => {
             ocrText: ocrResult.text,
             intent: intentResult.primaryIntent
           });
-          
+
           await patient.save();
-          
+
           logh(batchId, `✅ Report attached to patient: ${patientId}`);
         }
       } catch (saveError) {
@@ -1392,13 +1447,13 @@ router.post('/scan-medical', auth, upload.single('image'), async (req, res) => {
         // Continue execution, return extracted data anyway
       }
     }
-    
+
     // Cleanup temp file
     await cleanupTempFile(req.file.path);
-    
+
     const totalTime = Date.now() - t0;
     logh(batchId, `✅ Scan complete (${totalTime}ms)`);
-    
+
     return res.json({
       success: true,
       intent: intentResult.primaryIntent,
@@ -1425,7 +1480,7 @@ router.post('/scan-medical', auth, upload.single('image'), async (req, res) => {
         saved: savedImagePath !== null
       } : null
     });
-    
+
   } catch (error) {
     logh(batchId, '❌ Scan failed:', error.message);
     // Cleanup on error
@@ -1447,50 +1502,50 @@ router.post('/bulk-upload-with-matching', auth, upload.array('images', CONFIG.MA
   const t0 = Date.now();
   let results = [];
   let failures = [];
-  
+
   try {
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({ success: false, message: 'No files uploaded' });
     }
-    
+
     logh(batchId, `📤 Bulk upload: ${req.files.length} files`);
-    
+
     // Create uploads directory if doesn't exist
     const uploadsDir = path.join(__dirname, '../uploads/medical-reports');
     await fs.mkdir(uploadsDir, { recursive: true });
-    
+
     // Process each file
     for (const file of req.files) {
       const tempPath = file.path;
-      
+
       try {
         logh(batchId, `📄 Processing: ${file.originalname}`);
-        
+
         // STEP 1: OCR
         const ocrResult = await performOCR(tempPath, file.mimetype, batchId);
-        
+
         // STEP 2: Intent Detection
         const intentResult = await detectIntent(ocrResult.text, batchId);
-        
+
         // STEP 3: Extract Data (including patient name)
         const extractedData = await extractWithIntent(ocrResult.text, intentResult.primaryIntent, batchId);
-        
+
         // STEP 4: Find Patient by Name
         let patient = null;
         let matchedBy = 'none';
-        
+
         if (extractedData.patient?.firstName) {
           const firstName = extractedData.patient.firstName.trim();
           const lastName = extractedData.patient.lastName?.trim() || '';
-          
+
           logh(batchId, `🔍 Searching for patient: ${firstName} ${lastName}`);
-          
+
           // Try exact match first
           patient = await Patient.findOne({
             firstName: new RegExp(`^${firstName}$`, 'i'),
             ...(lastName && { lastName: new RegExp(`^${lastName}$`, 'i') })
           });
-          
+
           if (patient) {
             matchedBy = 'name-exact';
             logh(batchId, `✅ Patient found (exact): ${patient._id}`);
@@ -1499,14 +1554,14 @@ router.post('/bulk-upload-with-matching', auth, upload.array('images', CONFIG.MA
             patient = await Patient.findOne({
               firstName: new RegExp(firstName, 'i')
             });
-            
+
             if (patient) {
               matchedBy = 'name-partial';
               logh(batchId, `⚠️ Patient found (partial): ${patient._id}`);
             }
           }
         }
-        
+
         if (!patient) {
           logh(batchId, `❌ Patient not found for: ${file.originalname}`);
           failures.push({
@@ -1518,10 +1573,10 @@ router.post('/bulk-upload-with-matching', auth, upload.array('images', CONFIG.MA
           await cleanupTempFile(tempPath);
           continue;
         }
-        
+
         // STEP 5: Save image to MongoDB (same as individual upload)
         const fileBuffer = await fs.readFile(tempPath);
-        
+
         // Store PDF/Image in MongoDB
         const patientPDF = new PatientPDF({
           patientId: patient._id,
@@ -1532,11 +1587,11 @@ router.post('/bulk-upload-with-matching', auth, upload.array('images', CONFIG.MA
           size: fileBuffer.length,
           uploadedAt: new Date()
         });
-        
+
         await patientPDF.save();
         const pdfIdString = patientPDF._id.toString(); // Convert ObjectId to string
         logh(batchId, `💾 Image stored in MongoDB: ${pdfIdString}`);
-        
+
         // Create LabReport entry
         const labReport = new LabReport({
           patientId: patient._id,
@@ -1554,11 +1609,11 @@ router.post('/bulk-upload-with-matching', auth, upload.array('images', CONFIG.MA
             testCategory: TEST_INTENTS[intentResult.primaryIntent]?.category || 'General'
           }
         });
-        
+
         await labReport.save();
         const labReportIdString = labReport._id.toString(); // Convert ObjectId to string
         logh(batchId, `📊 Created LabReport: ${labReportIdString}`);
-        
+
         // Map intent to valid reportType enum
         const reportTypeMap = {
           'THYROID': 'LAB_REPORT',
@@ -1577,9 +1632,9 @@ router.post('/bulk-upload-with-matching', auth, upload.array('images', CONFIG.MA
           'RADIOLOGY': 'RADIOLOGY_REPORT',
           'GENERIC': 'GENERAL'
         };
-        
+
         const reportType = reportTypeMap[intentResult.primaryIntent] || 'LAB_REPORT';
-        
+
         // STEP 6: Add report to patient record (store PDF ID as string)
         patient.medicalReports.push({
           reportId: labReportIdString,
@@ -1591,11 +1646,11 @@ router.post('/bulk-upload-with-matching', auth, upload.array('images', CONFIG.MA
           ocrText: ocrResult.text,
           intent: intentResult.primaryIntent // Store specific intent here
         });
-        
+
         await patient.save();
-        
+
         logh(batchId, `✅ Report attached to patient: ${patient._id}`);
-        
+
         results.push({
           file: file.originalname,
           success: true,
@@ -1617,7 +1672,7 @@ router.post('/bulk-upload-with-matching', auth, upload.array('images', CONFIG.MA
             textLength: ocrResult.text.length
           }
         });
-        
+
       } catch (error) {
         logh(batchId, `❌ File processing failed: ${file.originalname}`, error.message);
         failures.push({
@@ -1629,10 +1684,10 @@ router.post('/bulk-upload-with-matching', auth, upload.array('images', CONFIG.MA
         await cleanupTempFile(tempPath);
       }
     }
-    
+
     const totalTime = Date.now() - t0;
     logh(batchId, `🏁 Bulk upload complete: ${results.length} success, ${failures.length} failed (${totalTime}ms)`);
-    
+
     return res.json({
       success: failures.length === 0,
       batchId,
@@ -1642,7 +1697,7 @@ router.post('/bulk-upload-with-matching', auth, upload.array('images', CONFIG.MA
       results,
       failures: failures.length > 0 ? failures : undefined
     });
-    
+
   } catch (error) {
     logh(batchId, '💥 Fatal error:', error.message);
     return res.status(500).json({
@@ -1661,29 +1716,29 @@ router.post('/bulk-upload-with-matching', auth, upload.array('images', CONFIG.MA
 router.post('/attach-report/:patientId', auth, upload.single('image'), async (req, res) => {
   const batchId = `attach-${Date.now()}`;
   const { patientId } = req.params;
-  
+
   try {
     if (!req.file) {
       return res.status(400).json({ success: false, message: 'No image file uploaded' });
     }
-    
+
     logh(batchId, `📎 Attaching report to patient: ${patientId}`);
-    
+
     // Find patient
     const patient = await Patient.findById(patientId);
     if (!patient) {
       await cleanupTempFile(req.file.path);
       return res.status(404).json({ success: false, message: 'Patient not found' });
     }
-    
+
     // Process image
     const ocrResult = await performOCR(req.file.path, req.file.mimetype, batchId);
     const intentResult = await detectIntent(ocrResult.text, batchId);
     const extractedData = await extractWithIntent(ocrResult.text, intentResult.primaryIntent, batchId);
-    
+
     // Read file buffer for database storage
     const fileBuffer = await fs.readFile(req.file.path);
-    
+
     // Store PDF/Image in MongoDB
     const patientPDF = new PatientPDF({
       patientId: patientId,
@@ -1694,10 +1749,10 @@ router.post('/attach-report/:patientId', auth, upload.single('image'), async (re
       size: fileBuffer.length,
       uploadedAt: new Date()
     });
-    
+
     await patientPDF.save();
     logh(batchId, `💾 Stored PDF in database: ${patientPDF._id}`);
-    
+
     // Create LabReport entry
     const labReport = new LabReport({
       patientId: patientId,
@@ -1715,10 +1770,10 @@ router.post('/attach-report/:patientId', auth, upload.single('image'), async (re
         testCategory: TEST_INTENTS[intentResult.primaryIntent]?.category || 'General'
       }
     });
-    
+
     await labReport.save();
     logh(batchId, `📊 Created LabReport: ${labReport._id}`);
-    
+
     // Map intent to valid reportType enum (same as batch upload)
     const reportTypeMap = {
       'THYROID': 'LAB_REPORT',
@@ -1738,9 +1793,9 @@ router.post('/attach-report/:patientId', auth, upload.single('image'), async (re
       'PRESCRIPTION': 'PRESCRIPTION',
       'DISCHARGE_SUMMARY': 'DISCHARGE_SUMMARY'
     };
-    
+
     const reportType = reportTypeMap[intentResult.primaryIntent] || 'LAB_REPORT';
-    
+
     // Add reference to patient's medicalReports (for backward compatibility)
     patient.medicalReports.push({
       reportId: labReport._id,
@@ -1752,14 +1807,14 @@ router.post('/attach-report/:patientId', auth, upload.single('image'), async (re
       ocrText: ocrResult.text,
       intent: intentResult.primaryIntent
     });
-    
+
     await patient.save();
-    
+
     // Cleanup temp file
     await cleanupTempFile(req.file.path);
-    
+
     logh(batchId, `✅ Report attached successfully`);
-    
+
     return res.json({
       success: true,
       reportId: labReport._id,
@@ -1767,7 +1822,7 @@ router.post('/attach-report/:patientId', auth, upload.single('image'), async (re
       intent: intentResult.primaryIntent,
       testResults: extractedData.testResults?.length || 0
     });
-    
+
   } catch (error) {
     logh(batchId, '❌ Attach failed:', error.message);
     if (req.file?.path) {
@@ -1786,19 +1841,19 @@ router.post('/attach-report/:patientId', auth, upload.single('image'), async (re
 router.get('/pdf/:pdfId', auth, async (req, res) => {
   try {
     const { pdfId } = req.params;
-    
+
     const pdf = await PatientPDF.findById(pdfId);
     if (!pdf) {
       return res.status(404).json({ success: false, message: 'PDF not found' });
     }
-    
+
     // Set content type and send binary data
     res.set({
       'Content-Type': pdf.mimeType,
       'Content-Disposition': `inline; filename="${pdf.fileName}"`,
       'Content-Length': pdf.size
     });
-    
+
     return res.send(pdf.data);
   } catch (error) {
     console.error('Error retrieving PDF:', error);
@@ -1813,17 +1868,17 @@ router.get('/pdf/:pdfId', auth, async (req, res) => {
 router.get('/pdf-public/:pdfId', async (req, res) => {
   try {
     const { pdfId } = req.params;
-    
+
     console.log(`[PDF-PUBLIC] Fetching PDF: ${pdfId}`);
-    
+
     const pdf = await PatientPDF.findById(pdfId);
     if (!pdf) {
       console.log(`[PDF-PUBLIC] PDF not found: ${pdfId}`);
       return res.status(404).json({ success: false, message: 'PDF not found' });
     }
-    
+
     console.log(`[PDF-PUBLIC] PDF found: ${pdf.fileName}, size: ${pdf.size}, type: ${pdf.mimeType}`);
-    
+
     // Set content type and send binary data
     res.set({
       'Content-Type': pdf.mimeType,
@@ -1831,7 +1886,7 @@ router.get('/pdf-public/:pdfId', async (req, res) => {
       'Content-Length': pdf.size,
       'Cache-Control': 'public, max-age=3600' // Cache for 1 hour
     });
-    
+
     return res.send(pdf.data);
   } catch (error) {
     console.error('[PDF-PUBLIC] Error retrieving PDF:', error);
@@ -1844,14 +1899,14 @@ router.get('/pdf-public/:pdfId', async (req, res) => {
 // ============================================================================
 router.get('/reports/:patientId', auth, async (req, res) => {
   const { patientId } = req.params;
-  
+
   try {
     // Fetch from OLD LabReport collection
     const oldReports = await LabReport.find({ patientId })
       .sort({ createdAt: -1 })
       .select('_id testType results metadata createdAt fileRef')
       .lean();
-    
+
     const enrichedOldReports = oldReports.map(report => ({
       id: report._id,
       _id: report._id,
@@ -1869,11 +1924,11 @@ router.get('/reports/:patientId', auth, async (req, res) => {
       metadata: report.metadata,
       source: 'old' // Mark as old storage
     }));
-    
+
     // Fetch from NEW patients.medicalReports array
     const patient = await Patient.findById(patientId).select('medicalReports').lean();
     const newReports = patient?.medicalReports || [];
-    
+
     const enrichedNewReports = newReports.map(report => ({
       id: report.reportId,
       _id: report.reportId,
@@ -1897,11 +1952,11 @@ router.get('/reports/:patientId', auth, async (req, res) => {
       source: 'new', // Mark as new storage
       imagePath: report.imagePath // Include image path
     }));
-    
+
     // Combine both sources, sorted by date (newest first)
     const allReports = [...enrichedNewReports, ...enrichedOldReports]
       .sort((a, b) => new Date(b.date) - new Date(a.date));
-    
+
     return res.json({
       success: true,
       ok: true,
@@ -1924,19 +1979,19 @@ router.get('/reports/:patientId', auth, async (req, res) => {
 // ============================================================================
 router.get('/report/:reportId', auth, async (req, res) => {
   const { reportId } = req.params;
-  
+
   try {
     const report = await LabReport.findById(reportId)
       .populate('patientId', 'firstName lastName dateOfBirth gender phone email')
       .lean();
-    
+
     if (!report) {
       return res.status(404).json({
         ok: false,
         error: 'Report not found'
       });
     }
-    
+
     return res.json({
       ok: true,
       report: {
@@ -1965,21 +2020,21 @@ router.get('/report/:reportId', auth, async (req, res) => {
 // ============================================================================
 router.get('/pdf/:id', auth, async (req, res) => {
   const { id } = req.params;
-  
+
   try {
     const pdf = await PatientPDF.findById(id);
-    
+
     if (!pdf) {
       return res.status(404).json({
         ok: false,
         error: 'PDF not found'
       });
     }
-    
+
     res.setHeader('Content-Type', pdf.mimeType || 'application/pdf');
     res.setHeader('Content-Length', pdf.size || pdf.data.length);
     res.setHeader('Content-Disposition', `inline; filename="${pdf.fileName}"`);
-    
+
     return res.send(pdf.data);
   } catch (error) {
     return res.status(500).json({
@@ -2009,19 +2064,19 @@ router.get('/health', auth, async (req, res) => {
 router.get('/prescriptions/:patientId', auth, async (req, res) => {
   const { patientId } = req.params;
   const { limit = 100, skip = 0 } = req.query;
-  
+
   try {
     console.log(`[PRESCRIPTIONS] Fetching for patient: ${patientId}`);
-    
+
     // Fetch from PrescriptionDocument collection
     const prescriptions = await PrescriptionDocument.find({ patientId })
       .sort({ uploadDate: -1 })
       .limit(parseInt(limit))
       .skip(parseInt(skip))
       .lean();
-    
+
     console.log(`[PRESCRIPTIONS] Found ${prescriptions.length} prescriptions`);
-    
+
     // Format response
     const formattedPrescriptions = prescriptions.map(prescription => ({
       id: prescription._id,
@@ -2049,7 +2104,7 @@ router.get('/prescriptions/:patientId', auth, async (req, res) => {
       ocrConfidence: prescription.ocrConfidence,
       status: prescription.status
     }));
-    
+
     return res.json({
       success: true,
       ok: true,
@@ -2073,19 +2128,19 @@ router.get('/prescriptions/:patientId', auth, async (req, res) => {
 router.get('/lab-reports/:patientId', auth, async (req, res) => {
   const { patientId } = req.params;
   const { limit = 100, skip = 0 } = req.query;
-  
+
   try {
     console.log(`[LAB REPORTS] Fetching for patient: ${patientId}`);
-    
+
     // Fetch from LabReportDocument collection
     const labReports = await LabReportDocument.find({ patientId })
       .sort({ uploadDate: -1 })
       .limit(parseInt(limit))
       .skip(parseInt(skip))
       .lean();
-    
+
     console.log(`[LAB REPORTS] Found ${labReports.length} lab reports`);
-    
+
     // Format response
     const formattedReports = labReports.map(report => ({
       id: report._id,
@@ -2104,7 +2159,7 @@ router.get('/lab-reports/:patientId', auth, async (req, res) => {
       extractionQuality: report.extractionQuality,
       status: report.status
     }));
-    
+
     return res.json({
       success: true,
       ok: true,
@@ -2128,19 +2183,19 @@ router.get('/lab-reports/:patientId', auth, async (req, res) => {
 router.get('/medical-history/:patientId', auth, async (req, res) => {
   const { patientId } = req.params;
   const { limit = 100, skip = 0 } = req.query;
-  
+
   try {
     console.log(`[MEDICAL HISTORY] Fetching for patient: ${patientId}`);
-    
+
     // Fetch from MedicalHistoryDocument collection
     const medicalHistory = await MedicalHistoryDocument.find({ patientId })
       .sort({ uploadDate: -1 })
       .limit(parseInt(limit))
       .skip(parseInt(skip))
       .lean();
-    
+
     console.log(`[MEDICAL HISTORY] Found ${medicalHistory.length} medical history records`);
-    
+
     // Format response
     const formattedHistory = medicalHistory.map(record => ({
       id: record._id,
@@ -2170,7 +2225,7 @@ router.get('/medical-history/:patientId', auth, async (req, res) => {
       ocrConfidence: record.ocrConfidence,
       status: record.status
     }));
-    
+
     return res.json({
       success: true,
       ok: true,
@@ -2193,50 +2248,50 @@ router.get('/medical-history/:patientId', auth, async (req, res) => {
 // ============================================================================
 router.post('/update-patient-id', auth, async (req, res) => {
   const { oldPatientId, newPatientId } = req.body;
-  
+
   if (!oldPatientId || !newPatientId) {
     return res.status(400).json({
       success: false,
       error: 'oldPatientId and newPatientId are required'
     });
   }
-  
+
   try {
     console.log(`[UPDATE PATIENT ID] Updating from ${oldPatientId} to ${newPatientId}`);
-    
+
     // Update PatientPDF collection
     const pdfResult = await PatientPDF.updateMany(
       { patientId: oldPatientId },
       { $set: { patientId: newPatientId } }
     );
-    
+
     // Update PrescriptionDocument collection
     const prescriptionResult = await PrescriptionDocument.updateMany(
       { patientId: oldPatientId },
       { $set: { patientId: newPatientId } }
     );
-    
+
     // Update LabReportDocument collection
     const labReportResult = await LabReportDocument.updateMany(
       { patientId: oldPatientId },
       { $set: { patientId: newPatientId } }
     );
-    
+
     // Update MedicalHistoryDocument collection
     const medicalHistoryResult = await MedicalHistoryDocument.updateMany(
       { patientId: oldPatientId },
       { $set: { patientId: newPatientId } }
     );
-    
+
     const totalUpdated = pdfResult.modifiedCount + prescriptionResult.modifiedCount + labReportResult.modifiedCount + medicalHistoryResult.modifiedCount;
-    
+
     console.log(`[UPDATE PATIENT ID] Updated documents:
       - PatientPDF: ${pdfResult.modifiedCount}
       - PrescriptionDocument: ${prescriptionResult.modifiedCount}
       - LabReportDocument: ${labReportResult.modifiedCount}
       - MedicalHistoryDocument: ${medicalHistoryResult.modifiedCount}
       - Total: ${totalUpdated}`);
-    
+
     return res.json({
       success: true,
       ok: true,

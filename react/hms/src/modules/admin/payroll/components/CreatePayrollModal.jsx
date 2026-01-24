@@ -130,42 +130,36 @@ const CreatePayrollModal = ({ isOpen, onClose, onSuccess }) => {
 
         setIsSaving(true);
         try {
+            // Parse "Month Year" string for backend
+            const periodParts = formData.payPeriod.split(' ');
+            const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+            const monthIdx = monthNames.findIndex(m => m.toLowerCase().startsWith(periodParts[0].toLowerCase() || '')) % 12;
+            const month = monthIdx !== -1 ? monthIdx + 1 : new Date().getMonth() + 1;
+            const year = parseInt(periodParts[1]) || new Date().getFullYear();
+
             const payload = {
                 staffId: formData.staffId,
                 staffName: formData.staffName,
                 department: formData.department,
-                period: formData.payPeriod,
-                payPeriod: formData.payPeriod,
-                earnings: {
-                    basic: parseFloat(formData.basicSalary) || 0,
-                    bonus: parseFloat(formData.bonus) || 0,
-                    incentives: parseFloat(formData.incentives) || 0,
-                    overtime: parseFloat(formData.overtime) || 0,
-                    arrears: parseFloat(formData.arrears) || 0
-                },
-                deductions: {
-                    pf: parseFloat(formData.pf) || 0,
-                    esi: parseFloat(formData.esi) || 0,
-                    pt: parseFloat(formData.pt) || 0,
-                    tds: parseFloat(formData.tds) || 0
-                },
-                allowanceBreakdown: {
-                    Bonus: parseFloat(formData.bonus) || 0,
-                    Incentives: parseFloat(formData.incentives) || 0,
-                    Overtime: parseFloat(formData.overtime) || 0,
-                    Arrears: parseFloat(formData.arrears) || 0
-                },
-                deductionBreakdown: {
-                    PF: parseFloat(formData.pf) || 0,
-                    ESI: parseFloat(formData.esi) || 0,
-                    PT: parseFloat(formData.pt) || 0,
-                    TDS: parseFloat(formData.tds) || 0
+                payPeriodMonth: month,
+                payPeriodYear: year,
+                basicSalary: parseFloat(formData.basicSalary) || 0,
+                bonus: parseFloat(formData.bonus) || 0,
+                incentives: parseFloat(formData.incentives) || 0,
+                overtimePay: parseFloat(formData.overtime) || 0,
+                arrears: parseFloat(formData.arrears) || 0,
+                totalEarnings: calculations.grossSalary,
+                totalDeductions: calculations.totalDeductions,
+                statutory: {
+                    employeePF: parseFloat(formData.pf) || 0,
+                    employeeESI: parseFloat(formData.esi) || 0,
+                    professionalTax: parseFloat(formData.pt) || 0,
+                    tdsDeducted: parseFloat(formData.tds) || 0
                 },
                 grossSalary: calculations.grossSalary,
-                totalDeductions: calculations.totalDeductions,
                 netSalary: calculations.netSalary,
-                status: formData.status,
-                paymentMode: formData.paymentMode,
+                status: formData.status.toLowerCase(),
+                paymentMode: formData.paymentMode.toLowerCase().replace(' ', '_'),
                 paymentDate: formData.paymentDate,
                 bankName: formData.bankName,
                 accountNumber: formData.accountNumber,

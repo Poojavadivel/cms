@@ -1,38 +1,29 @@
 .payroll-page {
-  padding: 24px;
+  padding: 10px 14px;
   background-color: #f8f9fa;
-  /* Light gray background for whole page */
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
   font-family: 'Inter', sans-serif;
+  box-sizing: border-box;
 }
 
 /* Summary Cards */
 .summary-cards {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  /* 5 cards in a row */
-  gap: 16px;
-  margin-bottom: 24px;
+  gap: 8px;
+  margin-bottom: 12px;
 }
 
 .summary-card {
   border-radius: 12px;
-  padding: 20px;
+  padding: 12px 16px;
   display: flex;
   flex-direction: column;
-  /* Icon top, content below or flex-row based on design? Screenshot: Icon left? No, screenshot shows Icon top-left maybe or left. Let's look closer. */
-  /* Re-evaluating screenshot description: "Icon, Label, Value".  */
-  /* Actually, screenshot shows Icon on top or left. Usually: Icon (top left), Label (below icon), Value (below label). */
-  /* Or: Icon (left), Text (right). */
-  /* Let's go with Icon and Text stack based on typical dashboard cards or side-by-side. */
-  /* The code I wrote in JSX puts Icon in 'card-icon-wrapper' and Label/Value in 'card-content'. I will style them as block (stack) or flex. */
-  /* I will assume vertical stack for now as per common "stats" card, or row. Let's start with column for clarity if not specified, but usually row is better for space.  */
-  /* WAIT. The code I wrote has them detailed. Let's use Column layout for the card itself, but visually it looks like distinct items. */
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  height: 120px;
-  /* Fixed height for uniformity */
+  justify-content: center;
+  height: 80px;
   border: 1px solid transparent;
 }
 
@@ -54,11 +45,11 @@
 }
 
 .card-icon-wrapper {
-  margin-bottom: 12px;
+  margin-bottom: 6px;
 }
 
 .card-icon {
-  font-size: 24px;
+  font-size: 18px;
 }
 
 .card-blue-light .card-icon {
@@ -79,15 +70,17 @@
 }
 
 .card-label {
-  font-size: 14px;
+  font-size: 13px;
   color: #64748b;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
   font-weight: 500;
 }
 
 .card-value {
   font-size: 24px;
   font-weight: 700;
+  line-height: 1;
+  margin-top: 2px;
 }
 
 .value-blue {
@@ -106,10 +99,16 @@
 /* Main Content Area */
 .payroll-content-area {
   background: white;
-  border-radius: 16px;
-  padding: 24px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  padding: 8px 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   border: 1px solid #e2e8f0;
+  flex: 1;
+  /* Fill remaining space */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  /* Critical for internal scroll */
 }
 
 /* Header */
@@ -117,9 +116,9 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: 12px;
   flex-wrap: wrap;
-  gap: 16px;
+  gap: 10px;
 }
 
 .header-left {
@@ -155,6 +154,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-wrap: wrap;
 }
 
 .icon-btn {
@@ -208,36 +208,42 @@
   color: white;
   border: none;
   border-radius: 8px;
-  padding: 10px 20px;
+  padding: 0 20px;
+  height: 42px;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 8px;
-  transition: background 0.2s;
+  box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
+  transition: all 0.2s;
 }
 
 .add-new-btn:hover {
   background-color: #1d4ed8;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 10px -1px rgba(37, 99, 235, 0.3);
 }
 
-/* Table Container Override */
+/* Table Container Optimized for Internal Scroll */
 .payroll-table-container {
-  /* Ensure GenericDataTable fits well */
-  width: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 /* Responsive */
-@media (max-width: 1024px) {
+@media (max-width: 1200px) {
   .summary-cards {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   }
 }
 
 @media (max-width: 768px) {
   .summary-cards {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
   }
 
   .payroll-header {
@@ -247,11 +253,139 @@
 
   .header-right {
     width: 100%;
-    justify-content: space-between;
-    flex-wrap: wrap;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
   }
 
   .search-control input {
     width: 100%;
   }
+
+  .tabs-wrapper {
+    overflow-x: auto;
+    width: 100%;
+    padding-bottom: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .card-value {
+    font-size: 18px;
+  }
+}
+
+/* Tabs & Filters */
+.tabs-wrapper {
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tab-btn {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 500;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  height: 36px;
+  display: flex;
+  align-items: center;
+}
+
+.tab-btn:hover {
+  background: rgba(37, 99, 235, 0.08);
+  color: #2563eb;
+}
+
+.tab-btn.active {
+  background: transparent;
+  color: #2563eb;
+  font-weight: 700;
+  box-shadow: none;
+  position: relative;
+}
+
+.tab-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 10px;
+  right: 10px;
+  height: 2px;
+  background-color: #2563eb;
+  border-radius: 2px;
+}
+
+.btn-filter-date {
+  padding: 0 12px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+  outline: none;
+  min-width: 130px;
+  height: 36px;
+}
+
+.search-control input {
+  padding: 0 12px 0 32px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 13px;
+  outline: none;
+  width: 220px;
+  height: 36px;
+  transition: border-color 0.2s;
+}
+
+/* Status Badges */
+.status-badge {
+  padding: 6px 12px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  display: inline-block;
+}
+
+.status-badge.paid {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.status-badge.pending {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.status-badge.approved {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+.status-badge.draft {
+  background-color: #f1f5f9;
+  color: #475569;
+}
+
+.status-badge.rejected {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.status-badge.processed {
+  background-color: #ede9fe;
+  color: #5b21b6;
 }

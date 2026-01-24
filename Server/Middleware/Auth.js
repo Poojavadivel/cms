@@ -14,6 +14,8 @@ module.exports = async function authFull(req, res, next) {
       token = header.slice(7).trim();
     } else if (req.header && req.header('x-auth-token')) {
       token = req.header('x-auth-token');
+    } else if (req.query && req.query.token) {
+      token = req.query.token;
     }
 
     if (!token) return res.status(401).json({ message: 'No token, authorization denied' });

@@ -1,0 +1,217 @@
+{
+  "_id": "8c4623e3-f93b-467f-bb18-d3a22df9cbfd",
+  "firstName": "Deepa",
+  "lastName": "R",
+  "dateOfBirth": "1969-01-14T02:45:42.459Z",
+  "age": 56,
+  "gender": "Female",
+  "bloodGroup": "A+",
+  "phone": "+918061768049",
+  "email": null,
+  "address": {
+    "houseNo": "621",
+    "street": "Bazaar Street",
+    "city": "Namakkal",
+    "state": "Tamil Nadu",
+    "pincode": "637141",
+    "country": "India",
+    "line1": "621 Bazaar Street Namakkal"
+  },
+  "vitals": {
+    "bp": "121/84",
+    "pulse": 91,
+    "spo2": 95,
+    "weightKg": 65,
+    "heightCm": 182,
+    "bmi": 19.62
+  },
+  "doctorId": "49fd2b7a-bbc7-40a7-ad51-518f726eb6e5",
+  "allergies": [],
+  "notes": "Regular patient. Cooperative.\nPast Surgeries: None\nPast Surgeries: None\nPast Surgeries: None\nPast Surgeries: None\nPast Surgeries: None\nPast Surgeries: None\nPast Surgeries: None",
+  "metadata": {
+    "emergencyContactName": "Lakshmi Menon",
+    "emergencyContactPhone": "+918151925706",
+    "medicalHistory": [
+      "Hypertension",
+      "Migraine"
+    ],
+    "prescriptions": [],
+    "insuranceNumber": "ACKO",
+    "insuranceProvider": null,
+    "insuranceExpiry": null,
+    "patientCode": "PAT-00066"
+  },
+  "deleted_at": null,
+  "prescriptions": [],
+  "medicalReports": [
+    {
+      "reportId": "3620f322-f727-48ac-a029-4a79f6c70641",
+      "reportType": "LAB_REPORT",
+      "imagePath": "1dc42cab-9f35-40d9-9130-9b9bd245c16a",
+      "uploadDate": "2026-01-22T07:04:25.235Z",
+      "uploadedBy": null,
+      "extractedData": {
+        "patient": {
+          "firstName": null,
+          "lastName": null,
+          "dateOfBirth": null,
+          "age": null,
+          "gender": null,
+          "phone": null,
+          "email": null,
+          "address": {
+            "line1": null,
+            "city": null,
+            "state": null,
+            "pincode": null,
+            "country": null
+          },
+          "mrNo": null,
+          "labId": null
+        },
+        "labReport": {
+          "testType": "UNKNOWN",
+          "testCategory": "General",
+          "testDate": null,
+          "reportedDate": null,
+          "labName": null,
+          "doctorName": null,
+          "results": [],
+          "notes": null,
+          "interpretation": null,
+          "technician": null,
+          "verifiedBy": null
+        },
+        "metadata": {
+          "specimenType": null,
+          "collectionDate": null,
+          "receivedDate": null,
+          "reportStatus": null
+        },
+        "extractionMetadata": {
+          "intent": "UNKNOWN",
+          "extractionTimeMs": 4091,
+          "model": "gemini-2.5-flash",
+          "timestamp": "2026-01-22T07:04:24.988Z"
+        }
+      },
+      "ocrText": "EG\",1DkyU1m",
+      "intent": "UNKNOWN",
+      "_id": "6971cbf9c9f15704aac4df17"
+    },
+    {
+      "reportId": "1f336071-c07d-42b2-9d0d-7232dd650964",
+      "reportType": "LAB_REPORT",
+      "imagePath": "43cc0623-3b23-4eea-ae79-79b87979e835",
+      "uploadDate": "2026-01-22T07:05:21.210Z",
+      "uploadedBy": null,
+      "extractedData": {
+        "patient": {
+          "firstName": null,
+          "lastName": null,
+          "dateOfBirth": null,
+          "age": null,
+          "gender": null,
+          "phone": null,
+          "email": null,
+          "address": {
+            "line1": null,
+            "city": null,
+            "state": null,
+            "pincode": null,
+            "country": null
+          },
+          "mrNo": null,
+          "labId": null
+        },
+        "labReport": {
+          "testType": "UNKNOWN",
+          "testCategory": "General",
+          "testDate": null,
+          "reportedDate": null,
+          "labName": null,
+          "doctorName": null,
+          "results": [],
+          "notes": null,
+          "interpretation": null,
+          "technician": null,
+          "verifiedBy": null
+        },
+        "metadata": {
+          "specimenType": null,
+          "collectionDate": null,
+          "receivedDate": null,
+          "reportStatus": null
+        },
+        "extractionMetadata": {
+          "intent": "UNKNOWN",
+          "extractionTimeMs": 4080,
+          "model": "gemini-2.5-flash",
+          "timestamp": "2026-01-22T07:05:20.951Z"
+        }
+      },
+      "ocrText": "EG\",1DkyU1m",
+      "intent": "UNKNOWN",
+      "_id": "6971cc31c9f15704aac4df47"
+    },
+    {
+      "reportId": "52af8759-255f-4466-bf27-8b5cc5610951",
+      "reportType": "LAB_REPORT",
+      "imagePath": "bce3a829-4970-4714-9691-0f119773404f",
+      "uploadDate": "2026-01-22T07:12:02.212Z",
+      "uploadedBy": null,
+      "extractedData": {
+        "patient": {
+          "firstName": null,
+          "lastName": null,
+          "dateOfBirth": null,
+          "age": null,
+          "gender": null,
+          "phone": null,
+          "email": null,
+          "address": {
+            "line1": null,
+            "city": null,
+            "state": null,
+            "pincode": null,
+            "country": null
+          },
+          "mrNo": null,
+          "labId": null
+        },
+        "labReport": {
+          "testType": "THYROID",
+          "testCategory": "Endocrinology",
+          "testDate": null,
+          "reportedDate": null,
+          "labName": null,
+          "doctorName": null,
+          "results": [],
+          "notes": null,
+          "interpretation": null,
+          "technician": null,
+          "verifiedBy": null
+        },
+        "metadata": {
+          "specimenType": null,
+          "collectionDate": null,
+          "receivedDate": null,
+          "reportStatus": null
+        },
+        "extractionMetadata": {
+          "intent": "THYROID",
+          "extractionTimeMs": 3068,
+          "model": "gemini-2.5-flash",
+          "timestamp": "2026-01-22T07:12:01.941Z"
+        }
+      },
+      "ocrText": "EG\",1DkyU1m",
+      "intent": "THYROID",
+      "_id": "6971cdc2c9f15704aac4dfb6"
+    }
+  ],
+  "createdAt": "2025-12-03T03:55:32.322Z",
+  "updatedAt": "2026-01-22T07:12:08.877Z",
+  "__v": 3,
+  "patientCode": "PAT-00066"
+}

@@ -7,6 +7,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { MdChevronLeft, MdChevronRight, MdSearch } from 'react-icons/md';
 import invoiceService from '../../../services/invoiceService';
+import InvoiceDetail from './InvoiceDetail';
+import InvoiceForm from './InvoiceForm';
 import './Invoice.css';
 
 // Custom SVG Icons (matching Appointments)
@@ -47,8 +49,13 @@ const Invoice = () => {
   const [currentPage, setCurrentPage] = useState(0);
   const [statusFilter, setStatusFilter] = useState('All');
   const [paymentMethodFilter, setPaymentMethodFilter] = useState('All');
+  const [periodFilter, setPeriodFilter] = useState('All'); // 'Current', 'Last', 'All'
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
-  
+  const [showDetail, setShowDetail] = useState(false);
+  const [showForm, setShowForm] = useState(false);
+  const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [editingInvoice, setEditingInvoice] = useState(null);
+
   const itemsPerPage = 10;
 
   // Fetch invoices from API
@@ -57,7 +64,7 @@ const Invoice = () => {
     try {
       const data = await invoiceService.fetchInvoices({ limit: 100 });
       console.log('✅ Fetched invoices:', data);
-      
+
       setInvoices(data);
       setFilteredInvoices(data);
     } catch (error) {
@@ -82,8 +89,9 @@ const Invoice = () => {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(invoice =>
         (invoice.invoiceNumber?.toLowerCase() || '').includes(query) ||
-        (invoice.patientName?.toLowerCase() || '').includes(query) ||
-        (invoice.patientId?.toLowerCase() || '').includes(query)
+        (invoice.staffName?.toLowerCase() || '').includes(query) ||
+        (invoice.staffCode?.toLowerCase() || '').includes(query) ||
+        (invoice.department?.toLowerCase() || '').includes(query)
       );
     }
 
@@ -97,9 +105,28 @@ const Invoice = () => {
       filtered = filtered.filter(invoice => invoice.paymentMethod === paymentMethodFilter);
     }
 
+    // Apply period filter
+    if (periodFilter === 'Current') {
+      const now = new Date();
+      filtered = filtered.filter(invoice =>
+        invoice.month === (now.getMonth() + 1) && invoice.year === now.getFullYear()
+      );
+    } else if (periodFilter === 'Last') {
+      const now = new Date();
+      let lastMonth = now.getMonth(); // Prev month index
+      let lastYear = now.getFullYear();
+      if (lastMonth === 0) { // Jan -> Dec
+        lastMonth = 12;
+        lastYear -= 1;
+      }
+      filtered = filtered.filter(invoice =>
+        invoice.month === lastMonth && invoice.year === lastYear
+      );
+    }
+
     setFilteredInvoices(filtered);
     setCurrentPage(0);
-  }, [invoices, searchQuery, statusFilter, paymentMethodFilter]);
+  }, [invoices, searchQuery, statusFilter, paymentMethodFilter, periodFilter]);
 
   // Get unique values for filters
   const uniqueStatuses = ['All', ...new Set(invoices.map(inv => inv.status).filter(Boolean))];
@@ -108,12 +135,7 @@ const Invoice = () => {
   // Format currency
   const formatCurrency = (amount) => {
     const num = parseFloat(amount || 0);
-    if (num >= 100000) {
-      return `₹${(num / 100000).toFixed(1)}L`;
-    } else if (num >= 1000) {
-      return `₹${(num / 1000).toFixed(1)}K`;
-    }
-    return `₹${num.toFixed(0)}`;
+    return `₹${num.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
   };
 
   // Format date
@@ -181,13 +203,44 @@ const Invoice = () => {
 
   // Handle actions
   const handleView = (invoice) => {
-    console.log('View invoice:', invoice);
-    alert(`View Invoice: ${invoice.invoiceNumber}`);
+    setSelectedInvoice(invoice);
+    setShowDetail(true);
+  };
+
+  const handleCloseDetail = () => {
+    setShowDetail(false);
+    setSelectedInvoice(null);
   };
 
   const handleEdit = (invoice) => {
-    console.log('Edit invoice:', invoice);
-    alert(`Edit Invoice: ${invoice.invoiceNumber}`);
+    setEditingInvoice(invoice);
+    setShowForm(true);
+  };
+
+  const handleFormSubmit = async (formData) => {
+    try {
+      await invoiceService.updateInvoice(editingInvoice.id, formData);
+      setShowForm(false);
+      setEditingInvoice(null);
+      await fetchInvoices();
+      alert('Payroll record updated successfully!');
+    } catch (error) {
+      console.error('Update error:', error);
+      alert('Failed to update payroll: ' + error.message);
+    }
+  };
+
+  const handleDelete = async (invoice) => {
+    if (window.confirm(`Are you sure you want to delete the payroll for ${invoice.staffName}?`)) {
+      try {
+        await invoiceService.deleteInvoice(invoice.id);
+        await fetchInvoices();
+        alert('Payroll record deleted successfully.');
+      } catch (error) {
+        console.error('Delete error:', error);
+        alert('Failed to delete payroll: ' + error.message);
+      }
+    }
   };
 
   // Pagination
@@ -223,7 +276,7 @@ const Invoice = () => {
           <MdSearch className="search-icon-lg" />
           <input
             type="text"
-            placeholder="Search invoices by invoice number, patient name..."
+            placeholder="Search by Employee, Code, Dept or Payroll ID..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="search-input-lg"
@@ -231,33 +284,42 @@ const Invoice = () => {
         </div>
 
         <div className="filter-right-group">
+          <button
+            className={`tab-btn ${periodFilter === 'All' ? 'active' : ''}`}
+            onClick={() => setPeriodFilter('All')}
+          >
+            All Periods
+          </button>
+          <button
+            className={`tab-btn ${periodFilter === 'Current' ? 'active' : ''}`}
+            onClick={() => setPeriodFilter('Current')}
+          >
+            Current Month
+          </button>
+          <button
+            className={`tab-btn ${periodFilter === 'Last' ? 'active' : ''}`}
+            onClick={() => setPeriodFilter('Last')}
+          >
+            Last Month
+          </button>
+
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="tab-btn"
+            className="btn-filter-date"
+            style={{ marginLeft: '12px' }}
           >
             {uniqueStatuses.map(status => (
               <option key={status} value={status}>{status}</option>
             ))}
           </select>
 
-          {showAdvancedFilters && (
-            <select
-              value={paymentMethodFilter}
-              onChange={(e) => setPaymentMethodFilter(e.target.value)}
-              className="tab-btn"
-            >
-              {uniquePaymentMethods.map(method => (
-                <option key={method} value={method}>{method || 'All'}</option>
-              ))}
-            </select>
-          )}
-
           <button
             className="btn-filter-date"
-            onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+            onClick={() => fetchInvoices()}
+            title="Refresh Data"
           >
-            {showAdvancedFilters ? 'Less Filters' : 'More Filters'}
+            ↻ Refresh
           </button>
         </div>
       </div>
@@ -268,12 +330,12 @@ const Invoice = () => {
           <table className="modern-table">
             <thead>
               <tr>
-                <th style={{ width: '25%' }}>Employee</th>
+                <th style={{ width: '22%' }}>Employee</th>
+                <th style={{ width: '13%' }}>Pay Month</th>
                 <th style={{ width: '13%' }}>Date</th>
                 <th style={{ width: '14%' }}>Gross Pay</th>
                 <th style={{ width: '14%' }}>Net Pay</th>
-                <th style={{ width: '10%' }}>Status</th>
-                <th style={{ width: '12%' }}>Payment</th>
+                <th style={{ width: '12%' }}>Status</th>
                 <th style={{ width: '12%' }}>Actions</th>
               </tr>
             </thead>
@@ -282,15 +344,15 @@ const Invoice = () => {
                 <tr key={invoice.id || index}>
                   <td>
                     <div className="info-group">
-                      <span className="primary">{invoice.patientName || 'Unknown'}</span>
-                      <span className="secondary">{invoice.invoiceNumber || 'N/A'}</span>
+                      <span className="primary">{invoice.staffName || 'Unknown'}</span>
+                      <span className="secondary">{invoice.department || 'General'} • {invoice.staffCode || 'N/A'}</span>
                     </div>
                   </td>
+                  <td style={{ fontWeight: 600, color: '#2563EB' }}>{invoice.periodDisplay || 'N/A'}</td>
                   <td>{formatDate(invoice.date)}</td>
                   <td style={{ fontWeight: 600, color: '#334155' }}>{formatCurrency(invoice.amount)}</td>
                   <td style={{ fontWeight: 600, color: '#28C76F' }}>{formatCurrency(invoice.paidAmount)}</td>
                   <td><StatusBadge status={invoice.status} /></td>
-                  <td style={{ fontWeight: 500, color: '#334155', fontSize: '12px' }}>{formatPaymentMethod(invoice.paymentMethod)}</td>
                   <td>
                     <div className="action-buttons-group">
                       <button className="btn-action view" title="View" onClick={() => handleView(invoice)}>
@@ -298,6 +360,9 @@ const Invoice = () => {
                       </button>
                       <button className="btn-action edit" title="Edit" onClick={() => handleEdit(invoice)}>
                         <Icons.Edit />
+                      </button>
+                      <button className="btn-action delete" title="Delete" onClick={() => handleDelete(invoice)}>
+                        <Icons.Delete />
                       </button>
                     </div>
                   </td>
@@ -347,6 +412,23 @@ const Invoice = () => {
           </button>
         </div>
       </div>
+
+      {showDetail && selectedInvoice && (
+        <InvoiceDetail
+          invoiceId={selectedInvoice.id}
+          invoice={selectedInvoice}
+          onClose={handleCloseDetail}
+        />
+      )}
+
+      {/* Invoice Form Modal */}
+      {showForm && editingInvoice && (
+        <InvoiceForm
+          initial={editingInvoice}
+          onCancel={() => setShowForm(false)}
+          onSubmit={handleFormSubmit}
+        />
+      )}
     </div>
   );
 };

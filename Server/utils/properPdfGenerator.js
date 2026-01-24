@@ -47,14 +47,14 @@ class ProperPdfGenerator {
   // Generate patient report (returns document definition, not PDF object)
   generatePatientReport(patient, doctor, appointments) {
     const patientName = `${patient.firstName} ${patient.lastName || ''}`.trim();
-    
+
     const docDefinition = {
       pageSize: 'A4',
       pageMargins: [50, 80, 50, 80],
-      
+
       header: this._buildHeader('Patient Medical Report', patientName),
       footer: this._buildFooter(),
-      
+
       content: [
         this._buildPatientInfo(patient, doctor),
         this._buildVitals(patient),
@@ -63,7 +63,7 @@ class ProperPdfGenerator {
         this._buildAppointments(appointments),
         this._buildClinicalNotes(patient)
       ],
-      
+
       styles: this._getStyles(),
       defaultStyle: {
         fontSize: this.fontSize.body,
@@ -76,7 +76,7 @@ class ProperPdfGenerator {
 
   // Header
   _buildHeader(title, patientName = null) {
-    return function(currentPage, pageCount) {
+    return function (currentPage, pageCount) {
       return {
         columns: [
           {
@@ -98,7 +98,7 @@ class ProperPdfGenerator {
 
   // Footer
   _buildFooter() {
-    return function(currentPage, pageCount) {
+    return function (currentPage, pageCount) {
       return {
         columns: [
           {
@@ -122,22 +122,26 @@ class ProperPdfGenerator {
       this._sectionHeader('Patient Demographics'),
       {
         columns: [
-          { width: '50%', stack: [
-            this._infoRow('Patient ID', patient._id?.toString().substring(0, 12) + '...'),
-            this._infoRow('Full Name', `${patient.firstName} ${patient.lastName || ''}`.trim()),
-            this._infoRow('Date of Birth', patient.dateOfBirth ? new Date(patient.dateOfBirth).toLocaleDateString('en-IN') : 'N/A'),
-            this._infoRow('Age', `${patient.age || 'N/A'} years`),
-            this._infoRow('Gender', patient.gender || 'N/A'),
-            this._infoRow('Blood Group', patient.bloodGroup || 'Unknown')
-          ]},
-          { width: '50%', stack: [
-            this._infoRow('Mobile', patient.phone || 'N/A'),
-            this._infoRow('Email', patient.email || 'N/A'),
-            this._infoRow('Address', patient.address?.street || patient.address?.line1 || 'N/A'),
-            this._infoRow('City', patient.address?.city || 'N/A'),
-            this._infoRow('State', patient.address?.state || 'N/A'),
-            this._infoRow('PIN Code', patient.address?.pincode || 'N/A')
-          ]}
+          {
+            width: '50%', stack: [
+              this._infoRow('Patient ID', patient._id?.toString().substring(0, 12) + '...'),
+              this._infoRow('Full Name', `${patient.firstName} ${patient.lastName || ''}`.trim()),
+              this._infoRow('Date of Birth', patient.dateOfBirth ? new Date(patient.dateOfBirth).toLocaleDateString('en-IN') : 'N/A'),
+              this._infoRow('Age', `${patient.age || 'N/A'} years`),
+              this._infoRow('Gender', patient.gender || 'N/A'),
+              this._infoRow('Blood Group', patient.bloodGroup || 'Unknown')
+            ]
+          },
+          {
+            width: '50%', stack: [
+              this._infoRow('Mobile', patient.phone || 'N/A'),
+              this._infoRow('Email', patient.email || 'N/A'),
+              this._infoRow('Address', patient.address?.street || patient.address?.line1 || 'N/A'),
+              this._infoRow('City', patient.address?.city || 'N/A'),
+              this._infoRow('State', patient.address?.state || 'N/A'),
+              this._infoRow('PIN Code', patient.address?.pincode || 'N/A')
+            ]
+          }
         ],
         columnGap: this.spacing.md,
         margin: [0, 0, 0, this.spacing.md]
@@ -258,7 +262,7 @@ class ProperPdfGenerator {
           this._infoRow('Notes', rx.notes || 'None'),
           { text: 'Medicines:', bold: true, margin: [0, this.spacing.xs, 0, this.spacing.xs] },
           {
-            ul: (rx.medicines || []).map(med => 
+            ul: (rx.medicines || []).map(med =>
               `${med.name || 'N/A'} - ${med.dosage || 'N/A'}, ${med.frequency || 'N/A'}, ${med.duration || 'N/A'} (Qty: ${med.quantity || 'N/A'})`
             ),
             margin: [this.spacing.md, 0, 0, this.spacing.sm]
@@ -310,7 +314,7 @@ class ProperPdfGenerator {
           body: tableBody
         },
         layout: {
-          fillColor: function(rowIndex) {
+          fillColor: function (rowIndex) {
             return rowIndex === 0 ? '#1a365d' : (rowIndex % 2 === 0 ? '#f9fafb' : null);
           }
         },
@@ -380,7 +384,7 @@ class ProperPdfGenerator {
       table: {
         widths: ['*'],
         body: [[
-          { 
+          {
             stack: [
               { text: value, bold: true, fontSize: this.fontSize.h3, alignment: 'center', color: color, margin: [0, this.spacing.xs, 0, 2] },
               { text: label, fontSize: this.fontSize.small, color: this.colors.textLight, alignment: 'center', margin: [0, 0, 0, this.spacing.xs] }
@@ -473,21 +477,21 @@ class ProperPdfGenerator {
   // Generate doctor report (combined weekly + total)
   generateDoctorReport(doctor, patients, weekAppointments, totalAppointments, activePatients) {
     const doctorName = `Dr. ${doctor.name || `${doctor.firstName} ${doctor.lastName || ''}`.trim()}`;
-    
+
     // Get upcoming appointments (future scheduled appointments)
     const now = new Date();
-    const upcomingAppointments = totalAppointments.filter(apt => 
-      new Date(apt.startAt) > now && 
+    const upcomingAppointments = totalAppointments.filter(apt =>
+      new Date(apt.startAt) > now &&
       (apt.status === 'Scheduled' || apt.status === 'scheduled' || apt.status === 'confirmed')
     ).slice(0, 20);
-    
+
     const docDefinition = {
       pageSize: 'A4',
       pageMargins: [50, 80, 50, 80],
-      
+
       header: this._buildHeader('Doctor Performance Report', doctorName),
       footer: this._buildFooter(),
-      
+
       content: [
         this._buildDoctorInfo(doctor),
         this._buildDoctorStats(patients, weekAppointments, totalAppointments, activePatients),
@@ -498,7 +502,7 @@ class ProperPdfGenerator {
         this._buildDoctorPatients(patients, 'All Assigned Patients'),
         this._buildActivePatients(activePatients)
       ],
-      
+
       styles: this._getStyles(),
       defaultStyle: {
         fontSize: this.fontSize.body,
@@ -515,15 +519,19 @@ class ProperPdfGenerator {
       this._sectionHeader('Doctor Information'),
       {
         columns: [
-          { width: '50%', stack: [
-            this._infoRow('Name', `${doctor.firstName} ${doctor.lastName || ''}`),
-            this._infoRow('Specialization', doctor.specialization || 'General Physician'),
-            this._infoRow('Email', doctor.email || 'N/A')
-          ]},
-          { width: '50%', stack: [
-            this._infoRow('Phone', doctor.phone || 'N/A'),
-            this._infoRow('Doctor ID', doctor._id?.toString().substring(0, 16))
-          ]}
+          {
+            width: '50%', stack: [
+              this._infoRow('Name', `${doctor.firstName} ${doctor.lastName || ''}`),
+              this._infoRow('Specialization', doctor.specialization || 'General Physician'),
+              this._infoRow('Email', doctor.email || 'N/A')
+            ]
+          },
+          {
+            width: '50%', stack: [
+              this._infoRow('Phone', doctor.phone || 'N/A'),
+              this._infoRow('Doctor ID', doctor._id?.toString().substring(0, 16))
+            ]
+          }
         ],
         columnGap: this.spacing.md,
         margin: [0, 0, 0, this.spacing.lg]
@@ -534,25 +542,25 @@ class ProperPdfGenerator {
   // Doctor Stats Section (Weekly + Total + Active)
   _buildDoctorStats(patients, weekAppointments, totalAppointments, activePatients) {
     const totalPatients = patients.length;
-    
+
     // Weekly stats
     const weekTotal = weekAppointments.length;
     const weekCompleted = weekAppointments.filter(a => a.status === 'Completed' || a.status === 'completed').length;
     const weekPending = weekAppointments.filter(a => a.status === 'Scheduled' || a.status === 'scheduled' || a.status === 'confirmed').length;
     const weekCancelled = weekAppointments.filter(a => a.status === 'Cancelled' || a.status === 'cancelled').length;
-    
+
     // Total stats
     const totalTotal = totalAppointments.length;
     const totalCompleted = totalAppointments.filter(a => a.status === 'Completed' || a.status === 'completed').length;
     const totalPending = totalAppointments.filter(a => a.status === 'Scheduled' || a.status === 'scheduled' || a.status === 'confirmed').length;
-    
+
     // Active stats (appointments in future)
     const now = new Date();
     const activeAppointments = totalAppointments.filter(a => new Date(a.startAt) > now && (a.status === 'Scheduled' || a.status === 'scheduled' || a.status === 'confirmed')).length;
 
     return [
       this._sectionHeader('Performance Overview'),
-      
+
       // Weekly Stats Row
       {
         table: {
@@ -577,7 +585,7 @@ class ProperPdfGenerator {
         columnGap: this.spacing.sm,
         margin: [0, 0, 0, this.spacing.md]
       },
-      
+
       // Total Stats Row
       {
         table: {
@@ -616,10 +624,10 @@ class ProperPdfGenerator {
     const today = new Date();
     const weekAgo = new Date(today);
     weekAgo.setDate(weekAgo.getDate() - 7);
-    
+
     const dailyCount = {};
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    
+
     weekAppointments.forEach(apt => {
       const date = new Date(apt.startAt);
       const dayKey = date.toLocaleDateString('en-IN');
@@ -697,11 +705,11 @@ class ProperPdfGenerator {
             console.error('Error formatting appointment date:', err);
           }
         }
-        
-        const statusColor = apt.status === 'Completed' || apt.status === 'completed' ? '#10b981' : 
-                           apt.status === 'Cancelled' || apt.status === 'cancelled' ? '#ef4444' : 
-                           this.colors.text;
-        
+
+        const statusColor = apt.status === 'Completed' || apt.status === 'completed' ? '#10b981' :
+          apt.status === 'Cancelled' || apt.status === 'cancelled' ? '#ef4444' :
+            this.colors.text;
+
         tableBody.push([
           { text: dateText, style: 'tableCell' },
           { text: timeText, style: 'tableCell' },
@@ -715,8 +723,8 @@ class ProperPdfGenerator {
       }
     });
 
-    const subtitle = appointments.length > limit ? 
-      `Showing ${limit} of ${appointments.length} appointments` : 
+    const subtitle = appointments.length > limit ?
+      `Showing ${limit} of ${appointments.length} appointments` :
       `Total: ${appointments.length} appointments`;
 
     return [
@@ -729,7 +737,7 @@ class ProperPdfGenerator {
           body: tableBody
         },
         layout: {
-          fillColor: function(rowIndex) {
+          fillColor: function (rowIndex) {
             return rowIndex === 0 ? '#1a365d' : (rowIndex % 2 === 0 ? '#f9fafb' : null);
           }
         },
@@ -766,7 +774,7 @@ class ProperPdfGenerator {
         const patientGender = patient.gender || 'N/A';
         const patientBloodGroup = patient.bloodGroup || 'N/A';
         const patientPhone = patient.phone || 'N/A';
-        
+
         tableBody.push([
           { text: patientName, style: 'tableCell' },
           { text: patientAge, style: 'tableCell' },
@@ -780,8 +788,8 @@ class ProperPdfGenerator {
       }
     });
 
-    const subtitle = patients.length > 30 ? 
-      `Showing 30 of ${patients.length} patients` : 
+    const subtitle = patients.length > 30 ?
+      `Showing 30 of ${patients.length} patients` :
       `Total: ${patients.length} patients`;
 
     return [
@@ -794,7 +802,7 @@ class ProperPdfGenerator {
           body: tableBody
         },
         layout: {
-          fillColor: function(rowIndex) {
+          fillColor: function (rowIndex) {
             return rowIndex === 0 ? '#1a365d' : (rowIndex % 2 === 0 ? '#f9fafb' : null);
           }
         },
@@ -815,7 +823,7 @@ class ProperPdfGenerator {
         ]
       };
     }
-    
+
     if (activePatients.length === 0) {
       return {
         stack: [
@@ -836,7 +844,7 @@ class ProperPdfGenerator {
     ];
 
     console.log(`[PDF Generator] Processing ${activePatients.length} active patients`);
-    
+
     activePatients.slice(0, 20).forEach((item, index) => {
       console.log(`[PDF Generator] Processing patient ${index + 1}:`, {
         firstName: item.firstName,
@@ -849,20 +857,20 @@ class ProperPdfGenerator {
         const patientAge = item.age?.toString() || 'N/A';
         const patientBloodGroup = item.bloodGroup || 'N/A';
         const patientPhone = item.phone || 'N/A';
-        
+
         let appointmentText = 'N/A';
         if (item.nextAppointment) {
           try {
             const nextDate = new Date(item.nextAppointment);
             if (!isNaN(nextDate.getTime())) {
-              appointmentText = nextDate.toLocaleDateString('en-IN') + ' ' + 
-                              nextDate.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+              appointmentText = nextDate.toLocaleDateString('en-IN') + ' ' +
+                nextDate.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
             }
           } catch (err) {
             console.error('Error formatting appointment date:', err);
           }
         }
-        
+
         tableBody.push([
           { text: patientName, style: 'tableCell', bold: true },
           { text: patientAge, style: 'tableCell' },
@@ -887,7 +895,7 @@ class ProperPdfGenerator {
             body: tableBody
           },
           layout: {
-            fillColor: function(rowIndex) {
+            fillColor: function (rowIndex) {
               return rowIndex === 0 ? '#1a365d' : (rowIndex % 2 === 0 ? '#f0fdf4' : null);
             }
           },
@@ -900,21 +908,21 @@ class ProperPdfGenerator {
   // Generate staff report
   generateStaffReport(staff) {
     const staffName = staff.name || 'Unknown';
-    
+
     const docDefinition = {
       pageSize: 'A4',
       pageMargins: [50, 80, 50, 80],
-      
+
       header: this._buildHeader('Staff Information Report', staffName),
       footer: this._buildFooter(),
-      
+
       content: [
         this._buildStaffInfo(staff),
         this._buildStaffRolesAndPermissions(staff),
         this._buildStaffSchedule(staff),
         this._buildStaffNotes(staff)
       ],
-      
+
       styles: this._getStyles(),
       defaultStyle: {
         fontSize: this.fontSize.body,
@@ -937,8 +945,8 @@ class ProperPdfGenerator {
       ['Status', staff.status || 'Active'],
       ['Gender', staff.gender || '-'],
       ['Date of Birth', staff.dateOfBirth ? new Date(staff.dateOfBirth).toLocaleDateString() : '-'],
-      ['Joined Date', staff.joinedDate ? new Date(staff.joinedDate).toLocaleDateString() : 
-                      staff.createdAt ? new Date(staff.createdAt).toLocaleDateString() : '-']
+      ['Joined Date', staff.joinedDate ? new Date(staff.joinedDate).toLocaleDateString() :
+        staff.createdAt ? new Date(staff.createdAt).toLocaleDateString() : '-']
     ];
 
     return {
@@ -1008,7 +1016,7 @@ class ProperPdfGenerator {
   // Build staff schedule section
   _buildStaffSchedule(staff) {
     const schedule = staff.schedule || staff.workingHours || {};
-    
+
     return {
       stack: [
         this._sectionHeader('Work Schedule'),
@@ -1071,6 +1079,362 @@ class ProperPdfGenerator {
         }
       ]
     };
+  }
+
+  // Generate Pathology Report
+  generatePathologyReport(report, patient) {
+    const patientName = `${patient.firstName} ${patient.lastName || ''}`.trim();
+    const reportDate = report.reportDate ? new Date(report.reportDate).toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    }) : 'N/A';
+
+    const docDefinition = {
+      pageSize: 'A4',
+      pageMargins: [50, 60, 50, 60],
+      header: this._buildHeader('Pathology Lab Report', patientName),
+      footer: this._buildFooter(),
+      content: [
+        {
+          columns: [
+            {
+              width: '*',
+              stack: [
+                this._sectionHeader('Patient Details'),
+                this._infoRow('Patient Name', patientName),
+                this._infoRow('Patient ID', patient.patientCode || 'N/A'),
+                this._infoRow('Age / Gender', `${patient.age || 'N/A'} / ${patient.gender || 'N/A'}`),
+                this._infoRow('Phone', patient.phone || 'N/A'),
+              ]
+            },
+            {
+              width: '*',
+              stack: [
+                this._sectionHeader('Report Summary'),
+                this._infoRow('Report Date', reportDate),
+                this._infoRow('Test Name', report.testName || 'N/A'),
+                this._infoRow('Test Type', report.testType || 'General'),
+                this._infoRow('Status', (report.status || 'Reported').toUpperCase()),
+              ]
+            }
+          ],
+          columnGap: 20
+        },
+        { text: '', margin: [0, 20] },
+        {
+          stack: [
+            this._sectionHeader('Medical Staff'),
+            {
+              columns: [
+                this._infoRow('Doctor', report.doctorName || 'N/A'),
+                this._infoRow('Technician', report.technician || 'N/A'),
+              ]
+            }
+          ]
+        },
+        { text: '', margin: [0, 20] },
+        {
+          table: {
+            headerRows: 1,
+            widths: ['*', 'auto', 'auto', 'auto', 'auto'],
+            body: [
+              [
+                { text: 'Parameter', style: 'tableHeader' },
+                { text: 'Result', style: 'tableHeader', alignment: 'center' },
+                { text: 'Unit', style: 'tableHeader', alignment: 'center' },
+                { text: 'Reference Range', style: 'tableHeader', alignment: 'center' },
+                { text: 'Flag', style: 'tableHeader', alignment: 'center' }
+              ],
+              ...(report.testResults && report.testResults.length > 0 ?
+                report.testResults.map(res => [
+                  { text: res.parameter || 'N/A', margin: [0, 5] },
+                  { text: res.value || 'N/A', alignment: 'center', bold: true, margin: [0, 5] },
+                  { text: res.unit || '-', alignment: 'center', margin: [0, 5] },
+                  { text: res.referenceRange || '-', alignment: 'center', margin: [0, 5] },
+                  {
+                    text: res.status || 'Normal',
+                    alignment: 'center',
+                    color: (res.status?.toLowerCase() === 'high' || res.status?.toLowerCase() === 'low') ? '#ef4444' : '#10b981',
+                    bold: (res.status?.toLowerCase() === 'high' || res.status?.toLowerCase() === 'low'),
+                    margin: [0, 5]
+                  }
+                ]) :
+                [[{ text: 'Detailed results available in original attachment', colSpan: 5, alignment: 'center', italics: true, color: '#6b7280', margin: [0, 20] }, {}, {}, {}, {}]]
+              )
+            ]
+          },
+          layout: 'lightHorizontalLines'
+        },
+        { text: '', margin: [0, 30] },
+        {
+          stack: [
+            { text: 'REMARKS', style: 'sectionHeader' },
+            { text: report.remarks || 'No clinical remarks provided.', fontSize: 10, italics: true, color: '#4b5563' }
+          ]
+        },
+        { text: '', margin: [0, 50] },
+        {
+          columns: [
+            {
+              width: '*',
+              stack: [
+                { text: '__________________________', margin: [0, 20, 0, 5] },
+                { text: 'Pathologist Signature', fontSize: 10, color: '#6b7280' }
+              ],
+              alignment: 'center'
+            },
+            {
+              width: '*',
+              stack: [
+                { text: '__________________________', margin: [0, 20, 0, 5] },
+                { text: 'Authorized Signatory', fontSize: 10, color: '#6b7280' }
+              ],
+              alignment: 'center'
+            }
+          ]
+        }
+      ],
+      styles: this._getStyles()
+    };
+
+    return docDefinition;
+  }
+
+  // Generate Payslip
+  generatePayslip(payroll) {
+    const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    const periodName = `${months[payroll.payPeriodMonth - 1]} ${payroll.payPeriodYear}`;
+    const staffName = payroll.staffName || 'Staff Member';
+
+    const docDefinition = {
+      pageSize: 'A4',
+      pageMargins: [50, 60, 50, 60],
+      header: this._buildHeader('Salary Payslip', staffName),
+      footer: this._buildFooter(),
+      content: [
+        {
+          columns: [
+            {
+              width: '*',
+              stack: [
+                this._sectionHeader('Staff Details'),
+                this._infoRow('Staff Name', staffName),
+                this._infoRow('Staff Code', payroll.staffCode || payroll.metadata?.payrollCode || 'N/A'),
+                this._infoRow('Department', payroll.department || 'N/A'),
+                this._infoRow('Designation', payroll.designation || 'N/A'),
+              ]
+            },
+            {
+              width: '*',
+              stack: [
+                this._sectionHeader('Payment Summary'),
+                this._infoRow('Pay Period', periodName),
+                this._infoRow('Payment Date', payroll.paymentDate ? new Date(payroll.paymentDate).toLocaleDateString('en-IN') : 'N/A'),
+                this._infoRow('Payment Mode', payroll.paymentMode || 'Bank Transfer'),
+                this._infoRow('Status', (payroll.status || 'Pending').toUpperCase()),
+              ]
+            }
+          ],
+          columnGap: 20
+        },
+        { text: '', margin: [0, 20] },
+        {
+          columns: [
+            {
+              width: '50%',
+              stack: [
+                { text: 'EARNINGS', style: 'tableHeader', alignment: 'center', margin: [0, 0, 0, 10] },
+                (() => {
+                  const items = [];
+                  const basic = Math.round(Number(payroll.basicSalary) || 0);
+                  items.push(this._amountRow('Basic Salary', basic));
+
+                  let listedSum = basic;
+
+                  if (payroll.earnings && Array.isArray(payroll.earnings)) {
+                    payroll.earnings.forEach(e => {
+                      const amt = Math.round(Number(e.amount) || 0);
+                      if (amt > 0) {
+                        items.push(this._amountRow(e.name || 'Allowance', amt));
+                        listedSum += amt;
+                      }
+                    });
+                  }
+
+                  const fixedFields = [
+                    { name: 'Bonus', val: payroll.bonus },
+                    { name: 'Incentives', val: payroll.incentives },
+                    { name: 'Overtime Pay', val: payroll.overtimePay },
+                    { name: 'Arrears', val: payroll.arrears }
+                  ];
+
+                  fixedFields.forEach(f => {
+                    const amt = Math.round(Number(f.val) || 0);
+                    if (amt > 0) {
+                      items.push(this._amountRow(f.name, amt));
+                      listedSum += amt;
+                    }
+                  });
+
+                  const targetGross = Math.round(Number(payroll.grossSalary || payroll.totalEarnings || 0));
+                  const gap = targetGross - listedSum;
+
+                  if (gap > 0) {
+                    items.push(this._amountRow('Special Allowance', gap));
+                  } else if (gap < 0) {
+                    // Logic to adjust if components exceed total (unlikely but safe)
+                    items.push(this._amountRow('Adjustments', gap));
+                  }
+
+                  items.push({ canvas: [{ type: 'line', x1: 0, y1: 5, x2: 240, y2: 5, lineWidth: 1, strokeColor: '#e5e7eb' }], margin: [0, 5] });
+                  items.push(this._amountRow('Total Earnings', targetGross, true));
+
+                  return items;
+                })()
+              ]
+            },
+            {
+              width: '50%',
+              stack: [
+                { text: 'DEDUCTIONS', style: 'tableHeader', alignment: 'center', margin: [0, 0, 0, 10] },
+                (() => {
+                  const items = [];
+                  const stat = payroll.statutory || {};
+                  let listedSum = 0;
+
+                  const statutoryFields = [
+                    { name: 'Provident Fund', val: stat.employeePF },
+                    { name: 'ESI', val: stat.employeeESI },
+                    { name: 'Professional Tax', val: stat.professionalTax },
+                    { name: 'Income Tax (TDS)', val: stat.tdsDeducted }
+                  ];
+
+                  statutoryFields.forEach(f => {
+                    const amt = Math.round(Number(f.val) || 0);
+                    if (amt > 0) {
+                      items.push(this._amountRow(f.name, amt));
+                      listedSum += amt;
+                    }
+                  });
+
+                  if (payroll.deductions && Array.isArray(payroll.deductions)) {
+                    payroll.deductions.forEach(d => {
+                      const amt = Math.round(Number(d.amount) || 0);
+                      if (amt > 0) {
+                        items.push(this._amountRow(d.name || 'Deduction', amt));
+                        listedSum += amt;
+                      }
+                    });
+                  }
+
+                  const otherDeductions = [
+                    { name: 'Loan Recovery', val: payroll.totalLoanDeduction },
+                    { name: 'Loss of Pay', val: payroll.lossOfPayAmount }
+                  ];
+
+                  otherDeductions.forEach(f => {
+                    const amt = Math.round(Number(f.val) || 0);
+                    if (amt > 0) {
+                      items.push(this._amountRow(f.name, amt));
+                      listedSum += amt;
+                    }
+                  });
+
+                  const targetDeduction = Math.round(Number(payroll.totalDeductions || 0));
+                  const gap = targetDeduction - listedSum;
+
+                  if (gap !== 0) {
+                    items.push(this._amountRow('Standard Deductions', gap));
+                  }
+
+                  items.push({ canvas: [{ type: 'line', x1: 0, y1: 5, x2: 240, y2: 5, lineWidth: 1, strokeColor: '#e5e7eb' }], margin: [0, 5] });
+                  items.push(this._amountRow('Total Deductions', targetDeduction, true));
+
+                  return items;
+                })()
+              ]
+            }
+          ],
+          columnGap: 20
+        },
+        { text: '', margin: [0, 30] },
+        {
+          table: {
+            widths: ['*'],
+            body: [[{
+              stack: [
+                {
+                  columns: [
+                    { text: 'NET SALARY PAYABLE', fontSize: 16, bold: true, color: '#1a365d' },
+                    { text: `₹${(payroll.netSalary || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, fontSize: 18, bold: true, alignment: 'right', color: '#10b981' }
+                  ]
+                },
+                { text: `(Rupees ${this._amountToWords(payroll.netSalary)} Only)`, italics: true, fontSize: 10, margin: [0, 5, 0, 0], color: '#6b7280' }
+              ],
+              fillColor: '#f8fafc',
+              margin: [20, 15, 20, 15]
+            }]]
+          },
+          layout: 'noBorders'
+        },
+        { text: '', margin: [0, 50] },
+        {
+          columns: [
+            {
+              width: '*',
+              stack: [
+                { text: '__________________________', margin: [0, 20, 0, 5] },
+                { text: 'Employee Signature', fontSize: 10, color: '#6b7280' }
+              ],
+              alignment: 'center'
+            },
+            {
+              width: '*',
+              stack: [
+                { text: '__________________________', margin: [0, 20, 0, 5] },
+                { text: 'Authorized Signatory', fontSize: 10, color: '#6b7280' }
+              ],
+              alignment: 'center'
+            }
+          ]
+        }
+      ],
+      styles: this._getStyles()
+    };
+
+    return docDefinition;
+  }
+
+  // Helper for amount rows
+  _amountRow(label, value, isTotal = false) {
+    return {
+      columns: [
+        { text: label, fontSize: isTotal ? 12 : 11, bold: isTotal, color: isTotal ? '#1a365d' : '#4b5563' },
+        { text: `₹${(value || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, alignment: 'right', fontSize: isTotal ? 12 : 11, bold: isTotal }
+      ],
+      margin: [0, 4, 0, 4]
+    };
+  }
+
+  // Amount to words converter
+  _amountToWords(amount) {
+    const a = ['', 'one ', 'two ', 'three ', 'four ', 'five ', 'six ', 'seven ', 'eight ', 'nine ', 'ten ', 'eleven ', 'twelve ', 'thirteen ', 'fourteen ', 'fifteen ', 'sixteen ', 'seventeen ', 'eighteen ', 'nineteen '];
+    const b = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
+
+    const num = Math.floor(amount);
+    if (num === 0) return 'zero';
+
+    const makeWords = (n) => {
+      if (n < 20) return a[n];
+      if (n < 100) return b[Math.floor(n / 10)] + (n % 10 !== 0 ? '-' + a[n % 10] : '');
+      if (n < 1000) return a[Math.floor(n / 100)] + 'hundred ' + (n % 100 !== 0 ? 'and ' + makeWords(n % 100) : '');
+      if (n < 100000) return makeWords(Math.floor(n / 1000)) + 'thousand ' + (n % 1000 !== 0 ? makeWords(n % 1000) : '');
+      if (n < 10000000) return makeWords(Math.floor(n / 100000)) + 'lakh ' + (n % 100000 !== 0 ? makeWords(n % 100000) : '');
+      return makeWords(Math.floor(n / 10000000)) + 'crore ' + (n % 10000000 !== 0 ? makeWords(n % 10000000) : '');
+    };
+
+    return makeWords(num).trim();
   }
 
 }

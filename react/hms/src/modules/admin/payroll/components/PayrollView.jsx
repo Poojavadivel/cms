@@ -5,8 +5,9 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { MdClose, MdCheckCircle, MdCancel, MdPrint, MdDownload } from 'react-icons/md';
+import { MdClose, MdCheckCircle, MdCancel, MdPrint } from 'react-icons/md';
 import authService from '../../../../services/authService';
+import payrollService from '../../../../services/payrollService';
 import './PayrollView.css';
 
 const PayrollView = ({ payroll, isOpen, onClose }) => {
@@ -30,8 +31,8 @@ const PayrollView = ({ payroll, isOpen, onClose }) => {
     setIsLoading(true);
     setError('');
     try {
-      const response = await authService.get(`/payrolls/${payroll.id}`);
-      setPayrollData(response.data || response);
+      const response = await authService.get(`/payroll/${payroll.id || payroll._id}`);
+      setPayrollData(response.payroll || response.data || response);
     } catch (err) {
       console.error('Failed to load payroll details:', err);
       setError('Failed to load payroll details');
@@ -46,8 +47,8 @@ const PayrollView = ({ payroll, isOpen, onClose }) => {
 
     setIsSaving(true);
     try {
-      await authService.put(`/payrolls/${payrollData._id || payrollData.id}`, {
-        status: 'Approved'
+      await authService.patch(`/payroll/${payrollData._id || payrollData.id}/approve`, {
+        approvalRemarks: 'Approved via Dashboard'
       });
       alert('Payroll approved successfully');
       const updated = { ...payrollData, status: 'Approved' };
@@ -67,9 +68,8 @@ const PayrollView = ({ payroll, isOpen, onClose }) => {
 
     setIsSaving(true);
     try {
-      await authService.put(`/payrolls/${payrollData._id || payrollData.id}`, {
-        status: 'Rejected',
-        rejectionReason: reason
+      await authService.patch(`/payroll/${payrollData._id || payrollData.id}/reject`, {
+        reason: reason
       });
       alert('Payroll rejected');
       const updated = { ...payrollData, status: 'Rejected', rejectionReason: reason };
@@ -87,14 +87,7 @@ const PayrollView = ({ payroll, isOpen, onClose }) => {
     window.print();
   };
 
-  const handleDownload = async () => {
-    try {
-      // Generate PDF download
-      alert('PDF download feature - To be implemented');
-    } catch (err) {
-      console.error('Failed to download:', err);
-    }
-  };
+
 
   if (!isOpen) return null;
 
@@ -126,7 +119,7 @@ const PayrollView = ({ payroll, isOpen, onClose }) => {
   };
 
   return (
-    <div className="payroll-view-overlay" onClick={() => onClose && onClose()}>
+    <div className="payroll-view-overlay printable-payslip" onClick={() => onClose && onClose()}>
       <div className="payroll-view-dialog" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="payroll-view-header">
@@ -141,13 +134,6 @@ const PayrollView = ({ payroll, isOpen, onClose }) => {
               title="Print"
             >
               <MdPrint size={20} />
-            </button>
-            <button
-              className="btn-icon"
-              onClick={handleDownload}
-              title="Download PDF"
-            >
-              <MdDownload size={20} />
             </button>
             <button
               className="btn-close-icon"
@@ -195,15 +181,15 @@ const PayrollView = ({ payroll, isOpen, onClose }) => {
                   </div>
                   <div className="info-item">
                     <label>Designation</label>
-                    <p>{data.designation || '—'}</p>
+                    <p>{data.designation || 'Staff'}</p>
                   </div>
                   <div className="info-item">
                     <label>Pay Period</label>
-                    <p>{data.payPeriod || '—'}</p>
+                    <p>{data.payPeriodDisplay || (data.payPeriodMonth ? `${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][data.payPeriodMonth - 1]} ${data.payPeriodYear}` : '—')}</p>
                   </div>
                   <div className="info-item">
                     <label>Payment Date</label>
-                    <p>{formatDate(data.paymentDate)}</p>
+                    <p>{formatDate(data.paymentDate || data.createdAt)}</p>
                   </div>
                 </div>
               </div>
@@ -217,12 +203,12 @@ const PayrollView = ({ payroll, isOpen, onClose }) => {
                     <span className="amount">{formatCurrency(data.basicSalary)}</span>
                   </div>
                   <div className="salary-row">
-                    <span>Allowances</span>
-                    <span className="amount positive">{formatCurrency(data.allowances)}</span>
+                    <span>Allowances & Others</span>
+                    <span className="amount positive">{formatCurrency((data.totalEarnings || data.grossSalary || 0) - (data.basicSalary || 0))}</span>
                   </div>
                   <div className="salary-row">
-                    <span>Deductions</span>
-                    <span className="amount negative">-{formatCurrency(data.deductions)}</span>
+                    <span>Total Deductions</span>
+                    <span className="amount negative">-{formatCurrency(data.totalDeductions || data.deductions)}</span>
                   </div>
                   <div className="salary-row total">
                     <span>Net Salary</span>
@@ -231,38 +217,56 @@ const PayrollView = ({ payroll, isOpen, onClose }) => {
                 </div>
               </div>
 
-              {/* Additional Details */}
-              {(data.allowanceBreakdown || data.deductionBreakdown) && (
-                <div className="info-section">
-                  <h3>Detailed Breakdown</h3>
-                  {data.allowanceBreakdown && (
+              {/* Detailed Breakdown */}
+              {(Array.isArray(data.earnings) ||
+                Array.isArray(data.deductions) ||
+                (data.statutory && Object.keys(data.statutory).length > 0) ||
+                data.bonus > 0 || data.incentives > 0 || data.overtimePay > 0 || data.arrears > 0 ||
+                data.totalLoanDeduction > 0 || data.lossOfPayAmount > 0
+              ) && (
+                  <div className="info-section">
+                    <h3>Detailed Breakdown</h3>
+
+                    {/* Earnings Breakdown */}
                     <div className="breakdown-section">
-                      <h4>Allowances</h4>
+                      <h4>Earnings</h4>
                       <ul>
-                        {Object.entries(data.allowanceBreakdown).map(([key, value]) => (
-                          <li key={key}>
-                            <span>{key}</span>
-                            <span>{formatCurrency(value)}</span>
-                          </li>
+                        <li><span>Basic Salary</span> <span>{formatCurrency(data.basicSalary)}</span></li>
+                        {Array.isArray(data.earnings) && data.earnings.map((item, idx) => (
+                          <li key={`earning-${idx}`}><span>{item.name}</span> <span>{formatCurrency(item.amount)}</span></li>
                         ))}
+                        {data.bonus > 0 && <li><span>Bonus</span> <span>{formatCurrency(data.bonus)}</span></li>}
+                        {data.incentives > 0 && <li><span>Incentives</span> <span>{formatCurrency(data.incentives)}</span></li>}
+                        {data.overtimePay > 0 && <li><span>Overtime Pay</span> <span>{formatCurrency(data.overtimePay)}</span></li>}
+                        {data.arrears > 0 && <li><span>Arrears</span> <span>{formatCurrency(data.arrears)}</span></li>}
                       </ul>
                     </div>
-                  )}
-                  {data.deductionBreakdown && (
+
+                    {/* Deductions Breakdown */}
                     <div className="breakdown-section">
                       <h4>Deductions</h4>
                       <ul>
-                        {Object.entries(data.deductionBreakdown).map(([key, value]) => (
-                          <li key={key}>
-                            <span>{key}</span>
-                            <span>{formatCurrency(value)}</span>
-                          </li>
+                        {data.statutory?.employeePF > 0 && (
+                          <li><span>Provident Fund (PF)</span> <span>{formatCurrency(data.statutory.employeePF)}</span></li>
+                        )}
+                        {data.statutory?.employeeESI > 0 && (
+                          <li><span>Employee ESI</span> <span>{formatCurrency(data.statutory.employeeESI)}</span></li>
+                        )}
+                        {data.statutory?.professionalTax > 0 && (
+                          <li><span>Professional Tax</span> <span>{formatCurrency(data.statutory.professionalTax)}</span></li>
+                        )}
+                        {data.statutory?.tdsDeducted > 0 && (
+                          <li><span>Income Tax (TDS)</span> <span>{formatCurrency(data.statutory.tdsDeducted)}</span></li>
+                        )}
+                        {Array.isArray(data.deductions) && data.deductions.map((item, idx) => (
+                          <li key={`deduction-${idx}`}><span>{item.name}</span> <span>{formatCurrency(item.amount)}</span></li>
                         ))}
+                        {data.totalLoanDeduction > 0 && <li><span>Loan Recovery</span> <span>{formatCurrency(data.totalLoanDeduction)}</span></li>}
+                        {data.lossOfPayAmount > 0 && <li><span>Loss of Pay</span> <span>{formatCurrency(data.lossOfPayAmount)}</span></li>}
                       </ul>
                     </div>
-                  )}
-                </div>
-              )}
+                  </div>
+                )}
 
               {/* Notes */}
               {data.notes && (

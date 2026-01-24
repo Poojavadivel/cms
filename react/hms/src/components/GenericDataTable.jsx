@@ -56,7 +56,7 @@ const GenericDataTable = ({
                                     {col.label}
                                 </th>
                             ))}
-                            {(onView || onEdit || onDelete || customActions) && <th>Actions</th>}
+                            {(onView || onEdit || onDelete || customActions) && <th className="actions-header">Actions</th>}
                         </tr>
                     </thead>
                     <tbody>
@@ -64,7 +64,7 @@ const GenericDataTable = ({
                             <tr key={item.id || index}>
                                 {columns.map((col) => (
                                     <td key={`${item.id}-${col.key}`}>
-                                        {col.format ? col.format(item[col.key]) : item[col.key]}
+                                        {col.render ? col.render(item[col.key], item) : (col.format ? col.format(item[col.key]) : item[col.key])}
                                     </td>
                                 ))}
                                 {(onView || onEdit || onDelete || customActions) && (
@@ -96,27 +96,25 @@ const GenericDataTable = ({
             </div>
 
             {/* Pagination */}
-            {totalPages > 1 && (
-                <div className="pagination-footer">
-                    <button
-                        className="page-arrow"
-                        disabled={currentPage === 0}
-                        onClick={handlePrevPage}
-                    >
-                        <MdChevronLeft />
-                    </button>
-                    <span className="page-info">
-                        Page {currentPage + 1} of {totalPages}
-                    </span>
-                    <button
-                        className="page-arrow"
-                        disabled={currentPage >= totalPages - 1}
-                        onClick={handleNextPage}
-                    >
-                        <MdChevronRight />
-                    </button>
-                </div>
-            )}
+            <div className="pagination-footer">
+                <button
+                    className="page-arrow"
+                    disabled={currentPage === 0}
+                    onClick={handlePrevPage}
+                >
+                    <MdChevronLeft />
+                </button>
+                <span className="page-info">
+                    Page {currentPage + 1} of {Math.max(1, totalPages)}
+                </span>
+                <button
+                    className="page-arrow"
+                    disabled={currentPage >= totalPages - 1 || totalPages <= 1}
+                    onClick={handleNextPage}
+                >
+                    <MdChevronRight />
+                </button>
+            </div>
         </div>
     );
 };

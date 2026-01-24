@@ -1,19 +1,36 @@
 .generic-data-table-wrapper {
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    background: transparent;
+    border-radius: 0;
+    box-shadow: none;
     overflow: hidden;
-    margin-top: 1rem;
+    margin-top: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
 }
 
 .table-container {
-    overflow-x: auto;
+    overflow-y: auto;
+    overflow-x: hidden;
+    flex: 1;
+}
+
+.modern-table thead {
+    position: sticky;
+    top: 0;
+    z-index: 10;
 }
 
 .modern-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.875rem;
+    font-size: 10.5px;
+    table-layout: auto;
+}
+
+.modern-table th,
+.modern-table td {
+    padding: 5px 4px;
 }
 
 .modern-table th {
@@ -21,15 +38,17 @@
     color: #64748b;
     font-weight: 600;
     text-align: left;
-    padding: 12px 16px;
     border-bottom: 1px solid #e2e8f0;
     white-space: nowrap;
+    font-size: 9px;
+    letter-spacing: 0.05em;
 }
 
 .modern-table td {
-    padding: 12px 16px;
     border-bottom: 1px solid #e2e8f0;
     color: #334155;
+    font-size: 11px;
+    white-space: nowrap;
 }
 
 .modern-table tr:last-child td {
@@ -41,9 +60,15 @@
 }
 
 /* Actions */
+.actions-header {
+    text-align: center !important;
+    width: 70px;
+}
+
 .actions-cell {
     white-space: nowrap;
-    width: 1%;
+    text-align: center;
+    width: 70px;
 }
 
 .action-buttons {
@@ -71,6 +96,10 @@
 
 .btn-icon.view {
     color: #3b82f6;
+}
+
+.btn-icon.download {
+    color: #10b981;
 }
 
 .btn-icon.edit {
@@ -128,35 +157,45 @@
 .pagination-footer {
     display: flex;
     align-items: center;
-    justify-content: flex-end;
+    justify-content: center;
     padding: 16px;
     border-top: 1px solid #e2e8f0;
-    gap: 12px;
+    gap: 24px;
+    background: #fff;
 }
 
 .page-arrow {
-    background: white;
-    border: 1px solid #e2e8f0;
-    border-radius: 4px;
-    padding: 4px 8px;
-    cursor: pointer;
-    color: #64748b;
+    background: #f8fafe;
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
     display: flex;
     align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #cbd5e1;
+    transition: all 0.2s;
+    font-size: 24px;
 }
 
 .page-arrow:disabled {
-    opacity: 0.5;
+    opacity: 0.4;
     cursor: not-allowed;
 }
 
 .page-arrow:not(:disabled):hover {
-    background-color: #f1f5f9;
+    background-color: #eff6ff;
+    color: #3b82f6;
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.05);
 }
 
 .page-info {
-    font-size: 0.875rem;
-    color: #64748b;
+    font-size: 16px;
+    font-weight: 600;
+    color: #1a365d;
+    min-width: 120px;
+    text-align: center;
 }
 
 /* Custom Action Button (Example) */

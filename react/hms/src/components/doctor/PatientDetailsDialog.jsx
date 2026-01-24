@@ -409,6 +409,8 @@ const ProfileTab = ({ patient, copyToClipboard }) => {
 const HistoryTab = ({ patient }) => {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
   const patientId = patient.id || patient._id || patient.patientId;
 
   const fetchHistory = async () => {
@@ -455,6 +457,16 @@ const HistoryTab = ({ patient }) => {
     if (patientId) fetchHistory();
   }, [patientId]);
 
+  const handleViewDetails = (item) => {
+    setSelectedItem(item);
+    setShowDetailModal(true);
+  };
+
+  const handleCloseDetailModal = () => {
+    setShowDetailModal(false);
+    setSelectedItem(null);
+  };
+
   if (loading) return <div className="pd-tab-inner"><p>Loading history...</p></div>;
 
   return (
@@ -467,11 +479,18 @@ const HistoryTab = ({ patient }) => {
               <div className="pd-history-header">
                 <span className="pd-history-date">{new Date(item.date).toLocaleDateString()}</span>
                 <span className="pd-history-tag">{item.category}</span>
-                {item.pdfId && (
-                  <button className="pd-view-pdf-btn" onClick={() => reportService.viewPdf(item.pdfId)}>
-                    <MdPictureAsPdf size={16} />
-                  </button>
-                )}
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {item.pdfId && (
+                    <button className="pd-view-pdf-btn" onClick={() => reportService.viewPdf(item.pdfId)}>
+                      <MdPictureAsPdf size={16} />
+                    </button>
+                  )}
+                  {!item.pdfId && (
+                    <button className="pd-view-pdf-btn" onClick={() => handleViewDetails(item)} title="View Details">
+                      <MdVisibility size={16} />
+                    </button>
+                  )}
+                </div>
               </div>
               <h4 className="pd-history-title">{item.title}</h4>
               <p className="pd-history-notes">{item.notes}</p>
@@ -489,6 +508,111 @@ const HistoryTab = ({ patient }) => {
           ) : (
             <EmptyState title="No Medical History" />
           )}
+        </div>
+      )}
+
+      {/* Medical History Detail Modal */}
+      {showDetailModal && selectedItem && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10000
+        }} onClick={handleCloseDetailModal}>
+          <div onClick={(e) => e.stopPropagation()} style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            padding: '24px',
+            maxWidth: '600px',
+            maxHeight: '80vh',
+            overflow: 'auto',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '2px solid #e2e8f0', paddingBottom: '16px' }}>
+              <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 'bold', color: '#1e293b' }}>
+                {selectedItem.title || 'Medical History Details'}
+              </h2>
+              <button
+                onClick={handleCloseDetailModal}
+                style={{
+                  background: '#ef4444',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: '32px',
+                  height: '32px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer'
+                }}
+              >
+                <MdClose size={20} />
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <span style={{ fontWeight: '600', color: '#64748b', fontSize: '14px' }}>Date: </span>
+                <span style={{ color: '#1e293b', fontSize: '14px' }}>
+                  {selectedItem.date
+                    ? new Date(selectedItem.date).toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })
+                    : '—'
+                  }
+                </span>
+              </div>
+
+              <div>
+                <span style={{ fontWeight: '600', color: '#64748b', fontSize: '14px' }}>Category: </span>
+                <span style={{ color: '#1e293b', fontSize: '14px' }}>
+                  {selectedItem.category || 'General'}
+                </span>
+              </div>
+
+              <div>
+                <span style={{ fontWeight: '600', color: '#64748b', fontSize: '14px' }}>Type: </span>
+                <span style={{ color: '#1e293b', fontSize: '14px' }}>
+                  {selectedItem.type === 'appointment' ? 'Appointment' : 'Scanned Record'}
+                </span>
+              </div>
+
+              {selectedItem.notes && (
+                <div style={{ marginTop: '8px' }}>
+                  <div style={{ fontWeight: '600', color: '#64748b', fontSize: '14px', marginBottom: '8px' }}>Notes:</div>
+                  <div style={{ color: '#1e293b', fontSize: '14px', lineHeight: '1.6', whiteSpace: 'pre-wrap', backgroundColor: '#f8fafc', padding: '12px', borderRadius: '8px' }}>
+                    {selectedItem.notes}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end' }}>
+              <button
+                onClick={handleCloseDetailModal}
+                style={{
+                  background: '#3b82f6',
+                  color: 'white',
+                  border: 'none',
+                  padding: '10px 24px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: '600'
+                }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

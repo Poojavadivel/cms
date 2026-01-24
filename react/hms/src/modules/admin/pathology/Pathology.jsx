@@ -55,7 +55,7 @@ const Pathology = () => {
   const [editingReport, setEditingReport] = useState(null);
   const [showDetail, setShowDetail] = useState(false);
   const [selectedReport, setSelectedReport] = useState(null);
-  
+
   const itemsPerPage = 10;
 
   // Fetch reports from API
@@ -64,7 +64,7 @@ const Pathology = () => {
     try {
       const data = await pathologyService.fetchReports({ limit: 100 });
       console.log('✅ Fetched pathology reports:', data);
-      
+
       setReports(data);
       setFilteredReports(data);
     } catch (error) {
@@ -146,7 +146,7 @@ const Pathology = () => {
         await pathologyService.createReport(formData);
         console.log('✅ Report created successfully');
       }
-      
+
       setShowForm(false);
       setEditingReport(null);
       await fetchReports();
@@ -178,21 +178,24 @@ const Pathology = () => {
     }
   };
 
-  // Handle download report
+  // Handle download report (Original file first, then generated fallback)
   const handleDownloadReport = async (report) => {
     if (isDownloading) return;
-    
     setIsDownloading(true);
     try {
-      const result = await pathologyService.downloadReport(report.id);
-      if (result.success) {
-        alert(result.message || 'Report downloaded successfully');
-      } else {
-        alert(result.message || 'Failed to download report');
-      }
+      // 1. Try to download the original attached file/scan
+      await pathologyService.downloadReport(report.id);
+      console.log('✅ Original file downloaded');
     } catch (error) {
-      console.error('❌ Download error:', error);
-      alert('Error downloading report: ' + error.message);
+      console.warn('⚠️ No original file found, using professional generator fallback:', error.message);
+      try {
+        // 2. Fallback to Professional PDF generation if file doesn't exist
+        const fileName = `Report_${(report.patientName || 'Patient').replace(/\s+/g, '_')}_${(report.testName || 'Test').replace(/\s+/g, '_')}.pdf`;
+        await pathologyService.downloadProperReport(report.id, fileName);
+      } catch (genError) {
+        console.error('❌ Generator failed:', genError);
+        alert('Failed to download report: ' + genError.message);
+      }
     } finally {
       setIsDownloading(false);
     }
@@ -282,103 +285,103 @@ const Pathology = () => {
           </button>
         </div>
 
-      {/* Filters Row */}
-      <div className="filter-bar-container">
-        <div className="search-wrapper">
-          <MdSearch className="search-icon-lg" />
-          <input
-            type="text"
-            placeholder="Search reports by ID, patient name, test name..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="search-input-lg"
-          />
-        </div>
+        {/* Filters Row */}
+        <div className="filter-bar-container">
+          <div className="search-wrapper">
+            <MdSearch className="search-icon-lg" />
+            <input
+              type="text"
+              placeholder="Search reports by ID, patient name, test name..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="search-input-lg"
+            />
+          </div>
 
-        <div className="filter-right-group">
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="tab-btn"
-          >
-            {uniqueStatuses.map(status => (
-              <option key={status} value={status}>{status}</option>
-            ))}
-          </select>
-
-          {showAdvancedFilters && (
+          <div className="filter-right-group">
             <select
-              value={testTypeFilter}
-              onChange={(e) => setTestTypeFilter(e.target.value)}
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
               className="tab-btn"
             >
-              {uniqueTestTypes.map(type => (
-                <option key={type} value={type}>{type || 'All'}</option>
+              {uniqueStatuses.map(status => (
+                <option key={status} value={status}>{status}</option>
               ))}
             </select>
-          )}
 
-          <button
-            className="btn-filter-date"
-            onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-          >
-            {showAdvancedFilters ? 'Less Filters' : 'More Filters'}
-          </button>
+            {showAdvancedFilters && (
+              <select
+                value={testTypeFilter}
+                onChange={(e) => setTestTypeFilter(e.target.value)}
+                className="tab-btn"
+              >
+                {uniqueTestTypes.map(type => (
+                  <option key={type} value={type}>{type || 'All'}</option>
+                ))}
+              </select>
+            )}
+
+            <button
+              className="btn-filter-date"
+              onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+            >
+              {showAdvancedFilters ? 'Less Filters' : 'More Filters'}
+            </button>
+          </div>
         </div>
-      </div>
 
-      {/* Table Container */}
-      <div className="table-card">
-        <div className="modern-table-wrapper">
-          <table className="modern-table">
-            <thead>
-              <tr>
-                <th style={{ width: '25%' }}>Patient</th>
-                <th style={{ width: '25%' }}>Test</th>
-                <th style={{ width: '15%' }}>Report Date</th>
-                <th style={{ width: '12%' }}>Status</th>
-                <th style={{ width: '15%' }}>Technician</th>
-                <th style={{ width: '8%' }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {currentReports.map((report, index) => (
-                <tr key={report.id || index}>
-                  <td>
-                    <div className="info-group">
-                      <span className="primary">{report.patientName || 'Unknown'}</span>
-                      <span className="secondary">{report.reportId || 'N/A'}</span>
-                    </div>
-                  </td>
-                  <td>
-                    <div className="info-group">
-                      <span className="primary">{report.testName || 'N/A'}</span>
-                      <span className="secondary">{report.testType || 'General'}</span>
-                    </div>
-                  </td>
-                  <td>{formatDate(report.reportDate)}</td>
-                  <td><StatusBadge status={report.status} /></td>
-                  <td>
-                    <span className="technician-badge">{report.technician || 'N/A'}</span>
-                  </td>
-                  <td>
-                    <div className="action-buttons-group">
-                      <button className="btn-action view" title="View" onClick={() => handleView(report)}>
-                        <Icons.Eye />
-                      </button>
-                      <button className="btn-action edit" title="Edit" onClick={() => handleEditReport(report)}>
-                        <Icons.Edit />
-                      </button>
-                      <button className="btn-action delete" title="Delete" onClick={() => handleDeleteReport(report)}>
-                        <Icons.Delete />
-                      </button>
-                      <button className="btn-action download" title="Download" onClick={() => handleDownloadReport(report)} disabled={isDownloading}>
-                        <Icons.Download />
-                      </button>
-                    </div>
-                  </td>
+        {/* Table Container */}
+        <div className="table-card">
+          <div className="modern-table-wrapper">
+            <table className="modern-table">
+              <thead>
+                <tr>
+                  <th style={{ width: '22%' }}>Patient</th>
+                  <th style={{ width: '22%' }}>Test</th>
+                  <th style={{ width: '15%' }}>Report Date</th>
+                  <th style={{ width: '12%' }}>Status</th>
+                  <th style={{ width: '15%' }}>Technician</th>
+                  <th style={{ width: '14%' }}>Actions</th>
                 </tr>
-              ))}
+              </thead>
+              <tbody>
+                {currentReports.map((report, index) => (
+                  <tr key={report.id || index}>
+                    <td>
+                      <div className="info-group">
+                        <span className="primary">{report.patientName || 'Unknown'}</span>
+                        <span className="secondary">{report.patientCode || report.reportId || 'N/A'}</span>
+                      </div>
+                    </td>
+                    <td>
+                      <div className="info-group">
+                        <span className="primary">{report.testName || 'N/A'}</span>
+                        <span className="secondary">{report.testType || 'General'}</span>
+                      </div>
+                    </td>
+                    <td>{formatDate(report.reportDate)}</td>
+                    <td><StatusBadge status={report.status} /></td>
+                    <td>
+                      <span className="technician-badge">{report.technician || 'N/A'}</span>
+                    </td>
+                    <td>
+                      <div className="action-buttons-group">
+                        <button className="btn-action view" title="View" onClick={() => handleView(report)}>
+                          <Icons.Eye />
+                        </button>
+                        <button className="btn-action edit" title="Edit" onClick={() => handleEditReport(report)}>
+                          <Icons.Edit />
+                        </button>
+                        <button className="btn-action delete" title="Delete" onClick={() => handleDeleteReport(report)}>
+                          <Icons.Delete />
+                        </button>
+                        <button className="btn-action download" title="Download" onClick={() => handleDownloadReport(report)} disabled={isDownloading}>
+                          <Icons.Download />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
                 {isLoading && (
                   <tr>
                     <td colSpan="6" style={{ textAlign: 'center', padding: '48px', color: '#9CA3AF' }}>
@@ -422,8 +425,8 @@ const Pathology = () => {
               <MdChevronRight size={20} />
             </button>
           </div>
+        </div>
       </div>
-    </div>
 
       {/* Pathology Detail Modal */}
       {showDetail && selectedReport && (

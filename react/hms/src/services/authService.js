@@ -337,12 +337,48 @@ class AuthService {
   }
 
   /**
+   * Generic PATCH request
+   */
+  async patch(path, body) {
+    return await this.makeAuthRequest(`${API_BASE_URL}${path}`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    });
+  }
+
+  /**
    * Generic DELETE request
    */
   async delete(path) {
     return await this.makeAuthRequest(`${API_BASE_URL}${path}`, {
       method: 'DELETE',
     });
+  }
+
+  /**
+   * Download file as blob (authenticated)
+   */
+  async downloadFileAsBlob(path) {
+    const token = this.getToken();
+    const url = `${API_BASE_URL}${path}`;
+
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          ...(token && { 'x-auth-token': token }),
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Download failed');
+      }
+
+      return await response.blob();
+    } catch (error) {
+      console.error('Blob download error:', error);
+      throw error;
+    }
   }
 
   /**
