@@ -46,7 +46,13 @@ app.use('/api/card', require('./routes/card')); // New: Profile card data endpoi
 app.use('/api/payroll', require('./routes/payroll')); // New: Payroll management routes
 app.use('/api/reports', require('./routes/enterpriseReports')); // Old: PDFKit reports (has layout issues)
 app.use('/api/reports-proper', require('./routes/properReports')); // New: PDFMake reports (FIXED)
-// --- Health / Root Endpoint ---
+app.get('*', (req, res) => {
+  // If it's an API route that wasn't found, let it fall through or handle specifically
+  if (req.path.startsWith('/api/')) {
+    return res.status(404).json({ success: false, message: 'API route not found' });
+  }
+  res.sendFile(path.join(webAppPath, 'index.html'));
+});
 
 
 /**
