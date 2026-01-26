@@ -1,9 +1,3 @@
-/**
- * DoctorSchedule.jsx  
- * Doctor's schedule calendar matching Flutter's EnterpriseScheduleScreen
- * Shows appointments in calendar view with list
- */
-
 import React, { useState, useEffect } from 'react';
 import {
   MdCalendarToday,
@@ -13,6 +7,7 @@ import {
   MdChevronLeft,
   MdChevronRight,
   MdDelete,
+  MdCheck,
 } from 'react-icons/md';
 import appointmentsService from '../../../services/appointmentsService';
 import patientsService from '../../../services/patientsService';
@@ -24,7 +19,7 @@ const DoctorSchedule = () => {
   const [appointments, setAppointments] = useState([]);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  
+
   // Dialog states
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
@@ -39,7 +34,7 @@ const DoctorSchedule = () => {
   const loadAppointments = async () => {
     setLoading(true);
     try {
-      const data = await appointmentsService.fetchAppointments({ limit: 100 });
+      const data = await appointmentsService.fetchAppointments();
       setAppointments(data || []);
     } catch (error) {
       console.error('Error loading appointments:', error);
@@ -49,17 +44,34 @@ const DoctorSchedule = () => {
   };
 
   const getAppointmentsForDate = (date) => {
+    if (!date || !appointments) return [];
+
+    // Local normalized components
+    const target = new Date(date);
+    const ty = target.getFullYear();
+    const tm = target.getMonth();
+    const td = target.getDate();
+
     return appointments.filter(a => {
       try {
-        const apptDate = new Date(a.date || a.appointmentDate);
-        return apptDate.toDateString() === date.toDateString();
+        // Search through all possible date markers in the data
+        const dates = [a.startAt, a.date, a.appointmentDate].filter(Boolean);
+        return dates.some(d => {
+          const dObj = new Date(d);
+          if (isNaN(dObj.getTime())) return false;
+
+          // Match by local day/month/year to avoid timezone slippage
+          return dObj.getFullYear() === ty &&
+            dObj.getMonth() === tm &&
+            dObj.getDate() === td;
+        });
       } catch {
         return false;
       }
     }).sort((a, b) => {
-      const timeA = a.time || a.appointmentTime || '';
-      const timeB = b.time || b.appointmentTime || '';
-      return timeA.localeCompare(timeB);
+      const timeA = a.startAt || a.time || '00:00';
+      const timeB = b.startAt || b.time || '00:00';
+      return String(timeA).localeCompare(String(timeB));
     });
   };
 
@@ -76,8 +88,6 @@ const DoctorSchedule = () => {
     const startingDayOfWeek = firstDay.getDay();
 
     const days = [];
-    
-    // Previous month days
     const prevMonthLastDay = new Date(year, month, 0).getDate();
     for (let i = startingDayOfWeek - 1; i >= 0; i--) {
       days.push({
@@ -85,24 +95,19 @@ const DoctorSchedule = () => {
         isCurrentMonth: false,
       });
     }
-
-    // Current month days
     for (let i = 1; i <= daysInMonth; i++) {
       days.push({
         date: new Date(year, month, i),
         isCurrentMonth: true,
       });
     }
-
-    // Next month days
-    const remainingDays = 42 - days.length; // 6 rows * 7 days
+    const remainingDays = 42 - days.length;
     for (let i = 1; i <= remainingDays; i++) {
       days.push({
         date: new Date(year, month + 1, i),
         isCurrentMonth: false,
       });
     }
-
     return days;
   };
 
@@ -121,7 +126,6 @@ const DoctorSchedule = () => {
     return date.toDateString() === selectedDate.toDateString();
   };
 
-  // View Intake (Eye Icon) - Opens intake form
   const handleViewIntake = async (appointment) => {
     setIsLoadingPatient(true);
     setSelectedAppointment(appointment);
@@ -138,35 +142,27 @@ const DoctorSchedule = () => {
     }
   };
 
-  // View Patient Profile (Click on Name) - Opens profile view
   const handleViewPatient = async (appointment) => {
-    console.log('🔍 [SCHEDULE] Patient name clicked!', appointment);
     setIsLoadingPatient(true);
     setSelectedAppointment(appointment);
     try {
       const patientId = appointment.patientId?._id || appointment.patientId;
-      console.log('🔍 [SCHEDULE] Fetching patient data for:', patientId);
       const patientData = await patientsService.fetchPatientById(patientId);
-      console.log('✅ [SCHEDULE] Patient data loaded:', patientData);
       setSelectedPatient(patientData);
       setShowProfileDialog(true);
-      console.log('✅ [SCHEDULE] Profile dialog opened');
     } catch (error) {
-      console.error('❌ [SCHEDULE] Error loading patient:', error);
+      console.error('Error loading patient:', error);
       alert('Failed to load patient details');
     } finally {
       setIsLoadingPatient(false);
     }
   };
 
-  // Edit Patient
   const handleEditPatient = () => {
     setShowProfileDialog(false);
-    // TODO: Implement edit form
     alert('Edit patient functionality will open the edit form');
   };
 
-  // Delete Appointment
   const handleDeleteAppointment = async (appointmentId) => {
     if (!window.confirm('Are you sure you want to delete this appointment?')) {
       return;
@@ -182,10 +178,19 @@ const DoctorSchedule = () => {
     }
   };
 
-  // Save Intake Form
+  const handleConfirm = async (appointmentId) => {
+    try {
+      await appointmentsService.updateAppointmentStatus(appointmentId, 'Confirmed');
+      await loadAppointments();
+      alert('Appointment confirmed successfully');
+    } catch (error) {
+      console.error('Error confirming appointment:', error);
+      alert('Failed to confirm appointment');
+    }
+  };
+
   const handleSaveIntake = async (formData) => {
     try {
-      // TODO: Implement save intake to backend
       console.log('Saving intake form:', formData);
       alert('Intake form saved successfully');
       await loadAppointments();
@@ -243,13 +248,17 @@ const DoctorSchedule = () => {
                 return (
                   <div
                     key={index}
-                    className={`calendar-day ${!day.isCurrentMonth ? 'other-month' : ''} ${
-                      isToday(day.date) ? 'today' : ''
-                    } ${isSelected(day.date) ? 'selected' : ''}`}
-                    onClick={() => day.isCurrentMonth && setSelectedDate(day.date)}
+                    className={`calendar-day ${!day.isCurrentMonth ? 'other-month' : ''} ${isToday(day.date) ? 'today' : ''
+                      } ${isSelected(day.date) ? 'selected' : ''}`}
+                    onClick={() => {
+                      if (!day.isCurrentMonth) {
+                        setCurrentMonth(new Date(day.date.getFullYear(), day.date.getMonth(), 1));
+                      }
+                      setSelectedDate(day.date);
+                    }}
                   >
                     <span className="day-number">{day.date.getDate()}</span>
-                    {day.isCurrentMonth && count > 0 && (
+                    {count > 0 && (
                       <span className="appointment-count">{count}</span>
                     )}
                   </div>
@@ -292,6 +301,7 @@ const DoctorSchedule = () => {
                     onViewIntake={() => handleViewIntake(appointment)}
                     onViewPatient={() => handleViewPatient(appointment)}
                     onDelete={() => handleDeleteAppointment(appointment._id || appointment.id)}
+                    onConfirm={() => handleConfirm(appointment._id || appointment.id)}
                   />
                 ))
               )}
@@ -334,74 +344,106 @@ const DoctorSchedule = () => {
 };
 
 // Helper Components
-const AppointmentCard = ({ appointment, onViewIntake, onViewPatient, onDelete }) => {
-  const patientName = appointment.patientName || appointment.patientId?.fullName || 'Unknown Patient';
-  const gender = appointment.gender || appointment.patientId?.gender || 'other';
-  const age = appointment.patientAge || appointment.patientId?.age || 0;
-  const time = appointment.time || appointment.appointmentTime || '--:--';
-  const reason = appointment.reason || 'General Consultation';
-  const status = appointment.status || 'scheduled';
+const AppointmentCard = ({ appointment, onViewIntake, onViewPatient, onDelete, onConfirm }) => {
+  // --- ROBUST DATA EXTRACTION ---
+  const pId = appointment.patientId;
+  const isPopulated = pId && typeof pId === 'object';
+
+  // 1. Patient Name
+  const patientName = appointment.patientName ||
+    appointment.clientName ||
+    (isPopulated ? (pId.fullName || `${pId.firstName || ''} ${pId.lastName || ''}`.trim()) : 'Unknown Patient');
+
+  // 2. Gender
+  const gender = appointment.gender ||
+    appointment.metadata?.gender ||
+    (isPopulated ? pId.gender : 'Other');
+
+  // 3. Age
+  const age = appointment.patientAge ||
+    (isPopulated ? pId.age : 0);
+
+  // 4. Time Display
+  let timeStr = appointment.time || appointment.appointmentTime || '--:--';
+  if (appointment.startAt) {
+    try {
+      const d = new Date(appointment.startAt);
+      timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch (e) {
+      console.error('Time Parse Error:', e);
+    }
+  }
+
+  // 5. Reasons & Vitals
+  const reason = appointment.reason ||
+    appointment.appointmentType ||
+    appointment.chiefComplaint ||
+    (isPopulated ? pId.chiefComplaint : 'Consultation');
+
+  const status = appointment.status || 'Scheduled';
 
   const getStatusColor = (status) => {
-    switch (status.toLowerCase()) {
-      case 'scheduled':
-        return '#0EA5E9';
-      case 'completed':
-        return '#10B981';
-      case 'cancelled':
-        return '#EF4444';
-      default:
-        return '#94A3B8';
-    }
+    const s = String(status).toLowerCase();
+    if (s.includes('confirm')) return '#10B981'; // Green
+    if (s.includes('sched')) return '#0EA5E9';   // Blue
+    if (s.includes('pend')) return '#F59E0B';    // Amber
+    if (s.includes('cancel')) return '#EF4444';   // Red
+    if (s.includes('complete')) return '#8B5CF6'; // Purple
+    return '#94A3B8';
   };
 
+  const isActionable = status.toLowerCase() === 'scheduled' || status.toLowerCase() === 'pending';
+
   return (
-    <div className="appointment-card">
+    <div className={`appointment-card modern-shadow status-border-${status.toLowerCase()}`}>
       <div className="card-header">
-        <div className="patient-avatar" data-gender={gender.toLowerCase()}>
-          {gender.toLowerCase() === 'male' ? <MdMan /> : <MdWoman />}
+        <div className="patient-avatar-box" data-gender={gender?.toLowerCase()}>
+          {gender?.toLowerCase() === 'female' ? <MdWoman /> : <MdMan />}
         </div>
         <div className="patient-info">
-          <div 
-            className="patient-name clickable" 
+          <div
+            className="patient-name clickable-title"
             onClick={(e) => {
-              console.log('👆 [CARD] Patient name div clicked!', patientName);
               e.stopPropagation();
-              e.preventDefault();
               onViewPatient();
             }}
           >
             {patientName}
           </div>
-          <div className="patient-meta">{age} years • {gender}</div>
+          <div className="patient-meta-row">
+            <span className="age-pill">{age > 0 ? `${age} yrs` : 'N/A'}</span>
+            <span className="dot">•</span>
+            <span className="gender-text">{gender}</span>
+          </div>
         </div>
-        <div className="status-badge" style={{ borderColor: getStatusColor(status), color: getStatusColor(status) }}>
+        <div className="status-chip" style={{ backgroundColor: `${getStatusColor(status)}15`, color: getStatusColor(status), borderColor: getStatusColor(status) }}>
           {status}
         </div>
       </div>
 
-      <div className="card-details">
-        <div className="detail-row">
-          <div className="detail-label">
-            <MdCalendarToday />
-            <span>Time:</span>
-          </div>
-          <div className="detail-value">{time}</div>
+      <div className="card-body-details">
+        <div className="schedule-row">
+          <MdCalendarToday className="icon-tiny" />
+          <span className="time-label">Scheduled for:</span>
+          <span className="time-value">{timeStr}</span>
         </div>
-        <div className="detail-row">
-          <div className="detail-label">
-            <span>Reason:</span>
-          </div>
-          <div className="detail-value">{reason}</div>
+        <div className="reason-box">
+          <p className="reason-text">"{reason}"</p>
         </div>
       </div>
 
-      <div className="card-actions">
-        <button className="action-btn intake-btn" onClick={onViewIntake} title="View Intake Form">
+      <div className="card-actions-row">
+        {isActionable && (
+          <button className="btn-modern btn-confirm flex-2" onClick={onConfirm} title="Confirm Appointment">
+            <MdCheck />
+            <span>Confirm</span>
+          </button>
+        )}
+        <button className="btn-modern btn-intake flex-2" onClick={onViewIntake} title="Open Intake Form">
           <MdRemoveRedEye />
-          <span>View Intake</span>
+          <span>Intake</span>
         </button>
-        <button className="action-btn delete-btn" onClick={onDelete} title="Delete Appointment">
+        <button className="btn-modern btn-delete-icon" onClick={onDelete} title="Archive / Delete">
           <MdDelete />
         </button>
       </div>

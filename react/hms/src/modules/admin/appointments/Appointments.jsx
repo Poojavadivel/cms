@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import './Appointments.css';
@@ -577,6 +578,7 @@ const transformAppointment = (apt, index) => {
 
 const Appointments = () => {
   // const navigate = useNavigate(); // Reserved for future navigation
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDate, setSelectedDate] = useState(null);
@@ -598,6 +600,9 @@ const Appointments = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showNewApptModal, setShowNewApptModal] = useState(false);
 
+  // Pre-selected patient for new appointment
+  const [preSelectedPatient, setPreSelectedPatient] = useState(null);
+
   const [selectedAppointmentId, setSelectedAppointmentId] = useState(null);
 
   // Patient dialog states
@@ -607,6 +612,26 @@ const Appointments = () => {
   // Doctor/Staff dialog states
   const [selectedDoctor, setSelectedDoctor] = useState(null);
   const [showDoctorDialog, setShowDoctorDialog] = useState(false);
+
+  // Handle new patient navigation for immediate booking
+  useEffect(() => {
+    if (location.state?.newPatient) {
+      console.log('🎉 [Appointments] Detected new patient from navigation:', location.state.newPatient);
+      const np = location.state.newPatient;
+
+      // Transform to format expected by NewAppointmentForm
+      const pData = {
+        id: np.id || np._id || np.patientId,
+        name: np.name || `${np.firstName || ''} ${np.lastName || ''}`.trim(),
+        age: np.age,
+        gender: np.gender,
+        phone: np.phone || np.contact || ''
+      };
+
+      setPreSelectedPatient(pData);
+      setShowNewApptModal(true);
+    }
+  }, [location.state]);
 
   // Fetch appointments from API on mount
   useEffect(() => {
@@ -1121,6 +1146,7 @@ const Appointments = () => {
             setShowNewApptModal(false);
             await refreshAppointments();
           }}
+          initialPatient={preSelectedPatient}
         />
       )}
 

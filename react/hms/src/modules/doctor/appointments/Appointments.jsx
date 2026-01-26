@@ -449,17 +449,25 @@ const transformAppointment = (apt, index) => {
   }
 
   // Parse date/time - EXACTLY like Flutter
-  let date = apt.date || '';
-  let time = apt.time || '';
+  // FIX: Ensure rawDate is always local YYYY-MM-DD for accurate filtering
+  let rawDate = '';
+  let displayTime = apt.time || '';
 
-  // If date/time not present, try startAt
-  if (!date && apt.startAt) {
-    try {
-      const dt = new Date(apt.startAt);
-      date = dt.toISOString().split('T')[0]; // YYYY-MM-DD
-      time = dt.toTimeString().split(' ')[0].substring(0, 5); // HH:MM
-    } catch (e) {
-      // Ignore parse errors
+  if (apt.date && typeof apt.date === 'string' && apt.date.length === 10 && !apt.date.includes('T')) {
+    // It's likely already YYYY-MM-DD
+    rawDate = apt.date;
+  } else if (apt.startAt || apt.date) {
+    const source = apt.startAt || apt.date;
+    const dt = new Date(source);
+    if (!isNaN(dt.getTime())) {
+      const year = dt.getFullYear();
+      const month = String(dt.getMonth() + 1).padStart(2, '0');
+      const day = String(dt.getDate()).padStart(2, '0');
+      rawDate = `${year}-${month}-${day}`;
+
+      if (!displayTime) {
+        displayTime = dt.toTimeString().substring(0, 5);
+      }
     }
   }
 
@@ -487,9 +495,9 @@ const transformAppointment = (apt, index) => {
     doctorInitials: getDoctorInitials(doctorName),
     doctorColor: getDoctorColor(index),
     doctorTextColor: getDoctorTextColor(index),
-    date: formatDate(date),
-    rawDate: date, // Keep raw YYYY-MM-DD for filtering
-    time: time || 'Not set',
+    date: formatDate(rawDate),
+    rawDate: rawDate, // Keep raw YYYY-MM-DD for filtering
+    time: displayTime || 'Not set',
     service: apt.appointmentType || reason || 'Consultation',
     reason: reason || 'Not specified', // Add reason field
     status: apt.status ? (apt.status.charAt(0).toUpperCase() + apt.status.slice(1).toLowerCase()) : 'Scheduled',
@@ -603,6 +611,30 @@ const Appointments = () => {
       setIsLoading(false);
     }
   };
+
+  // CHECK FOR NEW PENDING APPOINTMENTS (Simulated Notification)
+  useEffect(() => {
+    const pendingCount = allAppointments.filter(a => a.status === 'Pending').length;
+    if (pendingCount > 0) {
+      // You could show a toast here if desired, e.g.:
+      // showNotification(`You have ${pendingCount} pending appointments to approve.`, 'info');
+    }
+  }, [allAppointments]);
+
+  // Handle APPROVE Specific Action
+  const handleApprove = async (appointment) => {
+    try {
+      console.log(`✅ Approving appointment ${appointment.id}`);
+      await appointmentsService.updateAppointmentStatus(appointment.id, 'Confirmed');
+      showNotification(`Appointment for ${appointment.patientName} APPROVED`, 'success');
+      await refreshAppointments();
+    } catch (error) {
+      console.error('❌ Failed to approve:', error);
+      showNotification('Failed to approve appointment', 'error');
+    }
+  };
+
+
 
   // Handle view appointment
   const handleView = (appointment) => {

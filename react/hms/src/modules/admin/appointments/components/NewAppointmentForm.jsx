@@ -199,12 +199,12 @@ const TimePicker = ({ value, onChange, onClose }) => {
   );
 };
 // --- MAIN FORM COMPONENT ---
-const NewAppointmentForm = ({ onClose, onSave }) => {
+const NewAppointmentForm = ({ onClose, onSave, initialPatient }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [patients, setPatients] = useState([]);
   const [filteredPatients, setFilteredPatients] = useState([]);
-  const [selectedPatient, setSelectedPatient] = useState(null);
+  const [selectedPatient, setSelectedPatient] = useState(initialPatient || null);
   const [searchQuery, setSearchQuery] = useState('');
   const [reason, setReason] = useState('');
   const [notes, setNotes] = useState('');

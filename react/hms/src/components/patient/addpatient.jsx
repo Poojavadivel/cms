@@ -19,6 +19,7 @@ import {
 import patientsService from '../../services/patientsService';
 import doctorService from '../../services/doctorService';
 import scannerService from '../../services/scannerService';
+import appointmentsService from '../../services/appointmentsService';
 import './addpatient.css';
 
 // Move InputGroup OUTSIDE the component to prevent recreation on every render
@@ -101,7 +102,12 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
         insuranceNumber: '',
         insuranceProvider: '',
         insuranceExpiry: '',
-        patientCode: ''
+        patientCode: '',
+
+        // Step 6: Appointment (Optional)
+        appointmentDate: '',
+        appointmentTime: '',
+        appointmentReason: ''
     });
 
     // Reset form when modal opens
@@ -123,7 +129,8 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                 assignedDoctor: '', knownConditions: '', allergies: '', currentMedications: '',
                 pastSurgeries: '', notes: '', lastVisit: '',
                 height: '', weight: '', bmi: '', bp: '', pulse: '', spo2: '',
-                insuranceNumber: '', insuranceProvider: '', insuranceExpiry: ''
+                insuranceNumber: '', insuranceProvider: '', insuranceExpiry: '',
+                appointmentDate: '', appointmentTime: '', appointmentReason: ''
             };
 
             if (patientId) {
@@ -418,13 +425,47 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
 
             if (patientId) {
                 await patientsService.updatePatient(patientId, payload);
+                if (onSuccess) onSuccess();
             } else {
-                await patientsService.createPatient(payload);
+                const newPatient = await patientsService.createPatient(payload);
+                let appointmentCreated = false;
+
+                // Create optional initial appointment
+                if (formData.appointmentDate) {
+                    try {
+                        const apptDateStr = formData.appointmentDate;
+                        const apptTimeStr = formData.appointmentTime || '09:00';
+                        // Handle date time construction properly
+                        const apptDateTime = new Date(`${apptDateStr}T${apptTimeStr}`);
+
+                        const apptPayload = {
+                            patientId: newPatient.id || newPatient._id,
+                            clientName: newPatient.name || `${newPatient.firstName} ${newPatient.lastName || ''}`.trim(),
+                            date: apptDateTime,
+                            time: apptTimeStr,
+                            appointmentType: 'Consultation',
+                            mode: 'In-clinic',
+                            chiefComplaint: formData.appointmentReason || 'Initial Visit',
+                            reason: formData.appointmentReason || 'Initial Visit',
+                            notes: 'Scheduled during patient registration',
+                            status: 'Scheduled',
+                            startAt: apptDateTime.toISOString()
+                        };
+
+                        console.log('📅 Creating initial appointment:', apptPayload);
+                        await appointmentsService.createAppointment(apptPayload);
+                        appointmentCreated = true;
+                    } catch (apptError) {
+                        console.error('Failed to create initial appointment:', apptError);
+                        alert('Patient created successfully, but failed to schedule appointment: ' + (apptError.message || 'Unknown error'));
+                    }
+                }
+
+                if (onSuccess) onSuccess(newPatient, appointmentCreated);
             }
 
             // Close and Refresh
             setLoading(false);
-            if (onSuccess) onSuccess();
             onClose();
         } catch (error) {
             console.error('Submission error:', error);
@@ -512,7 +553,8 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
         { id: 2, name: 'Contact', desc: 'Address & emergency', icon: <FiPhone /> },
         { id: 3, name: 'Medical History', desc: 'Conditions & doctor', icon: <FiHeart /> },
         { id: 4, name: 'Vitals', desc: 'Height, weight, BP', icon: <FiActivity /> },
-        { id: 5, name: 'Insurance', desc: 'Insurance details', icon: <FiCheck /> }
+        { id: 5, name: 'Insurance', desc: 'Insurance details', icon: <FiCheck /> },
+        { id: 6, name: 'Appointment', desc: 'Schedule visit', icon: <MdMedicalServices /> }
     ];
 
     if (!isOpen) return null;
@@ -688,8 +730,8 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                                                     type="button"
                                                     onClick={() => handleSelectGender('Male')}
                                                     className={`flex-1 py-2 px-4 rounded-lg border-2 font-medium transition-all ${formData.gender === 'Male'
-                                                            ? 'border-blue-500 bg-blue-50 text-blue-700'
-                                                            : 'border-slate-200 hover:border-slate-300'
+                                                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                                        : 'border-slate-200 hover:border-slate-300'
                                                         }`}
                                                 >
                                                     Male
@@ -698,8 +740,8 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                                                     type="button"
                                                     onClick={() => handleSelectGender('Female')}
                                                     className={`flex-1 py-2 px-4 rounded-lg border-2 font-medium transition-all ${formData.gender === 'Female'
-                                                            ? 'border-blue-500 bg-blue-50 text-blue-700'
-                                                            : 'border-slate-200 hover:border-slate-300'
+                                                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                                        : 'border-slate-200 hover:border-slate-300'
                                                         }`}
                                                 >
                                                     Female
@@ -708,8 +750,8 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                                                     type="button"
                                                     onClick={() => handleSelectGender('Other')}
                                                     className={`flex-1 py-2 px-4 rounded-lg border-2 font-medium transition-all ${formData.gender === 'Other'
-                                                            ? 'border-blue-500 bg-blue-50 text-blue-700'
-                                                            : 'border-slate-200 hover:border-slate-300'
+                                                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                                        : 'border-slate-200 hover:border-slate-300'
                                                         }`}
                                                 >
                                                     Other
@@ -1084,6 +1126,55 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                                 </div>
                             )}
 
+                            {/* STEP 6: Appointment (Optional) */}
+                            {currentStep === 5 && (
+                                <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-300 fade-in">
+                                    <div>
+                                        <h2 className="text-2xl font-bold text-slate-900">Schedule Appointment</h2>
+                                        <p className="text-slate-500">Create an initial appointment for this patient (Optional)</p>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <InputGroup label="Appointment Date" className="col-span-1">
+                                            <input
+                                                type="date"
+                                                name="appointmentDate"
+                                                value={formData.appointmentDate}
+                                                onChange={handleInputChange}
+                                                className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300"
+                                                min={new Date().toISOString().split('T')[0]}
+                                            />
+                                        </InputGroup>
+
+                                        <InputGroup label="Appointment Time" className="col-span-1">
+                                            <input
+                                                type="time"
+                                                name="appointmentTime"
+                                                value={formData.appointmentTime}
+                                                onChange={handleInputChange}
+                                                className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300"
+                                            />
+                                        </InputGroup>
+
+                                        <InputGroup label="Reason for Visit" className="col-span-2">
+                                            <input
+                                                name="appointmentReason"
+                                                value={formData.appointmentReason}
+                                                onChange={handleInputChange}
+                                                className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300"
+                                                placeholder="e.g. Initial Consultation, Fever, etc."
+                                            />
+                                        </InputGroup>
+                                    </div>
+
+                                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                                        <p className="text-sm text-green-800">
+                                            <strong>Tip:</strong> If you set these details, an appointment will be automatically created with the new patient record.
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+
                             {/* ACTION BUTTONS */}
                             <div className="flex items-center justify-between pt-8 border-t border-slate-200">
                                 <div>
@@ -1100,7 +1191,7 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                                 </div>
 
                                 <div className="flex gap-3">
-                                    {currentStep < 4 ? (
+                                    {currentStep < 5 ? (
                                         <button
                                             type="button"
                                             onClick={handleNext}

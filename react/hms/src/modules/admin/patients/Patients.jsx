@@ -5,6 +5,7 @@
  */
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { MdChevronLeft, MdChevronRight, MdSearch } from 'react-icons/md';
 import axios from 'axios';
 import patientsService from '../../../services/patientsService';
@@ -85,6 +86,7 @@ const CONFIG = {
 };
 
 const Patients = () => {
+  const navigate = useNavigate();
   // State management
   const [patients, setPatients] = useState([]);
   const [filteredPatients, setFilteredPatients] = useState([]);
@@ -550,11 +552,26 @@ const Patients = () => {
   }, []);
 
   // Modal success handler
-  const handleModalSuccess = useCallback(async () => {
+  const handleModalSuccess = useCallback(async (newPatientData, appointmentCreated) => {
+    const wasAddMode = activeModal === 'add'; // Capture if we were adding
+
     setCurrentPage(0);
     await fetchPatients();
     handleCloseModal();
-  }, [fetchPatients, handleCloseModal]);
+
+    // If we just added a new patient, navigate to appointments booking
+    if (wasAddMode && newPatientData && typeof newPatientData === 'object') {
+      if (appointmentCreated) {
+        console.log('Redirecting to appointments list (appointment already created)');
+        navigate('/admin/appointments');
+      } else {
+        console.log('Redirecting to new appointment form for:', newPatientData);
+        navigate('/admin/appointments', {
+          state: { newPatient: newPatientData }
+        });
+      }
+    }
+  }, [fetchPatients, handleCloseModal, activeModal, navigate]);
 
   // Doctor dialog handlers - Match Appointments page implementation with robust fallbacks
   const handleDoctorClick = async (patient) => {

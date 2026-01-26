@@ -199,6 +199,38 @@ body {
   background-color: var(--primary-hover);
 }
 
+.btn-approve-all {
+  height: 38px;
+  padding: 0 16px;
+  background-color: #059669;
+  color: white;
+  border: none;
+  border-radius: var(--radius-btn);
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.2);
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #047857;
+}
+
+.btn-approve-all:hover {
+  background-color: #047857;
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 6px 15px rgba(5, 150, 105, 0.3);
+}
+
+.btn-approve-all:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.btn-approve-all svg {
+  stroke-width: 3px;
+}
+
 /* --- SEARCH & FILTER (Compact) --- */
 .filter-bar-container {
   background: var(--bg-card);
