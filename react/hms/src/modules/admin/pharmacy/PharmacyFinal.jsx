@@ -6,7 +6,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { MdChevronLeft, MdChevronRight, MdSearch, MdLocalPharmacy, MdAdd, MdRefresh } from 'react-icons/md';
+import { MdChevronLeft, MdChevronRight, MdSearch, MdLocalPharmacy, MdAdd, MdRefresh, MdClose } from 'react-icons/md';
 import authService from '../../../services/authService';
 import pharmacyService from '../../../services/pharmacyService';
 import AddMedicineDialog from './AddMedicineDialog';
@@ -50,37 +50,44 @@ const PharmacyFinal = () => {
   const [statusFilter, setStatusFilter] = useState('All');
   const [currentPage, setCurrentPage] = useState(0);
   const [batchPage, setBatchPage] = useState(0);
-  
+
   // Dialog states
   const [showMedicineDialog, setShowMedicineDialog] = useState(false);
   const [showBatchDialog, setShowBatchDialog] = useState(false);
   const [selectedMedicine, setSelectedMedicine] = useState(null);
   const [selectedBatch, setSelectedBatch] = useState(null);
-  
+
+  // Analytics Popup State
+  const [analyticsPopup, setAnalyticsPopup] = useState({
+    isOpen: false,
+    type: '', // 'Total', 'Low Stock', 'Out of Stock'
+    items: [],
+  });
+
   const itemsPerPage = 20;
   const batchesPerPage = 10;
 
   // Fetch data on mount
   useEffect(() => {
     fetchData();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Filter medicines when search or filter changes
   useEffect(() => {
     filterMedicines();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery, statusFilter, medicines]);
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
       console.log('🔄 [PHARMACY] Loading data...');
-      
+
       // Load medicines using authService
       const medicinesData = await authService.get('/pharmacy/medicines?limit=100');
       console.log('✅ [PHARMACY] Medicines response:', medicinesData);
-      
+
       let medicinesList = [];
       if (Array.isArray(medicinesData)) {
         medicinesList = medicinesData;
@@ -109,7 +116,7 @@ const PharmacyFinal = () => {
       // Load batches
       const batchesData = await authService.get('/pharmacy/batches?limit=100');
       console.log('✅ [PHARMACY] Batches response:', batchesData);
-      
+
       let batchesList = [];
       if (Array.isArray(batchesData)) {
         batchesList = batchesData;
@@ -169,7 +176,7 @@ const PharmacyFinal = () => {
       filtered = filtered.filter(med => {
         const stock = med.availableQty;
         const reorder = med.reorderLevel;
-        
+
         if (statusFilter === 'In Stock') return stock > reorder;
         if (statusFilter === 'Low Stock') return stock > 0 && stock <= reorder;
         if (statusFilter === 'Out of Stock') return stock === 0;
@@ -241,6 +248,23 @@ const PharmacyFinal = () => {
     fetchData();
     setShowBatchDialog(false);
     setSelectedBatch(null);
+  };
+
+  const handleAnalyticsClick = (type) => {
+    let items = [];
+    if (type === 'Total') {
+      items = medicines;
+    } else if (type === 'Low Stock') {
+      items = medicines.filter(m => m.availableQty > 0 && m.availableQty <= m.reorderLevel);
+    } else if (type === 'Out of Stock') {
+      items = medicines.filter(m => m.availableQty === 0);
+    }
+
+    setAnalyticsPopup({
+      isOpen: true,
+      type: type,
+      items: items
+    });
   };
 
   // Pagination for Medicines
@@ -351,74 +375,74 @@ const PharmacyFinal = () => {
 
           {/* Table Card */}
           <div className="table-card">
-              <div className="modern-table-wrapper">
-                <table className="modern-table">
-                  <thead>
+            <div className="modern-table-wrapper">
+              <table className="modern-table">
+                <thead>
+                  <tr>
+                    <th>Medicine Name</th>
+                    <th>SKU</th>
+                    <th>Category</th>
+                    <th>Manufacturer</th>
+                    <th style={{ textAlign: 'center' }}>Stock</th>
+                    <th style={{ textAlign: 'center' }}>Status</th>
+                    <th style={{ textAlign: 'center' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {isLoading ? (
                     <tr>
-                      <th>Medicine Name</th>
-                      <th>SKU</th>
-                      <th>Category</th>
-                      <th>Manufacturer</th>
-                      <th style={{ textAlign: 'center' }}>Stock</th>
-                      <th style={{ textAlign: 'center' }}>Status</th>
-                      <th style={{ textAlign: 'center' }}>Actions</th>
+                      <td colSpan="7" style={{ textAlign: 'center', padding: '48px' }}>
+                        <div className="loading-spinner"></div>
+                        <p>Loading medicines...</p>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {isLoading ? (
-                      <tr>
-                        <td colSpan="7" style={{ textAlign: 'center', padding: '48px' }}>
-                          <div className="loading-spinner"></div>
-                          <p>Loading medicines...</p>
-                        </td>
-                      </tr>
-                    ) : paginatedMedicines.length === 0 ? (
-                      <tr>
-                        <td colSpan="7" style={{ textAlign: 'center', padding: '48px', color: '#9CA3AF' }}>
-                          No medicines found
-                        </td>
-                      </tr>
-                    ) : (
-                      paginatedMedicines.map((med, index) => {
-                        const status = getStockStatus(med.availableQty, med.reorderLevel);
-                        return (
-                          <tr key={med._id || index}>
-                            <td>
-                              <div className="info-group">
-                                <span className="primary">{med.name}</span>
-                                {med.strength && <span className="secondary">{med.strength}</span>}
-                              </div>
-                            </td>
-                            <td>{med.sku}</td>
-                            <td>{med.category}</td>
-                            <td>{med.manufacturer}</td>
-                            <td style={{ textAlign: 'center' }}>
-                              <span className={`stock-badge ${status.color}`}>
-                                {med.availableQty}
-                              </span>
-                            </td>
-                            <td style={{ textAlign: 'center' }}>
-                              <span className={`status-badge ${status.color}`}>
-                                {status.label}
-                              </span>
-                            </td>
-                            <td>
-                              <div className="action-buttons-group">
-                                <button className="btn-action edit" title="Edit" onClick={() => handleEdit(med)}>
-                                  <Icons.Edit />
-                                </button>
-                                <button className="btn-action delete" title="Delete" onClick={() => handleDelete(med)}>
-                                  <Icons.Delete />
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                  ) : paginatedMedicines.length === 0 ? (
+                    <tr>
+                      <td colSpan="7" style={{ textAlign: 'center', padding: '48px', color: '#9CA3AF' }}>
+                        No medicines found
+                      </td>
+                    </tr>
+                  ) : (
+                    paginatedMedicines.map((med, index) => {
+                      const status = getStockStatus(med.availableQty, med.reorderLevel);
+                      return (
+                        <tr key={med._id || index}>
+                          <td>
+                            <div className="info-group">
+                              <span className="primary">{med.name}</span>
+                              {med.strength && <span className="secondary">{med.strength}</span>}
+                            </div>
+                          </td>
+                          <td>{med.sku}</td>
+                          <td>{med.category}</td>
+                          <td>{med.manufacturer}</td>
+                          <td style={{ textAlign: 'center' }}>
+                            <span className={`stock-badge ${status.color}`}>
+                              {med.availableQty}
+                            </span>
+                          </td>
+                          <td style={{ textAlign: 'center' }}>
+                            <span className={`status-badge ${status.color}`}>
+                              {status.label}
+                            </span>
+                          </td>
+                          <td>
+                            <div className="action-buttons-group">
+                              <button className="btn-action edit" title="Edit" onClick={() => handleEdit(med)}>
+                                <Icons.Edit />
+                              </button>
+                              <button className="btn-action delete" title="Delete" onClick={() => handleDelete(med)}>
+                                <Icons.Delete />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
 
             {/* Pagination */}
             <div className="pagination-footer">
@@ -532,23 +556,83 @@ const PharmacyFinal = () => {
         <>
           <h2 className="main-title" style={{ marginBottom: '24px', marginLeft: '24px' }}>Inventory Analytics</h2>
           <div className="analytics-cards" style={{ padding: '0 24px' }}>
-              <div className="analytics-card primary">
-                <MdLocalPharmacy size={32} />
-                <div className="card-value">{stats.total}</div>
-                <div className="card-label">Total Medicines</div>
-              </div>
-              <div className="analytics-card warning">
-                <Icons.Box />
-                <div className="card-value">{stats.lowStock}</div>
-                <div className="card-label">Low Stock</div>
-              </div>
-              <div className="analytics-card danger">
-                <Icons.Delete />
-                <div className="card-value">{stats.outOfStock}</div>
-                <div className="card-label">Out of Stock</div>
-              </div>
+            <div className="analytics-card primary" onClick={() => handleAnalyticsClick('Total')}>
+              <MdLocalPharmacy size={32} />
+              <div className="card-value">{stats.total}</div>
+              <div className="card-label">Total Medicines</div>
             </div>
+            <div className="analytics-card warning" onClick={() => handleAnalyticsClick('Low Stock')}>
+              <Icons.Box />
+              <div className="card-value">{stats.lowStock}</div>
+              <div className="card-label">Low Stock</div>
+            </div>
+            <div className="analytics-card danger" onClick={() => handleAnalyticsClick('Out of Stock')}>
+              <Icons.Delete />
+              <div className="card-value">{stats.outOfStock}</div>
+              <div className="card-label">Out of Stock</div>
+            </div>
+          </div>
         </>
+      )}
+
+      {/* Analytics Details Popup */}
+      {analyticsPopup.isOpen && (
+        <div className="analytics-overlay" onClick={() => setAnalyticsPopup({ ...analyticsPopup, isOpen: false })}>
+          <div className="analytics-modal" onClick={e => e.stopPropagation()}>
+            <div className="analytics-header">
+              <div>
+                <h2>{analyticsPopup.type} Items</h2>
+                <p>Showing detailed list of medicines</p>
+              </div>
+              <button className="analytics-close-btn" onClick={() => setAnalyticsPopup({ ...analyticsPopup, isOpen: false })}>
+                <MdClose size={20} />
+              </button>
+            </div>
+
+            <div className="analytics-body modern-table-wrapper">
+              <table className="modern-table">
+                <thead>
+                  <tr>
+                    <th>Medicine Name</th>
+                    <th>SKU</th>
+                    <th>Category</th>
+                    <th style={{ textAlign: 'center' }}>Stock</th>
+                    <th style={{ textAlign: 'center' }}>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {analyticsPopup.items.length === 0 ? (
+                    <tr>
+                      <td colSpan="5" style={{ textAlign: 'center', padding: '32px', color: '#9CA3AF' }}>No items found</td>
+                    </tr>
+                  ) : (
+                    analyticsPopup.items.map((med, idx) => {
+                      const status = getStockStatus(med.availableQty, med.reorderLevel);
+                      return (
+                        <tr key={idx}>
+                          <td>
+                            <div className="info-group">
+                              <span className="primary">{med.name}</span>
+                              {med.strength && <span className="secondary">{med.strength}</span>}
+                            </div>
+                          </td>
+                          <td>{med.sku}</td>
+                          <td>{med.category}</td>
+                          <td style={{ textAlign: 'center' }}>
+                            <span className={`stock-badge ${status.color}`}>{med.availableQty}</span>
+                          </td>
+                          <td style={{ textAlign: 'center' }}>
+                            <span className={`status-badge ${status.color}`}>{status.label}</span>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Dialogs */}

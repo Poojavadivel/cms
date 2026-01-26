@@ -1,0 +1,14 @@
+Daily Work Update - Jan 26, 2026
+
+Completed Tasks:
+PHARMACY PAGE :
+
+1. Pharmacy UI Design:
+   - Redesigned "Add Medicine" and "Add Batch" popups with a modern, scrollable layout.
+   - Fixed alignment and scrolling issues for better usability.
+
+2. Analytics Dashboard:
+   - Made Inventory Analytics cards (Total, Low Stock, Out of stock) clickable.
+   - Added popup views to show detailed lists when cards are clicked.
+
+

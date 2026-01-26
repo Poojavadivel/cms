@@ -1,12 +1,12 @@
 /**
  * Add/Edit Batch Dialog
- * Modal for creating and updating batches
+ * Neo-Pro Design System - Scrollable Layout
  */
 
 import React, { useState, useEffect } from 'react';
-import { MdClose } from 'react-icons/md';
+import { MdClose, MdCheck, MdInventory, MdDateRange, MdAttachMoney, MdStore } from 'react-icons/md';
 import pharmacyService from '../../../services/pharmacyService';
-import './Dialog.css';
+import './AddBatchDialog.css';
 
 const AddBatchDialog = ({ isOpen, onClose, batch, medicines, onSuccess }) => {
   const [formData, setFormData] = useState({
@@ -59,8 +59,8 @@ const AddBatchDialog = ({ isOpen, onClose, batch, medicines, onSuccess }) => {
     setFormData(prev => ({
       ...prev,
       [name]: name === 'quantity' ? parseInt(value) || 0 :
-              name === 'salePrice' || name === 'purchasePrice' ? parseFloat(value) || 0 :
-              value
+        name === 'salePrice' || name === 'purchasePrice' ? parseFloat(value) || 0 :
+          value
     }));
   };
 
@@ -70,25 +70,14 @@ const AddBatchDialog = ({ isOpen, onClose, batch, medicines, onSuccess }) => {
     setIsSubmitting(true);
 
     try {
-      // Validate
-      if (!formData.medicineId) {
-        throw new Error('Please select a medicine');
-      }
-      if (!formData.batchNumber.trim()) {
-        throw new Error('Batch number is required');
-      }
-      if (formData.quantity <= 0) {
-        throw new Error('Quantity must be greater than 0');
-      }
-      if (formData.salePrice <= 0) {
-        throw new Error('Sale price must be greater than 0');
-      }
+      if (!formData.medicineId) throw new Error('Please select a medicine');
+      if (!formData.batchNumber.trim()) throw new Error('Batch number is required');
+      if (formData.quantity <= 0) throw new Error('Quantity must be greater than 0');
+      if (formData.salePrice <= 0) throw new Error('Sale price must be greater than 0');
 
       if (batch) {
-        // Update existing
         await pharmacyService.updateBatch(batch._id, formData);
       } else {
-        // Create new
         await pharmacyService.createBatch(formData);
       }
 
@@ -104,98 +93,109 @@ const AddBatchDialog = ({ isOpen, onClose, batch, medicines, onSuccess }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="dialog-overlay" onClick={onClose}>
-      <div className="dialog-content" onClick={e => e.stopPropagation()}>
+    <div className="dialog-overlay">
+      <div className="dialog-container">
+
+        {/* Header */}
         <div className="dialog-header">
-          <h2>{batch ? 'Edit Batch' : 'Add New Batch'}</h2>
-          <button className="dialog-close" onClick={onClose}>
-            <MdClose size={24} />
+          <div className="dialog-title-group">
+            <div className="title-icon-box">
+              <MdInventory />
+            </div>
+            <div className="title-text">
+              <h2>{batch ? 'Edit Batch Stock' : 'Add New Batch'}</h2>
+              <p>Manage inventory stock and pricing</p>
+            </div>
+          </div>
+          <button className="dialog-close-btn" onClick={onClose} disabled={isSubmitting}>
+            <MdClose size={20} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          <div className="dialog-body">
-            {error && (
-              <div className="error-message">{error}</div>
-            )}
+        {/* Scrollable Body */}
+        <div className="dialog-scroll-body">
+          {error && <div className="error-banner">⚠️ {error}</div>}
 
-            <div className="form-section-title">Batch Information</div>
-            
-            <div className="form-row">
+          <form id="batchForm" onSubmit={handleSubmit}>
+
+            {/* Section 1: Batch Details */}
+            <div className="form-section">
+              <div className="form-section-header">Batch Details</div>
+
               <div className="form-group full-width">
-                <label>Select Medicine *</label>
-                <select 
-                  name="medicineId" 
-                  value={formData.medicineId} 
+                <label className="form-label">Select Medicine *</label>
+                <select
+                  name="medicineId"
+                  className="form-select"
+                  value={formData.medicineId}
                   onChange={handleChange}
                   required
+                  autoFocus
                 >
-                  <option value="">-- Select Medicine --</option>
+                  <option value="">-- Choose from Inventory --</option>
                   {medicines.map(med => (
                     <option key={med._id} value={med._id}>
-                      {med.name} {med.strength && `(${med.strength})`}
+                      {med.name} {med.strength && `(${med.strength})`} - {med.sku}
                     </option>
                   ))}
                 </select>
               </div>
-            </div>
 
-            <div className="form-row">
               <div className="form-group">
-                <label>Batch Number *</label>
+                <label className="form-label">Batch Number *</label>
                 <input
                   type="text"
                   name="batchNumber"
+                  className="form-input"
                   value={formData.batchNumber}
                   onChange={handleChange}
                   required
                   placeholder="e.g., BTH-2024-001"
                 />
               </div>
+
               <div className="form-group">
-                <label>Quantity *</label>
+                <label className="form-label">Quantity *</label>
                 <input
                   type="number"
                   name="quantity"
+                  className="form-input"
                   value={formData.quantity}
                   onChange={handleChange}
                   required
                   min="1"
                 />
               </div>
-            </div>
 
-            <div className="form-row">
-              <div className="form-group">
-                <label>Supplier</label>
-                <input
-                  type="text"
-                  name="supplier"
-                  value={formData.supplier}
-                  onChange={handleChange}
-                  placeholder="e.g., ABC Distributors"
-                />
-              </div>
-              <div className="form-group">
-                <label>Location</label>
-                <input
-                  type="text"
-                  name="location"
-                  value={formData.location}
-                  onChange={handleChange}
-                  placeholder="e.g., Main Store"
-                />
+              <div className="form-group full-width">
+                <label className="form-label">Expiry Date *</label>
+                <div style={{ position: 'relative' }}>
+                  <MdDateRange style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                  <input
+                    type="date"
+                    name="expiryDate"
+                    className="form-input"
+                    style={{ paddingLeft: '36px' }}
+                    value={formData.expiryDate}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
               </div>
             </div>
 
-            <div className="form-section-title">Pricing</div>
+            {/* Section 2: Pricing */}
+            <div className="form-section" style={{ borderColor: '#fbcfe8', background: '#fff1f2' }}>
+              <div className="form-section-header" style={{ color: '#be123c' }}>
+                <MdAttachMoney /> Pricing
+              </div>
 
-            <div className="form-row">
               <div className="form-group">
-                <label>Cost Price (₹) *</label>
+                <label className="form-label">Cost Price (₹) *</label>
                 <input
                   type="number"
                   name="purchasePrice"
+                  className="form-input"
                   value={formData.purchasePrice}
                   onChange={handleChange}
                   required
@@ -203,43 +203,67 @@ const AddBatchDialog = ({ isOpen, onClose, batch, medicines, onSuccess }) => {
                   step="0.01"
                 />
               </div>
+
               <div className="form-group">
-                <label>Sale Price (₹) *</label>
+                <label className="form-label">Sale Price (₹) *</label>
                 <input
                   type="number"
                   name="salePrice"
+                  className="form-input"
                   value={formData.salePrice}
                   onChange={handleChange}
                   required
                   min="0"
                   step="0.01"
+                  style={{ fontWeight: 'bold', color: '#be123c' }}
                 />
               </div>
             </div>
 
-            <div className="form-row">
-              <div className="form-group full-width">
-                <label>Expiry Date *</label>
+            {/* Section 3: Supply Chain */}
+            <div className="form-section" style={{ marginBottom: 0 }}>
+              <div className="form-section-header">
+                <MdStore /> Supply Chain
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Supplier</label>
                 <input
-                  type="date"
-                  name="expiryDate"
-                  value={formData.expiryDate}
+                  type="text"
+                  name="supplier"
+                  className="form-input"
+                  value={formData.supplier}
                   onChange={handleChange}
-                  required
+                  placeholder="e.g., ABC Distributors"
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Storage Location</label>
+                <input
+                  type="text"
+                  name="location"
+                  className="form-input"
+                  value={formData.location}
+                  onChange={handleChange}
+                  placeholder="e.g., Main Store - Shelf A"
                 />
               </div>
             </div>
-          </div>
 
-          <div className="dialog-footer">
-            <button type="button" className="btn-secondary" onClick={onClose} disabled={isSubmitting}>
-              Cancel
-            </button>
-            <button type="submit" className="btn-primary" disabled={isSubmitting}>
-              {isSubmitting ? 'Saving...' : batch ? 'Update Batch' : 'Add Batch'}
-            </button>
-          </div>
-        </form>
+          </form>
+        </div>
+
+        {/* Footer */}
+        <div className="dialog-footer">
+          <button type="button" className="btn-cancel" onClick={onClose} disabled={isSubmitting}>
+            Cancel
+          </button>
+          <button type="submit" form="batchForm" className="btn-submit" disabled={isSubmitting}>
+            {isSubmitting ? 'Saving...' : <><MdCheck size={20} /> Save Batch</>}
+          </button>
+        </div>
+
       </div>
     </div>
   );
