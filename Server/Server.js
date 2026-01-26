@@ -24,12 +24,6 @@ app.use(cors({
 app.use(express.json());
 const webAppPath = path.join(__dirname, 'web');
 
-// --- Static / Web app ---
-app.use(express.static(webAppPath));
-app.get('/', (req, res) => {
-  res.sendFile(path.join(webAppPath, 'index.html'));
-});
-
 // --- API Route Definitions ---
 app.use('/api/auth', authRoutes);
 app.use('/api/appointments', appointmentRoutes);
@@ -37,21 +31,27 @@ app.use('/api/staff', require('./routes/staff'));
 app.use('/api/patients', require('./routes/patients'));
 app.use('/api/doctors', require('./routes/doctors'));
 app.use('/api/pharmacy', require('./routes/pharmacy'));
-app.use('/api/pathology', require('./routes/pathology')); // New: Pathology routes
+app.use('/api/pathology', require('./routes/pathology'));
 app.use('/api/bot', require('./routes/bot'));
-// app.use('/api/telegram', require('./routes/telegram'));
 app.use('/api/intake', require('./routes/intake'));
-app.use('/api/scanner-enterprise', require('./routes/scanner-enterprise')); // Legacy: Enterprise scanner with intent detection
-app.use('/api/card', require('./routes/card')); // New: Profile card data endpoint
-app.use('/api/payroll', require('./routes/payroll')); // New: Payroll management routes
-app.use('/api/reports', require('./routes/enterpriseReports')); // Old: PDFKit reports (has layout issues)
-app.use('/api/reports-proper', require('./routes/properReports')); // New: PDFMake reports (FIXED)
+app.use('/api/scanner-enterprise', require('./routes/scanner-enterprise'));
+app.use('/api/card', require('./routes/card'));
+app.use('/api/payroll', require('./routes/payroll'));
+app.use('/api/reports', require('./routes/enterpriseReports'));
+app.use('/api/reports-proper', require('./routes/properReports'));
+
+// --- Static Files & SPA Support ---
+// Serve static assets (images, js, css)
+app.use(express.static(webAppPath));
+
+// Catch-all route: sends index.html for any request that doesn't match an API or static file
 app.get('*', (req, res) => {
-  // If it's an API route that wasn't found, let it fall through or handle specifically
+  // Return 404 for missing API routes
   if (req.path.startsWith('/api/')) {
     return res.status(404).json({ success: false, message: 'API route not found' });
   }
-  res.sendFile(path.join(webAppPath, 'index.html'));
+  // Send index.html for all other routes to support client-side routing (SPA)
+  res.sendFile(path.resolve(webAppPath, 'index.html'));
 });
 
 
