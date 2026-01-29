@@ -1192,14 +1192,24 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
 
                                 <div className="flex gap-3">
                                     {currentStep < 5 ? (
-                                        <button
-                                            type="button"
-                                            onClick={handleNext}
-                                            className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all shadow-lg shadow-blue-600/20 hover:shadow-xl hover:shadow-blue-600/30 flex items-center gap-2"
-                                        >
-                                            Continue
-                                            <FiArrowRight size={16} />
-                                        </button>
+                                        <>
+                                            <button
+                                                type="button"
+                                                onClick={() => setCurrentStep(currentStep + 1)}
+                                                className="px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 font-medium rounded-xl transition-all flex items-center gap-2"
+                                            >
+                                                Skip
+                                                <FiArrowRight size={16} />
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={handleNext}
+                                                className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all shadow-lg shadow-blue-600/20 hover:shadow-xl hover:shadow-blue-600/30 flex items-center gap-2"
+                                            >
+                                                Continue
+                                                <FiArrowRight size={16} />
+                                            </button>
+                                        </>
                                     ) : (
                                         <button
                                             type="button"

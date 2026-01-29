@@ -329,6 +329,63 @@ const printProperReport = async (id) => {
   }
 };
 
+/**
+ * Create pathology reports from intake
+ * Creates lab report orders when doctor prescribes tests during intake
+ */
+const createReportsFromIntake = async (intakeData) => {
+  try {
+    const { patientId, patientName, appointmentId, intakeId, pathologyRows } = intakeData;
+    
+    if (!pathologyRows || pathologyRows.length === 0) {
+      return { success: true, message: 'No pathology tests to create', reports: [] };
+    }
+
+    console.log(`🧪 Creating ${pathologyRows.length} lab report(s) from intake...`);
+    
+    const createdReports = [];
+    const errors = [];
+
+    // Create each pathology test as a separate lab report
+    for (const row of pathologyRows) {
+      try {
+        const reportPayload = {
+          patientId: patientId,
+          patientName: patientName,
+          testName: row.testName || row.Test || 'Lab Test',
+          testType: row.testType || row.Type || 'General',
+          status: 'Pending',
+          appointmentId: appointmentId,
+          intakeId: intakeId,
+          collectionDate: new Date().toISOString(),
+          remarks: row.notes || row.Notes || '',
+        };
+
+        logger.apiRequest('POST', PathologyEndpoints.create, reportPayload);
+        const response = await api.post(PathologyEndpoints.create, reportPayload);
+        logger.apiResponse('POST', PathologyEndpoints.create, response.status, response.data);
+        
+        createdReports.push(response.data);
+        console.log(`✅ Lab report created: ${reportPayload.testName}`);
+      } catch (error) {
+        const errorMsg = error.response?.data?.message || error.message;
+        console.error(`❌ Failed to create lab report for ${row.testName}:`, errorMsg);
+        errors.push({ test: row.testName, error: errorMsg });
+      }
+    }
+
+    return {
+      success: createdReports.length > 0,
+      message: `Created ${createdReports.length} of ${pathologyRows.length} lab report(s)`,
+      reports: createdReports,
+      errors: errors.length > 0 ? errors : undefined
+    };
+  } catch (error) {
+    logger.apiError('POST', 'createReportsFromIntake', error);
+    throw new Error(error.response?.data?.message || 'Failed to create pathology reports');
+  }
+};
+
 const pathologyServiceExport = {
   fetchReports,
   fetchReportById,
@@ -338,7 +395,8 @@ const pathologyServiceExport = {
   downloadReport,
   printReport,
   downloadProperReport,
-  printProperReport
+  printProperReport,
+  createReportsFromIntake
 };
 
 export default pathologyServiceExport;

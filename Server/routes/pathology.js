@@ -247,34 +247,37 @@ router.get('/reports', auth, async (req, res) => {
     // Populate patient name, patient code, and uploader name
     const User = require('../Models/User');
     for (const report of reports) {
-      // Populate patient details
-      if (report.patientId && Patient) {
-        try {
-          const patient = await Patient.findById(report.patientId).lean();
-          if (patient) {
-            const firstName = patient.firstName || '';
-            const lastName = patient.lastName || '';
-            const fullName = patient.name || `${firstName} ${lastName}`.trim();
-            report.patientName = fullName || 'Unknown';
+      // Use existing patient details if already present (from seeded data)
+      if (!report.patientName || !report.patientCode) {
+        // Only fetch patient if details are missing
+        if (report.patientId && Patient) {
+          try {
+            const patient = await Patient.findById(report.patientId).lean();
+            if (patient) {
+              const firstName = patient.firstName || '';
+              const lastName = patient.lastName || '';
+              const fullName = patient.name || `${firstName} ${lastName}`.trim();
+              report.patientName = report.patientName || fullName || 'Unknown';
 
-            // Extract patient code
-            const patientCode = patient.patientCode ||
-              patient.metadata?.patientCode ||
-              patient.metadata?.patient_code ||
-              'PAT-00';
-            report.patientCode = patientCode;
-          } else {
-            report.patientName = 'Unknown';
-            report.patientCode = 'PAT-00';
+              // Extract patient code
+              const patientCode = patient.patientCode ||
+                patient.metadata?.patientCode ||
+                patient.metadata?.patient_code ||
+                'PAT-00';
+              report.patientCode = report.patientCode || patientCode;
+            } else {
+              report.patientName = report.patientName || 'Unknown';
+              report.patientCode = report.patientCode || 'PAT-00';
+            }
+          } catch (e) {
+            console.error('Failed to fetch patient for report:', report._id, e);
+            report.patientName = report.patientName || 'Unknown';
+            report.patientCode = report.patientCode || 'PAT-00';
           }
-        } catch (e) {
-          console.error('Failed to fetch patient for report:', report._id, e);
-          report.patientName = 'Unknown';
-          report.patientCode = 'PAT-00';
+        } else {
+          report.patientName = report.patientName || 'Unknown';
+          report.patientCode = report.patientCode || 'PAT-00';
         }
-      } else {
-        report.patientName = 'Unknown';
-        report.patientCode = 'PAT-00';
       }
 
       // Populate uploader name - try multiple sources

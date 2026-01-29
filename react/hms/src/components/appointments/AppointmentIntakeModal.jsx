@@ -20,6 +20,7 @@ import './AppointmentIntakeModal.css';
 import appointmentsService from '../../services/appointmentsService';
 import patientsService from '../../services/patientsService';
 import pharmacyService from '../../services/pharmacyService';
+import pathologyService from '../../services/pathologyService';
 import { PatientDetails } from '../../models/Patients';
 
 const AppointmentIntakeModal = ({ isOpen, onClose, appointmentId, onSuccess }) => {
@@ -201,6 +202,9 @@ const AppointmentIntakeModal = ({ isOpen, onClose, appointmentId, onSuccess }) =
       const savedIntake = await appointmentsService.addIntake(payload, patientId);
       console.log('✅ Intake data saved successfully!', savedIntake);
 
+      let successMessage = '✅ Intake saved successfully!';
+      const details = [];
+
       // Step 3: Create prescription if pharmacy items exist
       if (pharmacyRows.length > 0) {
         try {
@@ -230,18 +234,49 @@ const AppointmentIntakeModal = ({ isOpen, onClose, appointmentId, onSuccess }) =
             const reductions = prescriptionResult.stockReductions || [];
             console.log('✅ Prescription created! Total: ₹' + total);
             console.log('📦 Stock reduced from ' + reductions.length + ' batch(es)');
-            
-            // Show success with prescription info
-            alert(`✅ Intake saved & prescription created!\n\nTotal: ₹${total}\nStock reduced: ${reductions.length} batch(es)`);
+            details.push(`💊 Prescription created: ₹${total}`);
+            details.push(`📦 Stock reduced: ${reductions.length} batch(es)`);
           }
         } catch (prescriptionError) {
           console.warn('⚠️ Warning: Failed to create prescription:', prescriptionError);
-          // Don't fail the entire save if prescription creation fails
-          alert(`✅ Intake saved successfully!\n\n⚠️ Warning: Failed to create prescription.\nPlease create it manually.`);
+          details.push('⚠️ Warning: Failed to create prescription');
         }
-      } else {
-        alert('✅ Intake saved successfully!');
       }
+
+      // Step 4: Create pathology reports if pathology items exist
+      if (pathologyRows.length > 0) {
+        try {
+          const pathologyPayload = {
+            patientId: appointment?.patientId?._id || appointment?.patientId,
+            patientName: appointment?.clientName || 'Unknown Patient',
+            appointmentId: appointmentId,
+            intakeId: savedIntake?._id || savedIntake?.id || appointmentId,
+            pathologyRows: pathologyRows,
+          };
+
+          console.log('🧪 Creating lab reports for', pathologyPayload.pathologyRows.length, 'tests...');
+          const pathologyResult = await pathologyService.createReportsFromIntake(pathologyPayload);
+          
+          if (pathologyResult && pathologyResult.success) {
+            console.log('✅ Lab reports created:', pathologyResult.reports.length);
+            details.push(`🧪 Lab reports created: ${pathologyResult.reports.length} test(s)`);
+            
+            if (pathologyResult.errors && pathologyResult.errors.length > 0) {
+              console.warn('⚠️ Some lab reports failed:', pathologyResult.errors);
+              details.push(`⚠️ ${pathologyResult.errors.length} test(s) failed`);
+            }
+          }
+        } catch (pathologyError) {
+          console.warn('⚠️ Warning: Failed to create lab reports:', pathologyError);
+          details.push('⚠️ Warning: Failed to create lab reports');
+        }
+      }
+
+      // Show consolidated success message
+      if (details.length > 0) {
+        successMessage += '\n\n' + details.join('\n');
+      }
+      alert(successMessage);
 
       if (onSuccess) {
         await onSuccess();

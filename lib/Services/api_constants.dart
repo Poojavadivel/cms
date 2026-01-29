@@ -29,7 +29,7 @@ class ApiConfig {
   
   /// Get base URL for current environment
   //static const  String baseUrl = 'http://10.41.67.132:3000';
-    static const  String baseUrl = 'https://hms-dev.onrender.com';
+    static const  String baseUrl = 'https://hms-dev.onrender.com/api';
   
   /// API version
   static const String apiVersion = 'v1';

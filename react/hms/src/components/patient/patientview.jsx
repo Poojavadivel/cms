@@ -36,7 +36,7 @@ import invoiceService from '../../services/invoiceService';
 import reportService from '../../services/reportService';
 import { getGenderAvatar } from '../../utils/avatarHelpers';
 
-const PatientView = ({ isOpen, onClose, patientId, onEdit }) => {
+const PatientView = ({ isOpen, onClose, patientId, patient: patientProp, onEdit, showBillingTab = true }) => {
     const [patient, setPatient] = useState(null);
     const [activeTab, setActiveTab] = useState('profile');
     const [isLoading, setIsLoading] = useState(true);
@@ -48,7 +48,7 @@ const PatientView = ({ isOpen, onClose, patientId, onEdit }) => {
         { id: 'medical-history', label: 'Medical History', icon: <MdMedicalServices /> },
         { id: 'prescription', label: 'Prescription', icon: <MdDescription /> },
         { id: 'lab-results', label: 'Lab Results', icon: <MdScience /> },
-        { id: 'billings', label: 'Billings', icon: <MdPayment /> }
+        ...(showBillingTab ? [{ id: 'billings', label: 'Billings', icon: <MdPayment /> }] : [])
     ];
 
     const fetchPatient = async () => {
@@ -66,17 +66,28 @@ const PatientView = ({ isOpen, onClose, patientId, onEdit }) => {
     };
 
     useEffect(() => {
-        if (isOpen && patientId) {
-            fetchPatient();
+        if (isOpen) {
+            if (patientProp) {
+                // Patient data already provided, use it directly
+                setPatient(patientProp);
+                setIsLoading(false);
+            } else if (patientId) {
+                // Fetch patient by ID
+                fetchPatient();
+            } else {
+                setError("No patient data or ID provided");
+                setIsLoading(false);
+            }
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isOpen, patientId]);
+    }, [isOpen, patientId, patientProp]);
 
     const handleDownloadReport = async () => {
-        if (!patientId) return;
+        const id = patientId || patient?._id;
+        if (!id) return;
         setIsDownloading(true);
         try {
-            const result = await reportService.downloadPatientReport(patientId);
+            const result = await reportService.downloadPatientReport(id);
             if (!result.success) {
                 alert(result.message);
             }
@@ -350,14 +361,6 @@ const PatientView = ({ isOpen, onClose, patientId, onEdit }) => {
 
                                 {/* Right Actions */}
                                 <div className="pv-header-right">
-                                    <button
-                                        className={`pv-btn-fill ${isDownloading ? 'loading' : ''}`}
-                                        onClick={handleDownloadReport}
-                                        disabled={isDownloading}
-                                    >
-                                        <MdPictureAsPdf size={14} /> {isDownloading ? 'Downloading...' : 'Medical Report'}
-                                    </button>
-
                                     <button className="pv-edit-btn" onClick={() => onEdit && onEdit(patient)}>
                                         <MdEdit size={14} /> Edit
                                     </button>
@@ -399,10 +402,10 @@ const PatientView = ({ isOpen, onClose, patientId, onEdit }) => {
                         {/* 3. TAB CONTENT (Scrollable) */}
                         <div className="patient-tab-content">
                             {activeTab === 'profile' && <ProfileTab patient={patient} copyToClipboard={copyToClipboard} />}
-                            {activeTab === 'medical-history' && <MedicalHistoryTab patientId={patientId} />}
-                            {activeTab === 'prescription' && <PrescriptionTab patientId={patientId} />}
-                            {activeTab === 'lab-results' && <LabResultTab patientId={patientId} />}
-                            {activeTab === 'billings' && <BillingsTab patientId={patientId} />}
+                            {activeTab === 'medical-history' && <MedicalHistoryTab patientId={patientId || patient?._id} />}
+                            {activeTab === 'prescription' && <PrescriptionTab patientId={patientId || patient?._id} />}
+                            {activeTab === 'lab-results' && <LabResultTab patientId={patientId || patient?._id} />}
+                            {activeTab === 'billings' && <BillingsTab patientId={patientId || patient?._id} />}
                         </div>
                     </>
                 )}
@@ -598,6 +601,10 @@ const MedicalHistoryTab = ({ patientId }) => {
     useEffect(() => {
         if (patientId) {
             fetchHistory();
+        } else {
+            // No patient ID available, stop loading
+            setLoading(false);
+            setHistoryData([]);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [patientId]);
@@ -1141,6 +1148,10 @@ const PrescriptionTab = ({ patientId }) => {
     useEffect(() => {
         if (patientId) {
             fetchPrescriptionsData();
+        } else {
+            // No patient ID available, stop loading
+            setLoading(false);
+            setPrescriptions([]);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [patientId]);
@@ -1149,7 +1160,32 @@ const PrescriptionTab = ({ patientId }) => {
         setLoading(true);
         try {
             const data = await patientsService.fetchPatientPrescriptions(patientId);
-            setPrescriptions(Array.isArray(data) ? data : []);
+            
+            // Flatten PharmacyRecord items to individual prescription rows
+            const flattenedPrescriptions = [];
+            if (Array.isArray(data)) {
+                data.forEach(record => {
+                    if (record.items && Array.isArray(record.items)) {
+                        record.items.forEach(item => {
+                            flattenedPrescriptions.push({
+                                medicationName: item.name || item.Medicine || '',
+                                medicine: item.name || item.Medicine || '',
+                                dosage: item.dosage || item.Dosage || '',
+                                frequency: item.frequency || item.Frequency || '',
+                                duration: item.duration || item.Duration || '',
+                                instructions: item.notes || item.Notes || '',
+                                createdAt: record.createdAt || record.date,
+                                pdfId: record.pdfId || null,
+                                recordId: record._id || record.id,
+                                quantity: item.quantity,
+                                unitPrice: item.unitPrice
+                            });
+                        });
+                    }
+                });
+            }
+            
+            setPrescriptions(flattenedPrescriptions);
         } catch (error) {
             console.error('Failed to fetch prescriptions:', error);
             setPrescriptions([]);
@@ -1268,17 +1304,28 @@ const LabResultTab = ({ patientId }) => {
     useEffect(() => {
         if (patientId) {
             fetchLabResults();
+        } else {
+            // No patient ID available, stop loading
+            setLoading(false);
+            setLabs([]);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [patientId]);
 
     const fetchLabResults = async () => {
         setLoading(true);
+        const startTime = performance.now();
+        console.log('[LAB RESULTS] Starting fetch for patient:', patientId);
+        
         try {
             const data = await patientsService.fetchPatientLabResults(patientId);
+            const endTime = performance.now();
+            console.log(`[LAB RESULTS] Fetch completed in ${(endTime - startTime).toFixed(0)}ms, found ${data?.length || 0} results`);
+            
             setLabs(Array.isArray(data) ? data : []);
         } catch (error) {
-            console.error('Failed to fetch lab results:', error);
+            const endTime = performance.now();
+            console.error(`[LAB RESULTS] Fetch failed after ${(endTime - startTime).toFixed(0)}ms:`, error);
             setLabs([]);
         } finally {
             setLoading(false);
@@ -1412,6 +1459,10 @@ const BillingsTab = ({ patientId }) => {
     useEffect(() => {
         if (patientId) {
             fetchBills();
+        } else {
+            // No patient ID available, stop loading
+            setLoading(false);
+            setBills([]);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [patientId]);

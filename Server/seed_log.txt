@@ -1,0 +1,66 @@
+[dotenv@17.2.3] injecting env (24) from .env -- tip: ≡ƒöÉ encrypt with Dotenvx: https://dotenvx.com
+≡ƒÜÇ Starting Enterprise Data Seeding...
+
+(node:3308) [MONGOOSE] Warning: Duplicate schema index on {"role":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3308) [MONGOOSE] Warning: Duplicate schema index on {"expiresAt":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+(node:3308) [MONGOOSE] Warning: Duplicate schema index on {"phone":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+(node:3308) [MONGOOSE] Warning: Duplicate schema index on {"patientSnapshot.phone":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+(node:3308) [MONGOOSE] Warning: Duplicate schema index on {"sku":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+(node:3308) [MONGOOSE] Warning: Duplicate schema index on {"documentId":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+(node:3308) [MONGOOSE] Warning: Duplicate schema index on {"pdfId":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+(node:3308) [MONGOOSE] Warning: Duplicate schema index on {"pdfId":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+(node:3308) [MONGOOSE] Warning: Duplicate schema index on {"pdfId":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+(node:3308) [MONGOOSE] Warning: Duplicate schema index on {"staffCode":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+(node:3308) [MONGODB DRIVER] Warning: useNewUrlParser is a deprecated option: useNewUrlParser has no effect since Node.js Driver version 4.0.0 and will be removed in the next major version
+(node:3308) [MONGODB DRIVER] Warning: useUnifiedTopology is a deprecated option: useUnifiedTopology has no effect since Node.js Driver version 4.0.0 and will be removed in the next major version
+Γ£à MongoDB Connected
+≡ƒùæ∩╕Å  Resetting collections...
+   Γ£ô Users cleaned (kept specified credentials)
+   Γ£ô patients cleared
+   Γ£ô appointments cleared
+   Γ£ô intakes cleared
+   Γ£ô labreports cleared
+   Γ£ô medicines cleared
+   Γ£ô medicinebatches cleared
+   Γ£ô payrolls cleared
+≡ƒæñ Ensuring user credentials...
+   Γ£ô User exists: banu@karurgastro.com
+   Γ£ô User exists: dr.sanjit@karurgastro.com
+   Γ£ô User exists: dr.sriram@karurgastro.com
+   Γ£ô User exists: pharmacist@hms.com
+   Γ£ô User exists: pathologist@hms.com
+≡ƒÆè Seeding medicines...
+   Γ£ô Created 50 medicines with batches
+≡ƒæÑ Seeding staff...
+   Γ£ô Created 50 staff members
+≡ƒÅÑ Seeding patients with complete data...
+   Patient 1/50: Ganesh Pillai (PAT001)
+Γ¥î Error during seeding: Error: PrescriptionDocument validation failed: pdfId: Path `pdfId` is required.
+    at ValidationError.inspect (D:\MOVICLOULD\Hms\karur\Server\node_modules\mongoose\lib\error\validation.js:52:26)
+    at formatValue (node:internal/util/inspect:809:19)
+    at inspect (node:internal/util/inspect:368:10)
+    at formatWithOptionsInternal (node:internal/util/inspect:2307:40)
+    at formatWithOptions (node:internal/util/inspect:2169:10)
+    at console.value (node:internal/console/constructor:340:14)
+    at console.warn (node:internal/console/constructor:381:61)
+    at main (D:\MOVICLOULD\Hms\karur\Server\seed_enterprise_data.js:502:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  errors: {
+    pdfId: ValidatorError: Path `pdfId` is required.
+        at validate (D:\MOVICLOULD\Hms\karur\Server\node_modules\mongoose\lib\schemaType.js:1413:13)
+        at SchemaType.doValidate (D:\MOVICLOULD\Hms\karur\Server\node_modules\mongoose\lib\schemaType.js:1397:7)
+        at D:\MOVICLOULD\Hms\karur\Server\node_modules\mongoose\lib\document.js:3111:18
+        at process.processTicksAndRejections (node:internal/process/task_queues:85:11) {
+      properties: [Object],
+      kind: 'required',
+      path: 'pdfId',
+      value: undefined,
+      reason: undefined,
+      [Symbol(mongoose#validatorError)]: true
+    }
+  },
+  _message: 'PrescriptionDocument validation failed'
+}
+
+≡ƒæï Database connection closed

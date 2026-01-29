@@ -12,7 +12,7 @@ import { Pathologist } from '../models/Pathologist';
 import apiLogger from '../utils/apiLogger';
 import logger from './loggerService';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://hms-dev.onrender.com/api';
 
 /**
  * AuthResult class - equivalent to Flutter's AuthResult

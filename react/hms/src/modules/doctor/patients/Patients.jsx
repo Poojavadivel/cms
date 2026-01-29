@@ -5,10 +5,9 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import patientsService from '../../../services/patientsService';
-import reportService from '../../../services/reportService';
-import PatientDetailsDialog from '../../../components/doctor/PatientDetailsDialog';
+import PatientView from '../../../components/patient/patientview';
 import FollowUpDialog from '../../../components/doctor/FollowUpDialog';
-import { MdSearch, MdChevronLeft, MdChevronRight, MdPictureAsPdf } from 'react-icons/md';
+import { MdSearch, MdChevronLeft, MdChevronRight } from 'react-icons/md';
 import './Patients.css';
 
 // Custom SVG Icons (matching admin)
@@ -48,16 +47,39 @@ const DoctorPatients = () => {
     try {
       const data = await patientsService.fetchPatients({ limit: 100 });
 
-      const transformed = data.map(p => ({
-        id: p._id || p.id,
-        name: p.name || `${p.firstName || ''} ${p.lastName || ''}`.trim(),
-        age: p.age || 0,
-        gender: p.gender || 'Other',
-        lastVisit: p.lastVisit || p.lastVisitDate || p.updatedAt || '',
-        doctor: p.doctor || p.doctorName || '',
-        condition: p.condition || p.reason || 'N/A',
-        patientId: p.patientId || p.patientCode || p._id,
-      }));
+      const transformed = data.map(p => {
+        // Extract medical condition from various possible sources
+        let condition = 'No diagnosis';
+        
+        // Try metadata first
+        if (p.metadata?.medicalHistory?.currentConditions && Array.isArray(p.metadata.medicalHistory.currentConditions) && p.metadata.medicalHistory.currentConditions.length > 0) {
+          condition = p.metadata.medicalHistory.currentConditions.join(', ');
+        } else if (p.metadata?.diagnosis && Array.isArray(p.metadata.diagnosis) && p.metadata.diagnosis.length > 0) {
+          condition = p.metadata.diagnosis.join(', ');
+        } else if (p.medicalHistory && Array.isArray(p.medicalHistory) && p.medicalHistory.length > 0) {
+          condition = p.medicalHistory.join(', ');
+        } else if (p.diagnosis && Array.isArray(p.diagnosis) && p.diagnosis.length > 0) {
+          condition = p.diagnosis.join(', ');
+        } else if (p.condition) {
+          condition = p.condition;
+        } else if (p.reason) {
+          condition = p.reason;
+        } else if (p.notes) {
+          // Use first 50 chars of notes if available
+          condition = p.notes.substring(0, 50) + (p.notes.length > 50 ? '...' : '');
+        }
+
+        return {
+          id: p._id || p.id,
+          name: p.name || `${p.firstName || ''} ${p.lastName || ''}`.trim(),
+          age: p.age || 0,
+          gender: p.gender || 'Other',
+          lastVisit: p.lastVisit || p.lastVisitDate || p.updatedAt || '',
+          doctor: p.doctor || p.doctorName || '',
+          condition: condition,
+          patientId: p.metadata?.patientCode || p.patientCode || p.patient_code || `PAT-${(p._id || p.id || '').substring(0, 8)}`,
+        };
+      });
 
       setPatients(transformed);
       setFilteredPatients(transformed);
@@ -138,21 +160,6 @@ const DoctorPatients = () => {
     event.stopPropagation(); // Prevent row click
     setSelectedFollowUpPatient(patient);
     setShowFollowUpDialog(true);
-  };
-
-  const handleDownloadReport = async (patient, event) => {
-    event.stopPropagation();
-    try {
-      const result = await reportService.downloadPatientReport(patient.id);
-      if (result.success) {
-        alert(result.message);
-      } else {
-        alert(result.message);
-      }
-    } catch (err) {
-      console.error('Download error:', err);
-      alert('Failed to download report');
-    }
   };
 
   const handleCloseFollowUpDialog = () => {
@@ -294,14 +301,6 @@ const DoctorPatients = () => {
                             <Icons.Eye />
                           </button>
                           <button
-                            className="action-btn action-download"
-                            title="Download Report"
-                            onClick={(e) => handleDownloadReport(patient, e)}
-                            style={{ color: '#EF4444' }}
-                          >
-                            <MdPictureAsPdf size={16} />
-                          </button>
-                          <button
                             className="action-btn action-appt"
                             title="Schedule Follow-Up"
                             onClick={(e) => handleFollowUpClick(patient, e)}
@@ -342,8 +341,8 @@ const DoctorPatients = () => {
         </div>
       </div>
 
-      {/* Patient Details Dialog */}
-      <PatientDetailsDialog
+      {/* Patient Details Dialog - Using same component as Appointments page */}
+      <PatientView
         patient={selectedPatient}
         isOpen={showPatientDialog}
         onClose={handleCloseDialog}

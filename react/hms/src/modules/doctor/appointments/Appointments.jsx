@@ -985,6 +985,7 @@ const Appointments = () => {
         patient={selectedPatient}
         isOpen={showPatientDialog}
         onClose={handleClosePatientDialog}
+        showBillingTab={false}
       />
     </div>
   );
