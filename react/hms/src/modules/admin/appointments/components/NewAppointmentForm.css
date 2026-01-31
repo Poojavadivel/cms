@@ -18,15 +18,14 @@
 
 .new-appt-modal {
     background: #FFFFFF;
-    border-radius: 16px;
-    width: 95%;
-    height: 95%;
-    max-width: 1400px;
-    max-height: 95vh;
+    border-radius: 20px;
+    width: 96%;
+    height: 92vh;
+    max-width: 1600px;
     position: relative;
     display: flex;
     overflow: hidden;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 25px 70px rgba(0, 0, 0, 0.35);
     animation: slideUp 0.3s ease-out;
 }
 
@@ -85,13 +84,14 @@
 
 /* LEFT PANEL */
 .left-panel {
-    width: 350px;
+    width: 420px;
     /* Match AppointmentViewModal Gradient */
     background: linear-gradient(135deg, #1E40AF 0%, #1E3A8A 100%);
     display: flex;
     flex-direction: column;
     padding: 2px;
     color: white;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
 }
 
 .panel-header {
@@ -135,12 +135,18 @@
 .search-container {
     margin: 16px 20px;
     background: rgba(255, 255, 255, 0.15);
-    border-radius: 8px;
+    border-radius: 10px;
     display: flex;
     align-items: center;
-    padding: 10px 12px;
+    padding: 12px 14px;
     gap: 10px;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    transition: all 0.2s;
+}
+
+.search-container:focus-within {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.4);
 }
 
 .search-container input {
@@ -149,65 +155,148 @@
     color: white;
     outline: none;
     width: 100%;
+    font-size: 14px;
+    font-weight: 500;
 }
 
 .search-container input::placeholder {
-    color: rgba(255, 255, 255, 0.6);
+    color: rgba(255, 255, 255, 0.65);
+    font-weight: 400;
 }
 
 .patient-count {
-    padding: 0 20px 10px;
-    font-size: 12px;
-    opacity: 0.7;
-    font-weight: 500;
+    padding: 0 20px 12px;
+    font-size: 13px;
+    opacity: 0.9;
+    font-weight: 600;
+    background: rgba(255, 255, 255, 0.1);
+    margin: 0 10px 10px;
+    border-radius: 6px;
+    text-align: center;
+    padding: 8px;
 }
 
 .patient-list {
     flex: 1;
     overflow-y: auto;
     padding: 0 10px 20px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+}
+
+.patient-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.patient-list::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+}
+
+.patient-list::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 10px;
+}
+
+.patient-list::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.5);
 }
 
 .patient-item {
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 12px;
-    margin-bottom: 8px;
-    border-radius: 10px;
+    padding: 14px 12px;
+    margin-bottom: 6px;
+    border-radius: 12px;
     cursor: pointer;
-    transition: background 0.2s;
+    transition: all 0.2s ease;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid transparent;
 }
 
 .patient-item:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.12);
+    transform: translateX(4px);
+    border-color: rgba(255, 255, 255, 0.2);
 }
 
 .patient-item.active {
-    background: rgba(255, 255, 255, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.4);
+    background: rgba(255, 255, 255, 0.25);
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: translateX(4px);
 }
 
 .p-avatar {
-    width: 40px;
-    height: 40px;
+    width: 48px;
+    height: 48px;
     border-radius: 50%;
     object-fit: cover;
     background: #fff;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .p-info {
     flex: 1;
+    min-width: 0;
 }
 
 .p-name {
     font-weight: 600;
-    font-size: 14px;
+    font-size: 15px;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .p-details {
-    font-size: 12px;
-    opacity: 0.8;
+    font-size: 13px;
+    opacity: 0.85;
+    font-weight: 400;
+}
+
+.patient-list-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.8);
+    gap: 12px;
+}
+
+.patient-list-empty svg {
+    width: 48px;
+    height: 48px;
+    opacity: 0.5;
+}
+
+.patient-list-empty p {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.patient-list-empty small {
+    font-size: 13px;
+    opacity: 0.7;
+}
+
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid rgba(255, 255, 255, 0.2);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
 }
 
 /* RIGHT PANEL */

@@ -156,15 +156,45 @@ export const fetchPatients = async () => {
     logger.apiRequest('GET', PatientEndpoints.getAll);
 
     const axiosInstance = createAxiosInstance();
-    const response = await axiosInstance.get(PatientEndpoints.getAll);
+    // Request all patients with high limit and metadata
+    const response = await axiosInstance.get(PatientEndpoints.getAll, {
+      params: {
+        limit: 100, // Backend max limit per page
+        page: 0,
+        meta: 1 // Request metadata to get total count
+      }
+    });
 
     logger.apiResponse('GET', PatientEndpoints.getAll, response.status);
 
-    const patients = Array.isArray(response.data)
-      ? response.data
-      : response.data.patients || response.data.data || [];
+    let patients = response.data.patients || response.data.data || (Array.isArray(response.data) ? response.data : []);
+    const total = response.data.total || patients.length;
+    
+    logger.info('PATIENTS', `Fetched page 0: ${patients.length} of ${total} total patients`);
 
-    logger.success('PATIENTS', `Fetched ${patients.length} patients`);
+    // If there are more patients, fetch all remaining pages
+    if (total > 100) {
+      const totalPages = Math.ceil(total / 100);
+      const additionalRequests = [];
+      
+      for (let page = 1; page < totalPages; page++) {
+        logger.info('PATIENTS', `Fetching page ${page}...`);
+        additionalRequests.push(
+          axiosInstance.get(PatientEndpoints.getAll, {
+            params: { limit: 100, page, meta: 1 }
+          })
+        );
+      }
+      
+      const additionalResponses = await Promise.all(additionalRequests);
+      additionalResponses.forEach((res, idx) => {
+        const morePatients = res.data.patients || res.data.data || (Array.isArray(res.data) ? res.data : []);
+        logger.info('PATIENTS', `Fetched page ${idx + 1}: ${morePatients.length} patients`);
+        patients = [...patients, ...morePatients];
+      });
+    }
+
+    logger.success('PATIENTS', `Total fetched: ${patients.length} patients`);
     return patients;
   } catch (error) {
     logger.apiError('GET', PatientEndpoints.getAll, error);

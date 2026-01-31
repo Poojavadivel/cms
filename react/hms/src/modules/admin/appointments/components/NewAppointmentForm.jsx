@@ -321,22 +321,40 @@ const NewAppointmentForm = ({ onClose, onSave, initialPatient }) => {
               onChange={e => setSearchQuery(e.target.value)}
             />
           </div>
-          <div className="patient-count">{filteredPatients.length} patients</div>
+          <div className="patient-count">
+            {filteredPatients.length} {filteredPatients.length === 1 ? 'Patient' : 'Patients'} 
+            {searchQuery && ` (filtered from ${patients.length})`}
+          </div>
           <div className="patient-list">
-            {filteredPatients.map(p => (
-              <div
-                key={p.id}
-                className={`patient-item ${selectedPatient?.id === p.id ? 'active' : ''}`}
-                onClick={() => setSelectedPatient(p)}
-              >
-                <img src={getAvatar(p)} alt="avatar" className="p-avatar" onError={(e) => { e.target.style.display = 'none'; }} />
-                <div className="p-info">
-                  <div className="p-name">{p.name}</div>
-                  <div className="p-details">{p.age ? `${p.age} years` : ''}</div>
-                </div>
-                <Icons.ChevronRight />
+            {isLoading ? (
+              <div className="patient-list-empty">
+                <div className="loading-spinner"></div>
+                <p>Loading patients...</p>
               </div>
-            ))}
+            ) : filteredPatients.length === 0 ? (
+              <div className="patient-list-empty">
+                <Icons.User />
+                <p>{searchQuery ? 'No patients found' : 'No patients available'}</p>
+                <small>{searchQuery ? 'Try a different search term' : 'Add patients to get started'}</small>
+              </div>
+            ) : (
+              filteredPatients.map(p => (
+                <div
+                  key={p.id}
+                  className={`patient-item ${selectedPatient?.id === p.id ? 'active' : ''}`}
+                  onClick={() => setSelectedPatient(p)}
+                >
+                  <img src={getAvatar(p)} alt="avatar" className="p-avatar" onError={(e) => { e.target.style.display = 'none'; }} />
+                  <div className="p-info">
+                    <div className="p-name">{p.name}</div>
+                    <div className="p-details">
+                      {p.age ? `${p.age} years` : ''}{p.age && p.phone ? ' • ' : ''}{p.phone ? p.phone.substring(0, 10) : ''}
+                    </div>
+                  </div>
+                  <Icons.ChevronRight />
+                </div>
+              ))
+            )}
           </div>
         </div>
         <div className={`right-panel ${!selectedPatient ? 'disabled' : ''}`}>
