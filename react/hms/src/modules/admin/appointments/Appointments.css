@@ -1,6 +1,16 @@
 /* --- ENTERPRISE DESIGN SYSTEM (Compact) --- */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
+/* Global scrollbar hiding for appointments page */
+* {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+*::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
 /* Loading spinner animation */
 @keyframes spin {
   to {
@@ -67,6 +77,14 @@ body {
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
+  /* Hide scrollbar */
+  overflow: auto;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.dashboard-container::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
 }
 
 /* Modern Notification Banner */
@@ -475,6 +493,12 @@ body {
     width: 100%;
     overflow-x: auto;
     padding-bottom: 8px;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+  }
+  
+  .tabs-wrapper::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
   }
 }
 
@@ -521,6 +545,13 @@ body {
   flex: 1;
   /* overflow: auto; Removed to allow full table display */
   padding: 0;
+  overflow-y: auto;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.modern-table-wrapper::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
 }
 
 .modern-table {
