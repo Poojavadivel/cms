@@ -46,8 +46,10 @@ const DoctorPatients = () => {
     setIsLoading(true);
     try {
       const data = await patientsService.fetchPatients({ limit: 100 });
+      
+      console.log('📊 Raw patient data from API:', data.slice(0, 2)); // Log first 2 patients
 
-      const transformed = data.map(p => {
+      const transformed = data.map((p, index) => {
         // Extract medical condition from various possible sources
         let condition = 'No diagnosis';
         
@@ -70,16 +72,23 @@ const DoctorPatients = () => {
         }
 
         return {
-          id: p._id || p.id,
-          name: p.name || `${p.firstName || ''} ${p.lastName || ''}`.trim(),
+          // Proper ID handling matching admin page
+          id: p._id || p.id || p.patientId || `temp-${index}-${Date.now()}`,
+          _id: p._id || p.id, // Keep for compatibility
+          name: p.name || `${p.firstName || ''} ${p.lastName || ''}`.trim() || 'Unknown',
           age: p.age || 0,
           gender: p.gender || 'Other',
           lastVisit: p.lastVisit || p.lastVisitDate || p.updatedAt || '',
           doctor: p.doctor || p.doctorName || '',
           condition: condition,
-          patientId: p.metadata?.patientCode || p.patientCode || p.patient_code || `PAT-${(p._id || p.id || '').substring(0, 8)}`,
+          patientId: p.patientId || p._id || p.id, // Patient code/ID
+          patientCode: p.patientCode || p.patient_code || p.metadata?.patientCode || null,
+          // Keep original data for reference
+          ...p
         };
       });
+
+      console.log('✅ Transformed patient data:', transformed.slice(0, 2)); // Log first 2 transformed
 
       setPatients(transformed);
       setFilteredPatients(transformed);
@@ -138,14 +147,17 @@ const DoctorPatients = () => {
   };
 
   const handlePatientClick = async (patient) => {
+    console.log('🔍 Patient clicked:', patient);
+    
     try {
-      // Fetch full patient details
-      const fullPatient = await patientsService.fetchPatientById(patient.patientId || patient.id);
+      // Fetch full patient details using the ID
+      const fullPatient = await patientsService.fetchPatientById(patient.id);
+      console.log('✅ Fetched full patient:', fullPatient);
       setSelectedPatient(fullPatient);
       setShowPatientDialog(true);
     } catch (error) {
-      console.error('Error fetching patient details:', error);
-      // Fallback to basic patient data
+      console.error('❌ Error fetching patient details:', error);
+      // Fallback to the patient data we already have
       setSelectedPatient(patient);
       setShowPatientDialog(true);
     }
@@ -271,7 +283,7 @@ const DoctorPatients = () => {
                           />
                           <div className="patient-details">
                             <span className="patient-name">{patient.name}</span>
-                            <span className="patient-id">ID: {patient.patientId}</span>
+                            <span className="patient-id">ID: {patient.patientCode || patient.metadata?.patientCode || `PAT-${patient.id?.substring(0, 8)}`}</span>
                           </div>
                         </td>
 

@@ -459,7 +459,6 @@ class _StaffScreenState extends State<StaffScreen> {
           children: [
             // avatar/icon
             _smallAvatarForList(s),
-            const SizedBox(width: 8),
             Flexible(
               child: Text(
                 code,
