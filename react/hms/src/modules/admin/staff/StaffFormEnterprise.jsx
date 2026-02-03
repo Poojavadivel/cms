@@ -141,17 +141,20 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
         relative bg-white border transition-all duration-200 rounded-lg overflow-hidden shadow-sm
         ${error ? 'border-red-500/50 ring-1 ring-red-500/20' : 'border-slate-200 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500/30 hover:border-slate-300'}
       `}>
-        <label className="absolute top-2 left-3 text-[10px] uppercase tracking-wider font-bold text-slate-400 pointer-events-none transition-colors group-focus-within:text-blue-600">
+        <label className="block px-3 pt-2 pb-0 text-[10px] uppercase tracking-wider font-bold text-slate-400 transition-colors group-focus-within:text-blue-600 select-none">
           {label}
         </label>
-        <div className="pt-6 pb-2 px-3">
+        <div className="px-3 pb-2">
           {children}
         </div>
       </div>
       {error && (
-        <div className="absolute top-2 right-2 text-red-500">
+        <div className="absolute top-2 right-2 text-red-500 pointer-events-none">
           <FiAlertCircle size={14} />
         </div>
+      )}
+      {error && (
+        <div className="text-xs text-red-500 mt-1 px-1">{error}</div>
       )}
     </div>
   );
@@ -249,9 +252,10 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
                         value={formData.name} 
                         onChange={handleChange} 
                         maxLength={100}
-                        className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300 font-medium" 
+                        className="w-full bg-transparent border-none py-1 px-0 text-slate-900 focus:outline-none focus:ring-0 placeholder-slate-300 font-medium" 
                         placeholder="e.g. Sarah Johnson" 
                         autoFocus 
+                        autoComplete="name"
                       />
                     </InputGroup>
 
@@ -262,8 +266,9 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
                         value={formData.email} 
                         onChange={handleChange} 
                         maxLength={100}
-                        className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" 
+                        className="w-full bg-transparent border-none py-1 px-0 text-slate-900 focus:outline-none focus:ring-0 placeholder-slate-300" 
                         placeholder="name@hospital.com" 
+                        autoComplete="email"
                       />
                     </InputGroup>
 
@@ -276,8 +281,9 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
                         pattern="^\+?[1-9]\d{1,14}$"
                         title="Enter a valid phone number (e.g., +919876543210)"
                         maxLength={20}
-                        className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" 
+                        className="w-full bg-transparent border-none py-1 px-0 text-slate-900 focus:outline-none focus:ring-0 placeholder-slate-300" 
                         placeholder="+919876543210" 
+                        autoComplete="tel"
                       />
                     </InputGroup>
 
@@ -289,13 +295,19 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
                         onChange={handleChange} 
                         pattern="^\+?[1-9]\d{1,14}$"
                         maxLength={20}
-                        className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" 
+                        className="w-full bg-transparent border-none py-1 px-0 text-slate-900 focus:outline-none focus:ring-0 placeholder-slate-300" 
                         placeholder="+919876543211" 
+                        autoComplete="tel"
                       />
                     </InputGroup>
 
                     <InputGroup label="Gender *" error={errors.gender}>
-                      <select name="gender" value={formData.gender} onChange={handleChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0">
+                      <select 
+                        name="gender" 
+                        value={formData.gender} 
+                        onChange={handleChange} 
+                        className="w-full bg-transparent border-none py-1 px-0 text-slate-900 focus:outline-none focus:ring-0"
+                      >
                         <option value="">Select...</option>
                         <option value="Male">Male</option>
                         <option value="Female">Female</option>
@@ -310,7 +322,8 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
                         value={formData.dob} 
                         onChange={handleChange} 
                         max={new Date().toISOString().split('T')[0]}
-                        className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0" 
+                        className="w-full bg-transparent border-none py-1 px-0 text-slate-900 focus:outline-none focus:ring-0" 
+                        autoComplete="bday"
                       />
                     </InputGroup>
 
@@ -320,8 +333,9 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
                         value={formData.address} 
                         onChange={handleChange} 
                         maxLength={200}
-                        className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" 
+                        className="w-full bg-transparent border-none py-1 px-0 text-slate-900 focus:outline-none focus:ring-0 placeholder-slate-300" 
                         placeholder="Full residential address" 
+                        autoComplete="street-address"
                       />
                     </InputGroup>
                   </div>
@@ -344,9 +358,10 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
                         onChange={handleChange} 
                         maxLength={20}
                         style={{textTransform: 'uppercase'}}
-                        className="w-full bg-transparent border-none p-0 text-slate-900 font-mono focus:ring-0 placeholder-slate-300" 
+                        className="w-full bg-transparent border-none py-1 px-0 text-slate-900 font-mono focus:outline-none focus:ring-0 placeholder-slate-300" 
                         placeholder="NUR001" 
                         autoFocus 
+                        autoComplete="off"
                       />
                     </InputGroup>
 
@@ -358,19 +373,30 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
                         onChange={handleChange} 
                         min="0"
                         max="50"
-                        className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0" 
+                        className="w-full bg-transparent border-none py-1 px-0 text-slate-900 focus:outline-none focus:ring-0" 
+                        autoComplete="off"
                       />
                     </InputGroup>
 
                     <InputGroup label="Department *" error={errors.department} className="col-span-2">
-                      <select name="department" value={formData.department} onChange={handleChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0">
+                      <select 
+                        name="department" 
+                        value={formData.department} 
+                        onChange={handleChange} 
+                        className="w-full bg-transparent border-none py-1 px-0 text-slate-900 focus:outline-none focus:ring-0"
+                      >
                         <option value="">Select Department...</option>
                         {departments.map(d => <option key={d} value={d}>{d}</option>)}
                       </select>
                     </InputGroup>
 
                     <InputGroup label="Designation *" error={errors.designation} className="col-span-2">
-                      <select name="designation" value={formData.designation} onChange={handleChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0">
+                      <select 
+                        name="designation" 
+                        value={formData.designation} 
+                        onChange={handleChange} 
+                        className="w-full bg-transparent border-none py-1 px-0 text-slate-900 focus:outline-none focus:ring-0"
+                      >
                         <option value="">Select Designation...</option>
                         {designations.map(d => <option key={d} value={d}>{d}</option>)}
                       </select>
@@ -381,8 +407,9 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
                         value={formData.qualifications.join(', ')} 
                         onChange={e => handleArrayChange('qualifications', e.target.value)} 
                         maxLength={200}
-                        className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" 
+                        className="w-full bg-transparent border-none py-1 px-0 text-slate-900 focus:outline-none focus:ring-0 placeholder-slate-300" 
                         placeholder="Comma-separated (e.g., BSc Nursing, Certificate)" 
+                        autoComplete="off"
                       />
                     </InputGroup>
                   </div>
@@ -405,12 +432,18 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
                         value={formData.joinedAt} 
                         onChange={handleChange} 
                         max={new Date().toISOString().split('T')[0]}
-                        className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0" 
+                        className="w-full bg-transparent border-none py-1 px-0 text-slate-900 focus:outline-none focus:ring-0" 
+                        autoComplete="off"
                       />
                     </InputGroup>
 
                     <InputGroup label="Shift *" error={errors.shift}>
-                      <select name="shift" value={formData.shift} onChange={handleChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0">
+                      <select 
+                        name="shift" 
+                        value={formData.shift} 
+                        onChange={handleChange} 
+                        className="w-full bg-transparent border-none py-1 px-0 text-slate-900 focus:outline-none focus:ring-0"
+                      >
                         <option value="">Select Shift...</option>
                         {shifts.map(s => <option key={s} value={s}>{s}</option>)}
                       </select>
@@ -422,14 +455,20 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
                         value={formData.location} 
                         onChange={handleChange} 
                         maxLength={100}
-                        className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" 
+                        className="w-full bg-transparent border-none py-1 px-0 text-slate-900 focus:outline-none focus:ring-0 placeholder-slate-300" 
                         placeholder="Building A, Floor 2" 
                         autoFocus 
+                        autoComplete="off"
                       />
                     </InputGroup>
 
                     <InputGroup label="Availability Status" className="col-span-2">
-                      <select name="status" value={formData.status} onChange={handleChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0">
+                      <select 
+                        name="status" 
+                        value={formData.status} 
+                        onChange={handleChange} 
+                        className="w-full bg-transparent border-none py-1 px-0 text-slate-900 focus:outline-none focus:ring-0"
+                      >
                         {statuses.map(s => <option key={s} value={s}>{s}</option>)}
                       </select>
                     </InputGroup>
@@ -485,8 +524,10 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
                       value={formData.notes} 
                       onChange={handleChange} 
                       maxLength={500}
-                      className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300 resize-none h-20" 
-                      placeholder="Any last comments..." 
+                      rows={3}
+                      className="w-full bg-transparent border-none py-1 px-0 text-slate-900 focus:outline-none focus:ring-0 placeholder-slate-300 resize-none" 
+                      placeholder="Any additional comments or notes..." 
+                      autoComplete="off"
                     />
                   </InputGroup>
                 </div>
