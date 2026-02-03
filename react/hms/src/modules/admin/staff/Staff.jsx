@@ -713,6 +713,7 @@ const Staff = () => {
       {/* Modals */}
       {showForm && (
         <StaffFormEnterprise
+          key={selectedStaff?.id || 'new'}
           initial={selectedStaff}
           onSubmit={handleFormSubmit}
           onCancel={handleFormCancel}

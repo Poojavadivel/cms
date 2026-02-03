@@ -22,11 +22,9 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
     roles: [], emergencyContact: '', address: '', notes: ''
   });
 
-  const [isInitialized, setIsInitialized] = useState(false);
-
+  // Initialize form data from initial prop (runs once per component mount due to key prop)
   useEffect(() => {
-    // Only initialize once when component mounts with initial data
-    if (initial && !isInitialized) {
+    if (initial) {
       setFormData({
         name: initial.name || '',
         email: initial.email || '',
@@ -47,9 +45,9 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
         address: initial.address || '',
         notes: initial.notes?.general || ''
       });
-      setIsInitialized(true);
     }
-  }, [initial, isInitialized]);
+    // Only run on mount - parent uses key prop to force remount for each edit
+  }, []);
 
   const steps = [
     { id: 1, name: 'Personal', icon: FiUser, desc: 'Identity & Contact' },
