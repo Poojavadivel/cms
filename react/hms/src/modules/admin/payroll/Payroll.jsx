@@ -62,7 +62,12 @@ const Payroll = () => {
 
       const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-      // Map strict columns: Code, Staff Name, Department, Period, Gross, Deductions, Net, Status
+      console.log('💰 [PAYROLL] Total records received:', payrollsList.length);
+      if (payrollsList.length > 0) {
+        console.log('💰 [PAYROLL] Sample record:', payrollsList[0]);
+      }
+
+      // ✅ Map strict columns: Code, Staff Name, Department, Period, Gross, Deductions, Net, Status
       const mappedPayrolls = payrollsList.map(p => {
         let paymentDateRaw = null;
         if (p.paymentDate) {
@@ -71,11 +76,18 @@ const Payroll = () => {
           paymentDateRaw = new Date(p.createdAt).toISOString().split('T')[0];
         }
 
-        return {
+        // ✅ Extract staff details from populated staffId or staff field
+        // Check 'staff' first (from aggregation), then 'staffId' (from populate)
+        const staff = p.staff || p.staffId || {};
+        const staffName = typeof staff === 'object' && staff !== null ? (staff.name || '') : (p.staffName || '');
+        const department = typeof staff === 'object' && staff !== null ? (staff.department || '') : (p.department || '');
+        const staffCode = typeof staff === 'object' && staff !== null ? (staff.patientFacingId || staff.metadata?.staffCode || '') : (p.staffCode || '');
+
+        const mapped = {
           id: p._id || p.id,
-          payrollCode: p.metadata?.payrollCode || p.staffCode || p.id || `PAY-${p._id?.substring(0, 6) || '000'}`,
-          staffName: p.staffName || '',
-          department: p.department || '',
+          payrollCode: p.metadata?.payrollCode || staffCode || p.id || `PAY-${p._id?.substring(0, 6) || '000'}`,
+          staffName,
+          department,
           period: p.payPeriodMonth ? `${months[p.payPeriodMonth - 1]} ${p.payPeriodYear}` : 'N/A',
           paymentDateRaw,
           grossSalary: parseFloat(p.grossSalary || 0),
@@ -84,6 +96,15 @@ const Payroll = () => {
           status: (p.status || 'DRAFT').toUpperCase(),
           rawData: p
         };
+
+        console.log('💰 [PAYROLL] Mapped record:', {
+          id: mapped.id,
+          staffName: mapped.staffName,
+          department: mapped.department,
+          hasStaffData: !!staff && typeof staff === 'object'
+        });
+
+        return mapped;
       });
 
       // Sort by newest first

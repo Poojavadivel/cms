@@ -67,19 +67,25 @@ const fetchInvoices = async (params = {}) => {
       invoicesData = [];
     }
 
+    console.log('📊 [INVOICE SERVICE] Received payroll data:', invoicesData.length, 'records');
+    if (invoicesData.length > 0) {
+      console.log('📊 [INVOICE SERVICE] Sample record:', invoicesData[0]);
+    }
+
     return invoicesData.map(payroll => {
       // ✅ Extract staff details from populated staffId or staff field
-      const staff = payroll.staffId || payroll.staff || {};
-      const staffName = typeof staff === 'object' ? (staff.name || '') : '';
-      const department = typeof staff === 'object' ? (staff.department || '') : '';
-      const designation = typeof staff === 'object' ? (staff.designation || '') : '';
-      const staffCode = typeof staff === 'object' ? (staff.patientFacingId || staff.metadata?.staffCode || '') : '';
+      // Check 'staff' first (from aggregation), then 'staffId' (from populate)
+      const staff = payroll.staff || payroll.staffId || {};
+      const staffName = typeof staff === 'object' && staff !== null ? (staff.name || '') : '';
+      const department = typeof staff === 'object' && staff !== null ? (staff.department || '') : '';
+      const designation = typeof staff === 'object' && staff !== null ? (staff.designation || '') : '';
+      const staffCode = typeof staff === 'object' && staff !== null ? (staff.patientFacingId || staff.metadata?.staffCode || '') : '';
       
-      return {
+      const result = {
         id: payroll._id || payroll.id,
         invoiceNumber: payroll.metadata?.payrollCode || staffCode || payroll._id,
         staffName: staffName || 'Unknown',
-        staffId: typeof staff === 'object' ? (staff._id || staff.id) : (payroll.staffId || ''),
+        staffId: typeof staff === 'object' && staff !== null ? (staff._id || staff.id) : (payroll.staffId || ''),
         staffCode: staffCode || '',
         department: department || '',
         designation: designation || '',
@@ -97,6 +103,16 @@ const fetchInvoices = async (params = {}) => {
         tax: 0,
         historyLog: payroll.historyLog || []
       };
+      
+      console.log('📊 [INVOICE SERVICE] Mapped record:', {
+        id: result.id,
+        staffName: result.staffName,
+        staffCode: result.staffCode,
+        department: result.department,
+        hasStaffData: !!staff && typeof staff === 'object'
+      });
+      
+      return result;
     });
   } catch (error) {
     logger.apiError('GET', InvoiceEndpoints.getAll, error);
