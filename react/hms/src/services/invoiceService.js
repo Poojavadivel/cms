@@ -76,6 +76,16 @@ const fetchInvoices = async (params = {}) => {
       // ✅ Extract staff details from populated staffId or staff field
       // Check 'staff' first (from aggregation), then 'staffId' (from populate)
       const staff = payroll.staff || payroll.staffId || {};
+      
+      // Debug logging
+      console.log('📊 [INVOICE SERVICE] Processing payroll:', {
+        payrollId: payroll._id,
+        staffIdType: typeof payroll.staffId,
+        staffIdValue: payroll.staffId,
+        hasStaffField: !!payroll.staff,
+        staffObject: staff
+      });
+      
       const staffName = typeof staff === 'object' && staff !== null ? (staff.name || '') : '';
       const department = typeof staff === 'object' && staff !== null ? (staff.department || '') : '';
       const designation = typeof staff === 'object' && staff !== null ? (staff.designation || '') : '';
