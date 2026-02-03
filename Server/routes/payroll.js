@@ -260,6 +260,16 @@ router.get('/', auth, async (req, res) => {
       Payroll.countDocuments(filter),
     ]);
 
+    console.log('📊 [PAYROLL GET] Returning', items.length, 'records');
+    if (items.length > 0) {
+      console.log('📊 [PAYROLL GET] Sample record staffId:', {
+        isObject: typeof items[0].staffId === 'object',
+        hasName: items[0].staffId?.name,
+        type: typeof items[0].staffId,
+        value: items[0].staffId
+      });
+    }
+
     return res.status(200).json({ success: true, payroll: items, total, page, limit });
   } catch (err) {
     console.error('PAYROLL LIST error:', err);
