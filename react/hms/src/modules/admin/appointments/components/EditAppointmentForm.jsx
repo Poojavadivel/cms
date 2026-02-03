@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import appointmentsService from '../../../../services/appointmentsService';
 import { AppointmentDraft } from '../../../../models/AppointmentDraft';
+import AvailabilityChecker from '../../../../components/appointments/AvailabilityChecker';
 import {
   MdClose,
   MdPerson,
@@ -16,6 +17,9 @@ const EditAppointmentForm = ({ appointmentId, onClose, onUpdate, onDelete }) => 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [doctors, setDoctors] = useState([]);
+  
+  // Availability checking state
+  const [isAvailable, setIsAvailable] = useState(true);
 
   // Simplified form state matching New Appointment flow
   const [formData, setFormData] = useState({
@@ -31,6 +35,11 @@ const EditAppointmentForm = ({ appointmentId, onClose, onUpdate, onDelete }) => 
     gender: 'Male',
     patientCode: ''
   });
+  
+  // Calculate startAt for availability checking
+  const startAt = formData.date && formData.time 
+    ? new Date(`${formData.date}T${formData.time}`) 
+    : null;
 
   const loadAppointment = useCallback(async () => {
     setLoading(true);
@@ -138,6 +147,12 @@ const EditAppointmentForm = ({ appointmentId, onClose, onUpdate, onDelete }) => 
     }
     if (!formData.doctorId) {
       alert('Doctor is required');
+      return;
+    }
+    
+    // Check availability before submitting
+    if (!isAvailable) {
+      alert('The selected time slot is not available. Please choose a different time.');
       return;
     }
 
@@ -312,6 +327,24 @@ const EditAppointmentForm = ({ appointmentId, onClose, onUpdate, onDelete }) => 
               </div>
             </FormSection>
 
+            {/* Availability Checker */}
+            {formData.doctorId && formData.patientId && formData.date && formData.time && (
+              <div style={{ marginTop: '20px', marginBottom: '20px' }}>
+                <AvailabilityChecker
+                  doctorId={formData.doctorId}
+                  patientId={formData.patientId}
+                  startAt={startAt}
+                  duration={30}
+                  excludeAppointmentId={appointmentId}
+                  onAvailabilityChange={(availability) => {
+                    setIsAvailable(availability.isAvailable);
+                  }}
+                  autoCheck={true}
+                  showSuggestions={true}
+                />
+              </div>
+            )}
+
             {/* Notes */}
             <FormSection icon={MdNotes} title="Clinical Notes">
               <div className="flex flex-col">
@@ -347,10 +380,14 @@ const EditAppointmentForm = ({ appointmentId, onClose, onUpdate, onDelete }) => 
             </button>
             <button
               onClick={handleSubmit}
-              disabled={saving}
+              disabled={saving || !isAvailable}
               className="px-8 py-3 rounded-xl bg-[#1e3a8a] text-white font-bold hover:bg-blue-900 transition-colors shadow-lg shadow-blue-900/20 flex items-center gap-2 disabled:opacity-70"
+              style={{
+                opacity: !isAvailable ? 0.5 : 1,
+                cursor: !isAvailable ? 'not-allowed' : 'pointer'
+              }}
             >
-              {saving ? 'Saving...' : 'Save Changes'}
+              {saving ? 'Saving...' : isAvailable ? 'Save Changes' : 'Time Slot Not Available'}
             </button>
           </div>
         </div>

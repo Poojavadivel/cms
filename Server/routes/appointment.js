@@ -598,4 +598,341 @@ router.get('/:id/follow-up-chain', auth, async (req, res) => {
   }
 });
 
+// -----------------------------
+// CHECK AVAILABILITY - Doctor & Patient
+// POST /api/appointments/check-availability
+// -----------------------------
+router.post('/check-availability', auth, async (req, res) => {
+  console.log("📥 CHECK AVAILABILITY request:", req.body);
+  try {
+    const { doctorId, patientId, startAt, endAt, duration = 30, excludeAppointmentId } = req.body;
+
+    // Validate required fields
+    if (!startAt) {
+      return res.status(400).json({
+        success: false,
+        message: 'Start time is required',
+        errorCode: 1011,
+      });
+    }
+
+    const startTime = new Date(startAt);
+    let endTime;
+
+    if (endAt) {
+      endTime = new Date(endAt);
+    } else {
+      // Calculate end time based on duration (in minutes)
+      endTime = new Date(startTime.getTime() + duration * 60000);
+    }
+
+    // Validate times
+    if (isNaN(startTime.getTime()) || isNaN(endTime.getTime())) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid date/time format',
+        errorCode: 1012,
+      });
+    }
+
+    if (endTime <= startTime) {
+      return res.status(400).json({
+        success: false,
+        message: 'End time must be after start time',
+        errorCode: 1013,
+      });
+    }
+
+    // Results object
+    const availability = {
+      doctorAvailable: true,
+      patientAvailable: true,
+      conflicts: [],
+      availableSlots: [],
+      recommendations: []
+    };
+
+    // Check doctor availability
+    if (doctorId) {
+      const doctorQuery = {
+        doctorId,
+        status: { $nin: ['Cancelled', 'No-Show'] }, // Exclude cancelled appointments
+        $or: [
+          // Appointment starts during the requested time
+          { startAt: { $gte: startTime, $lt: endTime } },
+          // Appointment ends during the requested time
+          { endAt: { $gt: startTime, $lte: endTime } },
+          // Appointment spans the entire requested time
+          { startAt: { $lte: startTime }, endAt: { $gte: endTime } }
+        ]
+      };
+
+      // Exclude current appointment if editing
+      if (excludeAppointmentId) {
+        doctorQuery._id = { $ne: excludeAppointmentId };
+      }
+
+      const doctorConflicts = await Appointment.find(doctorQuery)
+        .populate('patientId', 'firstName lastName phone')
+        .populate('doctorId', 'firstName lastName')
+        .lean();
+
+      if (doctorConflicts.length > 0) {
+        availability.doctorAvailable = false;
+        availability.conflicts.push({
+          type: 'doctor',
+          message: `Doctor has ${doctorConflicts.length} appointment(s) during this time`,
+          appointments: doctorConflicts.map(apt => ({
+            id: apt._id,
+            patientName: `${apt.patientId?.firstName || ''} ${apt.patientId?.lastName || ''}`.trim(),
+            startAt: apt.startAt,
+            endAt: apt.endAt,
+            status: apt.status,
+            type: apt.appointmentType
+          }))
+        });
+      }
+
+      // Find available time slots if doctor is not available
+      if (!availability.doctorAvailable) {
+        const dayStart = new Date(startTime);
+        dayStart.setHours(9, 0, 0, 0); // Clinic opens at 9 AM
+        const dayEnd = new Date(startTime);
+        dayEnd.setHours(17, 0, 0, 0); // Clinic closes at 5 PM
+
+        const allAppointments = await Appointment.find({
+          doctorId,
+          startAt: { $gte: dayStart, $lt: dayEnd },
+          status: { $nin: ['Cancelled', 'No-Show'] }
+        }).sort({ startAt: 1 }).lean();
+
+        // Find gaps between appointments
+        const slots = [];
+        let currentTime = dayStart;
+
+        for (const apt of allAppointments) {
+          const aptStart = new Date(apt.startAt);
+          const aptEnd = apt.endAt ? new Date(apt.endAt) : new Date(aptStart.getTime() + 30 * 60000);
+
+          // Check if there's a gap before this appointment
+          const gapMinutes = (aptStart - currentTime) / 60000;
+          if (gapMinutes >= duration) {
+            slots.push({
+              startAt: new Date(currentTime),
+              endAt: new Date(aptStart),
+              durationMinutes: gapMinutes
+            });
+          }
+
+          currentTime = aptEnd > currentTime ? aptEnd : currentTime;
+        }
+
+        // Check if there's time after the last appointment
+        const finalGap = (dayEnd - currentTime) / 60000;
+        if (finalGap >= duration) {
+          slots.push({
+            startAt: new Date(currentTime),
+            endAt: new Date(dayEnd),
+            durationMinutes: finalGap
+          });
+        }
+
+        availability.availableSlots = slots.slice(0, 5); // Return top 5 slots
+      }
+    }
+
+    // Check patient availability
+    if (patientId) {
+      const patientQuery = {
+        patientId,
+        status: { $nin: ['Cancelled', 'No-Show'] },
+        $or: [
+          { startAt: { $gte: startTime, $lt: endTime } },
+          { endAt: { $gt: startTime, $lte: endTime } },
+          { startAt: { $lte: startTime }, endAt: { $gte: endTime } }
+        ]
+      };
+
+      if (excludeAppointmentId) {
+        patientQuery._id = { $ne: excludeAppointmentId };
+      }
+
+      const patientConflicts = await Appointment.find(patientQuery)
+        .populate('doctorId', 'firstName lastName')
+        .lean();
+
+      if (patientConflicts.length > 0) {
+        availability.patientAvailable = false;
+        availability.conflicts.push({
+          type: 'patient',
+          message: `Patient has ${patientConflicts.length} appointment(s) during this time`,
+          appointments: patientConflicts.map(apt => ({
+            id: apt._id,
+            doctorName: `Dr. ${apt.doctorId?.firstName || ''} ${apt.doctorId?.lastName || ''}`.trim(),
+            startAt: apt.startAt,
+            endAt: apt.endAt,
+            status: apt.status,
+            type: apt.appointmentType
+          }))
+        });
+      }
+    }
+
+    // Add recommendations
+    if (!availability.doctorAvailable || !availability.patientAvailable) {
+      availability.recommendations.push(
+        'Consider selecting a different time slot',
+        'Review the suggested available slots below',
+        'Contact the patient/doctor to reschedule existing appointments'
+      );
+    }
+
+    // Overall availability status
+    availability.isAvailable = availability.doctorAvailable && availability.patientAvailable;
+
+    console.log("✅ Availability check completed:", availability.isAvailable);
+
+    res.status(200).json({
+      success: true,
+      availability,
+      requestedTime: {
+        startAt: startTime,
+        endAt: endTime,
+        duration: Math.round((endTime - startTime) / 60000)
+      }
+    });
+
+  } catch (err) {
+    console.error('💥 Availability check error:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to check availability',
+      errorCode: 5009,
+    });
+  }
+});
+
+// -----------------------------
+// GET DOCTOR'S SCHEDULE
+// GET /api/appointments/doctor/:doctorId/schedule?date=YYYY-MM-DD
+// -----------------------------
+router.get('/doctor/:doctorId/schedule', auth, async (req, res) => {
+  console.log("📥 GET doctor schedule:", req.params.doctorId, req.query);
+  try {
+    const { doctorId } = req.params;
+    const { date } = req.query;
+
+    if (!date) {
+      return res.status(400).json({
+        success: false,
+        message: 'Date parameter is required (YYYY-MM-DD format)',
+        errorCode: 1014,
+      });
+    }
+
+    // Parse date and set time range for the entire day
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    // Fetch all appointments for this doctor on this date
+    const appointments = await Appointment.find({
+      doctorId,
+      startAt: { $gte: startOfDay, $lte: endOfDay },
+      status: { $nin: ['Cancelled', 'No-Show'] }
+    })
+      .populate('patientId', 'firstName lastName phone gender dateOfBirth')
+      .sort({ startAt: 1 })
+      .lean();
+
+    // Calculate schedule statistics
+    const schedule = {
+      date,
+      totalAppointments: appointments.length,
+      appointments: appointments.map(apt => {
+        const endAt = apt.endAt || new Date(new Date(apt.startAt).getTime() + 30 * 60000);
+        return {
+          id: apt._id,
+          patientName: `${apt.patientId?.firstName || ''} ${apt.patientId?.lastName || ''}`.trim(),
+          patientPhone: apt.patientId?.phone,
+          patientGender: apt.patientId?.gender,
+          startAt: apt.startAt,
+          endAt: endAt,
+          duration: Math.round((endAt - new Date(apt.startAt)) / 60000),
+          type: apt.appointmentType,
+          status: apt.status,
+          location: apt.location
+        };
+      }),
+      busySlots: [],
+      freeSlots: []
+    };
+
+    // Define working hours (9 AM to 5 PM)
+    const workStart = new Date(startOfDay);
+    workStart.setHours(9, 0, 0, 0);
+    const workEnd = new Date(startOfDay);
+    workEnd.setHours(17, 0, 0, 0);
+
+    // Calculate busy and free slots
+    let currentTime = workStart;
+    
+    for (const apt of appointments) {
+      const aptStart = new Date(apt.startAt);
+      const aptEnd = apt.endAt ? new Date(apt.endAt) : new Date(aptStart.getTime() + 30 * 60000);
+
+      // Free slot before this appointment
+      if (currentTime < aptStart) {
+        schedule.freeSlots.push({
+          startAt: new Date(currentTime),
+          endAt: new Date(aptStart),
+          durationMinutes: Math.round((aptStart - currentTime) / 60000)
+        });
+      }
+
+      // Busy slot for this appointment
+      schedule.busySlots.push({
+        startAt: aptStart,
+        endAt: aptEnd,
+        durationMinutes: Math.round((aptEnd - aptStart) / 60000),
+        appointmentId: apt._id
+      });
+
+      currentTime = aptEnd > currentTime ? aptEnd : currentTime;
+    }
+
+    // Final free slot after last appointment
+    if (currentTime < workEnd) {
+      schedule.freeSlots.push({
+        startAt: new Date(currentTime),
+        endAt: new Date(workEnd),
+        durationMinutes: Math.round((workEnd - currentTime) / 60000)
+      });
+    }
+
+    // Calculate utilization percentage
+    const totalWorkMinutes = (workEnd - workStart) / 60000;
+    const totalBusyMinutes = schedule.busySlots.reduce((sum, slot) => sum + slot.durationMinutes, 0);
+    schedule.utilizationPercentage = totalWorkMinutes > 0 
+      ? Math.round((totalBusyMinutes / totalWorkMinutes) * 100) 
+      : 0;
+
+    console.log("✅ Doctor schedule retrieved successfully");
+
+    res.status(200).json({
+      success: true,
+      schedule
+    });
+
+  } catch (err) {
+    console.error('💥 Get doctor schedule error:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve doctor schedule',
+      errorCode: 5010,
+    });
+  }
+});
+
 module.exports = router;

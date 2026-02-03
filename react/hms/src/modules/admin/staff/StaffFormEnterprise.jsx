@@ -46,7 +46,12 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
     name: '', email: '', contact: '', gender: '', dob: '',
     patientFacingId: '', designation: '', department: '', qualifications: [], experienceYears: 0,
     joinedAt: '', shift: '', status: 'Available', location: '',
-    roles: [], emergencyContact: '', address: '', notes: ''
+    roles: [], emergencyContact: '', address: '', notes: '',
+    // User account fields for Doctor/Admin
+    createUserAccount: false,
+    userRole: '',
+    password: '',
+    confirmPassword: ''
   });
 
   // Initialize form data from initial prop (runs once per component mount due to key prop)
@@ -70,7 +75,11 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
         roles: initial.roles || [],
         emergencyContact: initial.emergencyContact || '',
         address: initial.address || '',
-        notes: initial.notes?.general || ''
+        notes: initial.notes?.general || '',
+        createUserAccount: false,
+        userRole: '',
+        password: '',
+        confirmPassword: ''
       });
     }
     // Only run on mount - parent uses key prop to force remount for each edit
@@ -100,6 +109,8 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
   
   // Designations - Job roles/positions
   const designations = [
+    'Doctor',
+    'Admin',
     'Staff Nurse',
     'Head Nurse',
     'Nursing Assistant',
@@ -130,6 +141,25 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
   const statuses = ['Available', 'On Leave', 'Off Duty', 'Busy'];
 
   /* Validation & Handlers */
+  
+  // Auto-check createUserAccount when Doctor/Admin is selected
+  useEffect(() => {
+    if (formData.designation === 'Doctor' || formData.designation === 'Admin') {
+      setFormData(prev => ({
+        ...prev,
+        createUserAccount: true,
+        userRole: formData.designation === 'Doctor' ? 'doctor' : 'admin'
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        createUserAccount: false,
+        userRole: '',
+        password: '',
+        confirmPassword: ''
+      }));
+    }
+  }, [formData.designation]);
   
   // Auto-generate Staff ID when department or designation changes
   useEffect(() => {
@@ -210,6 +240,23 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
       if (!formData.designation) newErrors.designation = 'Required';
       if (!formData.department) newErrors.department = 'Required';
       if (!formData.patientFacingId.trim()) newErrors.patientFacingId = 'Required';
+      
+      // Validate user account fields if creating Doctor/Admin
+      if (formData.createUserAccount) {
+        if (!formData.userRole) newErrors.userRole = 'Required';
+        if (!formData.password) {
+          newErrors.password = 'Required';
+        } else if (formData.password.length < 8) {
+          newErrors.password = 'Minimum 8 characters';
+        } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password)) {
+          newErrors.password = 'Must contain uppercase, lowercase, and number';
+        }
+        if (!formData.confirmPassword) {
+          newErrors.confirmPassword = 'Required';
+        } else if (formData.password !== formData.confirmPassword) {
+          newErrors.confirmPassword = 'Passwords do not match';
+        }
+      }
     }
     if (step === 3) {
       if (!formData.joinedAt) newErrors.joinedAt = 'Required';
@@ -247,13 +294,64 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
     if (!validateStep(currentStep)) return;
     setIsSubmitting(true);
     try {
-      // Remove avatarUrl from submission
-      const { avatarUrl, ...submitData } = formData;
-      await onSubmit({ ...submitData, ...(initial?.id && { id: initial.id, _id: initial.id }) });
-      if (window.showNotification) {
-        window.showNotification(initial ? 'Staff updated successfully!' : 'Staff added successfully!', 'success');
+      // Remove avatarUrl and user-specific fields from staff data
+      const { avatarUrl, createUserAccount, userRole, password, confirmPassword, ...staffData } = formData;
+      
+      // Submit staff data
+      await onSubmit({ ...staffData, ...(initial?.id && { id: initial.id, _id: initial.id }) });
+      
+      // If creating user account (Doctor/Admin), create user in Users collection
+      if (createUserAccount && !initial) {
+        try {
+          const [firstName, ...lastNameParts] = formData.name.split(' ');
+          const userPayload = {
+            role: userRole,
+            firstName: firstName || formData.name,
+            lastName: lastNameParts.join(' ') || '',
+            email: formData.email,
+            phone: formData.contact,
+            password: password,
+            metadata: {
+              staffId: formData.patientFacingId,
+              designation: formData.designation,
+              department: formData.department
+            }
+          };
+          
+          // Call user creation API
+          const response = await fetch(`${process.env.REACT_APP_API_URL || 'https://hms-dev.onrender.com/api'}/auth/create-user`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-auth-token': localStorage.getItem('auth_token') || localStorage.getItem('x-auth-token') || localStorage.getItem('authToken') || ''
+            },
+            body: JSON.stringify(userPayload)
+          });
+          
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to create user account');
+          }
+          
+          if (window.showNotification) {
+            window.showNotification('Staff and user account created successfully!', 'success');
+          } else {
+            alert('Staff and user account created successfully!');
+          }
+        } catch (userError) {
+          console.error('User creation error:', userError);
+          if (window.showNotification) {
+            window.showNotification('Staff created but user account failed: ' + userError.message, 'warning');
+          } else {
+            alert('Staff created but user account creation failed: ' + userError.message);
+          }
+        }
       } else {
-        alert(initial ? 'Staff updated successfully!' : 'Staff added successfully!');
+        if (window.showNotification) {
+          window.showNotification(initial ? 'Staff updated successfully!' : 'Staff added successfully!', 'success');
+        } else {
+          alert(initial ? 'Staff updated successfully!' : 'Staff added successfully!');
+        }
       }
     } catch (error) { 
       console.error(error); 
@@ -531,6 +629,90 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
                         autoComplete="off"
                       />
                     </InputGroup>
+
+                    {/* User Account Section for Doctor/Admin */}
+                    {formData.createUserAccount && (
+                      <>
+                        <div className="col-span-2 mt-6 pt-6 border-t border-slate-200">
+                          <div className="flex items-center gap-2 mb-4">
+                            <div className="h-8 w-8 rounded-lg bg-blue-50 flex items-center justify-center">
+                              <FiUser className="text-blue-600" size={18} />
+                            </div>
+                            <div>
+                              <h3 className="text-lg font-semibold text-slate-900">Login Credentials</h3>
+                              <p className="text-sm text-slate-500">
+                                {formData.designation === 'Doctor' ? 'Doctor' : 'Admin'} account will be created with system access
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <InputGroup label="User Role *" error={errors.userRole}>
+                          <select 
+                            name="userRole" 
+                            value={formData.userRole} 
+                            onChange={handleChange} 
+                            className="w-full bg-transparent border-none py-1 px-0 text-slate-900 focus:outline-none focus:ring-0"
+                            disabled={formData.designation === 'Doctor' || formData.designation === 'Admin'}
+                          >
+                            <option value="">Select Role...</option>
+                            <option value="doctor">Doctor</option>
+                            <option value="admin">Admin</option>
+                          </select>
+                        </InputGroup>
+
+                        <InputGroup label="Email (for login) *" error={errors.email}>
+                          <input 
+                            name="email" 
+                            type="email"
+                            value={formData.email} 
+                            onChange={handleChange} 
+                            className="w-full bg-transparent border-none py-1 px-0 text-slate-900 focus:outline-none focus:ring-0" 
+                            placeholder="user@example.com"
+                            autoComplete="email"
+                            readOnly
+                            title="Email from Personal Info will be used for login"
+                          />
+                        </InputGroup>
+
+                        <InputGroup label="Password *" error={errors.password} className="col-span-2">
+                          <input 
+                            name="password" 
+                            type="password"
+                            value={formData.password} 
+                            onChange={handleChange} 
+                            className="w-full bg-transparent border-none py-1 px-0 text-slate-900 focus:outline-none focus:ring-0" 
+                            placeholder="Min 8 characters, include uppercase, lowercase & number"
+                            autoComplete="new-password"
+                          />
+                          <p className="text-xs text-slate-500 mt-1">
+                            Requirements: Minimum 8 characters, at least one uppercase, one lowercase, and one number
+                          </p>
+                        </InputGroup>
+
+                        <InputGroup label="Confirm Password *" error={errors.confirmPassword} className="col-span-2">
+                          <input 
+                            name="confirmPassword" 
+                            type="password"
+                            value={formData.confirmPassword} 
+                            onChange={handleChange} 
+                            className="w-full bg-transparent border-none py-1 px-0 text-slate-900 focus:outline-none focus:ring-0" 
+                            placeholder="Re-enter password"
+                            autoComplete="new-password"
+                          />
+                        </InputGroup>
+
+                        <div className="col-span-2 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                          <div className="flex gap-3">
+                            <FiAlertCircle className="text-blue-600 flex-shrink-0 mt-0.5" size={18} />
+                            <div className="text-sm text-blue-800">
+                              <p className="font-medium mb-1">Account Creation</p>
+                              <p>This staff member will be added to both Staff and Users collections, allowing them to log into the system.</p>
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               )}
@@ -635,6 +817,33 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
                       <span className="text-slate-900 font-medium">{formData.location || '-'}</span>
                     </div>
                   </div>
+
+                  {/* User Account Info */}
+                  {formData.createUserAccount && (
+                    <div className="bg-blue-50 rounded-xl border border-blue-200 p-6 space-y-4">
+                      <div className="flex items-center gap-2 mb-4">
+                        <FiUser className="text-blue-600" size={20} />
+                        <h3 className="text-lg font-semibold text-blue-900">System Access Account</h3>
+                      </div>
+                      <div className="flex justify-between border-b border-blue-200 pb-3">
+                        <span className="text-blue-700">User Role</span>
+                        <span className="text-blue-900 font-medium capitalize">{formData.userRole || '-'}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-blue-200 pb-3">
+                        <span className="text-blue-700">Login Email</span>
+                        <span className="text-blue-900 font-medium">{formData.email || '-'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-blue-700">Password</span>
+                        <span className="text-blue-900 font-medium">{'•'.repeat(12)}</span>
+                      </div>
+                      <div className="mt-4 p-3 bg-blue-100 rounded-lg">
+                        <p className="text-sm text-blue-800">
+                          ✓ Account will be created in both Staff and Users collections
+                        </p>
+                      </div>
+                    </div>
+                  )}
 
                   <InputGroup label="Additional Notes">
                     <textarea 

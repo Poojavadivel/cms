@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import appointmentsService from '../../../../services/appointmentsService';
+import AvailabilityChecker from '../../../../components/appointments/AvailabilityChecker';
 import './NewAppointmentForm.css';
 // --- ICONS ---
 const Icons = {
@@ -223,6 +224,16 @@ const NewAppointmentForm = ({ onClose, onSave, initialPatient }) => {
   const [status, setStatus] = useState('Scheduled');
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
+  
+  // Availability checking state
+  const [isAvailable, setIsAvailable] = useState(true);
+  const [checkingAvailability, setCheckingAvailability] = useState(false);
+  
+  // Calculate startAt for availability checking
+  const startAt = selectedDate && selectedTime 
+    ? new Date(`${selectedDate.toISOString().split('T')[0]}T${selectedTime}`) 
+    : null;
+
   const loadPatients = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -272,6 +283,12 @@ const NewAppointmentForm = ({ onClose, onSave, initialPatient }) => {
     if (!selectedPatient) return alert('Please select a patient');
     if (!selectedDoctor) return alert('Please select a doctor');
     if (!reason.trim()) return alert('Please enter a reason');
+    
+    // Check availability before submitting
+    if (!isAvailable) {
+      return alert('The selected time slot is not available. Please choose a different time.');
+    }
+    
     setIsSaving(true);
     try {
       const dateStr = selectedDate.toISOString().split('T')[0];
@@ -428,6 +445,22 @@ const NewAppointmentForm = ({ onClose, onSave, initialPatient }) => {
               </div>
             </div>
 
+            {/* Availability Checker - Shows when doctor, patient, date and time are selected */}
+            {selectedDoctor && selectedPatient && selectedDate && selectedTime && (
+              <AvailabilityChecker
+                doctorId={selectedDoctor.id}
+                patientId={selectedPatient.id}
+                startAt={startAt}
+                duration={30}
+                onAvailabilityChange={(availability) => {
+                  setIsAvailable(availability.isAvailable);
+                  setCheckingAvailability(false);
+                }}
+                autoCheck={true}
+                showSuggestions={true}
+              />
+            )}
+
             <h3 className="section-title">
               <Icons.Note />
               Appointment Details
@@ -475,8 +508,16 @@ const NewAppointmentForm = ({ onClose, onSave, initialPatient }) => {
             <button className="btn-cancel" onClick={onClose}>
               <Icons.Close /> Cancel
             </button>
-            <button className="btn-save" onClick={handleSubmit} disabled={isSaving}>
-              {isSaving ? 'Saving...' : 'Save Appointment'}
+            <button 
+              className="btn-save" 
+              onClick={handleSubmit} 
+              disabled={isSaving || !isAvailable}
+              style={{
+                opacity: !isAvailable ? 0.6 : 1,
+                cursor: !isAvailable ? 'not-allowed' : 'pointer'
+              }}
+            >
+              {isSaving ? 'Saving...' : isAvailable ? 'Save Appointment' : 'Time Slot Not Available'}
             </button>
           </div>
         </div>

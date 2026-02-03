@@ -1,0 +1,401 @@
+/**
+ * AvailabilityChecker.css
+ * Styles for availability checking component
+ */
+
+.availability-checker {
+  background: #fff;
+  border-radius: 12px;
+  padding: 16px;
+  margin: 16px 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+}
+
+.availability-checker.available {
+  border: 2px solid #10b981;
+  background: linear-gradient(to right, #ecfdf5, #ffffff);
+}
+
+.availability-checker.unavailable {
+  border: 2px solid #f59e0b;
+  background: linear-gradient(to right, #fffbeb, #ffffff);
+}
+
+.availability-checker.error {
+  border: 2px solid #ef4444;
+  background: linear-gradient(to right, #fef2f2, #ffffff);
+}
+
+.availability-checker.checking {
+  border: 2px solid #3b82f6;
+  background: linear-gradient(to right, #eff6ff, #ffffff);
+}
+
+/* Header */
+.availability-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.availability-header .icon {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.availability-header .success-icon {
+  color: #10b981;
+}
+
+.availability-header .warning-icon {
+  color: #f59e0b;
+}
+
+.availability-header .error-icon {
+  color: #ef4444;
+}
+
+.availability-header .spinner-small {
+  width: 20px;
+  height: 20px;
+  border: 3px solid #e5e7eb;
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.status-text {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.status-text.success {
+  color: #10b981;
+}
+
+.status-text.warning {
+  color: #f59e0b;
+}
+
+/* Availability Details */
+.availability-details {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 12px;
+  background: rgba(248, 250, 252, 0.5);
+  border-radius: 8px;
+}
+
+.availability-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.item-icon {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon-small {
+  width: 18px;
+  height: 18px;
+}
+
+.icon-small.success {
+  color: #10b981;
+}
+
+.icon-small.error {
+  color: #ef4444;
+}
+
+.item-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.item-label {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.item-value {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.item-value.success {
+  color: #10b981;
+}
+
+.item-value.error {
+  color: #ef4444;
+}
+
+/* Conflicts Section */
+.conflicts-section {
+  margin-bottom: 16px;
+  padding: 12px;
+  background: #fef2f2;
+  border-left: 4px solid #ef4444;
+  border-radius: 6px;
+}
+
+.conflicts-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #991b1b;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.conflict-item {
+  margin-bottom: 12px;
+}
+
+.conflict-item:last-child {
+  margin-bottom: 0;
+}
+
+.conflict-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.conflict-icon {
+  width: 16px;
+  height: 16px;
+  color: #dc2626;
+  flex-shrink: 0;
+}
+
+.conflict-message {
+  font-size: 13px;
+  font-weight: 600;
+  color: #7f1d1d;
+}
+
+.conflict-appointments {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-left: 24px;
+}
+
+.conflict-appointment {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px;
+  background: #fff;
+  border-radius: 6px;
+  border: 1px solid #fee2e2;
+}
+
+.apt-icon {
+  width: 14px;
+  height: 14px;
+  color: #dc2626;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.apt-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.apt-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.apt-time {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.apt-status {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+/* Suggestions Section */
+.suggestions-section {
+  margin-bottom: 16px;
+  padding: 12px;
+  background: #f0fdf4;
+  border-left: 4px solid #10b981;
+  border-radius: 6px;
+}
+
+.suggestions-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #065f46;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.title-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.slots-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.slot-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  background: #fff;
+  border-radius: 6px;
+  border: 1px solid #d1fae5;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.slot-item:hover {
+  background: #ecfdf5;
+  border-color: #10b981;
+  transform: translateX(4px);
+}
+
+.slot-icon {
+  width: 16px;
+  height: 16px;
+  color: #10b981;
+  flex-shrink: 0;
+}
+
+.slot-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.slot-time {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.slot-duration {
+  font-size: 11px;
+  color: #059669;
+  font-weight: 500;
+}
+
+/* Recommendations Section */
+.recommendations-section {
+  padding: 12px;
+  background: #eff6ff;
+  border-left: 4px solid #3b82f6;
+  border-radius: 6px;
+}
+
+.recommendations-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e40af;
+  margin-bottom: 8px;
+}
+
+.recommendations-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.recommendation-item {
+  font-size: 12px;
+  color: #1e40af;
+  padding-left: 16px;
+  position: relative;
+}
+
+.recommendation-item::before {
+  content: '→';
+  position: absolute;
+  left: 0;
+  color: #3b82f6;
+  font-weight: bold;
+}
+
+/* Retry Button */
+.btn-retry {
+  margin-top: 12px;
+  padding: 8px 16px;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-retry:hover {
+  background: #2563eb;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(59, 130, 246, 0.25);
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .availability-checker {
+    padding: 12px;
+  }
+
+  .availability-header {
+    font-size: 14px;
+  }
+
+  .availability-details {
+    gap: 10px;
+  }
+
+  .conflict-appointments {
+    margin-left: 16px;
+  }
+}

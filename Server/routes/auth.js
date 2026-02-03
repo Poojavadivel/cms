@@ -232,4 +232,91 @@ router.post('/signout', auth, async (req, res) => {
   }
 });
 
+/**
+ * POST /api/auth/create-user
+ * Create a new user (Admin only - for creating Doctor/Admin accounts)
+ */
+router.post('/create-user', auth, async (req, res) => {
+  try {
+    // Check if requester is admin/superadmin
+    const requesterRole = req.user && req.user.role;
+    if (!requesterRole || (requesterRole !== 'admin' && requesterRole !== 'superadmin')) {
+      console.warn('CREATE USER FAILED: Unauthorized role:', requesterRole);
+      return res.status(403).json({ 
+        success: false,
+        message: 'Forbidden: Admin role required', 
+        errorCode: 1002 
+      });
+    }
+
+    const { role, firstName, lastName, email, phone, password, metadata } = req.body;
+
+    // Validate required fields
+    if (!role || !firstName || !email || !password) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Missing required fields: role, firstName, email, password',
+        errorCode: 1000 
+      });
+    }
+
+    // Validate role
+    const validRoles = ['admin', 'doctor', 'pharmacist', 'pathologist', 'reception'];
+    if (!validRoles.includes(role)) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Invalid role. Must be one of: ' + validRoles.join(', '),
+        errorCode: 1001 
+      });
+    }
+
+    // Check if email already exists
+    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    if (existingUser) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Email already exists',
+        errorCode: 1004 
+      });
+    }
+
+    // Create new user
+    const newUser = new User({
+      role,
+      firstName,
+      lastName: lastName || '',
+      email: email.toLowerCase(),
+      phone: phone || '',
+      password, // Will be hashed by pre-save hook
+      is_active: true,
+      metadata: metadata || {}
+    });
+
+    await newUser.save();
+
+    console.log('USER CREATED:', newUser._id, 'by admin:', req.user.id);
+
+    return res.status(201).json({
+      success: true,
+      message: 'User created successfully',
+      user: {
+        id: newUser._id,
+        role: newUser.role,
+        firstName: newUser.firstName,
+        lastName: newUser.lastName,
+        email: newUser.email,
+        phone: newUser.phone
+      }
+    });
+
+  } catch (err) {
+    console.error('CREATE USER ERROR:', err);
+    return res.status(500).json({ 
+      success: false,
+      message: 'Server error: ' + (err.message || 'Unknown error'),
+      errorCode: 5000 
+    });
+  }
+});
+
 module.exports = router;

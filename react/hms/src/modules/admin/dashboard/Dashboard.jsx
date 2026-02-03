@@ -1,5 +1,6 @@
 /* eslint-disable no-unused-vars */
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Calendar from 'react-calendar';
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
@@ -10,14 +11,18 @@ import { fetchAppointments } from '../../../services/appointmentsService';
 import { fetchPatients } from '../../../services/patientsService';
 import staffService from '../../../services/staffService';
 import DashboardService from './DashboardService';
+import AppointmentViewModal from '../../../components/appointments/AppointmentViewModal';
 
 const AdminDashboard = () => {
+  const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [revenueTab, setRevenueTab] = useState(0);
   const [selectedDay, setSelectedDay] = useState(new Date());
   const [upcomingAppointments, setUpcomingAppointments] = useState([]);
   const [appointmentsLoading, setAppointmentsLoading] = useState(true);
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState(null);
 
   useEffect(() => {
     loadDashboardData();
@@ -51,7 +56,7 @@ const AdminDashboard = () => {
         invoice: stats.totalInvoices || stats.invoices || 0,
         patients: stats.totalPatients || patientCount,
         appointments: stats.totalAppointments || 0, // Will be updated by loadAppointments
-        beds: stats.totalBeds || stats.beds || staffCount || 0,
+        staff: stats.totalStaff || stats.staff || staffCount || 0,
       });
     } catch (error) {
       console.error('Error loading dashboard data:', error);
@@ -60,7 +65,7 @@ const AdminDashboard = () => {
         invoice: 0,
         patients: 0,
         appointments: 0,
-        beds: 0,
+        staff: 0,
       });
     } finally {
       setLoading(false);
@@ -133,7 +138,8 @@ const AdminDashboard = () => {
             time: apt.time || formatTime(apt.startAt),
             status: apt.status || 'Scheduled',
             gender: gender || 'Male',
-            id: apt._id || apt.id
+            id: apt._id || apt.id,
+            originalData: apt
           };
         });
       
@@ -164,6 +170,11 @@ const AdminDashboard = () => {
     } catch {
       return 'N/A';
     }
+  };
+
+  const handleViewAppointment = (appointmentItem) => {
+    setSelectedAppointment(appointmentItem.originalData);
+    setShowViewModal(true);
   };
 
   const patientOverviewData = [
@@ -281,29 +292,29 @@ const AdminDashboard = () => {
           icon="📄"
           title="Total Invoice"
           value={data.invoice}
-          subtitle="56 more than yesterday"
           iconColor="#3b82f6"
+          onClick={() => navigate('/admin/invoice')}
         />
         <StatCard
           icon="👥"
           title="Total Patients"
           value={data.patients}
-          subtitle="45 more than yesterday"
           iconColor="#22c55e"
+          onClick={() => navigate('/admin/patients')}
         />
         <StatCard
           icon="📅"
           title="Appointments"
           value={data.appointments}
-          subtitle="18 less than yesterday"
           iconColor="#ef4444"
+          onClick={() => navigate('/admin/appointments')}
         />
         <StatCard
-          icon="🛏️"
-          title="Bedroom"
-          value={data.beds}
-          subtitle="56 more than yesterday"
+          icon="👤"
+          title="Staff"
+          value={data.staff}
           iconColor="#3b82f6"
+          onClick={() => navigate('/admin/staff')}
         />
       </div>
 
@@ -370,7 +381,11 @@ const AdminDashboard = () => {
                   </div>
                 ) : (
                   upcomingAppointments.map((apt, idx) => (
-                    <AppointmentItem key={apt.id || idx} {...apt} />
+                    <AppointmentItem 
+                      key={apt.id || idx} 
+                      {...apt}
+                      onClick={() => handleViewAppointment(apt)}
+                    />
                   ))
                 )}
               </div>
@@ -412,13 +427,26 @@ const AdminDashboard = () => {
           </ChartCard>
         </div>
       </div>
+
+      {/* Appointment View Modal */}
+      {showViewModal && selectedAppointment && (
+        <AppointmentViewModal
+          isOpen={showViewModal}
+          onClose={() => {
+            setShowViewModal(false);
+            setSelectedAppointment(null);
+          }}
+          appointmentId={selectedAppointment._id || selectedAppointment.id}
+          appointmentData={selectedAppointment}
+        />
+      )}
     </div>
   );
 };
 
 // Component Definitions
-const StatCard = ({ icon, title, value, subtitle, iconColor }) => (
-  <div className="stat-card">
+const StatCard = ({ icon, title, value, iconColor, onClick }) => (
+  <div className="stat-card" onClick={onClick} style={{ cursor: 'pointer' }}>
     <div className="stat-icon" style={{ 
       backgroundColor: `${iconColor}1A`, 
       borderColor: `${iconColor}4D` 
@@ -428,7 +456,6 @@ const StatCard = ({ icon, title, value, subtitle, iconColor }) => (
     <div className="stat-content">
       <p className="stat-label">{title}</p>
       <h3 className="stat-value">{value.toLocaleString()}</h3>
-      <p className="stat-subtitle">{subtitle}</p>
     </div>
   </div>
 );
@@ -464,7 +491,7 @@ const LegendItem = ({ color, label }) => (
   </div>
 );
 
-const AppointmentItem = ({ name, doctor, time, status, gender }) => {
+const AppointmentItem = ({ name, doctor, time, status, gender, onClick }) => {
   // Get avatar based on gender
   const getAvatar = () => {
     if (gender && gender.toLowerCase() === 'female') {
@@ -485,7 +512,7 @@ const AppointmentItem = ({ name, doctor, time, status, gender }) => {
   const statusStyle = statusColors[status] || statusColors['Scheduled'];
 
   return (
-    <div className="appointment-item">
+    <div className="appointment-item" onClick={onClick} style={{ cursor: 'pointer' }}>
       <div className="appointment-avatar">
         <img 
           src={getAvatar()} 
