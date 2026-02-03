@@ -67,28 +67,37 @@ const fetchInvoices = async (params = {}) => {
       invoicesData = [];
     }
 
-    return invoicesData.map(payroll => ({
-      id: payroll._id || payroll.id,
-      invoiceNumber: payroll.metadata?.payrollCode || payroll.staffCode || payroll._id,
-      staffName: payroll.staffName || 'Unknown',
-      staffId: payroll.staffId || '',
-      staffCode: payroll.staffCode || '',
-      department: payroll.department || '',
-      designation: payroll.designation || '',
-      date: payroll.paymentDate || payroll.createdAt || '',
-      month: payroll.payPeriodMonth,
-      year: payroll.payPeriodYear,
-      periodDisplay: payroll.payPeriodDisplay || `${payroll.payPeriodMonth}/${payroll.payPeriodYear}`,
-      amount: parseFloat(payroll.grossSalary || payroll.totalEarnings || 0),
-      paidAmount: parseFloat(payroll.netSalary || 0),
-      balanceAmount: parseFloat((payroll.grossSalary || 0) - (payroll.netSalary || 0)),
-      status: payroll.status || 'Pending',
-      paymentMethod: payroll.paymentMode || '',
-      items: (payroll.earnings || []).concat(payroll.deductions || []),
-      discount: parseFloat(payroll.totalDeductions || 0),
-      tax: 0,
-      historyLog: payroll.historyLog || []
-    }));
+    return invoicesData.map(payroll => {
+      // ✅ Extract staff details from populated staffId or staff field
+      const staff = payroll.staffId || payroll.staff || {};
+      const staffName = typeof staff === 'object' ? (staff.name || '') : '';
+      const department = typeof staff === 'object' ? (staff.department || '') : '';
+      const designation = typeof staff === 'object' ? (staff.designation || '') : '';
+      const staffCode = typeof staff === 'object' ? (staff.patientFacingId || staff.metadata?.staffCode || '') : '';
+      
+      return {
+        id: payroll._id || payroll.id,
+        invoiceNumber: payroll.metadata?.payrollCode || staffCode || payroll._id,
+        staffName: staffName || 'Unknown',
+        staffId: typeof staff === 'object' ? (staff._id || staff.id) : (payroll.staffId || ''),
+        staffCode: staffCode || '',
+        department: department || '',
+        designation: designation || '',
+        date: payroll.paymentDate || payroll.createdAt || '',
+        month: payroll.payPeriodMonth,
+        year: payroll.payPeriodYear,
+        periodDisplay: payroll.payPeriodDisplay || `${payroll.payPeriodMonth}/${payroll.payPeriodYear}`,
+        amount: parseFloat(payroll.grossSalary || payroll.totalEarnings || 0),
+        paidAmount: parseFloat(payroll.netSalary || 0),
+        balanceAmount: parseFloat((payroll.grossSalary || 0) - (payroll.netSalary || 0)),
+        status: payroll.status || 'Pending',
+        paymentMethod: payroll.paymentMode || '',
+        items: (payroll.earnings || []).concat(payroll.deductions || []),
+        discount: parseFloat(payroll.totalDeductions || 0),
+        tax: 0,
+        historyLog: payroll.historyLog || []
+      };
+    });
   } catch (error) {
     logger.apiError('GET', InvoiceEndpoints.getAll, error);
     console.error('Failed to fetch invoices from API:', error);

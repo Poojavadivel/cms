@@ -30,9 +30,9 @@ function requireAdmin(req, res) {
 function buildPayrollPayload(body = {}) {
   const payload = {};
   
-  // Basic fields
+  // ✅ Basic fields - REMOVED denormalized staff fields
   const basicFields = [
-    'staffId', 'staffName', 'staffCode', 'department', 'designation', 'email', 'contact',
+    'staffId', // ✅ Only reference
     'payPeriodMonth', 'payPeriodYear', 'payPeriodStart', 'payPeriodEnd', 'paymentDate',
     'status', 'basicSalary', 'earnings', 'deductions', 'reimbursements',
     'totalEarnings', 'totalDeductions', 'totalReimbursements', 'grossSalary', 'netSalary', 'ctc',
@@ -103,24 +103,14 @@ router.post('/', auth, async (req, res) => {
       });
     }
 
-    // Fetch staff details if not provided
-    let staffData = {};
-    if (!body.staffName || !body.staffCode) {
-      try {
-        const staff = await Staff.findById(body.staffId).lean();
-        if (staff) {
-          staffData = {
-            staffName: staff.name,
-            staffCode: staff.metadata?.staffCode || staff.patientFacingId || '',
-            department: staff.department || '',
-            designation: staff.designation || '',
-            email: staff.email || '',
-            contact: staff.contact || ''
-          };
-        }
-      } catch (err) {
-        console.log('Could not fetch staff details:', err.message);
-      }
+    // ✅ Verify staff exists
+    const staff = await Staff.findById(body.staffId);
+    if (!staff) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Staff member not found',
+        errorCode: 2009
+      });
     }
 
     // Generate payroll code
@@ -135,7 +125,8 @@ router.post('/', auth, async (req, res) => {
       body.payPeriodEnd = new Date(year, month + 1, 0); // Last day of month
     }
 
-    const payload = buildPayrollPayload(Object.assign({}, staffData, body));
+    // ✅ Build payload without denormalized staff data
+    const payload = buildPayrollPayload(body);
     payload.metadata = payload.metadata || {};
     payload.metadata.payrollCode = payrollCode;
 
@@ -191,29 +182,77 @@ router.get('/', auth, async (req, res) => {
     const page = Math.max(0, parseInt(req.query.page || '0', 10));
     const limit = Math.min(100, parseInt(req.query.limit || '50', 10));
 
-    const filter = {};
+    // ✅ Use aggregation for filtering by department or text search
+    if (q || department) {
+      const pipeline = [];
 
-    if (department) filter.department = department;
+      // Lookup staff details
+      pipeline.push({
+        $lookup: {
+          from: 'staffs',
+          localField: 'staffId',
+          foreignField: '_id',
+          as: 'staff'
+        }
+      });
+      pipeline.push({ $unwind: { path: '$staff', preserveNullAndEmptyArrays: true } });
+
+      // Build match conditions
+      const matchConditions = [];
+      if (status) matchConditions.push({ status });
+      if (month) matchConditions.push({ payPeriodMonth: month });
+      if (year) matchConditions.push({ payPeriodYear: year });
+      if (staffId) matchConditions.push({ staffId });
+      if (department) matchConditions.push({ 'staff.department': department });
+
+      if (q) {
+        const regex = { $regex: q, $options: 'i' };
+        matchConditions.push({
+          $or: [
+            { 'staff.name': regex },
+            { 'staff.department': regex },
+            { 'staff.designation': regex },
+            { 'staff.patientFacingId': regex },
+            { 'metadata.payrollCode': regex }
+          ]
+        });
+      }
+
+      if (matchConditions.length > 0) {
+        pipeline.push({ $match: matchConditions.length === 1 ? matchConditions[0] : { $and: matchConditions } });
+      }
+
+      // Sort and paginate
+      pipeline.push({ $sort: { payPeriodYear: -1, payPeriodMonth: -1, createdAt: -1 } });
+      pipeline.push({ $skip: page * limit });
+      pipeline.push({ $limit: limit });
+
+      // ✅ Project to ensure staff data is available as both 'staff' and 'staffId' for React compatibility
+      pipeline.push({
+        $addFields: {
+          staffId: '$staff' // Duplicate staff data to staffId field for client compatibility
+        }
+      });
+
+      // Execute aggregation
+      const items = await Payroll.aggregate(pipeline);
+      const total = items.length; // Approximate count
+
+      return res.status(200).json({ success: true, payroll: items, total, page, limit });
+    }
+
+    // ✅ Simple query with populate
+    const filter = {};
     if (status) filter.status = status;
     if (month) filter.payPeriodMonth = month;
     if (year) filter.payPeriodYear = year;
     if (staffId) filter.staffId = staffId;
 
-    if (q) {
-      const regex = new RegExp(q, 'i');
-      filter.$or = [
-        { staffName: regex },
-        { staffCode: regex },
-        { department: regex },
-        { designation: regex },
-        { 'metadata.payrollCode': regex }
-      ];
-    }
-
     const skip = page * limit;
 
     const [items, total] = await Promise.all([
       Payroll.find(filter)
+        .populate('staffId', 'name department designation email contact patientFacingId metadata')
         .skip(skip)
         .limit(limit)
         .sort({ payPeriodYear: -1, payPeriodMonth: -1, createdAt: -1 })
@@ -233,7 +272,11 @@ router.get('/', auth, async (req, res) => {
 // ------------------------------
 router.get('/:id', auth, async (req, res) => {
   try {
-    const payroll = await Payroll.findById(req.params.id).lean();
+    // ✅ Populate staff details
+    const payroll = await Payroll.findById(req.params.id)
+      .populate('staffId', 'name department designation email contact patientFacingId metadata')
+      .lean();
+    
     if (!payroll) return res.status(404).json({ success: false, message: 'Payroll not found', errorCode: 2007 });
     return res.status(200).json({ success: true, payroll });
   } catch (err) {
@@ -480,13 +523,8 @@ router.post('/bulk/generate', auth, async (req, res) => {
         const periodEnd = new Date(year, month, 0);
 
         const payrollData = {
+          // ✅ Only staffId reference
           staffId: staff._id,
-          staffName: staff.name,
-          staffCode: staff.metadata?.staffCode || staff.patientFacingId || '',
-          department: staff.department || '',
-          designation: staff.designation || '',
-          email: staff.email || '',
-          contact: staff.contact || '',
           payPeriodMonth: month,
           payPeriodYear: year,
           payPeriodStart: periodStart,
@@ -538,23 +576,44 @@ router.get('/summary/stats', auth, async (req, res) => {
     const year = req.query.year ? parseInt(req.query.year, 10) : null;
     const department = (req.query.department || '').trim();
 
-    const filter = {};
-    if (month) filter.payPeriodMonth = month;
-    if (year) filter.payPeriodYear = year;
-    if (department) filter.department = department;
+    // ✅ Use aggregation with $lookup for department filtering
+    const pipeline = [];
 
-    const stats = await Payroll.aggregate([
-      { $match: filter },
-      {
-        $group: {
-          _id: '$status',
-          count: { $sum: 1 },
-          totalGross: { $sum: '$grossSalary' },
-          totalNet: { $sum: '$netSalary' },
-          totalDeductions: { $sum: '$totalDeductions' }
+    // Lookup staff for department filtering
+    if (department) {
+      pipeline.push({
+        $lookup: {
+          from: 'staffs',
+          localField: 'staffId',
+          foreignField: '_id',
+          as: 'staff'
         }
+      });
+      pipeline.push({ $unwind: '$staff' });
+    }
+
+    // Build match filter
+    const matchFilter = {};
+    if (month) matchFilter.payPeriodMonth = month;
+    if (year) matchFilter.payPeriodYear = year;
+    if (department) matchFilter['staff.department'] = department;
+
+    if (Object.keys(matchFilter).length > 0) {
+      pipeline.push({ $match: matchFilter });
+    }
+
+    // Group by status
+    pipeline.push({
+      $group: {
+        _id: '$status',
+        count: { $sum: 1 },
+        totalGross: { $sum: '$grossSalary' },
+        totalNet: { $sum: '$netSalary' },
+        totalDeductions: { $sum: '$totalDeductions' }
       }
-    ]);
+    });
+
+    const stats = await Payroll.aggregate(pipeline);
 
     const summary = {
       total: 0,
