@@ -270,7 +270,28 @@ router.get('/', auth, async (req, res) => {
       });
     }
 
-    return res.status(200).json({ success: true, payroll: items, total, page, limit });
+    // ✅ Manual populate fallback if staffId is still a string (populate failed)
+    const enrichedItems = await Promise.all(items.map(async (item) => {
+      if (typeof item.staffId === 'string') {
+        console.log('⚠️ [PAYROLL GET] staffId not populated, fetching manually:', item.staffId);
+        try {
+          const staff = await Staff.findById(item.staffId)
+            .select('name department designation email contact patientFacingId metadata')
+            .lean();
+          if (staff) {
+            console.log('✅ [PAYROLL GET] Manually fetched staff:', staff.name);
+            return { ...item, staffId: staff };
+          } else {
+            console.log('❌ [PAYROLL GET] Staff not found for ID:', item.staffId);
+          }
+        } catch (err) {
+          console.error('❌ [PAYROLL GET] Error fetching staff:', err);
+        }
+      }
+      return item;
+    }));
+
+    return res.status(200).json({ success: true, payroll: enrichedItems, total, page, limit });
   } catch (err) {
     console.error('PAYROLL LIST error:', err);
     return res.status(500).json({ success: false, message: 'Failed to fetch payroll list', errorCode: 5001 });
@@ -312,6 +333,25 @@ router.get('/:id', auth, async (req, res) => {
       .lean();
     
     if (!payroll) return res.status(404).json({ success: false, message: 'Payroll not found', errorCode: 2007 });
+    
+    // ✅ Manual populate fallback if staffId is still a string
+    if (typeof payroll.staffId === 'string') {
+      console.log('⚠️ [PAYROLL GET BY ID] staffId not populated, fetching manually:', payroll.staffId);
+      try {
+        const staff = await Staff.findById(payroll.staffId)
+          .select('name department designation email contact patientFacingId metadata')
+          .lean();
+        if (staff) {
+          console.log('✅ [PAYROLL GET BY ID] Manually fetched staff:', staff.name);
+          payroll.staffId = staff;
+        } else {
+          console.log('❌ [PAYROLL GET BY ID] Staff not found for ID:', payroll.staffId);
+        }
+      } catch (err) {
+        console.error('❌ [PAYROLL GET BY ID] Error fetching staff:', err);
+      }
+    }
+    
     return res.status(200).json({ success: true, payroll });
   } catch (err) {
     console.error('PAYROLL GET error:', err);
