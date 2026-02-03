@@ -169,19 +169,19 @@ const PayrollView = ({ payroll, isOpen, onClose }) => {
                 <div className="info-grid">
                   <div className="info-item">
                     <label>Staff Name</label>
-                    <p>{data.staffName || '—'}</p>
+                    <p>{(typeof data.staffId === 'object' ? data.staffId?.name : data.staffName) || '—'}</p>
                   </div>
                   <div className="info-item">
                     <label>Staff Code</label>
-                    <p>{data.staffCode || '—'}</p>
+                    <p>{(typeof data.staffId === 'object' ? (data.staffId?.patientFacingId || data.staffId?.metadata?.staffCode) : data.staffCode) || '—'}</p>
                   </div>
                   <div className="info-item">
                     <label>Department</label>
-                    <p>{data.department || '—'}</p>
+                    <p>{(typeof data.staffId === 'object' ? data.staffId?.department : data.department) || '—'}</p>
                   </div>
                   <div className="info-item">
                     <label>Designation</label>
-                    <p>{data.designation || 'Staff'}</p>
+                    <p>{(typeof data.staffId === 'object' ? data.staffId?.designation : data.designation) || 'Staff'}</p>
                   </div>
                   <div className="info-item">
                     <label>Pay Period</label>

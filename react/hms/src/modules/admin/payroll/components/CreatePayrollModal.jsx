@@ -111,11 +111,12 @@ const CreatePayrollModal = ({ isOpen, onClose, onSuccess }) => {
             setFormData(prev => ({
                 ...prev,
                 staffId: selected._id || selected.id,
+                // ✅ Store for display only - not sent to backend
                 staffName: selected.name,
-                staffCode: selected.staffCode || selected.empId || selected.id, // Fallback
+                staffCode: selected.staffCode || selected.empId || selected.id,
                 department: selected.department || '',
-                designation: selected.designation || '', // Assuming designation exists
-                basicSalary: selected.salary || selected.basicSalary || prev.basicSalary, // Auto-fill salary if avail
+                designation: selected.designation || '',
+                basicSalary: selected.salary || selected.basicSalary || prev.basicSalary,
                 bankName: selected.bankName || '',
                 accountNumber: selected.accountNumber || ''
             }));
@@ -138,9 +139,8 @@ const CreatePayrollModal = ({ isOpen, onClose, onSuccess }) => {
             const year = parseInt(periodParts[1]) || new Date().getFullYear();
 
             const payload = {
+                // ✅ Only send staffId reference
                 staffId: formData.staffId,
-                staffName: formData.staffName,
-                department: formData.department,
                 payPeriodMonth: month,
                 payPeriodYear: year,
                 basicSalary: parseFloat(formData.basicSalary) || 0,

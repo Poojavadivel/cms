@@ -2016,35 +2016,6 @@ router.get('/report/:reportId', auth, async (req, res) => {
 });
 
 // ============================================================================
-// VIEW PDF
-// ============================================================================
-router.get('/pdf/:id', auth, async (req, res) => {
-  const { id } = req.params;
-
-  try {
-    const pdf = await PatientPDF.findById(id);
-
-    if (!pdf) {
-      return res.status(404).json({
-        ok: false,
-        error: 'PDF not found'
-      });
-    }
-
-    res.setHeader('Content-Type', pdf.mimeType || 'application/pdf');
-    res.setHeader('Content-Length', pdf.size || pdf.data.length);
-    res.setHeader('Content-Disposition', `inline; filename="${pdf.fileName}"`);
-
-    return res.send(pdf.data);
-  } catch (error) {
-    return res.status(500).json({
-      ok: false,
-      error: error.message
-    });
-  }
-});
-
-// ============================================================================
 // HEALTH CHECK
 // ============================================================================
 router.get('/health', auth, async (req, res) => {

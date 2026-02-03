@@ -71,14 +71,9 @@ const LoanAdvanceSchema = new Schema({
 const PayrollSchema = new Schema({
   _id: { type: String, default: () => uuidv4() },
 
-  // Staff Reference
+  // ✅ Staff Reference - SINGLE SOURCE OF TRUTH
+  // All staff details (name, department, designation, etc.) must be fetched from Staff collection
   staffId: { type: String, required: true, index: true, ref: 'Staff' },
-  staffName: { type: String, required: true, index: true },
-  staffCode: { type: String, default: '', index: true },
-  department: { type: String, default: '', index: true },
-  designation: { type: String, default: '' },
-  email: { type: String, default: '' },
-  contact: { type: String, default: '' },
 
   // Pay Period
   payPeriodMonth: { type: Number, required: true, min: 1, max: 12, index: true },
@@ -188,9 +183,19 @@ const PayrollSchema = new Schema({
 PayrollSchema.index({ staffId: 1, payPeriodYear: -1, payPeriodMonth: -1 });
 PayrollSchema.index({ payPeriodYear: -1, payPeriodMonth: -1, status: 1 });
 PayrollSchema.index({ status: 1, paymentDate: -1 });
-PayrollSchema.index({ department: 1, payPeriodYear: -1, payPeriodMonth: -1 });
-PayrollSchema.index({ staffCode: 1 });
+// ❌ REMOVED: Denormalized indexes
+// PayrollSchema.index({ department: 1, payPeriodYear: -1, payPeriodMonth: -1 });
+// PayrollSchema.index({ staffCode: 1 });
 PayrollSchema.index({ 'metadata.payrollCode': 1 });
+
+// ==================== Virtual Population ====================
+// ✅ Staff details populated from Staff collection
+PayrollSchema.virtual('staff', {
+  ref: 'Staff',
+  localField: 'staffId',
+  foreignField: '_id',
+  justOne: true
+});
 
 // ==================== Virtual Fields ====================
 PayrollSchema.virtual('payPeriodDisplay').get(function() {
