@@ -12,12 +12,24 @@ const StaffSchema = new Schema({
 
   // Core identity
   name: { type: String, required: true, index: true },
-  designation: { type: String, default: '' }, // e.g. "Cardiologist"
-  department: { type: String, default: '' }, // e.g. "Cardiology"
-  patientFacingId: { type: String, default: '' }, // e.g. DOC102
+  designation: { type: String, required: true, default: 'Staff' }, // REQUIRED: e.g. "Cardiologist"
+  department: { type: String, required: true, default: 'General' }, // REQUIRED: e.g. "Cardiology"
+  patientFacingId: { 
+    type: String, 
+    required: true,  // REQUIRED: Staff code must exist
+    unique: true,    // UNIQUE: No duplicate staff codes
+    sparse: true,    // Allow migration for existing empty values
+    trim: true,
+    uppercase: true  // Auto-convert to uppercase (DOC001)
+  },
 
-  // Contact
-  contact: { type: String, default: '', validate: phoneValidator },
+  // Contact - NOW REQUIRED
+  contact: { 
+    type: String, 
+    required: true,  // REQUIRED: Contact number must exist
+    trim: true,
+    validate: phoneValidator 
+  },
   email: { type: String, default: '', lowercase: true, validate: emailValidator },
   avatarUrl: { type: String, default: '' },
   gender: { type: String, enum: ['Male', 'Female', 'Other', ''], default: '' },
@@ -42,7 +54,9 @@ const StaffSchema = new Schema({
   metadata: { type: Schema.Types.Mixed, default: {} }
 }, Object.assign({}, commonOptions));
 
-StaffSchema.index({ patientFacingId: 1 });
+// Indexes
+StaffSchema.index({ patientFacingId: 1 }, { unique: true, sparse: true }); // UNIQUE staff code
+StaffSchema.index({ contact: 1 }); // Index on contact for quick lookups
 StaffSchema.index({ name: 'text', designation: 'text', department: 'text' });
 
 module.exports = mongoose.model('Staff', StaffSchema);
