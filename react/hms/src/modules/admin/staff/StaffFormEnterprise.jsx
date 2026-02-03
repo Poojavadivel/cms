@@ -6,7 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   FiUser, FiCalendar,
-  FiBriefcase, FiUpload, FiCheck, FiX, FiAlertCircle,
+  FiBriefcase, FiCheck, FiX, FiAlertCircle,
   FiArrowRight
 } from 'react-icons/fi';
 
@@ -14,10 +14,9 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
-  const [imagePreview, setImagePreview] = useState(initial?.avatarUrl || '');
 
   const [formData, setFormData] = useState({
-    name: '', email: '', contact: '', gender: '', dob: '', avatarUrl: '',
+    name: '', email: '', contact: '', gender: '', dob: '',
     patientFacingId: '', designation: '', department: '', qualifications: [], experienceYears: 0,
     joinedAt: '', shift: '', status: 'Available', location: '',
     roles: [], emergencyContact: '', address: '', notes: ''
@@ -31,7 +30,6 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
         contact: initial.contact || '',
         gender: initial.gender || '',
         dob: initial.dob || '',
-        avatarUrl: initial.avatarUrl || '',
         patientFacingId: initial.patientFacingId || '',
         designation: initial.designation || '',
         department: initial.department || '',
@@ -46,7 +44,6 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
         address: initial.address || '',
         notes: initial.notes?.general || ''
       });
-      setImagePreview(initial.avatarUrl || '');
     }
   }, [initial]);
 
@@ -58,8 +55,8 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
   ];
 
   /* Constants */
-  const departments = ['Cardiology', 'Neurology', 'Pediatrics', 'Orthopedics', 'General Medicine', 'Surgery', 'Radiology', 'Pathology', 'Emergency', 'ICU', 'Administration', 'Other'];
-  const designations = ['Doctor', 'Nurse', 'Surgeon', 'Specialist', 'Consultant', 'Lab Technician', 'Pharmacist', 'Receptionist', 'Admin Staff'];
+  const departments = ['General', 'Nursing', 'Administration', 'Support', 'Maintenance', 'Security', 'Reception', 'Laboratory', 'Other'];
+  const designations = ['Nurse', 'Lab Technician', 'Receptionist', 'Admin Staff', 'Cleaner', 'Security Guard', 'Support Staff', 'Other'];
   const shifts = ['Morning', 'Evening', 'Night', 'Rotational'];
   const statuses = ['Available', 'On Leave', 'Off Duty', 'Busy'];
 
@@ -69,7 +66,9 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
     if (step === 1) {
       if (!formData.name.trim()) newErrors.name = 'Required';
       if (!formData.email.trim()) newErrors.email = 'Required';
+      else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) newErrors.email = 'Invalid email format';
       if (!formData.contact.trim()) newErrors.contact = 'Required';
+      else if (!/^\+?[1-9]\d{1,14}$/.test(formData.contact.replace(/\s/g, ''))) newErrors.contact = 'Invalid phone format';
       if (!formData.gender) newErrors.gender = 'Required';
     }
     if (step === 2) {
@@ -93,14 +92,17 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
     setFormData(prev => ({ ...prev, [name]: value }));
     if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }));
   };
-  const handleImageUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => { setImagePreview(reader.result); setFormData(p => ({ ...p, avatarUrl: reader.result })); };
-      reader.readAsDataURL(file);
+  
+  const handleCancel = () => {
+    const hasData = Object.values(formData).some(v => v && v !== '' && v !== 0 && (!Array.isArray(v) || v.length > 0));
+    if (hasData && !initial) {
+      if (!window.confirm('You have unsaved changes. Are you sure you want to cancel?')) {
+        return;
+      }
     }
+    onCancel();
   };
+
   const handleArrayChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value.split(',').map(item => item.trim()).filter(item => item) }));
   };
@@ -110,11 +112,22 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
     if (!validateStep(currentStep)) return;
     setIsSubmitting(true);
     try {
-      await onSubmit({ ...formData, ...(initial?.id && { id: initial.id, _id: initial.id }) });
-      alert(initial ? 'Staff updated successfully!' : 'Staff added successfully!');
+      // Remove avatarUrl from submission
+      const { avatarUrl, ...submitData } = formData;
+      await onSubmit({ ...submitData, ...(initial?.id && { id: initial.id, _id: initial.id }) });
+      if (window.showNotification) {
+        window.showNotification(initial ? 'Staff updated successfully!' : 'Staff added successfully!', 'success');
+      } else {
+        alert(initial ? 'Staff updated successfully!' : 'Staff added successfully!');
+      }
     } catch (error) { 
       console.error(error); 
-      alert('Failed to save staff: ' + (error.message || 'Unknown error'));
+      const errorMsg = 'Failed to save staff: ' + (error.message || 'Unknown error');
+      if (window.showNotification) {
+        window.showNotification(errorMsg, 'error');
+      } else {
+        alert(errorMsg);
+      }
     } finally { 
       setIsSubmitting(false); 
     }
@@ -193,7 +206,7 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
           </div>
 
           <div className="p-6 border-t border-slate-100">
-            <button onClick={onCancel} className="w-full py-3 px-4 rounded-lg border border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-50 text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-2">
+            <button onClick={handleCancel} className="w-full py-3 px-4 rounded-lg border border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-50 text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-2">
               <FiX size={14} /> Cancel
             </button>
           </div>
@@ -204,8 +217,17 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
 
           {/* Context Header (Mobile/Compact) */}
           <div className="md:hidden p-4 border-b border-slate-200 bg-white flex justify-between items-center">
-            <span className="text-slate-800 font-bold">Step {currentStep}/4</span>
-            <button onClick={onCancel} className="p-2 text-slate-500"><FiX /></button>
+            <div className="flex-1">
+              <div className="text-slate-800 font-bold mb-1">Step {currentStep} of 4</div>
+              <div className="text-xs text-slate-500">{steps[currentStep - 1].name}</div>
+              <div className="w-full bg-slate-200 rounded-full h-1.5 mt-2">
+                <div 
+                  className="bg-blue-600 h-1.5 rounded-full transition-all duration-300"
+                  style={{ width: `${(currentStep / 4) * 100}%` }}
+                />
+              </div>
+            </div>
+            <button onClick={handleCancel} className="p-2 text-slate-500 ml-4"><FiX /></button>
           </div>
 
           {/* Scrollable Form Area */}
@@ -215,33 +237,64 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
               {/* STEP 1 */}
               {currentStep === 1 && (
                 <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-300 fade-in">
-                  <div className="flex items-center gap-6">
-                    <div className="relative group cursor-pointer">
-                      <div className="w-24 h-24 rounded-2xl bg-white border border-slate-200 flex items-center justify-center overflow-hidden transition-all group-hover:border-blue-300 shadow-sm">
-                        {imagePreview ? <img src={imagePreview} className="w-full h-full object-cover" alt="" /> : <FiUpload size={24} className="text-slate-400" />}
-                      </div>
-                      <input type="file" onChange={handleImageUpload} className="absolute inset-0 opacity-0 cursor-pointer" acceptable="image/*" />
-                    </div>
-                    <div>
-                      <h2 className="text-2xl font-bold text-slate-900">Who is this?</h2>
-                      <p className="text-slate-500">Upload a photo and set basic contact info.</p>
-                    </div>
+                  <div>
+                    <h2 className="text-2xl font-bold text-slate-900">Personal Information</h2>
+                    <p className="text-slate-500">Basic contact details and identity</p>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
-                    <InputGroup label="Full Name" error={errors.name} className="col-span-2">
-                      <input name="name" value={formData.name} onChange={handleChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300 font-medium" placeholder="e.g. Dr. Sarah Connor" autoFocus />
+                    <InputGroup label="Full Name *" error={errors.name} className="col-span-2">
+                      <input 
+                        name="name" 
+                        value={formData.name} 
+                        onChange={handleChange} 
+                        maxLength={100}
+                        className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300 font-medium" 
+                        placeholder="e.g. Sarah Johnson" 
+                        autoFocus 
+                      />
                     </InputGroup>
 
-                    <InputGroup label="Email Address" error={errors.email}>
-                      <input name="email" value={formData.email} onChange={handleChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" placeholder="name@hospital.com" />
+                    <InputGroup label="Email Address *" error={errors.email}>
+                      <input 
+                        type="email"
+                        name="email" 
+                        value={formData.email} 
+                        onChange={handleChange} 
+                        maxLength={100}
+                        className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" 
+                        placeholder="name@hospital.com" 
+                      />
                     </InputGroup>
 
-                    <InputGroup label="Phone" error={errors.contact}>
-                      <input name="contact" value={formData.contact} onChange={handleChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" placeholder="+1 555 000 0000" />
+                    <InputGroup label="Phone *" error={errors.contact}>
+                      <input 
+                        type="tel"
+                        name="contact" 
+                        value={formData.contact} 
+                        onChange={handleChange} 
+                        pattern="^\+?[1-9]\d{1,14}$"
+                        title="Enter a valid phone number (e.g., +919876543210)"
+                        maxLength={20}
+                        className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" 
+                        placeholder="+919876543210" 
+                      />
                     </InputGroup>
 
-                    <InputGroup label="Gender" error={errors.gender}>
+                    <InputGroup label="Emergency Contact">
+                      <input 
+                        type="tel"
+                        name="emergencyContact" 
+                        value={formData.emergencyContact} 
+                        onChange={handleChange} 
+                        pattern="^\+?[1-9]\d{1,14}$"
+                        maxLength={20}
+                        className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" 
+                        placeholder="+919876543211" 
+                      />
+                    </InputGroup>
+
+                    <InputGroup label="Gender *" error={errors.gender}>
                       <select name="gender" value={formData.gender} onChange={handleChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0">
                         <option value="">Select...</option>
                         <option value="Male">Male</option>
@@ -251,11 +304,25 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
                     </InputGroup>
 
                     <InputGroup label="Date of Birth">
-                      <input type="date" name="dob" value={formData.dob} onChange={handleChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0" />
+                      <input 
+                        type="date" 
+                        name="dob" 
+                        value={formData.dob} 
+                        onChange={handleChange} 
+                        max={new Date().toISOString().split('T')[0]}
+                        className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0" 
+                      />
                     </InputGroup>
 
                     <InputGroup label="Address" className="col-span-2">
-                      <input name="address" value={formData.address} onChange={handleChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" placeholder="Full residential address" />
+                      <input 
+                        name="address" 
+                        value={formData.address} 
+                        onChange={handleChange} 
+                        maxLength={200}
+                        className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" 
+                        placeholder="Full residential address" 
+                      />
                     </InputGroup>
                   </div>
                 </div>
@@ -266,26 +333,43 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
                 <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-300 fade-in">
                   <div>
                     <h2 className="text-2xl font-bold text-slate-900">Professional Role</h2>
-                    <p className="text-slate-500">Define their position and access level.</p>
+                    <p className="text-slate-500">Define their position and access level (Non-medical staff only)</p>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
-                    <InputGroup label="Staff ID" error={errors.patientFacingId}>
-                      <input name="patientFacingId" value={formData.patientFacingId} onChange={handleChange} className="w-full bg-transparent border-none p-0 text-slate-900 font-mono focus:ring-0 placeholder-slate-300" placeholder="STF-####" autoFocus />
+                    <InputGroup label="Staff ID *" error={errors.patientFacingId}>
+                      <input 
+                        name="patientFacingId" 
+                        value={formData.patientFacingId} 
+                        onChange={handleChange} 
+                        maxLength={20}
+                        style={{textTransform: 'uppercase'}}
+                        className="w-full bg-transparent border-none p-0 text-slate-900 font-mono focus:ring-0 placeholder-slate-300" 
+                        placeholder="NUR001" 
+                        autoFocus 
+                      />
                     </InputGroup>
 
-                    <InputGroup label="EXP (Years)">
-                      <input type="number" name="experienceYears" value={formData.experienceYears} onChange={handleChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0" />
+                    <InputGroup label="Experience (Years)">
+                      <input 
+                        type="number" 
+                        name="experienceYears" 
+                        value={formData.experienceYears} 
+                        onChange={handleChange} 
+                        min="0"
+                        max="50"
+                        className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0" 
+                      />
                     </InputGroup>
 
-                    <InputGroup label="Department" error={errors.department} className="col-span-2">
+                    <InputGroup label="Department *" error={errors.department} className="col-span-2">
                       <select name="department" value={formData.department} onChange={handleChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0">
                         <option value="">Select Department...</option>
                         {departments.map(d => <option key={d} value={d}>{d}</option>)}
                       </select>
                     </InputGroup>
 
-                    <InputGroup label="Designation" error={errors.designation} className="col-span-2">
+                    <InputGroup label="Designation *" error={errors.designation} className="col-span-2">
                       <select name="designation" value={formData.designation} onChange={handleChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0">
                         <option value="">Select Designation...</option>
                         {designations.map(d => <option key={d} value={d}>{d}</option>)}
@@ -293,7 +377,13 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
                     </InputGroup>
 
                     <InputGroup label="Qualifications" className="col-span-2">
-                      <input value={formData.qualifications.join(', ')} onChange={e => handleArrayChange('qualifications', e.target.value)} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" placeholder="MBBS, MD..." />
+                      <input 
+                        value={formData.qualifications.join(', ')} 
+                        onChange={e => handleArrayChange('qualifications', e.target.value)} 
+                        maxLength={200}
+                        className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" 
+                        placeholder="Comma-separated (e.g., BSc Nursing, Certificate)" 
+                      />
                     </InputGroup>
                   </div>
                 </div>
@@ -303,24 +393,39 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
               {currentStep === 3 && (
                 <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-300 fade-in">
                   <div>
-                    <h2 className="text-2xl font-bold text-slate-900">Logistics</h2>
-                    <p className="text-slate-500">Schedule and location details.</p>
+                    <h2 className="text-2xl font-bold text-slate-900">Employment Details</h2>
+                    <p className="text-slate-500">Schedule and location information</p>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
-                    <InputGroup label="Joining Date" error={errors.joinedAt}>
-                      <input type="date" name="joinedAt" value={formData.joinedAt} onChange={handleChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0" />
+                    <InputGroup label="Joining Date *" error={errors.joinedAt}>
+                      <input 
+                        type="date" 
+                        name="joinedAt" 
+                        value={formData.joinedAt} 
+                        onChange={handleChange} 
+                        max={new Date().toISOString().split('T')[0]}
+                        className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0" 
+                      />
                     </InputGroup>
 
-                    <InputGroup label="Shift" error={errors.shift}>
+                    <InputGroup label="Shift *" error={errors.shift}>
                       <select name="shift" value={formData.shift} onChange={handleChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0">
                         <option value="">Select Shift...</option>
                         {shifts.map(s => <option key={s} value={s}>{s}</option>)}
                       </select>
                     </InputGroup>
 
-                    <InputGroup label="Work Location" error={errors.location} className="col-span-2">
-                      <input name="location" value={formData.location} onChange={handleChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" placeholder="Building A, Floor 2" autoFocus />
+                    <InputGroup label="Work Location *" error={errors.location} className="col-span-2">
+                      <input 
+                        name="location" 
+                        value={formData.location} 
+                        onChange={handleChange} 
+                        maxLength={100}
+                        className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" 
+                        placeholder="Building A, Floor 2" 
+                        autoFocus 
+                      />
                     </InputGroup>
 
                     <InputGroup label="Availability Status" className="col-span-2">
@@ -339,31 +444,50 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
                     <div className="w-20 h-20 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6 border border-emerald-100 shadow-sm">
                       <FiCheck size={40} />
                     </div>
-                    <h2 className="text-3xl font-bold text-slate-900 mb-2">Ready to Create?</h2>
-                    <p className="text-slate-500">Review the details below before confirming.</p>
+                    <h2 className="text-3xl font-bold text-slate-900 mb-2">Ready to {initial ? 'Update' : 'Create'}?</h2>
+                    <p className="text-slate-500">Review the details below before confirming</p>
                   </div>
 
                   <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-4 shadow-sm">
                     <div className="flex justify-between border-b border-slate-100 pb-4">
                       <span className="text-slate-500">Name</span>
-                      <span className="text-slate-900 font-medium">{formData.name}</span>
+                      <span className="text-slate-900 font-medium">{formData.name || '-'}</span>
+                    </div>
+                    <div className="flex justify-between border-b border-slate-100 pb-4">
+                      <span className="text-slate-500">Staff Code</span>
+                      <span className="text-slate-900 font-medium font-mono">{formData.patientFacingId || '-'}</span>
                     </div>
                     <div className="flex justify-between border-b border-slate-100 pb-4">
                       <span className="text-slate-500">Role</span>
-                      <span className="text-slate-900 font-medium">{formData.designation}</span>
+                      <span className="text-slate-900 font-medium">{formData.designation || '-'}</span>
                     </div>
                     <div className="flex justify-between border-b border-slate-100 pb-4">
                       <span className="text-slate-500">Department</span>
-                      <span className="text-slate-900 font-medium">{formData.department}</span>
+                      <span className="text-slate-900 font-medium">{formData.department || '-'}</span>
+                    </div>
+                    <div className="flex justify-between border-b border-slate-100 pb-4">
+                      <span className="text-slate-500">Email</span>
+                      <span className="text-slate-900 font-medium">{formData.email || '-'}</span>
+                    </div>
+                    <div className="flex justify-between border-b border-slate-100 pb-4">
+                      <span className="text-slate-500">Contact</span>
+                      <span className="text-slate-900 font-medium">{formData.contact || '-'}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-500">Email</span>
-                      <span className="text-slate-900 font-medium">{formData.email}</span>
+                      <span className="text-slate-500">Location</span>
+                      <span className="text-slate-900 font-medium">{formData.location || '-'}</span>
                     </div>
                   </div>
 
-                  <InputGroup label="Final Notes">
-                    <textarea name="notes" value={formData.notes} onChange={handleChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300 resize-none h-20" placeholder="Any last comments..." />
+                  <InputGroup label="Additional Notes">
+                    <textarea 
+                      name="notes" 
+                      value={formData.notes} 
+                      onChange={handleChange} 
+                      maxLength={500}
+                      className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300 resize-none h-20" 
+                      placeholder="Any last comments..." 
+                    />
                   </InputGroup>
                 </div>
               )}
@@ -375,20 +499,30 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
           <div className="p-6 border-t border-slate-200 bg-white flex justify-between items-center z-10">
             <button
               type="button"
-              onClick={currentStep === 1 ? onCancel : handlePrevious}
-              className="text-slate-500 hover:text-slate-800 font-semibold text-sm transition-colors"
+              onClick={currentStep === 1 ? handleCancel : handlePrevious}
+              className="text-slate-500 hover:text-slate-800 font-semibold text-sm transition-colors disabled:opacity-50"
+              disabled={isSubmitting}
             >
               {currentStep === 1 ? 'Cancel' : 'Back'}
             </button>
 
             <div className="flex gap-4">
               <button
+                type="button"
                 onClick={currentStep < 4 ? handleNext : handleSubmit}
                 disabled={isSubmitting}
                 className="bg-blue-600 text-white px-8 py-3 rounded-lg font-bold text-sm tracking-wide hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
-                {isSubmitting ? 'Saving...' : currentStep === 4 ? 'Confirm Creation' : 'Continue'}
-                {!isSubmitting && <FiArrowRight />}
+                {isSubmitting ? (
+                  <>
+                    <span className="inline-block animate-spin">⏳</span> Saving...
+                  </>
+                ) : currentStep === 4 ? (
+                  initial ? 'Update Staff' : 'Create Staff'
+                ) : (
+                  'Continue'
+                )}
+                {!isSubmitting && currentStep < 4 && <FiArrowRight />}
               </button>
             </div>
           </div>
