@@ -21,11 +21,13 @@
   border-radius: 16px;
   width: 95%;
   max-width: 1200px;
-  max-height: 90vh;
+  height: 90vh;
+  max-height: 850px;
   display: flex;
   flex-direction: column;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   animation: slideUp 0.3s ease-out;
+  overflow: hidden;
 }
 
 @keyframes slideUp {
@@ -370,6 +372,7 @@
   .pathology-detail-modal {
     width: 100%;
     max-width: 100%;
+    height: 100vh;
     max-height: 100vh;
     border-radius: 0;
   }

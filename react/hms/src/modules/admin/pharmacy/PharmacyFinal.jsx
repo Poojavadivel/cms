@@ -310,10 +310,6 @@ const PharmacyFinal = () => {
           <h1 className="main-title">Pharmacy Management</h1>
           <p className="main-subtitle">Manage medicine inventory, batches, and analytics.</p>
         </div>
-        <button className="btn-new-appointment" onClick={handleAddMedicine}>
-          <MdAdd size={20} />
-          Add Medicine
-        </button>
       </div>
 
       {/* TABS */}
@@ -338,16 +334,12 @@ const PharmacyFinal = () => {
             Analytics
           </button>
         </div>
-        <button className="btn-filter-date" onClick={fetchData}>
-          <MdRefresh size={16} />
-          Refresh
-        </button>
       </div>
 
       {/* TAB 1: MEDICINE INVENTORY */}
       {activeTab === 0 && (
         <>
-          {/* Search and Filter */}
+          {/* Search Only */}
           <div className="filter-bar-container">
             <div className="search-wrapper">
               <span className="search-icon-lg"><MdSearch size={18} /></span>
@@ -358,18 +350,6 @@ const PharmacyFinal = () => {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
-            </div>
-            <div className="filter-right-group">
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                style={{ padding: '8px 12px', border: '1.5px solid #E2E8F0', borderRadius: '8px', fontSize: '13px', fontWeight: 500 }}
-              >
-                <option value="All">All Status</option>
-                <option value="In Stock">In Stock</option>
-                <option value="Low Stock">Low Stock</option>
-                <option value="Out of Stock">Out of Stock</option>
-              </select>
             </div>
           </div>
 

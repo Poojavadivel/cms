@@ -59,4 +59,28 @@ StaffSchema.index({ patientFacingId: 1 }, { unique: true, sparse: true }); // UN
 StaffSchema.index({ contact: 1 }); // Index on contact for quick lookups
 StaffSchema.index({ name: 'text', designation: 'text', department: 'text' });
 
+// Pre-save hook to clean phone numbers  
+StaffSchema.pre('validate', function(next) {
+  if (this.contact) {
+    // Remove spaces, dashes, and parentheses from phone number before validation
+    this.contact = this.contact.replace(/[\s\-()]/g, '');
+  }
+  if (this.emergencyContact) {
+    this.emergencyContact = this.emergencyContact.replace(/[\s\-()]/g, '');
+  }
+  next();
+});
+
+// Pre-save hook (keeping for backward compatibility)
+StaffSchema.pre('save', function(next) {
+  if (this.contact) {
+    // Remove spaces, dashes, and parentheses from phone number
+    this.contact = this.contact.replace(/[\s\-()]/g, '');
+  }
+  if (this.emergencyContact) {
+    this.emergencyContact = this.emergencyContact.replace(/[\s\-()]/g, '');
+  }
+  next();
+});
+
 module.exports = mongoose.model('Staff', StaffSchema);

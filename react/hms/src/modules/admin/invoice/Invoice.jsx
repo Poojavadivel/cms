@@ -5,10 +5,14 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { MdChevronLeft, MdChevronRight, MdSearch } from 'react-icons/md';
+import { MdChevronLeft, MdChevronRight, MdSearch, MdMoreVert, MdArrowForward } from 'react-icons/md';
 import invoiceService from '../../../services/invoiceService';
+import staffService from '../../../services/staffService';
 import InvoiceDetail from './InvoiceDetail';
 import InvoiceForm from './InvoiceForm';
+import PayrollModal from './PayrollModal';
+import PayrollViewModal from './PayrollViewModal';
+import NextMonthPayrollModal from './NextMonthPayrollModal';
 import './Invoice.css';
 
 // Custom SVG Icons (matching Appointments)
@@ -53,8 +57,14 @@ const Invoice = () => {
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [showDetail, setShowDetail] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [showPayrollModal, setShowPayrollModal] = useState(false);
+  const [showPayrollView, setShowPayrollView] = useState(false);
+  const [showNextMonthModal, setShowNextMonthModal] = useState(false);
+  const [showBulkActions, setShowBulkActions] = useState(false);
+  const [payrollMode, setPayrollMode] = useState('create'); // 'create', 'edit', 'copy'
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [editingInvoice, setEditingInvoice] = useState(null);
+  const [staffList, setStaffList] = useState([]);
 
   const itemsPerPage = 10;
 
@@ -78,7 +88,18 @@ const Invoice = () => {
   // Load invoices on mount
   useEffect(() => {
     fetchInvoices();
+    fetchStaffList();
   }, [fetchInvoices]);
+
+  // Fetch staff list for payroll modal
+  const fetchStaffList = async () => {
+    try {
+      const data = await staffService.fetchStaffs();
+      setStaffList(data);
+    } catch (error) {
+      console.error('Failed to fetch staff list:', error);
+    }
+  };
 
   // Filter invoices
   useEffect(() => {
@@ -204,7 +225,7 @@ const Invoice = () => {
   // Handle actions
   const handleView = (invoice) => {
     setSelectedInvoice(invoice);
-    setShowDetail(true);
+    setShowPayrollView(true);
   };
 
   const handleCloseDetail = () => {
@@ -214,7 +235,13 @@ const Invoice = () => {
 
   const handleEdit = (invoice) => {
     setEditingInvoice(invoice);
-    setShowForm(true);
+    setPayrollMode('edit');
+    setShowPayrollModal(true);
+  };
+
+  const handleCopyToNextMonth = (invoice) => {
+    setSelectedInvoice(invoice);
+    setShowNextMonthModal(true);
   };
 
   const handleFormSubmit = async (formData) => {
@@ -243,6 +270,82 @@ const Invoice = () => {
     }
   };
 
+  const handlePayrollSubmit = async (payrollData) => {
+    try {
+      if (payrollMode === 'edit') {
+        await invoiceService.updateInvoice(editingInvoice.id, payrollData);
+        alert('Payroll updated successfully!');
+      } else {
+        await invoiceService.createInvoice(payrollData);
+        alert('Payroll processed successfully!');
+      }
+      setShowPayrollModal(false);
+      setEditingInvoice(null);
+      setPayrollMode('create');
+      await fetchInvoices();
+    } catch (error) {
+      console.error('Payroll submission error:', error);
+      throw error;
+    }
+  };
+
+  const handleNextMonthSubmit = async (payrollData) => {
+    try {
+      await invoiceService.createInvoice(payrollData);
+      setShowNextMonthModal(false);
+      setSelectedInvoice(null);
+      await fetchInvoices();
+      alert('Next month payroll created successfully!');
+    } catch (error) {
+      console.error('Next month payroll error:', error);
+      throw error;
+    }
+  };
+
+  const handleConfirmAllPending = async () => {
+    if (!window.confirm('Confirm all pending payrolls for this month? This will mark them as approved.')) {
+      return;
+    }
+    
+    try {
+      const pendingPayrolls = filteredInvoices.filter(inv => inv.status === 'pending');
+      
+      for (const payroll of pendingPayrolls) {
+        await invoiceService.updateInvoice(payroll.id, { ...payroll, status: 'approved' });
+      }
+      
+      await fetchInvoices();
+      alert(`Successfully approved ${pendingPayrolls.length} payroll(s)!`);
+      setShowBulkActions(false);
+    } catch (error) {
+      console.error('Bulk approve error:', error);
+      alert('Failed to approve payrolls: ' + error.message);
+    }
+  };
+
+  const handleStopAllPayroll = async () => {
+    if (!window.confirm('Stop all payroll processing for this month? This will mark them as draft.')) {
+      return;
+    }
+    
+    try {
+      const activePayrolls = filteredInvoices.filter(inv => 
+        inv.status === 'pending' || inv.status === 'approved' || inv.status === 'processed'
+      );
+      
+      for (const payroll of activePayrolls) {
+        await invoiceService.updateInvoice(payroll.id, { ...payroll, status: 'draft' });
+      }
+      
+      await fetchInvoices();
+      alert(`Successfully stopped ${activePayrolls.length} payroll(s)!`);
+      setShowBulkActions(false);
+    } catch (error) {
+      console.error('Bulk stop error:', error);
+      alert('Failed to stop payrolls: ' + error.message);
+    }
+  };
+
   // Pagination
   const totalPages = Math.ceil(filteredInvoices.length / itemsPerPage);
   const startIndex = currentPage * itemsPerPage;
@@ -265,9 +368,82 @@ const Invoice = () => {
           <h1 className="main-title">Payroll Management</h1>
           <p className="main-subtitle">Manage employee payroll and salary records</p>
         </div>
-        <button className="btn-new-appointment" onClick={() => alert('Add Invoice functionality')}>
-          + New Payroll
-        </button>
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <div style={{ position: 'relative' }}>
+            <button 
+              className="btn-filter-date" 
+              onClick={() => setShowBulkActions(!showBulkActions)}
+              style={{ padding: '10px 16px' }}
+            >
+              <MdMoreVert size={20} />
+            </button>
+            
+            {showBulkActions && (
+              <div 
+                style={{
+                  position: 'absolute',
+                  right: 0,
+                  top: '50px',
+                  background: 'white',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                  minWidth: '220px',
+                  zIndex: 100
+                }}
+              >
+                <button
+                  onClick={handleConfirmAllPending}
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    textAlign: 'left',
+                    border: 'none',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    color: '#10b981',
+                    fontWeight: '500'
+                  }}
+                  onMouseOver={(e) => e.target.style.background = '#f3f4f6'}
+                  onMouseOut={(e) => e.target.style.background = 'transparent'}
+                >
+                  ✓ Confirm All Pending
+                </button>
+                <button
+                  onClick={handleStopAllPayroll}
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    textAlign: 'left',
+                    border: 'none',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    color: '#ef4444',
+                    fontWeight: '500',
+                    borderTop: '1px solid #e5e7eb'
+                  }}
+                  onMouseOver={(e) => e.target.style.background = '#f3f4f6'}
+                  onMouseOut={(e) => e.target.style.background = 'transparent'}
+                >
+                  ✕ Stop All Payroll
+                </button>
+              </div>
+            )}
+          </div>
+          
+          <button 
+            className="btn-new-appointment" 
+            onClick={() => {
+              setPayrollMode('create');
+              setEditingInvoice(null);
+              setShowPayrollModal(true);
+            }}
+          >
+            + Process Payroll
+          </button>
+        </div>
       </div>
 
       {/* Filters Row */}
@@ -354,12 +530,19 @@ const Invoice = () => {
                   <td style={{ fontWeight: 600, color: '#28C76F' }}>{formatCurrency(invoice.paidAmount)}</td>
                   <td><StatusBadge status={invoice.status} /></td>
                   <td>
-                    <div className="action-buttons-group">
+                    <div className="action-buttons-group" style={{ gap: '6px' }}>
                       <button className="btn-action view" title="View" onClick={() => handleView(invoice)}>
                         <Icons.Eye />
                       </button>
                       <button className="btn-action edit" title="Edit" onClick={() => handleEdit(invoice)}>
                         <Icons.Edit />
+                      </button>
+                      <button 
+                        className="btn-action" 
+                        title="Copy to Next Month" 
+                        onClick={() => handleCopyToNextMonth(invoice)}
+                      >
+                        <MdArrowForward size={16} />
                       </button>
                       <button className="btn-action delete" title="Delete" onClick={() => handleDelete(invoice)}>
                         <Icons.Delete />
@@ -429,6 +612,41 @@ const Invoice = () => {
           onSubmit={handleFormSubmit}
         />
       )}
+
+      {/* Payroll Processing Modal */}
+      <PayrollModal
+        isOpen={showPayrollModal}
+        onClose={() => {
+          setShowPayrollModal(false);
+          setEditingInvoice(null);
+          setPayrollMode('create');
+        }}
+        onSubmit={handlePayrollSubmit}
+        staffList={staffList}
+        mode={payrollMode}
+        initialData={editingInvoice}
+      />
+
+      {/* Payroll View Modal */}
+      <PayrollViewModal
+        isOpen={showPayrollView}
+        onClose={() => {
+          setShowPayrollView(false);
+          setSelectedInvoice(null);
+        }}
+        payroll={selectedInvoice}
+      />
+
+      {/* Next Month Payroll Modal */}
+      <NextMonthPayrollModal
+        isOpen={showNextMonthModal}
+        onClose={() => {
+          setShowNextMonthModal(false);
+          setSelectedInvoice(null);
+        }}
+        onSubmit={handleNextMonthSubmit}
+        previousPayroll={selectedInvoice}
+      />
     </div>
   );
 };

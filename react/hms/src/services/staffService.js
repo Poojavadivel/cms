@@ -315,6 +315,59 @@ const downloadDoctorReport = async (doctorId) => {
 };
 
 /**
+ * Generate Staff ID based on department and designation
+ */
+const generateStaffId = async (department, designation) => {
+  try {
+    logger.apiRequest('POST', '/staff/generate-id', { department, designation });
+    const response = await api.post('/staff/generate-id', { department, designation });
+    logger.apiResponse('POST', '/staff/generate-id', response.status, response.data);
+    
+    return {
+      success: true,
+      patientFacingId: response.data?.patientFacingId || null,
+      message: response.data?.message || ''
+    };
+  } catch (error) {
+    logger.apiError('POST', '/staff/generate-id', error);
+    return {
+      success: false,
+      patientFacingId: null,
+      message: error.response?.data?.message || 'Failed to generate Staff ID'
+    };
+  }
+};
+
+/**
+ * Check if Staff ID is unique
+ */
+const checkStaffIdUnique = async (patientFacingId, excludeId = null) => {
+  try {
+    if (!patientFacingId || !patientFacingId.trim()) {
+      return { isUnique: false, message: 'Staff ID is required' };
+    }
+
+    const normalizedId = patientFacingId.trim().toUpperCase();
+    const url = `/staff/check-unique/${encodeURIComponent(normalizedId)}${excludeId ? `?excludeId=${excludeId}` : ''}`;
+    
+    logger.apiRequest('GET', url);
+    const response = await api.get(url);
+    logger.apiResponse('GET', url, response.status, response.data);
+    
+    return {
+      isUnique: response.data?.isUnique ?? false,
+      message: response.data?.message || ''
+    };
+  } catch (error) {
+    logger.apiError('GET', `/staff/check-unique/${patientFacingId}`, error);
+    return {
+      isUnique: false,
+      message: error.response?.data?.message || 'Failed to check Staff ID uniqueness'
+    };
+  }
+};
+
+/**
  * Find staff locally (no network)
  */
 const findLocalStaffById = (id) => {
@@ -347,6 +400,8 @@ const staffService = {
   deleteStaff,
   downloadStaffReport,
   downloadDoctorReport,
+  generateStaffId,
+  checkStaffIdUnique,
   findLocalStaffById,
   clearStaffCache,
   getCurrentStaff,

@@ -3,17 +3,44 @@
  * "Clean Focus Mode" Design - 2024
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   FiUser, FiCalendar,
   FiBriefcase, FiCheck, FiX, FiAlertCircle,
   FiArrowRight
 } from 'react-icons/fi';
+import staffService from '../../../services/staffService';
+
+// Move InputGroup outside to prevent re-creation on every render
+const InputGroup = ({ label, error, children, className = "" }) => (
+  <div className={`group relative ${className}`}>
+    <div className={`
+      relative bg-white border transition-all duration-200 rounded-lg overflow-hidden shadow-sm
+      ${error ? 'border-red-500/50 ring-1 ring-red-500/20' : 'border-slate-200 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500/30 hover:border-slate-300'}
+    `}>
+      <label className="block px-3 pt-2 pb-0 text-[10px] uppercase tracking-wider font-bold text-slate-400 transition-colors group-focus-within:text-blue-600 select-none">
+        {label}
+      </label>
+      <div className="px-3 pb-2">
+        {children}
+      </div>
+    </div>
+    {error && (
+      <div className="absolute top-2 right-2 text-red-500 pointer-events-none">
+        <FiAlertCircle size={14} />
+      </div>
+    )}
+    {error && (
+      <div className="text-xs text-red-500 mt-1 px-1">{error}</div>
+    )}
+  </div>
+);
 
 const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
+  const [isCheckingStaffId, setIsCheckingStaffId] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '', email: '', contact: '', gender: '', dob: '',
@@ -57,12 +84,112 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
   ];
 
   /* Constants */
-  const departments = ['General', 'Nursing', 'Administration', 'Support', 'Maintenance', 'Security', 'Reception', 'Laboratory', 'Other'];
-  const designations = ['Nurse', 'Lab Technician', 'Receptionist', 'Admin Staff', 'Cleaner', 'Security Guard', 'Support Staff', 'Other'];
+  // Departments - Functional areas/divisions of the hospital
+  const departments = [
+    'Nursing Department',
+    'Medical Department', 
+    'Laboratory & Pathology',
+    'Pharmacy',
+    'Administration',
+    'Housekeeping & Maintenance',
+    'Security',
+    'Reception & Front Desk',
+    'Support Services',
+    'Other'
+  ];
+  
+  // Designations - Job roles/positions
+  const designations = [
+    'Staff Nurse',
+    'Head Nurse',
+    'Nursing Assistant',
+    'Lab Technician',
+    'Lab Assistant',
+    'Pharmacist',
+    'Pharmacy Assistant',
+    'Receptionist',
+    'Front Desk Officer',
+    'Administrative Officer',
+    'Office Assistant',
+    'Accountant',
+    'HR Staff',
+    'Cleaner',
+    'Housekeeping Staff',
+    'Maintenance Technician',
+    'Electrician',
+    'Plumber',
+    'Security Guard',
+    'Security Supervisor',
+    'Driver',
+    'Peon',
+    'Ward Boy',
+    'Other'
+  ];
+  
   const shifts = ['Morning', 'Evening', 'Night', 'Rotational'];
   const statuses = ['Available', 'On Leave', 'Off Duty', 'Busy'];
 
   /* Validation & Handlers */
+  
+  // Auto-generate Staff ID when department or designation changes
+  useEffect(() => {
+    // Only auto-generate if:
+    // 1. We're creating a new staff (not editing)
+    // 2. Staff ID is empty
+    // 3. Department and designation are selected
+    if (!initial && !formData.patientFacingId.trim() && formData.department && formData.designation) {
+      const generateId = async () => {
+        try {
+          const result = await staffService.generateStaffId(formData.department, formData.designation);
+          if (result.success && result.patientFacingId) {
+            setFormData(prev => ({ ...prev, patientFacingId: result.patientFacingId }));
+          }
+        } catch (error) {
+          console.error('Error generating Staff ID:', error);
+        }
+      };
+      generateId();
+    }
+  }, [formData.department, formData.designation, initial, formData.patientFacingId]);
+  
+  // Debounced Staff ID uniqueness check
+  const checkStaffIdUniqueness = useCallback(async (staffId) => {
+    if (!staffId || !staffId.trim()) return;
+    
+    setIsCheckingStaffId(true);
+    try {
+      const result = await staffService.checkStaffIdUnique(staffId, initial?.id);
+      
+      if (!result.isUnique) {
+        setErrors(prev => ({
+          ...prev,
+          patientFacingId: result.message || 'Staff ID already exists'
+        }));
+      } else {
+        setErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors.patientFacingId;
+          return newErrors;
+        });
+      }
+    } catch (error) {
+      console.error('Error checking Staff ID:', error);
+    } finally {
+      setIsCheckingStaffId(false);
+    }
+  }, [initial?.id]);
+
+  // Debounce timer for Staff ID check
+  useEffect(() => {
+    if (!formData.patientFacingId || !formData.patientFacingId.trim()) return;
+    
+    const timer = setTimeout(() => {
+      checkStaffIdUniqueness(formData.patientFacingId);
+    }, 500); // Wait 500ms after user stops typing
+    
+    return () => clearTimeout(timer);
+  }, [formData.patientFacingId, checkStaffIdUniqueness]);
+  
   const validateStep = (step) => {
     const newErrors = {};
     if (step === 1) {
@@ -70,7 +197,13 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
       if (!formData.email.trim()) newErrors.email = 'Required';
       else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) newErrors.email = 'Invalid email format';
       if (!formData.contact.trim()) newErrors.contact = 'Required';
-      else if (!/^\+?[1-9]\d{1,14}$/.test(formData.contact.replace(/\s/g, ''))) newErrors.contact = 'Invalid phone format';
+      else {
+        // Remove spaces, dashes, parentheses for validation
+        const cleanedPhone = formData.contact.replace(/[\s\-()]/g, '');
+        if (!/^\+?[0-9]{7,15}$/.test(cleanedPhone)) {
+          newErrors.contact = 'Invalid phone format (7-15 digits)';
+        }
+      }
       if (!formData.gender) newErrors.gender = 'Required';
     }
     if (step === 2) {
@@ -134,32 +267,6 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
       setIsSubmitting(false); 
     }
   };
-
-  /* LIGHT THEME COMPONENTS */
-
-  const InputGroup = ({ label, error, children, className = "" }) => (
-    <div className={`group relative ${className}`}>
-      <div className={`
-        relative bg-white border transition-all duration-200 rounded-lg overflow-hidden shadow-sm
-        ${error ? 'border-red-500/50 ring-1 ring-red-500/20' : 'border-slate-200 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500/30 hover:border-slate-300'}
-      `}>
-        <label className="block px-3 pt-2 pb-0 text-[10px] uppercase tracking-wider font-bold text-slate-400 transition-colors group-focus-within:text-blue-600 select-none">
-          {label}
-        </label>
-        <div className="px-3 pb-2">
-          {children}
-        </div>
-      </div>
-      {error && (
-        <div className="absolute top-2 right-2 text-red-500 pointer-events-none">
-          <FiAlertCircle size={14} />
-        </div>
-      )}
-      {error && (
-        <div className="text-xs text-red-500 mt-1 px-1">{error}</div>
-      )}
-    </div>
-  );
 
   return (
     <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-[100] animate-in fade-in duration-200">
@@ -256,7 +363,6 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
                         maxLength={100}
                         className="w-full bg-transparent border-none py-1 px-0 text-slate-900 focus:outline-none focus:ring-0 placeholder-slate-300 font-medium" 
                         placeholder="e.g. Sarah Johnson" 
-                        autoFocus 
                         autoComplete="name"
                       />
                     </InputGroup>
@@ -280,11 +386,10 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
                         name="contact" 
                         value={formData.contact} 
                         onChange={handleChange} 
-                        pattern="^\+?[1-9]\d{1,14}$"
-                        title="Enter a valid phone number (e.g., +919876543210)"
+                        title="Enter a valid phone number with 7-15 digits (spaces and dashes allowed)"
                         maxLength={20}
                         className="w-full bg-transparent border-none py-1 px-0 text-slate-900 focus:outline-none focus:ring-0 placeholder-slate-300" 
-                        placeholder="+919876543210" 
+                        placeholder="+91 98765 43210" 
                         autoComplete="tel"
                       />
                     </InputGroup>
@@ -295,10 +400,9 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
                         name="emergencyContact" 
                         value={formData.emergencyContact} 
                         onChange={handleChange} 
-                        pattern="^\+?[1-9]\d{1,14}$"
                         maxLength={20}
                         className="w-full bg-transparent border-none py-1 px-0 text-slate-900 focus:outline-none focus:ring-0 placeholder-slate-300" 
-                        placeholder="+919876543211" 
+                        placeholder="+91 98765 43211" 
                         autoComplete="tel"
                       />
                     </InputGroup>
@@ -349,37 +453,10 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
                 <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-300 fade-in">
                   <div>
                     <h2 className="text-2xl font-bold text-slate-900">Professional Role</h2>
-                    <p className="text-slate-500">Define their position and access level (Non-medical staff only)</p>
+                    <p className="text-slate-500">Define their position and department. Staff will NOT receive login credentials.</p>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
-                    <InputGroup label="Staff ID *" error={errors.patientFacingId}>
-                      <input 
-                        name="patientFacingId" 
-                        value={formData.patientFacingId} 
-                        onChange={handleChange} 
-                        maxLength={20}
-                        style={{textTransform: 'uppercase'}}
-                        className="w-full bg-transparent border-none py-1 px-0 text-slate-900 font-mono focus:outline-none focus:ring-0 placeholder-slate-300" 
-                        placeholder="NUR001" 
-                        autoFocus 
-                        autoComplete="off"
-                      />
-                    </InputGroup>
-
-                    <InputGroup label="Experience (Years)">
-                      <input 
-                        type="number" 
-                        name="experienceYears" 
-                        value={formData.experienceYears} 
-                        onChange={handleChange} 
-                        min="0"
-                        max="50"
-                        className="w-full bg-transparent border-none py-1 px-0 text-slate-900 focus:outline-none focus:ring-0" 
-                        autoComplete="off"
-                      />
-                    </InputGroup>
-
                     <InputGroup label="Department *" error={errors.department} className="col-span-2">
                       <select 
                         name="department" 
@@ -402,6 +479,46 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
                         <option value="">Select Designation...</option>
                         {designations.map(d => <option key={d} value={d}>{d}</option>)}
                       </select>
+                    </InputGroup>
+
+                    <InputGroup label="Staff ID * (Auto-generated)" error={errors.patientFacingId}>
+                      <div className="relative">
+                        <input 
+                          name="patientFacingId" 
+                          value={formData.patientFacingId} 
+                          onChange={handleChange} 
+                          maxLength={20}
+                          readOnly={!initial}
+                          style={{textTransform: 'uppercase'}}
+                          className={`w-full bg-transparent border-none py-1 px-0 pr-6 text-slate-900 font-mono focus:outline-none focus:ring-0 placeholder-slate-300 ${!initial ? 'cursor-not-allowed opacity-75' : ''}`}
+                          placeholder={formData.department && formData.designation ? "Generating..." : "Select dept & role first"} 
+                          autoComplete="off"
+                          title={!initial ? "Staff ID is auto-generated based on department and designation" : "You can edit the Staff ID"}
+                        />
+                        {isCheckingStaffId && (
+                          <div className="absolute right-0 top-1/2 -translate-y-1/2">
+                            <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-500 border-t-transparent"></div>
+                          </div>
+                        )}
+                        {!isCheckingStaffId && formData.patientFacingId.trim() && !errors.patientFacingId && (
+                          <div className="absolute right-0 top-1/2 -translate-y-1/2 text-green-500">
+                            <FiCheck size={16} />
+                          </div>
+                        )}
+                      </div>
+                    </InputGroup>
+
+                    <InputGroup label="Experience (Years)">
+                      <input 
+                        type="number" 
+                        name="experienceYears" 
+                        value={formData.experienceYears} 
+                        onChange={handleChange} 
+                        min="0"
+                        max="50"
+                        className="w-full bg-transparent border-none py-1 px-0 text-slate-900 focus:outline-none focus:ring-0" 
+                        autoComplete="off"
+                      />
                     </InputGroup>
 
                     <InputGroup label="Qualifications" className="col-span-2">
@@ -459,7 +576,6 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
                         maxLength={100}
                         className="w-full bg-transparent border-none py-1 px-0 text-slate-900 focus:outline-none focus:ring-0 placeholder-slate-300" 
                         placeholder="Building A, Floor 2" 
-                        autoFocus 
                         autoComplete="off"
                       />
                     </InputGroup>

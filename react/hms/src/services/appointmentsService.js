@@ -6,7 +6,7 @@
  */
 
 import axios from 'axios';
-import { AppointmentEndpoints, PatientEndpoints, IntakeEndpoints } from './apiConstants';
+import { AppointmentEndpoints, PatientEndpoints, IntakeEndpoints, DoctorEndpoints } from './apiConstants';
 import logger from './loggerService';
 
 /**
@@ -305,6 +305,43 @@ export const addIntake = async (payload, patientId) => {
   }
 };
 
+/**
+ * Fetch all doctors
+ * @returns {Promise<Array>} List of doctors
+ */
+export const fetchDoctors = async () => {
+  try {
+    logger.apiRequest('GET', DoctorEndpoints.getAll);
+
+    const axiosInstance = createAxiosInstance();
+    const response = await axiosInstance.get(DoctorEndpoints.getAll);
+
+    logger.apiResponse('GET', DoctorEndpoints.getAll, response.status);
+
+    const doctors = Array.isArray(response.data)
+      ? response.data
+      : response.data.doctors || response.data.data || [];
+
+    const mappedDoctors = doctors.map(d => ({
+      id: d.id || d._id,
+      name: d.name || `${d.firstName || ''} ${d.lastName || ''}`.trim(),
+      firstName: d.firstName,
+      lastName: d.lastName,
+      email: d.email,
+      phone: d.phone,
+      specialization: d.specialization,
+      department: d.department,
+      role: d.role || 'doctor'
+    }));
+
+    logger.success('DOCTORS', `Fetched ${mappedDoctors.length} doctors`);
+    return mappedDoctors;
+  } catch (error) {
+    logger.apiError('GET', DoctorEndpoints.getAll, error);
+    throw new Error(error.response?.data?.message || 'Failed to fetch doctors');
+  }
+};
+
 const appointmentsService = {
   fetchAppointments,
   fetchAppointmentById,
@@ -315,7 +352,8 @@ const appointmentsService = {
   updateAppointmentStatus,
   fetchTodayAppointments,
   fetchUpcomingAppointments,
-  addIntake
+  addIntake,
+  fetchDoctors
 };
 
 export default appointmentsService;

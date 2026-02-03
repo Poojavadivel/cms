@@ -15,11 +15,14 @@ import {
 const EditAppointmentForm = ({ appointmentId, onClose, onUpdate, onDelete }) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [doctors, setDoctors] = useState([]);
 
   // Simplified form state matching New Appointment flow
   const [formData, setFormData] = useState({
     patientName: '',
     patientId: '',
+    doctorId: '',
+    doctorName: '',
     date: '',
     time: '',
     notes: '',
@@ -84,9 +87,26 @@ const EditAppointmentForm = ({ appointmentId, onClose, onUpdate, onDelete }) => 
         patientCode = data.patientId;
       }
 
+      // Doctor Details
+      let doctorId = '';
+      let doctorName = '';
+      if (data.doctorId && typeof data.doctorId === 'object') {
+        doctorId = data.doctorId._id || data.doctorId.id || '';
+        doctorName = data.doctorId.name || `${data.doctorId.firstName || ''} ${data.doctorId.lastName || ''}`.trim();
+      } else if (data.doctorId) {
+        doctorId = data.doctorId;
+        doctorName = data.doctorName || '';
+      }
+
+      // Load doctors list
+      const doctorsList = await appointmentsService.fetchDoctors();
+      setDoctors(doctorsList || []);
+
       setFormData({
         patientName: data.clientName || patientName,
         patientId: patientId,
+        doctorId: doctorId,
+        doctorName: doctorName,
         date,
         time,
         notes: data.notes || '',
@@ -116,11 +136,17 @@ const EditAppointmentForm = ({ appointmentId, onClose, onUpdate, onDelete }) => 
       alert('Date and Time are required');
       return;
     }
+    if (!formData.doctorId) {
+      alert('Doctor is required');
+      return;
+    }
 
     setSaving(true);
     try {
       // Build simple payload for update
       const payload = {
+        doctorId: formData.doctorId,
+        doctorName: formData.doctorName,
         date: formData.date,
         time: formData.time,
         reason: formData.chiefComplaint,
@@ -197,7 +223,7 @@ const EditAppointmentForm = ({ appointmentId, onClose, onUpdate, onDelete }) => 
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 font-sans">
-      <div className="bg-[#f8fafc] w-[95%] max-w-[800px] rounded-2xl shadow-2xl flex flex-col overflow-hidden max-h-[90vh]">
+      <div className="bg-[#f8fafc] w-[96%] h-[92vh] max-w-[1600px] rounded-2xl shadow-2xl flex flex-col overflow-hidden">
 
         {/* HEADER */}
         <div className="bg-[#1e3a8a] text-white px-8 py-6 flex justify-between items-center shrink-0">
@@ -222,6 +248,31 @@ const EditAppointmentForm = ({ appointmentId, onClose, onUpdate, onDelete }) => 
               <div className="grid grid-cols-2 gap-6">
                 <InputField label="Patient Name" value={formData.patientName} onChange={() => { }} disabled />
                 <InputField label="Patient ID" value={formData.patientCode} onChange={() => { }} disabled />
+              </div>
+            </FormSection>
+
+            {/* Doctor Selection */}
+            <FormSection icon={MdPerson} title="Assigned Doctor">
+              <div className="flex flex-col">
+                <label className="text-sm font-semibold text-gray-700 mb-2">
+                  Doctor <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={formData.doctorId}
+                  onChange={(e) => {
+                    const doctor = doctors.find(d => d.id === e.target.value);
+                    handleChange('doctorId', e.target.value);
+                    handleChange('doctorName', doctor ? doctor.name : '');
+                  }}
+                  className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                >
+                  <option value="">Select a doctor</option>
+                  {doctors.map(doc => (
+                    <option key={doc.id} value={doc.id}>
+                      {doc.name} - {doc.department || doc.specialization || 'General'}
+                    </option>
+                  ))}
+                </select>
               </div>
             </FormSection>
 

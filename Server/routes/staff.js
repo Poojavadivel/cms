@@ -71,7 +71,7 @@ function buildStaffPayload(body = {}) {
 }
 
 // ------------------------------
-// Generate next staff code (STF-###)
+// Generate next staff code (STF-###) for metadata
 // ------------------------------
 async function generateStaffCode() {
   const lastStaff = await Staff.findOne({ 'metadata.staffCode': { $exists: true } })
@@ -89,7 +89,56 @@ async function generateStaffCode() {
 }
 
 // ------------------------------
+// Generate unique patientFacingId based on department
+// ------------------------------
+async function generatePatientFacingId(department, designation) {
+  // Determine prefix based on department/designation
+  let prefix = 'STF'; // Default
+  
+  const deptLower = (department || '').toLowerCase();
+  const desigLower = (designation || '').toLowerCase();
+  
+  // Mapping for different staff types
+  if (desigLower.includes('nurse') || deptLower.includes('nursing')) {
+    prefix = 'NUR';
+  } else if (desigLower.includes('doctor') || desigLower.includes('physician') || deptLower.includes('medical')) {
+    prefix = 'DOC';
+  } else if (desigLower.includes('lab') || desigLower.includes('technician') || deptLower.includes('lab') || deptLower.includes('pathology')) {
+    prefix = 'LAB';
+  } else if (desigLower.includes('pharma') || deptLower.includes('pharma')) {
+    prefix = 'PHR';
+  } else if (desigLower.includes('admin') || desigLower.includes('reception') || desigLower.includes('front desk') || desigLower.includes('accountant') || desigLower.includes('hr') || deptLower.includes('admin') || deptLower.includes('reception')) {
+    prefix = 'ADM';
+  } else if (desigLower.includes('security') || deptLower.includes('security')) {
+    prefix = 'SEC';
+  } else if (desigLower.includes('clean') || desigLower.includes('housekeeping') || desigLower.includes('maintenance') || desigLower.includes('electrician') || desigLower.includes('plumber') || deptLower.includes('housekeeping') || deptLower.includes('maintenance')) {
+    prefix = 'MNT';
+  } else if (desigLower.includes('driver') || desigLower.includes('peon') || desigLower.includes('ward boy') || deptLower.includes('support')) {
+    prefix = 'SUP';
+  }
+  
+  // Find the last staff with this prefix
+  const regex = new RegExp(`^${prefix}-\\d+$`, 'i');
+  const lastStaff = await Staff.findOne({ patientFacingId: regex })
+    .sort({ patientFacingId: -1 })
+    .lean();
+  
+  let nextNumber = 1;
+  if (lastStaff && lastStaff.patientFacingId) {
+    const match = lastStaff.patientFacingId.match(new RegExp(`${prefix}-(\\d+)`, 'i'));
+    if (match) {
+      nextNumber = parseInt(match[1], 10) + 1;
+    }
+  }
+  
+  return `${prefix}-${String(nextNumber).padStart(3, '0')}`;
+}
+
+// ------------------------------
 // CREATE Staff
+// NOTE: This ONLY creates Staff records, NOT User accounts.
+// Staff members added here will NOT have login credentials.
+// To give staff login access, create a separate User record via /api/auth/register
 // ------------------------------
 router.post('/', auth, async (req, res) => {
   try {
@@ -103,20 +152,50 @@ router.post('/', auth, async (req, res) => {
       return res.status(400).json({ success: false, message: 'Missing required field: name', errorCode: 2006 });
     }
 
-    // Generate staff code
+    // Auto-generate patientFacingId if not provided
+    let patientFacingId = body.patientFacingId;
+    if (!patientFacingId || !patientFacingId.trim()) {
+      patientFacingId = await generatePatientFacingId(body.department, body.designation);
+      console.log('STAFF CREATE: auto-generated patientFacingId =', patientFacingId);
+    } else {
+      // If provided, check uniqueness
+      const normalizedId = patientFacingId.trim().toUpperCase();
+      const existing = await Staff.findOne({ patientFacingId: normalizedId }).lean();
+      if (existing) {
+        return res.status(400).json({ 
+          success: false, 
+          message: `Staff ID '${normalizedId}' already exists. Please use a different ID.`, 
+          errorCode: 2008,
+          field: 'patientFacingId'
+        });
+      }
+      patientFacingId = normalizedId;
+    }
+
+    // Generate staff code for metadata
     const staffCode = await generateStaffCode();
     console.log('STAFF CREATE: generated staffCode =', staffCode);
 
     const payload = buildStaffPayload(body);
+    payload.patientFacingId = patientFacingId; // Set the auto-generated or validated ID
     payload.metadata = payload.metadata || {};
     payload.metadata.staffCode = staffCode;
 
     const created = await Staff.create(payload);
-    console.log('STAFF CREATE: created staff id:', created._id);
+    console.log('STAFF CREATE: created staff id:', created._id, 'patientFacingId:', created.patientFacingId);
 
     return res.status(201).json({ success: true, staff: created });
   } catch (err) {
     console.error('STAFF CREATE error:', err);
+    // Handle MongoDB duplicate key error
+    if (err.code === 11000 && err.keyPattern && err.keyPattern.patientFacingId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Staff ID already exists. Please use a different ID.', 
+        errorCode: 2008,
+        field: 'patientFacingId'
+      });
+    }
     return res.status(500).json({ success: false, message: 'Failed to create staff', errorCode: 5000 });
   }
 });
@@ -179,11 +258,32 @@ router.get('/:id', auth, async (req, res) => {
 
 // ------------------------------
 // UPDATE Staff
+// NOTE: This ONLY updates Staff records, NOT User accounts.
+// User credentials must be managed separately via User endpoints.
 // ------------------------------
 router.put('/:id', auth, async (req, res) => {
   try {
     if (!requireAdmin(req, res)) return;
     const body = req.body || {};
+    
+    // Check if patientFacingId is being changed and ensure it's unique
+    if (body.patientFacingId) {
+      const normalizedId = body.patientFacingId.trim().toUpperCase();
+      const existing = await Staff.findOne({ 
+        patientFacingId: normalizedId,
+        _id: { $ne: req.params.id } // Exclude current staff from check
+      }).lean();
+      
+      if (existing) {
+        return res.status(400).json({ 
+          success: false, 
+          message: `Staff ID '${normalizedId}' already exists. Please use a different ID.`, 
+          errorCode: 2008,
+          field: 'patientFacingId'
+        });
+      }
+    }
+    
     const updatePayload = buildStaffPayload(body);
     if (updatePayload.metadata && Object.keys(updatePayload.metadata).length === 0) {
       delete updatePayload.metadata;
@@ -196,7 +296,39 @@ router.put('/:id', auth, async (req, res) => {
     return res.status(200).json({ success: true, staff: updated });
   } catch (err) {
     console.error('STAFF UPDATE error:', err);
+    // Handle MongoDB duplicate key error
+    if (err.code === 11000 && err.keyPattern && err.keyPattern.patientFacingId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Staff ID already exists. Please use a different ID.', 
+        errorCode: 2008,
+        field: 'patientFacingId'
+      });
+    }
     return res.status(500).json({ success: false, message: 'Failed to update staff', errorCode: 5003 });
+  }
+});
+
+// ------------------------------
+// GENERATE Staff ID Preview
+// ------------------------------
+router.post('/generate-id', auth, async (req, res) => {
+  try {
+    const { department, designation } = req.body;
+    const generatedId = await generatePatientFacingId(department, designation);
+    
+    return res.status(200).json({ 
+      success: true, 
+      patientFacingId: generatedId,
+      message: 'Staff ID generated successfully'
+    });
+  } catch (err) {
+    console.error('STAFF GENERATE ID error:', err);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Failed to generate Staff ID', 
+      errorCode: 5007 
+    });
   }
 });
 
@@ -219,6 +351,51 @@ router.patch('/:id/status', auth, async (req, res) => {
   } catch (err) {
     console.error('STAFF STATUS error:', err);
     return res.status(500).json({ success: false, message: 'Failed to update staff status', errorCode: 5004 });
+  }
+});
+
+// ------------------------------
+// CHECK Staff ID Uniqueness
+// ------------------------------
+router.get('/check-unique/:patientFacingId', auth, async (req, res) => {
+  try {
+    const { patientFacingId } = req.params;
+    const { excludeId } = req.query; // Optional: exclude a specific staff ID when editing
+    
+    if (!patientFacingId || !patientFacingId.trim()) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Staff ID is required',
+        isUnique: false
+      });
+    }
+
+    const normalizedId = patientFacingId.trim().toUpperCase();
+    
+    const filter = { 
+      patientFacingId: normalizedId 
+    };
+    
+    // When editing, exclude the current staff member from the check
+    if (excludeId) {
+      filter._id = { $ne: excludeId };
+    }
+
+    const existing = await Staff.findOne(filter).lean();
+    
+    return res.status(200).json({ 
+      success: true, 
+      isUnique: !existing,
+      message: existing ? 'Staff ID already exists' : 'Staff ID is available'
+    });
+  } catch (err) {
+    console.error('STAFF CHECK UNIQUE error:', err);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Failed to check staff ID uniqueness', 
+      errorCode: 5006,
+      isUnique: false
+    });
   }
 });
 

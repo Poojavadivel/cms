@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import appointmentsService from '../../../../services/appointmentsService';
-import './NewAppointmentForm.css'; // We'll create this for custom overrides
+import './NewAppointmentForm.css';
 // --- ICONS ---
 const Icons = {
   Search: () => (
@@ -40,6 +40,13 @@ const Icons = {
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <line x1="18" y1="6" x2="6" y2="18"></line>
       <line x1="6" y1="6" x2="18" y2="18"></line>
+    </svg>
+  ),
+  Stethoscope: () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4.8 2.3A.3.3 0 1 0 5 2H4a2 2 0 0 0-2 2v5a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6V4a2 2 0 0 0-2-2h-1a.2.2 0 1 0 .3.3"></path>
+      <path d="M8 15v1a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6v-4"></path>
+      <circle cx="20" cy="10" r="2"></circle>
     </svg>
   ),
   Note: () => (
@@ -208,6 +215,8 @@ const NewAppointmentForm = ({ onClose, onSave, initialPatient }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [reason, setReason] = useState('');
   const [notes, setNotes] = useState('');
+  const [doctors, setDoctors] = useState([]);
+  const [selectedDoctor, setSelectedDoctor] = useState(null);
   // Date/Time State
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedTime, setSelectedTime] = useState('09:00'); // Default 9 AM
@@ -228,6 +237,10 @@ const NewAppointmentForm = ({ onClose, onSave, initialPatient }) => {
       }));
       setPatients(mappedPatients);
       setFilteredPatients(mappedPatients);
+
+      // Load doctors
+      const doctorsList = await appointmentsService.fetchDoctors();
+      setDoctors(doctorsList || []);
     } catch (error) {
       console.error('Failed to load patients:', error);
     } finally {
@@ -257,6 +270,7 @@ const NewAppointmentForm = ({ onClose, onSave, initialPatient }) => {
   };
   const handleSubmit = async () => {
     if (!selectedPatient) return alert('Please select a patient');
+    if (!selectedDoctor) return alert('Please select a doctor');
     if (!reason.trim()) return alert('Please enter a reason');
     setIsSaving(true);
     try {
@@ -264,6 +278,8 @@ const NewAppointmentForm = ({ onClose, onSave, initialPatient }) => {
       const payload = {
         patientId: selectedPatient.id,
         clientName: selectedPatient.name,
+        doctorId: selectedDoctor.id,
+        doctorName: selectedDoctor.name,
         date: new Date(dateStr + 'T' + selectedTime),
         time: selectedTime,
         appointmentType: 'Consultation',
@@ -385,26 +401,58 @@ const NewAppointmentForm = ({ onClose, onSave, initialPatient }) => {
                 </div>
               </div>
             </div>
-            <h3 className="section-title">Appointment Details</h3>
+            
+            <h3 className="section-title">
+              <Icons.Stethoscope />
+              Assigned Doctor
+            </h3>
+            <div className="form-group">
+              <label>Select Doctor *</label>
+              <div className="doctor-select-wrapper">
+                <select
+                  value={selectedDoctor?.id || ''}
+                  onChange={(e) => {
+                    const doctor = doctors.find(d => d.id === e.target.value);
+                    setSelectedDoctor(doctor);
+                  }}
+                  disabled={!selectedPatient}
+                  className="modern-select"
+                >
+                  <option value="">Choose a doctor</option>
+                  {doctors.map(doc => (
+                    <option key={doc.id} value={doc.id}>
+                      Dr. {doc.name} {doc.department ? `• ${doc.department}` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <h3 className="section-title">
+              <Icons.Note />
+              Appointment Details
+            </h3>
             <div className="form-group">
               <label>Reason / Chief Complaint *</label>
               <div className="input-with-icon">
-                <Icons.Note />
                 <input
                   type="text"
                   value={reason}
                   onChange={e => setReason(e.target.value)}
+                  placeholder="E.g., Routine check-up, Follow-up consultation..."
+                  disabled={!selectedPatient}
                 />
               </div>
             </div>
             <div className="form-group">
               <label>Clinical Notes (Optional)</label>
               <div className="input-with-icon top-align">
-                <Icons.Note />
                 <textarea
                   rows={3}
                   value={notes}
                   onChange={e => setNotes(e.target.value)}
+                  placeholder="Additional notes or observations..."
+                  disabled={!selectedPatient}
                 />
               </div>
             </div>

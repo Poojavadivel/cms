@@ -340,6 +340,17 @@ router.put('/:id', auth, async (req, res) => {
       metadata: data.metadata ?? appointment.metadata,
     };
 
+    // Update simple fields for editing
+    if (data.date && data.time) {
+      updateObj.startAt = new Date(`${data.date}T${data.time}`);
+    }
+    if (data.reason) {
+      updateObj.reason = data.reason;
+    }
+    if (data.chiefComplaint) {
+      updateObj.chiefComplaint = data.chiefComplaint;
+    }
+
     // Handle follow-up data from intake form
     if (data.followUp && typeof data.followUp === 'object') {
       updateObj.followUp = {
@@ -359,6 +370,9 @@ router.put('/:id', auth, async (req, res) => {
 
     if ((role === 'admin' || role === 'superadmin') && data.doctorId) {
       updateObj.doctorId = data.doctorId;
+    }
+    if (data.doctorName) {
+      updateObj.doctorName = data.doctorName;
     }
 
     const updated = await Appointment.findByIdAndUpdate(req.params.id, updateObj, { new: true, runValidators: true })

@@ -22,15 +22,8 @@ export {
   AbnormalFlag 
 } from './PatientVitals';
 
-// Staff and Payroll models
+// Staff models
 export { Staff } from './Staff';
-export { 
-  Payroll, 
-  SalaryComponent, 
-  AttendanceSummary, 
-  StatutoryCompliance, 
-  LoanAdvance 
-} from './Payroll';
 
 // Appointment models
 export { AppointmentDraft } from './AppointmentDraft';

@@ -25,10 +25,16 @@ const emailValidator = {
 const phoneValidator = {
   validator: function (v) {
     if (v === null || v === undefined || v === '') return true; // allow null/empty for optional phones
+    // Remove spaces, dashes, and parentheses for validation
+    const cleaned = v.replace(/[\s\-()]/g, '');
     // allow optional leading + and 7-15 digits
-    return /^\+?[0-9]{7,15}$/.test(v);
+    // Also allow 0000... patterns for testing (will be cleaned by pre-save)
+    return /^\+?[0-9]{7,15}$/.test(cleaned);
   },
-  message: props => `${props.value} is not a valid phone number`
+  message: props => {
+    const cleaned = (props.value || '').replace(/[\s\-()]/g, '');
+    return `${props.value} is not a valid phone number (cleaned: ${cleaned})`;
+  }
 };
 
 module.exports = {

@@ -278,6 +278,30 @@ router.get('/', auth, async (req, res) => {
 });
 
 // ------------------------------
+// GET Payroll History by Staff ID
+// NOTE: This MUST come BEFORE /:id route to avoid route collision
+// ------------------------------
+router.get('/staff/:staffId', auth, async (req, res) => {
+  try {
+    const { staffId } = req.params;
+    
+    console.log('📋 Fetching payroll history for staff:', staffId);
+    
+    // Find all payroll records for this staff
+    const payrolls = await Payroll.find({ staffId })
+      .sort({ payPeriodYear: -1, payPeriodMonth: -1 }) // Most recent first
+      .lean();
+    
+    console.log('📋 Found', payrolls.length, 'payroll records');
+    
+    return res.status(200).json(payrolls);
+  } catch (err) {
+    console.error('PAYROLL HISTORY error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to fetch payroll history', errorCode: 5002 });
+  }
+});
+
+// ------------------------------
 // GET Payroll by ID
 // ------------------------------
 router.get('/:id', auth, async (req, res) => {

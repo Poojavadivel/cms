@@ -22,9 +22,6 @@ export { default as Pathology } from './pathology/Pathology';
 // Invoice Management
 export { default as Invoice } from './invoice/Invoice';
 
-// Payroll Management
-export { default as Payroll } from './payroll/Payroll';
-
 // Settings
 export { default as Settings } from './settings/Settings';
 

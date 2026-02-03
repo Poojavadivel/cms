@@ -5,14 +5,28 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { FiX, FiUser, FiUpload, FiSave, FiArrowRight, FiCheck } from 'react-icons/fi';
+import { FiX, FiUser, FiUpload, FiSave, FiArrowRight, FiCheck, FiSearch } from 'react-icons/fi';
 import { MdOutlineScience, MdOutlineNoteAlt } from 'react-icons/md';
+import { fetchPatients } from '../../../services/patientsService';
+import { fetchAllDoctors } from '../../../services/doctorService';
 
 const PathologyFormEnterprise = ({ initial, onSubmit, onCancel }) => {
   // Multi-step form states
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
+  
+  // Patient search states
+  const [patientSearchQuery, setPatientSearchQuery] = useState('');
+  const [patientSearchResults, setPatientSearchResults] = useState([]);
+  const [isSearchingPatients, setIsSearchingPatients] = useState(false);
+  const [showPatientDropdown, setShowPatientDropdown] = useState(false);
+  const [selectedPatientIndex, setSelectedPatientIndex] = useState(-1);
+  const [patientSelected, setPatientSelected] = useState(false);
+
+  // Doctor states
+  const [doctors, setDoctors] = useState([]);
+  const [isLoadingDoctors, setIsLoadingDoctors] = useState(false);
 
   // Form data
   const [formData, setFormData] = useState({
@@ -57,8 +71,166 @@ const PathologyFormEnterprise = ({ initial, onSubmit, onCancel }) => {
         testResults: initial.testResults || initial.results || [],
         results: initial.results || {},
       });
+      setPatientSearchQuery(initial.patientName || '');
+      setPatientSelected(true);
+    } else {
+      // Load all available patients on mount for new form
+      loadAvailablePatients();
     }
+    
+    // Load doctors on mount
+    loadDoctors();
   }, [initial]);
+
+  // Load doctors from API
+  const loadDoctors = async () => {
+    try {
+      setIsLoadingDoctors(true);
+      const doctorsList = await fetchAllDoctors();
+      setDoctors(doctorsList);
+      console.log('✅ Loaded doctors:', doctorsList.length);
+    } catch (error) {
+      console.error('❌ Error loading doctors:', error);
+      setDoctors([]);
+    } finally {
+      setIsLoadingDoctors(false);
+    }
+  };
+
+  // Load available patients on mount
+  const loadAvailablePatients = async () => {
+    try {
+      setIsSearchingPatients(true);
+      const results = await fetchPatients({ limit: 50 }); // Load first 50 patients
+      setPatientSearchResults(results);
+      setShowPatientDropdown(true);
+    } catch (error) {
+      console.error('Error loading patients:', error);
+      setPatientSearchResults([]);
+    } finally {
+      setIsSearchingPatients(false);
+    }
+  };
+
+  // Search patients with debounce
+  useEffect(() => {
+    // Skip search if patient is already selected
+    if (patientSelected) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      if (patientSearchQuery && patientSearchQuery.length >= 2 && !initial) {
+        searchPatients(patientSearchQuery);
+      } else if (!patientSearchQuery && !initial) {
+        // Show all patients when search is empty
+        loadAvailablePatients();
+      } else {
+        setPatientSearchResults([]);
+        setShowPatientDropdown(false);
+      }
+      setSelectedPatientIndex(-1); // Reset selection on search
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [patientSearchQuery, initial, patientSelected]);
+
+  const searchPatients = async (query) => {
+    try {
+      setIsSearchingPatients(true);
+      const results = await fetchPatients({ q: query, limit: 10 });
+      setPatientSearchResults(results);
+      setShowPatientDropdown(true);
+    } catch (error) {
+      console.error('Error searching patients:', error);
+      setPatientSearchResults([]);
+    } finally {
+      setIsSearchingPatients(false);
+    }
+  };
+
+  const selectPatient = (patient) => {
+    console.log('Selecting patient:', patient);
+    console.log('Patient object keys:', Object.keys(patient));
+    console.log('Patient.patientId:', patient.patientId);
+    console.log('Patient.id:', patient.id);
+    console.log('Patient._id:', patient._id);
+    
+    const fullName = `${patient.firstName || ''} ${patient.lastName || ''}`.trim() || patient.name || '';
+    // Try all possible ID fields
+    const patientId = patient.patientId || patient.id || patient._id || '';
+    const patientCode = patient.patientCode || patient.code || '';
+    
+    console.log('Extracted values:', { patientId, patientCode, fullName });
+    
+    if (!patientId) {
+      console.error('❌ No patient ID found! Patient object:', JSON.stringify(patient, null, 2));
+    }
+    
+    // Update form data synchronously
+    setFormData(prev => ({
+      ...prev,
+      patientId: patientId,
+      patientCode: patientCode,
+      patientName: fullName,
+    }));
+    
+    setPatientSearchQuery(fullName);
+    setPatientSelected(true);
+    setShowPatientDropdown(false);
+    setPatientSearchResults([]);
+    setSelectedPatientIndex(-1);
+    
+    // Clear any errors
+    setErrors(prev => {
+      const newErrors = { ...prev };
+      delete newErrors.patientName;
+      delete newErrors.patientId;
+      return newErrors;
+    });
+    
+    console.log('Patient selection completed with ID:', patientId);
+  };
+
+  // Handle keyboard navigation
+  const handleKeyDown = (e) => {
+    if (!showPatientDropdown || patientSearchResults.length === 0) {
+      // If dropdown is not shown, don't prevent default Enter behavior
+      return;
+    }
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setSelectedPatientIndex(prev => 
+          prev < patientSearchResults.length - 1 ? prev + 1 : prev
+        );
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setSelectedPatientIndex(prev => prev > 0 ? prev - 1 : 0);
+        break;
+      case 'Enter':
+        // Prevent form submission and next button
+        e.preventDefault();
+        e.stopPropagation();
+        
+        if (selectedPatientIndex >= 0 && selectedPatientIndex < patientSearchResults.length) {
+          selectPatient(patientSearchResults[selectedPatientIndex]);
+        } else if (patientSearchResults.length > 0) {
+          // If no selection, select first result on Enter
+          selectPatient(patientSearchResults[0]);
+        }
+        break;
+      case 'Escape':
+        e.preventDefault();
+        setShowPatientDropdown(false);
+        setSelectedPatientIndex(-1);
+        break;
+      default:
+        break;
+    }
+  };
 
   // Form steps configuration
   const steps = [
@@ -107,16 +279,36 @@ const PathologyFormEnterprise = ({ initial, onSubmit, onCancel }) => {
     const newErrors = {};
 
     if (step === 1) {
-      if (!formData.patientId.trim()) newErrors.patientId = 'Patient ID is required';
-      if (!formData.patientName.trim()) newErrors.patientName = 'Patient name is required';
+      console.log('Validating step 1, formData:', formData);
+      console.log('patientId:', formData.patientId);
+      console.log('patientName:', formData.patientName);
+      console.log('patientSelected flag:', patientSelected);
+      
+      // Check if patient is actually selected (has ID)
+      if (!formData.patientId || (typeof formData.patientId === 'string' && formData.patientId.trim() === '')) {
+        newErrors.patientName = 'Please search and select a patient from the list';
+        console.log('Patient validation failed - no patientId');
+      }
+      
+      if (!formData.patientName || (typeof formData.patientName === 'string' && formData.patientName.trim() === '')) {
+        newErrors.patientName = 'Please search and select a patient from the list';
+        console.log('Patient validation failed - no patientName');
+      }
     }
 
     if (step === 2) {
-      if (!formData.testName.trim()) newErrors.testName = 'Test name is required';
-      if (!formData.testType.trim()) newErrors.testType = 'Test type is required';
-      if (!formData.collectionDate) newErrors.collectionDate = 'Collection date is required';
+      if (!formData.testName || !formData.testName.trim()) {
+        newErrors.testName = 'Test name is required';
+      }
+      if (!formData.testType || !formData.testType.trim()) {
+        newErrors.testType = 'Test type is required';
+      }
+      if (!formData.collectionDate) {
+        newErrors.collectionDate = 'Collection date is required';
+      }
     }
 
+    console.log('Validation errors:', newErrors);
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -168,7 +360,16 @@ const PathologyFormEnterprise = ({ initial, onSubmit, onCancel }) => {
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white shadow-2xl w-full max-h-[92vh] overflow-hidden flex flex-col" style={{ maxWidth: window.innerWidth >= 1200 ? '1980px' : '96vw', borderRadius: '12px' }}>
+      <div 
+        className="bg-white shadow-2xl overflow-hidden flex flex-col" 
+        style={{ 
+          width: '95%',
+          maxWidth: '1200px',
+          height: '90vh',
+          maxHeight: '850px',
+          borderRadius: '20px'
+        }}
+      >
 
         {/* Header */}
         <div className="bg-gradient-to-r from-emerald-600 to-teal-600 px-8 py-6">
@@ -242,45 +443,120 @@ const PathologyFormEnterprise = ({ initial, onSubmit, onCancel }) => {
                     </div>
                     <div>
                       <h3 className="text-lg font-bold text-gray-800">Patient Information</h3>
-                      <p className="text-sm text-gray-600">Enter patient details</p>
+                      <p className="text-sm text-gray-600">Search and select patient</p>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Patient ID */}
-                    <div>
+                  <div className="grid grid-cols-1 gap-6">
+                    {/* Patient Search with Dropdown */}
+                    <div className="relative">
                       <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Patient ID <span className="text-red-500">*</span>
+                        Search Patient <span className="text-red-500">*</span>
                       </label>
-                      <input
-                        type="text"
-                        name="patientId"
-                        value={formData.patientCode || formData.patientId}
-                        onChange={handleChange}
-                        placeholder="Enter patient ID"
-                        readOnly={!!initial}
-                        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${errors.patientId ? 'border-red-500' : 'border-gray-300'
+                      <div className="relative">
+                        <FiSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                        <input
+                          type="text"
+                          value={patientSearchQuery}
+                          onChange={(e) => {
+                            setPatientSearchQuery(e.target.value);
+                            if (!e.target.value) {
+                              setFormData(prev => ({
+                                ...prev,
+                                patientId: '',
+                                patientCode: '',
+                                patientName: ''
+                              }));
+                              setPatientSelected(false);
+                            } else {
+                              // When user types, allow searching again
+                              setPatientSelected(false);
+                            }
+                          }}
+                          onKeyDown={handleKeyDown}
+                          onFocus={() => {
+                            if (!initial) {
+                              if (patientSearchQuery.length >= 2 && patientSearchResults.length > 0) {
+                                setShowPatientDropdown(true);
+                              } else if (!patientSearchQuery) {
+                                loadAvailablePatients();
+                              }
+                            }
+                          }}
+                          placeholder="Type patient name or ID to search... (Press Enter to select)"
+                          readOnly={!!initial}
+                          className={`w-full pl-12 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
+                            errors.patientName ? 'border-red-500' : 'border-gray-300'
                           } ${initial ? 'bg-gray-100 cursor-not-allowed' : ''}`}
-                      />
-                      {errors.patientId && <p className="text-red-500 text-xs mt-1">{errors.patientId}</p>}
+                        />
+                        {isSearchingPatients && (
+                          <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
+                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-emerald-600"></div>
+                          </div>
+                        )}
+                      </div>
+                      {errors.patientName && <p className="text-red-500 text-xs mt-1">{errors.patientName}</p>}
+                      
+                      {/* Search Results Dropdown */}
+                      {showPatientDropdown && patientSearchResults.length > 0 && !initial && (
+                        <div 
+                          className="absolute w-full mt-2 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto"
+                          style={{ zIndex: 9999 }}
+                        >
+                          {patientSearchResults.map((patient, index) => (
+                            <div
+                              key={patient.id || patient._id}
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                selectPatient(patient);
+                              }}
+                              onMouseEnter={() => setSelectedPatientIndex(index)}
+                              className={`px-4 py-3 cursor-pointer border-b border-gray-100 last:border-b-0 transition-colors ${
+                                index === selectedPatientIndex 
+                                  ? 'bg-emerald-100 border-l-4 border-l-emerald-600' 
+                                  : 'hover:bg-emerald-50'
+                              }`}
+                            >
+                              <div className="font-semibold text-gray-800">
+                                {patient.firstName} {patient.lastName}
+                              </div>
+                              <div className="text-sm text-gray-600">
+                                Code: {patient.patientCode || patient.code || 'N/A'} • 
+                                {patient.gender ? ` ${patient.gender}` : ''} • 
+                                {patient.age ? ` Age: ${patient.age}` : ''}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      
+                      {/* No results message */}
+                      {showPatientDropdown && patientSearchResults.length === 0 && !isSearchingPatients && patientSearchQuery.length >= 2 && (
+                        <div 
+                          className="absolute w-full mt-2 bg-white border border-gray-200 rounded-lg shadow-lg p-4"
+                          style={{ zIndex: 9999 }}
+                        >
+                          <p className="text-gray-600 text-sm text-center">No patients found</p>
+                        </div>
+                      )}
                     </div>
 
-                    {/* Patient Name */}
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Patient Name <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        name="patientName"
-                        value={formData.patientName}
-                        onChange={handleChange}
-                        placeholder="Enter patient name"
-                        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${errors.patientName ? 'border-red-500' : 'border-gray-300'
-                          }`}
-                      />
-                      {errors.patientName && <p className="text-red-500 text-xs mt-1">{errors.patientName}</p>}
-                    </div>
+                    {/* Display Selected Patient Info */}
+                    {formData.patientId && (
+                      <div className="bg-white border border-emerald-200 rounded-lg p-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center">
+                            <FiUser className="text-emerald-600" size={24} />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-gray-800">{formData.patientName}</p>
+                            <p className="text-sm text-gray-600">
+                              Patient Code: {formData.patientCode || formData.patientId}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -430,19 +706,31 @@ const PathologyFormEnterprise = ({ initial, onSubmit, onCancel }) => {
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Doctor Name */}
+                    {/* Doctor Name - Changed to Dropdown */}
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">
                         Referring Doctor
                       </label>
-                      <input
-                        type="text"
-                        name="doctorName"
-                        value={formData.doctorName}
-                        onChange={handleChange}
-                        placeholder="Enter doctor name"
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
-                      />
+                      {isLoadingDoctors ? (
+                        <div className="w-full px-4 py-3 border border-gray-300 rounded-lg flex items-center gap-2 text-gray-500">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-emerald-600"></div>
+                          Loading doctors...
+                        </div>
+                      ) : (
+                        <select
+                          name="doctorName"
+                          value={formData.doctorName}
+                          onChange={handleChange}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                        >
+                          <option value="">Select a doctor</option>
+                          {doctors.map((doctor) => (
+                            <option key={doctor.id} value={doctor.name}>
+                              {doctor.name} - {doctor.specialization}
+                            </option>
+                          ))}
+                        </select>
+                      )}
                     </div>
 
                     {/* Technician */}
@@ -550,16 +838,28 @@ const PathologyFormEnterprise = ({ initial, onSubmit, onCancel }) => {
             {currentStep === 1 ? 'Cancel' : 'Back'}
           </button>
 
-          {currentStep < 4 ? (
-            <button
-              type="button"
-              onClick={handleNext}
-              className="flex items-center gap-2 px-6 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium shadow-lg shadow-emerald-500/30"
-            >
-              Next
-              <FiArrowRight size={18} />
-            </button>
-          ) : (
+          <div className="flex items-center gap-3">
+            {/* Skip button for step 3 */}
+            {currentStep === 3 && (
+              <button
+                type="button"
+                onClick={() => setCurrentStep(4)}
+                className="flex items-center gap-2 px-6 py-2.5 text-emerald-600 bg-white border border-emerald-600 rounded-lg hover:bg-emerald-50 transition-colors font-medium"
+              >
+                Skip
+              </button>
+            )}
+
+            {currentStep < 4 ? (
+              <button
+                type="button"
+                onClick={handleNext}
+                className="flex items-center gap-2 px-6 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium shadow-lg shadow-emerald-500/30"
+              >
+                Next
+                <FiArrowRight size={18} />
+              </button>
+            ) : (
             <button
               type="submit"
               onClick={handleSubmit}
@@ -578,7 +878,8 @@ const PathologyFormEnterprise = ({ initial, onSubmit, onCancel }) => {
                 </>
               )}
             </button>
-          )}
+            )}
+          </div>
         </div>
       </div>
 

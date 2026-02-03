@@ -95,21 +95,6 @@ export const StaffEndpoints = {
 };
 
 /**
- * Payroll endpoints
- */
-export const PayrollEndpoints = {
-  getAll: `${API_BASE_URL}/payroll`,
-  getById: (id) => `${API_BASE_URL}/payroll/${id}`,
-  create: `${API_BASE_URL}/payroll`,
-  update: (id) => `${API_BASE_URL}/payroll/${id}`,
-  delete: (id) => `${API_BASE_URL}/payroll/${id}`,
-  getByStaff: (staffId) => `${API_BASE_URL}/payroll/staff/${staffId}`,
-  approve: (id) => `${API_BASE_URL}/payroll/${id}/approve`,
-  reject: (id) => `${API_BASE_URL}/payroll/${id}/reject`,
-  process: (id) => `${API_BASE_URL}/payroll/${id}/process`,
-};
-
-/**
  * Pharmacy endpoints
  */
 export const PharmacyEndpoints = {
@@ -244,7 +229,6 @@ const apiConstants = {
   AppointmentEndpoints,
   DoctorEndpoints,
   StaffEndpoints,
-  PayrollEndpoints,
   PharmacyEndpoints,
   PathologyEndpoints,
   DashboardEndpoints,

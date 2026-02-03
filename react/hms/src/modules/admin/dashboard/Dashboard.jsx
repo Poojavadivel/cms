@@ -6,28 +6,164 @@ import {
 } from 'recharts';
 import 'react-calendar/dist/Calendar.css';
 import './Dashboard.css';
+import { fetchAppointments } from '../../../services/appointmentsService';
+import { fetchPatients } from '../../../services/patientsService';
+import staffService from '../../../services/staffService';
+import DashboardService from './DashboardService';
 
 const AdminDashboard = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [revenueTab, setRevenueTab] = useState(0);
   const [selectedDay, setSelectedDay] = useState(new Date());
+  const [upcomingAppointments, setUpcomingAppointments] = useState([]);
+  const [appointmentsLoading, setAppointmentsLoading] = useState(true);
 
   useEffect(() => {
     loadDashboardData();
+    loadAppointments();
   }, []);
 
   const loadDashboardData = async () => {
     setLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    setData({
-      invoice: 1287,
-      patients: 965,
-      appointments: 128,
-      beds: 315,
-    });
-    setLoading(false);
+    try {
+      // Fetch real data from APIs in parallel
+      const [patientsData, staffData, statsData] = await Promise.all([
+        fetchPatients({ limit: 1000 }).catch(() => []),
+        staffService.fetchStaffs().catch(() => []),
+        DashboardService.getStats().catch(() => null)
+      ]);
+      
+      // Count patients
+      const patientCount = Array.isArray(patientsData) 
+        ? patientsData.length 
+        : (patientsData?.patients?.length || 0);
+      
+      // Count staff/beds (you can adjust this logic)
+      const staffCount = Array.isArray(staffData) 
+        ? staffData.length 
+        : (staffData?.staff?.length || 0);
+      
+      // Get stats from dashboard service or use calculated values
+      const stats = statsData?.data || statsData || {};
+      
+      setData({
+        invoice: stats.totalInvoices || stats.invoices || 0,
+        patients: stats.totalPatients || patientCount,
+        appointments: stats.totalAppointments || 0, // Will be updated by loadAppointments
+        beds: stats.totalBeds || stats.beds || staffCount || 0,
+      });
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+      // Set default values on error
+      setData({
+        invoice: 0,
+        patients: 0,
+        appointments: 0,
+        beds: 0,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadAppointments = async () => {
+    try {
+      setAppointmentsLoading(true);
+      const appointments = await fetchAppointments();
+      
+      // Filter for today and upcoming appointments
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const upcoming = appointments
+        .filter(apt => {
+          const aptDate = new Date(apt.date || apt.startAt);
+          return aptDate >= today;
+        })
+        .sort((a, b) => {
+          const dateA = new Date(a.date || a.startAt);
+          const dateB = new Date(b.date || b.startAt);
+          return dateA - dateB;
+        })
+        .slice(0, 10) // Get top 10
+        .map(apt => {
+          // Extract patient info
+          let patientName = '';
+          let gender = '';
+          
+          if (apt.patientId && typeof apt.patientId === 'object') {
+            const p = apt.patientId;
+            patientName = `${p.firstName || ''} ${p.lastName || ''}`.trim();
+            gender = p.gender || '';
+          } else if (typeof apt.patientId === 'string') {
+            patientName = apt.clientName || '';
+          }
+          
+          // Fallback to direct fields
+          if (!patientName) {
+            patientName = apt.clientName || apt.patientName || 'Unknown Patient';
+          }
+          
+          // Check appointment metadata for gender
+          if (!gender && apt.metadata && typeof apt.metadata === 'object') {
+            gender = apt.metadata.gender || '';
+          }
+          
+          // Extract doctor info
+          let doctorName = '';
+          if (apt.doctorId && typeof apt.doctorId === 'object') {
+            const d = apt.doctorId;
+            doctorName = `Dr. ${d.firstName || ''} ${d.lastName || ''}`.trim();
+          } else if (typeof apt.doctorId === 'string') {
+            doctorName = apt.doctorId;
+          } else if (apt.doctorName) {
+            doctorName = apt.doctorName;
+          } else if (apt.doctor) {
+            doctorName = apt.doctor;
+          }
+          
+          if (!doctorName || doctorName === 'Dr. ') {
+            doctorName = 'Unknown Doctor';
+          }
+          
+          return {
+            name: patientName,
+            doctor: doctorName,
+            time: apt.time || formatTime(apt.startAt),
+            status: apt.status || 'Scheduled',
+            gender: gender || 'Male',
+            id: apt._id || apt.id
+          };
+        });
+      
+      setUpcomingAppointments(upcoming);
+      
+      // Update dashboard stats with real appointment count
+      setData(prevData => ({
+        ...prevData,
+        appointments: appointments.length
+      }));
+    } catch (error) {
+      console.error('Error loading appointments:', error);
+      setUpcomingAppointments([]);
+    } finally {
+      setAppointmentsLoading(false);
+    }
+  };
+
+  const formatTime = (dateStr) => {
+    if (!dateStr) return 'N/A';
+    try {
+      const date = new Date(dateStr);
+      return date.toLocaleTimeString('en-US', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        hour12: true 
+      });
+    } catch {
+      return 'N/A';
+    }
   };
 
   const patientOverviewData = [
@@ -78,19 +214,6 @@ const AdminDashboard = () => {
     if (revenueTab === 1) return revenueDataMonth;
     return revenueDataYear;
   };
-
-  const upcomingAppointments = [
-    { name: "Arthur Morgan", doctor: "Dr. John", time: "10:00 AM - 10:30 AM", status: "Confirmed" },
-    { name: "Regina Mills", doctor: "Dr. Joel", time: "10:30 AM - 11:00 AM", status: "Confirmed" },
-    { name: "David Warner", doctor: "Dr. John", time: "11:00 AM - 11:30 AM", status: "Pending" },
-    { name: "Joseph King", doctor: "Dr. John", time: "11:30 AM - 12:00 PM", status: "Confirmed" },
-    { name: "Lokesh", doctor: "Dr. John", time: "12:00 PM - 12:30 PM", status: "Cancelled" },
-    { name: "Kanagaraj", doctor: "Dr. John", time: "12:30 PM - 01:00 PM", status: "Confirmed" },
-    { name: "Priya", doctor: "Dr. Olivia", time: "01:00 PM - 01:30 PM", status: "Confirmed" },
-    { name: "Suresh K", doctor: "Dr. Petra", time: "01:30 PM - 02:00 PM", status: "Pending" },
-    { name: "Anita", doctor: "Dr. Ameena", time: "02:00 PM - 02:30 PM", status: "Confirmed" },
-    { name: "Ravi", doctor: "Dr. Damian", time: "02:30 PM - 03:00 PM", status: "Confirmed" },
-  ];
 
   const reports = [
     { icon: "🧹", title: "Room Cleaning Needed", time: "1 min ago", tag: "Cleaning" },
@@ -237,9 +360,19 @@ const AdminDashboard = () => {
           <div className="list-row">
             <ListCard title="Upcoming Appointments" subtitle="Next scheduled visits">
               <div className="list-content">
-                {upcomingAppointments.map((apt, idx) => (
-                  <AppointmentItem key={idx} {...apt} />
-                ))}
+                {appointmentsLoading ? (
+                  <div className="loading-message" style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>
+                    Loading appointments...
+                  </div>
+                ) : upcomingAppointments.length === 0 ? (
+                  <div className="empty-message" style={{ padding: '20px', textAlign: 'center', color: '#94a3b8' }}>
+                    No upcoming appointments
+                  </div>
+                ) : (
+                  upcomingAppointments.map((apt, idx) => (
+                    <AppointmentItem key={apt.id || idx} {...apt} />
+                  ))
+                )}
               </div>
             </ListCard>
 
@@ -331,21 +464,43 @@ const LegendItem = ({ color, label }) => (
   </div>
 );
 
-const AppointmentItem = ({ name, doctor, time, status }) => {
-  const isGirl = name.toLowerCase().endsWith('a') || 
-                 name.toLowerCase().endsWith('i') || 
-                 name.toLowerCase().endsWith('y');
+const AppointmentItem = ({ name, doctor, time, status, gender }) => {
+  // Get avatar based on gender
+  const getAvatar = () => {
+    if (gender && gender.toLowerCase() === 'female') {
+      return '/girlicon.png';
+    }
+    return '/boyicon.png';
+  };
   
   const statusColors = {
     Confirmed: { bg: '#dcfce7', text: '#166534' },
+    Scheduled: { bg: '#dbeafe', text: '#1e40af' },
     Pending: { bg: '#fef3c7', text: '#92400e' },
-    Cancelled: { bg: '#fee2e2', text: '#991b1b' }
+    Cancelled: { bg: '#fee2e2', text: '#991b1b' },
+    Completed: { bg: '#e0e7ff', text: '#4338ca' }
   };
+
+  // Default to Scheduled if status not found
+  const statusStyle = statusColors[status] || statusColors['Scheduled'];
 
   return (
     <div className="appointment-item">
       <div className="appointment-avatar">
-        {isGirl ? '👧' : '👦'}
+        <img 
+          src={getAvatar()} 
+          alt={name}
+          style={{ 
+            width: '36px', 
+            height: '36px', 
+            borderRadius: '50%',
+            objectFit: 'cover'
+          }}
+          onError={(e) => {
+            e.target.style.display = 'none';
+            e.target.parentElement.innerHTML = gender === 'Female' ? '👧' : '👦';
+          }}
+        />
       </div>
       <div className="appointment-info">
         <p className="appointment-name">{name}</p>
@@ -354,8 +509,8 @@ const AppointmentItem = ({ name, doctor, time, status }) => {
       <div 
         className="appointment-status"
         style={{ 
-          backgroundColor: statusColors[status].bg, 
-          color: statusColors[status].text 
+          backgroundColor: statusStyle.bg, 
+          color: statusStyle.text 
         }}
       >
         {status}
