@@ -22,14 +22,17 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
     roles: [], emergencyContact: '', address: '', notes: ''
   });
 
+  const [isInitialized, setIsInitialized] = useState(false);
+
   useEffect(() => {
-    if (initial) {
+    // Only initialize once when component mounts with initial data
+    if (initial && !isInitialized) {
       setFormData({
         name: initial.name || '',
         email: initial.email || '',
         contact: initial.contact || '',
         gender: initial.gender || '',
-        dob: initial.dob || '',
+        dob: initial.dob ? (initial.dob.includes('T') ? initial.dob.split('T')[0] : initial.dob) : '',
         patientFacingId: initial.patientFacingId || '',
         designation: initial.designation || '',
         department: initial.department || '',
@@ -44,8 +47,9 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
         address: initial.address || '',
         notes: initial.notes?.general || ''
       });
+      setIsInitialized(true);
     }
-  }, [initial]);
+  }, [initial, isInitialized]);
 
   const steps = [
     { id: 1, name: 'Personal', icon: FiUser, desc: 'Identity & Contact' },
