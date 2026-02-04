@@ -447,10 +447,10 @@ const PharmacyFinal = () => {
             <div className="header-content">
               <h2 className="main-title" style={{ fontSize: '18px' }}>Batch Management</h2>
             </div>
-            <button className="btn-new-appointment" onClick={handleAddBatch}>
+            {/* <button className="btn-new-appointment" onClick={handleAddBatch}>
               <MdAdd size={16} />
               Add Batch
-            </button>
+            </button> */}
           </div>
 
           <div className="table-card">
