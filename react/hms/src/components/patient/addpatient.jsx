@@ -29,7 +29,7 @@ const InputGroup = ({ label, error, required, children, className = '' }) => (
             border rounded-xl transition-all duration-200 bg-white
             ${error ? 'border-red-500 ring-2 ring-red-100' : 'border-slate-200 group-focus-within:border-blue-400 group-focus-within:ring-2 group-focus-within:ring-blue-100'}
         `}>
-            <label className="absolute top-2 left-3 text-[10px] uppercase tracking-wider font-bold text-slate-400 pointer-events-none">
+            <label className="absolute top-2 left-3 text-xs uppercase tracking-wider font-bold text-slate-400 pointer-events-none" style={{ fontSize: '11px' }}>
                 {label} {required && <span className="text-red-500">*</span>}
             </label>
             <div className="pt-6 pb-2 px-3">
@@ -609,7 +609,7 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                                             Step {step.id}
                                         </span>
                                         <h3 className="text-sm font-semibold text-slate-800">{step.name}</h3>
-                                        <p className="text-[11px] text-slate-500">{step.desc}</p>
+                                        <p className="text-xs text-slate-500" style={{ fontSize: '11px' }}>{step.desc}</p>
                                     </div>
                                 </div>
                             );
@@ -676,7 +676,7 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                                                 name="lastName"
                                                 value={formData.lastName}
                                                 onChange={handleInputChange}
-                                                className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300"
+                                                className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300 font-medium"
                                                 placeholder="e.g. Doe"
                                             />
                                             {fieldErrors.lastName && <span className="text-red-500 text-xs mt-1">{fieldErrors.lastName}</span>}

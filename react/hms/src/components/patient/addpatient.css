@@ -1,4 +1,5 @@
-/* AddPatientModal.css */
+/* AddPatientModal.css - Standardized Typography */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 .add-patient-overlay {
     position: fixed;
@@ -12,6 +13,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .add-patient-modal {
@@ -26,6 +28,7 @@
     overflow: hidden;
     position: relative;
     animation: modalSlideIn 0.3s ease-out;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 @keyframes modalSlideIn {
@@ -50,16 +53,20 @@
 }
 
 .header-title-block h2 {
-    font-size: 1.5rem;
+    font-size: 22px;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     color: #1E293B;
     margin: 0 0 4px 0;
     font-weight: 700;
+    letter-spacing: -0.01em;
 }
 
 .header-title-block p {
     color: #64748B;
     margin: 0;
-    font-size: 0.95rem;
+    font-size: 13px;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-weight: 400;
 }
 
 .close-btn {
@@ -67,7 +74,7 @@
     border: none;
     color: #94A3B8;
     cursor: pointer;
-    font-size: 1.2rem;
+    font-size: 20px;
     transition: color 0.2s;
     padding: 4px;
     border-radius: 50%;
@@ -106,12 +113,15 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 16px;
+    font-size: 14px;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-weight: 600;
     z-index: 2;
 }
 
 .step-label {
-    font-size: 0.9rem;
+    font-size: 13px;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     font-weight: 600;
 }
 
@@ -157,12 +167,18 @@
     margin-top: 0;
     color: #1E293B;
     margin-bottom: 4px;
+    font-size: 18px;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-weight: 700;
+    letter-spacing: -0.01em;
 }
 
 .step-desc {
     color: #64748B;
     margin-bottom: 24px;
-    font-size: 0.95rem;
+    font-size: 13px;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-weight: 400;
 }
 
 .form-grid {
@@ -177,7 +193,8 @@
 
 .form-group label {
     display: block;
-    font-size: 0.85rem;
+    font-size: 13px;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     font-weight: 600;
     color: #475569;
     margin-bottom: 8px;
@@ -192,12 +209,9 @@
     padding: 0 12px;
     height: 48px;
     transition: border 0.2s;
-    /* Removed line-height: 48px which causes placeholder overlap */
-    display: flex;
-    align-items: center;
     overflow: hidden;
-    /* Ensures input doesn't spill out */
-    font-size: 0.95rem;
+    font-size: 14px;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .input-wrapper:focus-within {
@@ -208,7 +222,7 @@
 .input-icon {
     color: #94A3B8;
     margin-right: 10px;
-    font-size: 1.2rem;
+    font-size: 18px;
 }
 
 .input-wrapper input {
@@ -219,7 +233,9 @@
     padding: 0;
     padding-left: 28px;
     line-height: 48px;
-    font-size: 0.95rem;
+    font-size: 14px;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-weight: 500;
     color: #1E293B;
     background: transparent;
 }
@@ -235,7 +251,9 @@
     border: 1px solid #CBD5E1;
     border-radius: 8px;
     padding: 0 12px;
-    font-size: 0.95rem;
+    font-size: 14px;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-weight: 500;
     color: #1E293B;
 }
 
@@ -250,6 +268,8 @@
     border: 1px solid #CBD5E1;
     background: #fff;
     border-radius: 8px;
+    font-size: 14px;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     font-weight: 600;
     color: #64748B;
     cursor: pointer;
@@ -272,8 +292,11 @@
     border: 1px solid #CBD5E1;
     border-radius: 8px;
     padding: 12px;
-    font-family: inherit;
-    font-size: 0.95rem;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.5;
+    color: #1E293B;
     resize: vertical;
 }
 
@@ -302,6 +325,8 @@
     border: 1px solid #CBD5E1;
     background: #fff;
     border-radius: 8px;
+    font-size: 13px;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     font-weight: 600;
     color: #475569;
     cursor: pointer;
@@ -321,6 +346,8 @@
     color: #fff;
     border: none;
     border-radius: 8px;
+    font-size: 13px;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     font-weight: 600;
     cursor: pointer;
     box-shadow: 0 4px 6px rgba(59, 130, 246, 0.2);
@@ -334,6 +361,8 @@
     background: none;
     border: none;
     color: #94A3B8;
+    font-size: 13px;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     font-weight: 600;
     cursor: pointer;
 }

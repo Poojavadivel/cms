@@ -414,12 +414,6 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
               );
             })}
           </div>
-
-          <div className="p-6 border-t border-slate-100">
-            <button onClick={handleCancel} className="w-full py-3 px-4 rounded-lg border border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-50 text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-2">
-              <FiX size={14} /> Cancel
-            </button>
-          </div>
         </div>
 
         {/* RIGHT CONTENT - FORM FOCUS */}
