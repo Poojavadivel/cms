@@ -3,16 +3,14 @@ import { authService } from '../../services';
 import {
   MdSearch,
   MdRefresh,
-  MdViewList,
-  MdGridView,
   MdDescription,
-  MdPerson,
-  MdPhone,
-  MdCalendarToday,
   MdCheckCircle,
+  MdDelete,
+  MdVisibility,
+  MdClose,
+  MdCalendarToday,
   MdInventory,
   MdFilterAlt,
-  MdClose,
 } from 'react-icons/md';
 import './Prescriptions.css';
 
@@ -23,29 +21,18 @@ const PrescriptionFilter = {
   MONTH: 'month',
 };
 
-const PrescriptionSort = {
-  NEWEST: 'newest',
-  OLDEST: 'oldest',
-  PATIENT_NAME: 'patientName',
-};
-
-const ViewMode = {
-  LIST: 'list',
-  GRID: 'grid',
-};
-
 const PharmacistPrescriptions = () => {
   const [allPrescriptions, setAllPrescriptions] = useState([]);
   const [filteredPrescriptions, setFilteredPrescriptions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
+  const [selectedPrescription, setSelectedPrescription] = useState(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+
   // Search & Filter
   const [searchQuery, setSearchQuery] = useState('');
   const [currentFilter, setCurrentFilter] = useState(PrescriptionFilter.ALL);
-  const [currentSort, setCurrentSort] = useState(PrescriptionSort.NEWEST);
-  const [viewMode, setViewMode] = useState(ViewMode.LIST);
-  
+
   // Statistics
   const [todayCount, setTodayCount] = useState(0);
   const [weekCount, setWeekCount] = useState(0);
@@ -56,20 +43,20 @@ const PharmacistPrescriptions = () => {
   }, []);
 
   useEffect(() => {
-    filterAndSortPrescriptions();
-  }, [searchQuery, currentFilter, currentSort, allPrescriptions]);
+    filterPrescriptions();
+  }, [searchQuery, currentFilter, allPrescriptions]);
 
   const loadPrescriptions = async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const response = await authService.get('/pharmacy/pending-prescriptions');
-      
+
       if (response && typeof response === 'object') {
         const prescriptions = response.prescriptions || [];
         console.log(`📦 Loaded ${prescriptions.length} prescriptions`);
-        
+
         setAllPrescriptions(prescriptions);
         calculateStatistics(prescriptions);
       } else {
@@ -87,10 +74,10 @@ const PharmacistPrescriptions = () => {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-    
+
     let todayC = 0;
     let weekC = 0;
-    
+
     prescriptions.forEach(prescription => {
       const createdAt = prescription.createdAt ? new Date(prescription.createdAt) : null;
       if (createdAt) {
@@ -98,15 +85,15 @@ const PharmacistPrescriptions = () => {
         if (createdAt > weekAgo) weekC++;
       }
     });
-    
+
     setTodayCount(todayC);
     setWeekCount(weekC);
     setTotalCount(prescriptions.length);
   };
 
-  const filterAndSortPrescriptions = () => {
+  const filterPrescriptions = () => {
     let filtered = [...allPrescriptions];
-    
+
     // Apply date filter
     const now = new Date();
     switch (currentFilter) {
@@ -137,7 +124,7 @@ const PharmacistPrescriptions = () => {
       default:
         break;
     }
-    
+
     // Apply search filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
@@ -145,39 +132,19 @@ const PharmacistPrescriptions = () => {
         const patientName = (p.patientName || '').toLowerCase();
         const patientPhone = (p.patientPhone || '').toLowerCase();
         const notes = (p.notes || '').toLowerCase();
-        return patientName.includes(query) || 
-               patientPhone.includes(query) || 
-               notes.includes(query);
+        return patientName.includes(query) ||
+          patientPhone.includes(query) ||
+          notes.includes(query);
       });
     }
-    
-    // Apply sorting
-    switch (currentSort) {
-      case PrescriptionSort.NEWEST:
-        filtered.sort((a, b) => {
-          const aDate = a.createdAt ? new Date(a.createdAt) : new Date(0);
-          const bDate = b.createdAt ? new Date(b.createdAt) : new Date(0);
-          return bDate - aDate;
-        });
-        break;
-      case PrescriptionSort.OLDEST:
-        filtered.sort((a, b) => {
-          const aDate = a.createdAt ? new Date(a.createdAt) : new Date(0);
-          const bDate = b.createdAt ? new Date(b.createdAt) : new Date(0);
-          return aDate - bDate;
-        });
-        break;
-      case PrescriptionSort.PATIENT_NAME:
-        filtered.sort((a, b) => {
-          const aName = (a.patientName || '').toLowerCase();
-          const bName = (b.patientName || '').toLowerCase();
-          return aName.localeCompare(bName);
-        });
-        break;
-      default:
-        break;
-    }
-    
+
+    // Sort by newest first
+    filtered.sort((a, b) => {
+      const aDate = a.createdAt ? new Date(a.createdAt) : new Date(0);
+      const bDate = b.createdAt ? new Date(b.createdAt) : new Date(0);
+      return bDate - aDate;
+    });
+
     setFilteredPrescriptions(filtered);
   };
 
@@ -188,20 +155,100 @@ const PharmacistPrescriptions = () => {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
-    }).format(date);
-  };
-
-  const formatTime = (dateString) => {
-    if (!dateString) return 'N/A';
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('en-US', {
       hour: 'numeric',
       minute: 'numeric',
       hour12: true,
     }).format(date);
   };
 
-  if (loading) {
+  const handleView = (prescription) => {
+    setSelectedPrescription(prescription);
+    setShowDetailsModal(true);
+  };
+
+  const handleApprove = async (prescription) => {
+    if (!prescription || !prescription.pharmacyItems || prescription.pharmacyItems.length === 0) {
+      alert('No medicines to dispense');
+      return;
+    }
+
+    if (prescription.dispensed) {
+      alert('This prescription has already been dispensed');
+      return;
+    }
+
+    const confirmMsg = `Approve and dispense prescription for ${prescription.patientName}?\n\nMedicines: ${prescription.pharmacyItems.length}\nTotal: ₹${prescription.total.toFixed(2)}`;
+
+    if (!window.confirm(confirmMsg)) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      // Prepare items for dispensing
+      const items = prescription.pharmacyItems.map(item => ({
+        medicineId: item.medicineId,
+        quantity: item.quantity || 1,
+        unitPrice: item.unitPrice || item.price || 0,
+        metadata: {
+          dosage: item.dosage,
+          frequency: item.frequency,
+          duration: item.duration,
+          notes: item.notes
+        }
+      }));
+
+      // Call dispense API
+      const response = await authService.post('/pharmacy/records/dispense', {
+        patientId: prescription.patientId,
+        appointmentId: prescription.appointmentId,
+        items: items,
+        paid: false,
+        notes: prescription.notes || `Dispensed from intake ${prescription._id}`
+      });
+
+      if (response && response.success) {
+        alert('✅ Prescription approved and dispensed successfully!');
+        await loadPrescriptions();
+      } else {
+        throw new Error(response?.message || 'Failed to dispense');
+      }
+    } catch (err) {
+      console.error('Error dispensing prescription:', err);
+      const errorMsg = err.response?.data?.message || err.message || 'Failed to dispense prescription';
+      alert(`❌ Error: ${errorMsg}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async (prescription) => {
+    if (!window.confirm(`Delete prescription for ${prescription.patientName}?\n\nThis action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      // Call delete API (you may need to implement this endpoint)
+      const response = await authService.delete(`/pharmacy/prescriptions/${prescription._id}`);
+
+      if (response && response.success) {
+        alert('✅ Prescription deleted successfully!');
+        await loadPrescriptions();
+      } else {
+        throw new Error(response?.message || 'Failed to delete');
+      }
+    } catch (err) {
+      console.error('Error deleting prescription:', err);
+      alert(`❌ Error: ${err.message || 'Failed to delete prescription'}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading && allPrescriptions.length === 0) {
     return (
       <div className="prescriptions-loading">
         <div className="spinner"></div>
@@ -235,9 +282,9 @@ const PharmacistPrescriptions = () => {
             <div className="stat-label">Today</div>
           </div>
         </div>
-        
+
         <div className="stat-divider"></div>
-        
+
         <div className="stat-card">
           <MdInventory className="stat-icon stat-info" size={20} />
           <div className="stat-content">
@@ -245,9 +292,9 @@ const PharmacistPrescriptions = () => {
             <div className="stat-label">This Week</div>
           </div>
         </div>
-        
+
         <div className="stat-divider"></div>
-        
+
         <div className="stat-card">
           <MdDescription className="stat-icon stat-primary" size={20} />
           <div className="stat-content">
@@ -255,9 +302,9 @@ const PharmacistPrescriptions = () => {
             <div className="stat-label">Total</div>
           </div>
         </div>
-        
+
         <div className="stat-divider"></div>
-        
+
         <div className="stat-card">
           <MdFilterAlt className="stat-icon stat-warning" size={20} />
           <div className="stat-content">
@@ -265,11 +312,11 @@ const PharmacistPrescriptions = () => {
             <div className="stat-label">Filtered</div>
           </div>
         </div>
-        
+
         <div className="stat-divider"></div>
-        
-        <button onClick={loadPrescriptions} className="btn-refresh-stat" title="Refresh">
-          <MdRefresh size={20} />
+
+        <button onClick={loadPrescriptions} className="btn-refresh-stat" title="Refresh" disabled={loading}>
+          <MdRefresh size={20} className={loading ? 'spinning' : ''} />
         </button>
       </div>
 
@@ -285,7 +332,7 @@ const PharmacistPrescriptions = () => {
             className="search-input"
           />
           {searchQuery && (
-            <button 
+            <button
               onClick={() => setSearchQuery('')}
               className="search-clear"
             >
@@ -293,27 +340,10 @@ const PharmacistPrescriptions = () => {
             </button>
           )}
         </div>
-        
-        <button onClick={loadPrescriptions} className="btn-refresh" title="Refresh">
+
+        <button onClick={loadPrescriptions} className="btn-refresh" title="Refresh" disabled={loading}>
           <MdRefresh size={20} />
         </button>
-        
-        <div className="view-mode-toggle">
-          <button
-            onClick={() => setViewMode(ViewMode.LIST)}
-            className={`view-btn ${viewMode === ViewMode.LIST ? 'active' : ''}`}
-            title="List View"
-          >
-            <MdViewList size={20} />
-          </button>
-          <button
-            onClick={() => setViewMode(ViewMode.GRID)}
-            className={`view-btn ${viewMode === ViewMode.GRID ? 'active' : ''}`}
-            title="Grid View"
-          >
-            <MdGridView size={20} />
-          </button>
-        </div>
       </div>
 
       {/* Filter Chips */}
@@ -329,21 +359,7 @@ const PharmacistPrescriptions = () => {
         ))}
       </div>
 
-      {/* Sort Dropdown */}
-      <div className="sort-section">
-        <label className="sort-label">Sort by:</label>
-        <select
-          value={currentSort}
-          onChange={(e) => setCurrentSort(e.target.value)}
-          className="sort-select"
-        >
-          <option value={PrescriptionSort.NEWEST}>Newest First</option>
-          <option value={PrescriptionSort.OLDEST}>Oldest First</option>
-          <option value={PrescriptionSort.PATIENT_NAME}>Patient Name</option>
-        </select>
-      </div>
-
-      {/* Prescriptions List */}
+      {/* Prescriptions Table */}
       {filteredPrescriptions.length === 0 ? (
         <div className="prescriptions-empty">
           <MdDescription size={64} className="empty-icon" />
@@ -351,53 +367,195 @@ const PharmacistPrescriptions = () => {
           <p>Try adjusting your search or filter</p>
         </div>
       ) : (
-        <div className={`prescriptions-${viewMode}`}>
-          {filteredPrescriptions.map((prescription, index) => (
-            <div key={prescription._id || index} className="prescription-card">
-              <div className="prescription-header">
-                <div className="patient-info">
-                  <div className="patient-avatar">
-                    <MdPerson size={24} />
-                  </div>
-                  <div className="patient-details">
-                    <h4 className="patient-name">{prescription.patientName || 'Unknown'}</h4>
-                    <div className="patient-phone">
-                      <MdPhone size={14} />
-                      <span>{prescription.patientPhone || 'N/A'}</span>
+        <div className="prescriptions-table-container">
+          <table className="prescriptions-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Patient Name</th>
+                <th>Phone</th>
+                <th>Medicines</th>
+                <th>Total Amount</th>
+                <th>Date & Time</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredPrescriptions.map((prescription, index) => (
+                <tr key={prescription._id || index}>
+                  <td>{index + 1}</td>
+                  <td className="patient-name-cell">
+                    <strong>{prescription.patientName || 'Unknown'}</strong>
+                  </td>
+                  <td>{prescription.patientPhone || 'N/A'}</td>
+                  <td className="medicines-cell">
+                    {prescription.pharmacyItems && prescription.pharmacyItems.length > 0 ? (
+                      <div className="medicines-summary">
+                        <strong>{prescription.pharmacyItems.length}</strong> medicine(s)
+                        <div className="medicines-preview">
+                          {prescription.pharmacyItems.slice(0, 2).map((med, idx) => (
+                            <div key={idx} className="medicine-item">
+                              • {med.name}
+                            </div>
+                          ))}
+                          {prescription.pharmacyItems.length > 2 && (
+                            <div className="medicine-more">
+                              +{prescription.pharmacyItems.length - 2} more
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      'No medicines'
+                    )}
+                  </td>
+                  <td className="amount-cell">
+                    <strong>₹{prescription.total ? prescription.total.toFixed(2) : '0.00'}</strong>
+                  </td>
+                  <td>{formatDate(prescription.createdAt)}</td>
+                  <td>
+                    {prescription.dispensed ? (
+                      <span className="status-badge status-dispensed">
+                        <MdCheckCircle size={14} />
+                        Dispensed
+                      </span>
+                    ) : (
+                      <span className="status-badge status-pending">
+                        Pending
+                      </span>
+                    )}
+                  </td>
+                  <td className="actions-cell">
+                    <div className="action-buttons">
+                      <button
+                        className="btn-action btn-view"
+                        onClick={() => handleView(prescription)}
+                        title="View Details"
+                      >
+                        <MdVisibility size={18} />
+                      </button>
+                      {!prescription.dispensed && (
+                        <>
+                          <button
+                            className="btn-action btn-approve"
+                            onClick={() => handleApprove(prescription)}
+                            title="Approve & Dispense"
+                          >
+                            <MdCheckCircle size={18} />
+                          </button>
+                          <button
+                            className="btn-action btn-delete"
+                            onClick={() => handleDelete(prescription)}
+                            title="Delete"
+                          >
+                            <MdDelete size={18} />
+                          </button>
+                        </>
+                      )}
                     </div>
-                  </div>
-                </div>
-                <div className="prescription-date">
-                  <div className="date-value">{formatDate(prescription.createdAt)}</div>
-                  <div className="time-value">{formatTime(prescription.createdAt)}</div>
-                </div>
-              </div>
-              
-              {prescription.medicines && prescription.medicines.length > 0 && (
-                <div className="prescription-medicines">
-                  <h5>Medicines:</h5>
-                  <ul>
-                    {prescription.medicines.map((med, idx) => (
-                      <li key={idx}>{med.name || 'Unknown'} - {med.quantity || 0} units</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              
-              {prescription.notes && (
-                <div className="prescription-notes">
-                  <strong>Notes:</strong> {prescription.notes}
-                </div>
-              )}
-              
-              <div className="prescription-actions">
-                <button className="btn-dispense">
-                  <MdCheckCircle size={18} />
-                  Dispense
-                </button>
-              </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Details Modal */}
+      {showDetailsModal && selectedPrescription && (
+        <div className="modal-overlay" onClick={() => setShowDetailsModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Prescription Details</h2>
+              <button className="modal-close" onClick={() => setShowDetailsModal(false)}>
+                <MdClose size={24} />
+              </button>
             </div>
-          ))}
+            <div className="modal-body">
+              <div className="detail-section">
+                <h3>Patient Information</h3>
+                <div className="detail-row">
+                  <span className="detail-label">Name:</span>
+                  <span className="detail-value">{selectedPrescription.patientName || 'Unknown'}</span>
+                </div>
+                <div className="detail-row">
+                  <span className="detail-label">Phone:</span>
+                  <span className="detail-value">{selectedPrescription.patientPhone || 'N/A'}</span>
+                </div>
+                <div className="detail-row">
+                  <span className="detail-label">Date:</span>
+                  <span className="detail-value">{formatDate(selectedPrescription.createdAt)}</span>
+                </div>
+              </div>
+
+              <div className="detail-section">
+                <h3>Medicines ({selectedPrescription.pharmacyItems?.length || 0})</h3>
+                {selectedPrescription.pharmacyItems && selectedPrescription.pharmacyItems.length > 0 ? (
+                  <table className="medicines-detail-table">
+                    <thead>
+                      <tr>
+                        <th>Medicine</th>
+                        <th>Dosage</th>
+                        <th>Frequency</th>
+                        <th>Duration</th>
+                        <th>Qty</th>
+                        <th>Instructions</th>
+                        <th>Total</th>
+
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedPrescription.pharmacyItems.map((med, idx) => (
+                        <tr key={idx}>
+                          <td><strong>{med.name || 'Unknown'}</strong></td>
+                          <td>{med.dosage || '-'}</td>
+                          <td>{med.frequency || '-'}</td>
+                          <td>{med.duration ? `${med.duration} days` : '-'}</td>
+                          <td>{med.quantity || 0}</td>
+                          <td>{med.notes || med.instructions || '-'}</td>
+                          <td>₹{((med.quantity || 0) * (med.unitPrice || 0)).toFixed(2)}</td>
+
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr>
+                        <td colSpan="6" style={{ textAlign: 'right' }}><strong>Total:</strong></td>
+                        <td><strong>₹{selectedPrescription.total?.toFixed(2) || '0.00'}</strong></td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                ) : (
+                  <p>No medicines prescribed</p>
+                )}
+              </div>
+
+              {selectedPrescription.notes && (
+                <div className="detail-section">
+                  <h3>Notes</h3>
+                  <p className="notes-text">{selectedPrescription.notes}</p>
+                </div>
+              )}
+            </div>
+            <div className="modal-footer">
+              {!selectedPrescription.dispensed && (
+                <button
+                  className="btn-modal-approve"
+                  onClick={() => {
+                    setShowDetailsModal(false);
+                    handleApprove(selectedPrescription);
+                  }}
+                >
+                  <MdCheckCircle size={18} />
+                  Approve & Dispense
+                </button>
+              )}
+              <button className="btn-modal-close" onClick={() => setShowDetailsModal(false)}>
+                Close
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

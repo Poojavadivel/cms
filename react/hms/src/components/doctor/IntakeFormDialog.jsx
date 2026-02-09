@@ -16,6 +16,8 @@ import {
   MdAdd,
   MdDelete,
 } from 'react-icons/md';
+import { authService } from '../../services';
+import { PharmacyEndpoints, PathologyEndpoints } from '../../services/apiConstants';
 import PatientProfileHeaderCard from './PatientProfileHeaderCard';
 import './IntakeFormDialog.css';
 
@@ -30,7 +32,34 @@ const IntakeFormDialog = ({ appointment, patient, isOpen, onClose, onSave }) => 
 
   const [pharmacyRows, setPharmacyRows] = useState([]);
   const [pathologyRows, setPathologyRows] = useState([]);
+  // Standard list of medicines and tests
+  const [allMedicines, setAllMedicines] = useState([]);
+  const [allTests, setAllTests] = useState([]);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Fetch medicines and tests on mount
+  useEffect(() => {
+    if (isOpen) {
+      loadLookupData();
+    }
+  }, [isOpen]);
+
+  const loadLookupData = async () => {
+    try {
+      const [medsRes, testsRes] = await Promise.all([
+        authService.makeAuthRequest(PharmacyEndpoints.getMedicines, { method: 'GET' }),
+        authService.makeAuthRequest(PathologyEndpoints.getTests, { method: 'GET' })
+      ]);
+
+      const medicines = medsRes.medicines || medsRes.data || medsRes || [];
+      const tests = testsRes.tests || testsRes.data || testsRes || [];
+
+      setAllMedicines(Array.isArray(medicines) ? medicines : []);
+      setAllTests(Array.isArray(tests) ? tests : []);
+    } catch (error) {
+      console.error('Error loading lookup data:', error);
+    }
+  };
 
   // Auto-calculate BMI
   useEffect(() => {
@@ -91,10 +120,28 @@ const IntakeFormDialog = ({ appointment, patient, isOpen, onClose, onSave }) => 
               icon={<MdNoteAlt />}
               title="Medical Notes"
               description="Overview, vitals, and notes history."
-              initiallyExpanded={false}
+              initiallyExpanded={true}
             >
               <div className="vitals-editor">
-                <h4 className="editor-title">Edit Vitals</h4>
+                <h4 className="editor-title">Clinical Notes & Vitals</h4>
+
+                <textarea
+                  className="notes-textarea"
+                  placeholder="Enter clinical notes, complaints, diagnosis..."
+                  value={formData.currentNotes}
+                  onChange={(e) => handleChange('currentNotes', e.target.value)}
+                  rows={3}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    borderRadius: '8px',
+                    border: '1px solid #D1D5DB',
+                    marginBottom: '16px',
+                    fontFamily: 'inherit',
+                    resize: 'vertical'
+                  }}
+                />
+
                 <div className="vitals-row">
                   <div className="vitals-input">
                     <label>Height (cm)</label>
@@ -103,7 +150,7 @@ const IntakeFormDialog = ({ appointment, patient, isOpen, onClose, onSave }) => 
                       step="0.1"
                       value={formData.height}
                       onChange={(e) => handleChange('height', e.target.value)}
-                      placeholder="170"
+                      placeholder="e.g. 170"
                     />
                   </div>
                   <div className="vitals-input">
@@ -113,7 +160,7 @@ const IntakeFormDialog = ({ appointment, patient, isOpen, onClose, onSave }) => 
                       step="0.1"
                       value={formData.weight}
                       onChange={(e) => handleChange('weight', e.target.value)}
-                      placeholder="70"
+                      placeholder="e.g. 70"
                     />
                   </div>
                 </div>
@@ -122,11 +169,10 @@ const IntakeFormDialog = ({ appointment, patient, isOpen, onClose, onSave }) => 
                     <label>BMI</label>
                     <input
                       type="number"
-                      step="0.1"
                       value={formData.bmi}
-                      onChange={(e) => handleChange('bmi', e.target.value)}
-                      placeholder="Auto-calculated"
                       readOnly
+                      placeholder="Auto-calc"
+                      style={{ backgroundColor: '#F3F4F6' }}
                     />
                   </div>
                   <div className="vitals-input">
@@ -135,7 +181,7 @@ const IntakeFormDialog = ({ appointment, patient, isOpen, onClose, onSave }) => 
                       type="number"
                       value={formData.spo2}
                       onChange={(e) => handleChange('spo2', e.target.value)}
-                      placeholder="98"
+                      placeholder="e.g. 98"
                     />
                   </div>
                 </div>
@@ -146,12 +192,13 @@ const IntakeFormDialog = ({ appointment, patient, isOpen, onClose, onSave }) => 
             <SectionCard
               icon={<MdLocalPharmacy />}
               title="Pharmacy"
-              description="Prescribe and manage medications with auto-calculation."
-              initiallyExpanded={false}
+              description="Prescribe and manage medications."
+              initiallyExpanded={true}
             >
               <PharmacyTable
                 rows={pharmacyRows}
                 onChange={setPharmacyRows}
+                medicines={allMedicines}
               />
             </SectionCard>
 
@@ -160,23 +207,33 @@ const IntakeFormDialog = ({ appointment, patient, isOpen, onClose, onSave }) => 
               icon={<MdBiotech />}
               title="Pathology"
               description="Order and track lab investigations."
-              initiallyExpanded={false}
+              initiallyExpanded={true}
             >
               <PathologyTable
                 rows={pathologyRows}
                 onChange={setPathologyRows}
+                tests={allTests}
               />
             </SectionCard>
 
-            {/* Follow-Up Planning Section */}
+            {/* Follow-Up Section */}
             <SectionCard
               icon={<MdEventNote />}
-              title="Follow-Up Planning"
-              description="Schedule follow-up appointments and reminders."
+              title="Follow-Up & Plan"
+              description="Schedule next visit and treatment plan."
               initiallyExpanded={false}
             >
               <div className="follow-up-content">
-                <p>Follow-up planning options will be added here</p>
+                <textarea
+                  placeholder="Treatment plan instructions..."
+                  rows={3}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    borderRadius: '8px',
+                    border: '1px solid #D1D5DB',
+                  }}
+                />
               </div>
             </SectionCard>
 
@@ -232,21 +289,60 @@ const SectionCard = ({ icon, title, description, initiallyExpanded = true, child
 };
 
 // Pharmacy Table
-const PharmacyTable = ({ rows, onChange }) => {
+const PharmacyTable = ({ rows, onChange, medicines = [] }) => {
+  const commonFrequencies = [
+    { label: '1-0-1 (BD)', value: '1-0-1', factor: 2 },
+    { label: '1-0-0 (OD)', value: '1-0-0', factor: 1 },
+    { label: '0-0-1 (HS)', value: '0-0-1', factor: 1 },
+    { label: '1-1-1 (TDS)', value: '1-1-1', factor: 3 },
+    { label: '1-1-1-1 (QID)', value: '1-1-1-1', factor: 4 },
+  ];
+
   const addRow = () => {
     onChange([...rows, {
       medicine: '',
+      medicineId: '',
+      sku: '',
       dosage: '',
-      frequency: '',
+      frequency: '1-0-1',
+      duration: '5',
       notes: '',
-      quantity: '',
-      price: '',
+      quantity: 10,
+      price: 0,
     }]);
+  };
+
+  const calculateQty = (freq, days) => {
+    const f = commonFrequencies.find(cf => cf.value === freq);
+    const d = parseInt(days) || 0;
+    if (f && f.factor > 0) return f.factor * d;
+    return 0; // fallback if custom freq
   };
 
   const updateRow = (index, field, value) => {
     const newRows = [...rows];
-    newRows[index][field] = value;
+
+    if (field === 'medicineId') {
+      const selectedMed = medicines.find(m => m._id === value);
+      if (selectedMed) {
+        newRows[index].medicine = selectedMed.name;
+        newRows[index].medicineId = selectedMed._id;
+        newRows[index].sku = selectedMed.sku || 'N/A';
+        newRows[index].price = selectedMed.salePrice || selectedMed.price || 0;
+        newRows[index].dosage = selectedMed.strength || ''; // Auto-fill dosage
+      }
+    } else {
+      newRows[index][field] = value;
+    }
+
+    // Auto-calc quantity
+    if (field === 'frequency' || field === 'duration' || field === 'medicineId') {
+      const freq = newRows[index].frequency;
+      const days = newRows[index].duration;
+      const autoQty = calculateQty(freq, days);
+      if (autoQty > 0) newRows[index].quantity = autoQty;
+    }
+
     onChange(newRows);
   };
 
@@ -260,51 +356,116 @@ const PharmacyTable = ({ rows, onChange }) => {
         <table>
           <thead>
             <tr>
-              <th>Medicine</th>
-              <th>Dosage</th>
-              <th>Frequency</th>
-              <th>Notes</th>
-              <th>Qty</th>
-              <th>Price</th>
-              <th></th>
+              <th style={{ width: '30%' }}>Medicine</th>
+              <th style={{ width: '15%' }}>Dosage</th>
+              <th style={{ width: '10%' }}>Days</th>
+              <th style={{ width: '20%' }}>Frequency</th>
+              <th style={{ width: '10%' }}>Qty</th>
+              <th style={{ width: '15%' }}>Notes</th>
+              <th style={{ width: '5%' }}></th>
             </tr>
           </thead>
           <tbody>
             {rows.map((row, index) => (
               <tr key={index}>
-                <td><input value={row.medicine} onChange={(e) => updateRow(index, 'medicine', e.target.value)} /></td>
-                <td><input value={row.dosage} onChange={(e) => updateRow(index, 'dosage', e.target.value)} /></td>
-                <td><input value={row.frequency} onChange={(e) => updateRow(index, 'frequency', e.target.value)} /></td>
-                <td><input value={row.notes} onChange={(e) => updateRow(index, 'notes', e.target.value)} /></td>
-                <td><input type="number" value={row.quantity} onChange={(e) => updateRow(index, 'quantity', e.target.value)} /></td>
-                <td><input type="number" value={row.price} onChange={(e) => updateRow(index, 'price', e.target.value)} /></td>
-                <td><button type="button" className="delete-row-btn" onClick={() => deleteRow(index)}><MdDelete /></button></td>
+                <td>
+                  <select
+                    value={row.medicineId || ''}
+                    onChange={(e) => updateRow(index, 'medicineId', e.target.value)}
+                    style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #d1d5db' }}
+                  >
+                    <option value="">Select Medicine...</option>
+                    {medicines.map(m => (
+                      <option key={m._id} value={m._id}>
+                        {m.name} {m.strength ? `(${m.strength})` : ''} - ₹{m.salePrice || m.price || 0}
+                      </option>
+                    ))}
+                  </select>
+                </td>
+                <td>
+                  <input
+                    type="text"
+                    value={row.dosage}
+                    onChange={(e) => updateRow(index, 'dosage', e.target.value)}
+                    placeholder="e.g. 500mg"
+                  />
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    min="1"
+                    value={row.duration}
+                    onChange={(e) => updateRow(index, 'duration', e.target.value)}
+                    placeholder="Days"
+                  />
+                </td>
+                <td>
+                  <select
+                    value={row.frequency}
+                    onChange={(e) => updateRow(index, 'frequency', e.target.value)}
+                  >
+                    {commonFrequencies.map(f => (
+                      <option key={f.value} value={f.value}>{f.label}</option>
+                    ))}
+                    <option value="SOS">SOS</option>
+                  </select>
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    value={row.quantity}
+                    onChange={(e) => updateRow(index, 'quantity', e.target.value)}
+                  />
+                </td>
+                <td>
+                  <input
+                    type="text"
+                    value={row.notes}
+                    onChange={(e) => updateRow(index, 'notes', e.target.value)}
+                    placeholder="Instructions..."
+                  />
+                </td>
+                <td style={{ textAlign: 'center' }}>
+                  <button type="button" className="delete-row-btn" onClick={() => deleteRow(index)}>
+                    <MdDelete />
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       )}
       <button type="button" className="add-row-btn" onClick={addRow}>
-        <MdAdd /> Add Medicine
+        <MdAdd /> Add Medication
       </button>
     </div>
   );
 };
 
 // Pathology Table
-const PathologyTable = ({ rows, onChange }) => {
+const PathologyTable = ({ rows, onChange, tests }) => {
   const addRow = () => {
     onChange([...rows, {
       testName: '',
+      testId: '',
       category: '',
-      priority: '',
+      priority: 'Normal',
       notes: '',
     }]);
   };
 
   const updateRow = (index, field, value) => {
     const newRows = [...rows];
-    newRows[index][field] = value;
+    if (field === 'testId') {
+      const selectedTest = tests.find(t => t._id === value);
+      if (selectedTest) {
+        newRows[index].testName = selectedTest.name;
+        newRows[index].testId = selectedTest._id;
+        newRows[index].category = selectedTest.category || 'General';
+      }
+    } else {
+      newRows[index][field] = value;
+    }
     onChange(newRows);
   };
 
@@ -318,20 +479,34 @@ const PathologyTable = ({ rows, onChange }) => {
         <table>
           <thead>
             <tr>
-              <th>Test Name</th>
-              <th>Category</th>
-              <th>Priority</th>
-              <th>Notes</th>
-              <th></th>
+              <th style={{ width: '40%' }}>Test Name</th>
+              <th style={{ width: '20%' }}>Priority</th>
+              <th style={{ width: '30%' }}>Notes</th>
+              <th style={{ width: '10%' }}></th>
             </tr>
           </thead>
           <tbody>
             {rows.map((row, index) => (
               <tr key={index}>
-                <td><input value={row.testName} onChange={(e) => updateRow(index, 'testName', e.target.value)} /></td>
-                <td><input value={row.category} onChange={(e) => updateRow(index, 'category', e.target.value)} /></td>
-                <td><input value={row.priority} onChange={(e) => updateRow(index, 'priority', e.target.value)} /></td>
-                <td><input value={row.notes} onChange={(e) => updateRow(index, 'notes', e.target.value)} /></td>
+                <td>
+                  <select
+                    value={row.testId}
+                    onChange={(e) => updateRow(index, 'testId', e.target.value)}
+                  >
+                    <option value="">Select Test...</option>
+                    {tests.map(t => (
+                      <option key={t._id} value={t._id}>{t.name}</option>
+                    ))}
+                  </select>
+                </td>
+                <td>
+                  <select value={row.priority} onChange={(e) => updateRow(index, 'priority', e.target.value)}>
+                    <option value="Normal">Normal</option>
+                    <option value="Urgent">Urgent</option>
+                    <option value="Emergency">Emergency</option>
+                  </select>
+                </td>
+                <td><input value={row.notes} onChange={(e) => updateRow(index, 'notes', e.target.value)} placeholder="Instructions..." /></td>
                 <td><button type="button" className="delete-row-btn" onClick={() => deleteRow(index)}><MdDelete /></button></td>
               </tr>
             ))}
@@ -339,7 +514,7 @@ const PathologyTable = ({ rows, onChange }) => {
         </table>
       )}
       <button type="button" className="add-row-btn" onClick={addRow}>
-        <MdAdd /> Add Test
+        <MdAdd /> Add Lab Test
       </button>
     </div>
   );

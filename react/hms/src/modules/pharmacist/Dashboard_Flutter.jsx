@@ -59,7 +59,7 @@ const PharmacistDashboard = () => {
       } else if (medicinesResponse && typeof medicinesResponse === 'object') {
         medicinesData = medicinesResponse.medicines || medicinesResponse.data || [];
       }
-      
+
       // Load batches
       const batchResponse = await authService.get('/pharmacy/batches?limit=100');
       let batchList = [];
@@ -68,23 +68,23 @@ const PharmacistDashboard = () => {
       } else if (batchResponse && typeof batchResponse === 'object') {
         batchList = batchResponse.batches || batchResponse.data || [];
       }
-      
+
       // Calculate stats
       let lowStock = 0;
       let outOfStock = 0;
       let totalValue = 0.0;
-      
+
       for (const med of medicinesData) {
         const stock = toInt(med.availableQty || med.stock || 0);
         const reorderLevel = toInt(med.reorderLevel || 20);
-        
+
         if (stock === 0) {
           outOfStock++;
         } else if (stock <= reorderLevel) {
           lowStock++;
         }
       }
-      
+
       // Count expiring batches (within 90 days)
       let expiringBatches = 0;
       const now = new Date();
@@ -97,7 +97,7 @@ const PharmacistDashboard = () => {
             if (daysUntilExpiry > 0 && daysUntilExpiry <= 90) {
               expiringBatches++;
             }
-            
+
             // Calculate total value
             const quantity = toInt(batch.quantity || 0);
             const salePrice = toDouble(batch.salePrice || 0);
@@ -107,7 +107,7 @@ const PharmacistDashboard = () => {
           }
         }
       }
-      
+
       setMedicines(medicinesData);
       setBatches(batchList);
       setStats({
@@ -117,7 +117,7 @@ const PharmacistDashboard = () => {
         expiringBatches,
         totalValue,
       });
-      
+
     } catch (error) {
       console.error('❌ Error loading dashboard:', error);
     } finally {
@@ -177,6 +177,15 @@ const PharmacistDashboard = () => {
     } catch {
       return 0;
     }
+  };
+
+  const [showExpiringModal, setShowExpiringModal] = useState(false);
+  const [showLowStockModal, setShowLowStockModal] = useState(false);
+  const [showOutOfStockModal, setShowOutOfStockModal] = useState(false);
+  const [showTotalModal, setShowTotalModal] = useState(false);
+
+  const handleShowExpiringBatches = () => {
+    setShowExpiringModal(true);
   };
 
   if (isLoading) {
@@ -307,41 +316,42 @@ const PharmacistDashboard = () => {
         </div>
 
         {/* Stats Cards */}
+        {/* Stats Cards - Updated with popup actions */}
         <div className="flutter-stats-grid">
-          <div className="flutter-stat-card">
+          <div className="flutter-stat-card clickable" onClick={() => setShowTotalModal(true)}>
             <div className="flutter-stat-icon flutter-stat-icon-blue">
               <MdLocalPharmacy size={24} />
             </div>
             <h2 className="flutter-stat-value">{stats.totalMedicines}</h2>
             <p className="flutter-stat-label">Total Medicines</p>
-            <p className="flutter-stat-subtitle">{medicines.length} items</p>
+            <p className="flutter-stat-subtitle">Click to view all</p>
           </div>
 
-          <div className="flutter-stat-card">
+          <div className="flutter-stat-card clickable" onClick={() => setShowLowStockModal(true)}>
             <div className="flutter-stat-icon flutter-stat-icon-orange">
               <MdWarning size={24} />
             </div>
             <h2 className="flutter-stat-value">{stats.lowStock}</h2>
             <p className="flutter-stat-label">Low Stock</p>
-            <p className="flutter-stat-subtitle">Need reorder</p>
+            <p className="flutter-stat-subtitle">Click to view items</p>
           </div>
 
-          <div className="flutter-stat-card">
+          <div className="flutter-stat-card clickable" onClick={() => setShowOutOfStockModal(true)}>
             <div className="flutter-stat-icon flutter-stat-icon-red">
               <MdBlock size={24} />
             </div>
             <h2 className="flutter-stat-value">{stats.outOfStock}</h2>
             <p className="flutter-stat-label">Out of Stock</p>
-            <p className="flutter-stat-subtitle">Urgent action</p>
+            <p className="flutter-stat-subtitle">Click to view items</p>
           </div>
 
-          <div className="flutter-stat-card">
+          <div className="flutter-stat-card clickable" onClick={handleShowExpiringBatches}>
             <div className="flutter-stat-icon flutter-stat-icon-yellow">
               <MdCalendarToday size={24} />
             </div>
             <h2 className="flutter-stat-value">{stats.expiringBatches}</h2>
             <p className="flutter-stat-label">Expiring Soon</p>
-            <p className="flutter-stat-subtitle">Within 90 days</p>
+            <p className="flutter-stat-subtitle">Click to view detail</p>
           </div>
         </div>
 
@@ -369,7 +379,13 @@ const PharmacistDashboard = () => {
                     {lowStockMedicines.map((med, index) => {
                       const stock = toInt(med.availableQty || med.stock || 0);
                       return (
-                        <div key={index} className="flutter-alert-item flutter-alert-item-warning">
+                        <div
+                          key={index}
+                          className="flutter-alert-item flutter-alert-item-warning clickable"
+                          onClick={() => navigate(`/pharmacist/medicines?search=${encodeURIComponent(med.name)}`)}
+                          title="Click to view details"
+                          style={{ cursor: 'pointer' }}
+                        >
                           <div className="flutter-alert-icon">
                             <MdLocalPharmacy size={20} />
                           </div>
@@ -406,7 +422,13 @@ const PharmacistDashboard = () => {
                     {expiringBatches.map((batch, index) => {
                       const daysLeft = getDaysUntilExpiry(batch.expiryDate);
                       return (
-                        <div key={index} className="flutter-alert-item flutter-alert-item-danger">
+                        <div
+                          key={index}
+                          className="flutter-alert-item flutter-alert-item-danger clickable"
+                          onClick={handleShowExpiringBatches}
+                          title="Click to view all expiring batches"
+                          style={{ cursor: 'pointer' }}
+                        >
                           <div className="flutter-alert-icon">
                             <MdInventory size={20} />
                           </div>
@@ -431,7 +453,7 @@ const PharmacistDashboard = () => {
               <h3 className="flutter-card-title">Quick Actions</h3>
               <div className="flutter-card-body">
                 <div className="flutter-quick-actions">
-                  <button 
+                  <button
                     className="flutter-action-btn flutter-action-primary"
                     onClick={() => navigate('/pharmacist/medicines')}
                   >
@@ -439,15 +461,15 @@ const PharmacistDashboard = () => {
                     <span>Add Medicine</span>
                     <MdArrowForward size={16} className="flutter-action-arrow" />
                   </button>
-                  <button 
+                  <button
                     className="flutter-action-btn flutter-action-success"
-                    onClick={() => alert('Add Batch feature coming soon!')}
+                    onClick={() => navigate('/pharmacist/medicines')}
                   >
                     <MdInventory size={20} />
-                    <span>Add Batch</span>
+                    <span>Manage Stock</span>
                     <MdArrowForward size={16} className="flutter-action-arrow" />
                   </button>
-                  <button 
+                  <button
                     className="flutter-action-btn flutter-action-warning"
                     onClick={() => navigate('/pharmacist/prescriptions')}
                   >
@@ -455,7 +477,7 @@ const PharmacistDashboard = () => {
                     <span>New Prescription</span>
                     <MdArrowForward size={16} className="flutter-action-arrow" />
                   </button>
-                  <button 
+                  <button
                     className="flutter-action-btn flutter-action-info"
                     onClick={() => navigate('/pharmacist/medicines')}
                   >
@@ -492,6 +514,178 @@ const PharmacistDashboard = () => {
           </div>
         </div>
       </div>
+
+      {showExpiringModal && (
+        <div className="dashboard-modal-overlay">
+          <div className="dashboard-modal-content" style={{ maxWidth: '600px' }}>
+            <div className="modal-header">
+              <h3>Expiring Batches (Next 90 Days)</h3>
+              <button className="close-btn" onClick={() => setShowExpiringModal(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+                <table className="modern-table">
+                  <thead>
+                    <tr>
+                      <th>Medicine</th>
+                      <th>Batch #</th>
+                      <th>Expiry</th>
+                      <th>Days Left</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {getExpiringBatches().length === 0 ? (
+                      <tr><td colSpan="4" style={{ textAlign: 'center', padding: '20px' }}>No expiring batches found</td></tr>
+                    ) : (
+                      getExpiringBatches().map((batch, idx) => (
+                        <tr key={idx}>
+                          <td>{batch.medicineName || 'Unknown'}</td>
+                          <td>{batch.batchNumber || '-'}</td>
+                          <td>{new Date(batch.expiryDate).toLocaleDateString()}</td>
+                          <td>
+                            <span className="flutter-badge flutter-badge-danger">
+                              {getDaysUntilExpiry(batch.expiryDate)} days
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="primary-btn" onClick={() => setShowExpiringModal(false)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Low Stock Modal */}
+      {showLowStockModal && (
+        <div className="dashboard-modal-overlay">
+          <div className="dashboard-modal-content" style={{ maxWidth: '600px' }}>
+            <div className="modal-header">
+              <h3>Low Stock Medicines</h3>
+              <button className="close-btn" onClick={() => setShowLowStockModal(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+                <table className="modern-table">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>SKU</th>
+                      <th>Stock</th>
+                      <th>Reorder Level</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {getLowStockMedicines().length === 0 ? (
+                      <tr><td colSpan="4" style={{ textAlign: 'center', padding: '20px' }}>No low stock items</td></tr>
+                    ) : (
+                      getLowStockMedicines().map((med, idx) => (
+                        <tr key={idx}>
+                          <td>{med.name}</td>
+                          <td>{med.sku}</td>
+                          <td><span className="flutter-badge flutter-badge-warning">{toInt(med.availableQty || med.stock || 0)}</span></td>
+                          <td>{toInt(med.reorderLevel || 20)}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="primary-btn" onClick={() => setShowLowStockModal(false)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Out of Stock Modal */}
+      {showOutOfStockModal && (
+        <div className="dashboard-modal-overlay">
+          <div className="dashboard-modal-content" style={{ maxWidth: '600px' }}>
+            <div className="modal-header">
+              <h3>Out of Stock Medicines</h3>
+              <button className="close-btn" onClick={() => setShowOutOfStockModal(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+                <table className="modern-table">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>SKU</th>
+                      <th>Category</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {medicines.filter(m => (m.availableQty || 0) <= 0).length === 0 ? (
+                      <tr><td colSpan="4" style={{ textAlign: 'center', padding: '20px' }}>No out of stock items</td></tr>
+                    ) : (
+                      medicines.filter(m => (m.availableQty || 0) <= 0).map((med, idx) => (
+                        <tr key={idx}>
+                          <td>{med.name}</td>
+                          <td>{med.sku}</td>
+                          <td>{med.category}</td>
+                          <td><span className="flutter-badge flutter-badge-danger">Out of Stock</span></td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="primary-btn" onClick={() => setShowOutOfStockModal(false)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Total Medicines Modal */}
+      {showTotalModal && (
+        <div className="dashboard-modal-overlay">
+          <div className="dashboard-modal-content" style={{ maxWidth: '700px' }}>
+            <div className="modal-header">
+              <h3>All Medicines ({medicines.length})</h3>
+              <button className="close-btn" onClick={() => setShowTotalModal(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <div style={{ maxHeight: '500px', overflowY: 'auto' }}>
+                <table className="modern-table">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>SKU</th>
+                      <th>Stock</th>
+                      <th>Manufacturer</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {medicines.map((med, idx) => (
+                      <tr key={idx}>
+                        <td>{med.name}</td>
+                        <td>{med.sku}</td>
+                        <td>{toInt(med.availableQty || med.stock)}</td>
+                        <td>{med.manufacturer || '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="secondary-btn" onClick={() => navigate('/pharmacist/medicines')} style={{ marginRight: '8px' }}>Manage in Medicines</button>
+              <button className="primary-btn" onClick={() => setShowTotalModal(false)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

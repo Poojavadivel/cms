@@ -37,9 +37,17 @@ function calculateAge(dateOfBirth) {
 // Normalize appointments to include doctor string, patient age, and patientCode
 function normalizeAppointments(arr) {
   return arr.map(a => {
+    // Determine patient name
+    const patientFirstName = a.patientId?.firstName || '';
+    const patientLastName = a.patientId?.lastName || '';
+    const fullName = `${patientFirstName} ${patientLastName}`.trim();
+    const patientName = fullName || a.patientName || 'Unknown Patient';
+
     const normalized = {
       ...a,
       doctor: extractDoctorName(a.doctorId),
+      patientName: patientName,
+      patientFullName: fullName,
       patientCode: a.patientId?.patientCode || a.patientId?.metadata?.patientCode || 'N/A'
     };
 
@@ -223,7 +231,7 @@ router.get('/:id', auth, async (req, res) => {
       return res.status(403).json({ success: false, message: 'Forbidden', errorCode: 1009 });
     }
 
-    const normalized = { ...appointment, doctor: extractDoctorName(appointment.doctorId) };
+    const normalized = normalizeAppointments([appointment])[0];
     console.log("✅ Appointment fetched:", appointment._id);
 
     res.status(200).json({ success: true, appointment: normalized });
@@ -268,7 +276,7 @@ router.patch('/:id/status', auth, async (req, res) => {
       .populate('doctorId', 'firstName lastName email')
       .lean();
 
-    const normalized = { ...populated, doctor: extractDoctorName(populated.doctorId) };
+    const normalized = normalizeAppointments([populated])[0];
 
     res.status(200).json({ success: true, message: 'Appointment status updated', appointment: normalized });
   } catch (err) {
@@ -380,7 +388,7 @@ router.put('/:id', auth, async (req, res) => {
       .populate('doctorId', 'firstName lastName email')
       .lean();
 
-    const normalized = { ...updated, doctor: extractDoctorName(updated.doctorId) };
+    const normalized = normalizeAppointments([updated])[0];
     console.log("✅ Appointment updated successfully:", updated._id);
 
     res.status(200).json({ success: true, message: 'Appointment updated successfully', appointment: normalized });
@@ -877,7 +885,7 @@ router.get('/doctor/:doctorId/schedule', auth, async (req, res) => {
 
     // Calculate busy and free slots
     let currentTime = workStart;
-    
+
     for (const apt of appointments) {
       const aptStart = new Date(apt.startAt);
       const aptEnd = apt.endAt ? new Date(apt.endAt) : new Date(aptStart.getTime() + 30 * 60000);
@@ -914,8 +922,8 @@ router.get('/doctor/:doctorId/schedule', auth, async (req, res) => {
     // Calculate utilization percentage
     const totalWorkMinutes = (workEnd - workStart) / 60000;
     const totalBusyMinutes = schedule.busySlots.reduce((sum, slot) => sum + slot.durationMinutes, 0);
-    schedule.utilizationPercentage = totalWorkMinutes > 0 
-      ? Math.round((totalBusyMinutes / totalWorkMinutes) * 100) 
+    schedule.utilizationPercentage = totalWorkMinutes > 0
+      ? Math.round((totalBusyMinutes / totalWorkMinutes) * 100)
       : 0;
 
     console.log("✅ Doctor schedule retrieved successfully");

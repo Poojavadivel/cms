@@ -5,6 +5,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   MdSearch,
   MdNotifications,
@@ -27,6 +28,7 @@ import girlIcon from '../../../assets/girlicon.png';
 import './ModernDashboard.css';
 
 const ModernDashboard = () => {
+  const navigate = useNavigate();
   const { user } = useApp();
   const [loading, setLoading] = useState(true);
   const [reports, setReports] = useState([]);
@@ -108,16 +110,18 @@ const ModernDashboard = () => {
     setLoading(true);
     try {
       const data = await pathologyService.fetchReports({ limit: 50 });
+      const pendingTests = await pathologyService.fetchPendingTests();
       setReports(data);
-      
-      // Calculate stats
-      const pending = data.filter(r => !r.fileRef).length;
+
+      // Calculate stats based on items
+      const pendingItemsCount = pendingTests.reduce((acc, test) => acc + (test.pathologyItems?.length || 0), 0);
+      const pendingCount = data.filter(r => !r.fileRef).length + pendingItemsCount;
       const completed = data.filter(r => r.fileRef).length;
-      const critical = data.filter(r => r.priority === 'urgent').length;
-      
+      const critical = data.filter(r => r.priority?.toLowerCase() === 'urgent' || r.priority?.toLowerCase() === 'emergency' || r.priority?.toLowerCase() === 'high risk').length;
+
       setStats({
-        total: data.length,
-        pending,
+        total: data.length + pendingItemsCount,
+        pending: pendingCount,
         completed,
         critical,
       });
@@ -142,7 +146,7 @@ const ModernDashboard = () => {
             <span className="status-text">System Online</span>
           </div>
         </div>
-        
+
         <div className="header-right-section">
           <div className="search-bar">
             <MdSearch className="search-icon" />
@@ -213,13 +217,13 @@ const ModernDashboard = () => {
               <AreaChart data={performanceData}>
                 <defs>
                   <linearGradient id="colorEff" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#5B7CFA" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#5B7CFA" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#5B7CFA" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#5B7CFA" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <XAxis dataKey="day" stroke="#94A3B8" style={{ fontSize: '10px' }} />
                 <YAxis hide />
-                <Tooltip 
+                <Tooltip
                   contentStyle={{
                     backgroundColor: '#fff',
                     border: 'none',
@@ -228,12 +232,12 @@ const ModernDashboard = () => {
                   }}
                   formatter={(value) => `${value}%`}
                 />
-                <Area 
-                  type="monotone" 
-                  dataKey="efficiency" 
-                  stroke="#5B7CFA" 
+                <Area
+                  type="monotone"
+                  dataKey="efficiency"
+                  stroke="#5B7CFA"
                   strokeWidth={2}
-                  fill="url(#colorEff)" 
+                  fill="url(#colorEff)"
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -288,25 +292,28 @@ const ModernDashboard = () => {
           <div className="card recent-reports">
             <div className="card-header">
               <h3 className="card-title">Recent Test Reports</h3>
-              <button className="view-all-btn">
+              <button
+                className="view-all-btn"
+                onClick={() => navigate('/pathologist/test-reports')}
+              >
                 View All <MdArrowForward size={16} />
               </button>
             </div>
             <div className="reports-table">
-              {recentReports.map((report, index) => (
+              {(reports.length > 0 ? reports.slice(0, 10) : recentReports).map((report, index) => (
                 <div key={index} className="report-row">
-                  <img 
-                    src={report.gender === 'Female' ? girlIcon : boyIcon}
-                    alt={report.name}
+                  <img
+                    src={report.patientGender === 'Female' || report.gender === 'Female' ? girlIcon : boyIcon}
+                    alt={report.patientName || report.name}
                     className="report-avatar"
                   />
                   <div className="report-patient-info">
-                    <div className="report-name">{report.name}</div>
-                    <div className="report-id">{report.id}</div>
+                    <div className="report-name">{report.patientName || report.name}</div>
+                    <div className="report-id">{report.patientCode || report.id}</div>
                   </div>
-                  <div className="report-test">{report.test}</div>
-                  <div className="report-dept">{report.dept}</div>
-                  <span className={`report-status-badge ${report.status.toLowerCase().replace(' ', '-')}`}>
+                  <div className="report-test">{report.testName || report.test}</div>
+                  <div className="report-dept">{report.testType || report.dept}</div>
+                  <span className={`report-status-badge ${(report.status || '').toLowerCase().replace(' ', '-')}`}>
                     {report.status}
                   </span>
                 </div>
@@ -334,7 +341,7 @@ const ModernDashboard = () => {
             </div>
             <div className="feedback-pagination">
               {feedbackItems.map((_, index) => (
-                <span 
+                <span
                   key={index}
                   className={`dot ${index === currentFeedback ? 'active' : ''}`}
                   onClick={() => setCurrentFeedback(index)}

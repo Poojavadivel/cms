@@ -19,6 +19,9 @@ const PORT = process.env.PORT || 3000;
 
 // --- Core Middleware ---
 app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-token'],
   exposedHeaders: ['Content-Disposition']
 }));
 app.use(express.json());
@@ -210,6 +213,31 @@ const createInitialPathologist = async () => {
 
 
 /**
+ * Generates a unique staff code (patientFacingId) for a staff member
+ */
+const generateStaffCode = async (Staff, prefix = 'DOC') => {
+  let code;
+  let attempts = 0;
+  const maxAttempts = 100;
+
+  while (attempts < maxAttempts) {
+    // Generate a random 3-digit number
+    const randomNum = Math.floor(100 + Math.random() * 900);
+    code = `${prefix}${randomNum}`;
+
+    // Check if this code already exists
+    const existing = await Staff.findOne({ patientFacingId: code }).lean();
+    if (!existing) {
+      return code;
+    }
+    attempts++;
+  }
+
+  // Fallback: use timestamp-based code if random generation fails
+  return `${prefix}${Date.now().toString().slice(-4)}`;
+};
+
+/**
  * Syncs doctors from User collection to Staff collection
  */
 const syncDoctorsToStaff = async () => {
@@ -230,13 +258,17 @@ const syncDoctorsToStaff = async () => {
       const existingStaff = await Staff.findOne({ email: doctor.email }).lean();
 
       if (!existingStaff) {
+        // Generate unique staff code
+        const staffCode = await generateStaffCode(Staff, 'DOC');
+
         // Create new staff record for this doctor
         const staffData = {
           name: doctor.firstName && doctor.lastName
             ? `${doctor.firstName} ${doctor.lastName}`.trim()
             : doctor.firstName || 'Doctor',
           email: doctor.email,
-          contact: doctor.phone || '',
+          contact: doctor.phone || '0000000000', // Provide default if missing
+          patientFacingId: staffCode, // Add required staff code
           roles: ['doctor'],
           designation: doctor.metadata?.specialization || 'Doctor',
           department: doctor.metadata?.department || 'Medical',
@@ -249,7 +281,7 @@ const syncDoctorsToStaff = async () => {
 
         await Staff.create(staffData);
         synced++;
-        console.log(`✓ Synced doctor to Staff: ${staffData.name} (${doctor.email})`);
+        console.log(`✓ Synced doctor to Staff: ${staffData.name} (${doctor.email}) - Code: ${staffCode}`);
       }
     }
 

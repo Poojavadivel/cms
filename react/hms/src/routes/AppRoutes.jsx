@@ -52,6 +52,7 @@ const DoctorSettings = lazy(() => import('../modules/doctor/settings/Settings'))
 const PharmacistDashboard = lazy(() => import('../modules/pharmacist/Dashboard_Flutter'));
 const PharmacistMedicines = lazy(() => import('../modules/pharmacist/Medicines_Table'));
 const PharmacistPrescriptions = lazy(() => import('../modules/pharmacist/Prescriptions_Flutter'));
+const PharmacistSettings = lazy(() => import('../modules/pharmacist/Settings'));
 
 // Pathologist module pages (from modules folder)
 const PathologistDashboard = lazy(() => import('../modules/pathologist/dashboard/Dashboard'));
@@ -155,7 +156,7 @@ const AppRoutes = () => {
           <Route path="dashboard" element={<PharmacistDashboard />} />
           <Route path="medicines" element={<PharmacistMedicines />} />
           <Route path="prescriptions" element={<PharmacistPrescriptions />} />
-          <Route path="settings" element={<div>Settings - Coming Soon</div>} />
+          <Route path="settings" element={<PharmacistSettings />} />
           <Route path="*" element={<Navigate to="/pharmacist/dashboard" replace />} />
         </Route>
 

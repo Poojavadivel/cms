@@ -271,120 +271,50 @@ router.post('/:id/intake', auth, async (req, res) => {
     console.log('INTAKE POST: intakePayload prepared (patientSnapshot.firstName):', intakePayload.patientSnapshot.firstName);
     console.log('INTAKE POST: 📊 Vitals extracted:', JSON.stringify(intakePayload.triage.vitals));
 
-    // Create pharmacy record if medicines provided
-    let pharmacyRecord = null;
+    // Store pharmacy items in meta for pharmacist to review/dispense
     if (Array.isArray(data.pharmacy) && data.pharmacy.length > 0) {
-      console.log('INTAKE POST: pharmacy data present, creating PharmacyRecord with', data.pharmacy.length, 'items');
-      // Map incoming pharmacy rows to PharmacyRecord.items
-      const items = data.pharmacy.map(r => {
-        return {
-          medicineId: r.medicineId || r.medicine_id || r.MedicineId || null,
-          batchId: r.batchId || null,
-          sku: r.sku || r.SKU || null,
-          name: r.name || r.Medicine || '',
-          dosage: r.Dosage || r.dosage || '',
-          frequency: r.Frequency || r.frequency || '',
-          notes: r.Notes || r.notes || '',
-          quantity: Number(r.quantity ?? r.Qty ?? 0),
-          unitPrice: Number(r.unitPrice ?? r.price ?? 0),
-          taxPercent: Number(r.taxPercent ?? 0),
-          lineTotal: Number((r.quantity ?? 0) * (r.unitPrice ?? 0)),
-          metadata: r.meta || {},
-        };
-      });
-
-      const prPayload = {
-        type: 'Dispense',
-        patientId: intakePayload.patientId || null,
-        appointmentId: intakePayload.appointmentId || null,
-        createdBy: userId,
-        items,
-        total: items.reduce((s, it) => s + (Number(it.lineTotal || 0)), 0),
-        paid: data.paid ?? false,
-        paymentMethod: data.paymentMethod || null,
-        notes: data.pharmacyNotes || intakePayload.notes || null,
-        metadata: data.pharmacyMeta || {},
-      };
-
-      pharmacyRecord = await PharmacyRecord.create(prPayload);
-      console.log('INTAKE POST: PharmacyRecord created ->', pharmacyRecord._id);
-
-      intakePayload.attachments = intakePayload.attachments || [];
-      // To keep compatible with your previous shape, store pharmacy id in meta or attachments? We'll set meta.pharmacyId.
+      console.log('INTAKE POST: pharmacy data present, storing in meta.pharmacyItems:', data.pharmacy.length);
       intakePayload.meta = intakePayload.meta || {};
-      intakePayload.meta.pharmacyId = String(pharmacyRecord._id);
+      intakePayload.meta.pharmacyItems = data.pharmacy.map(r => ({
+        medicineId: r.medicineId || null,
+        name: r.name || r.Medicine || '',
+        sku: r.sku || '',
+        dosage: r.dosage || '',
+        frequency: r.frequency || '',
+        duration: r.duration || '',
+        notes: r.notes || '',
+        quantity: Number(r.quantity || 1),
+        unitPrice: Number(r.unitPrice || r.price || 0),
+        lineTotal: Number((r.quantity || 1) * (r.unitPrice || r.price || 0))
+      }));
     }
 
-    // Create lab reports (Pathology) if provided
-    const createdLabReportIds = [];
+    // Store pathology requests if provided (Pathology)
     if (Array.isArray(data.pathology) && data.pathology.length > 0) {
-      console.log('INTAKE POST: pathology data present, creating LabReport(s):', data.pathology.length);
-      for (const row of data.pathology) {
-        try {
-          const lrPayload = {
-            patientId: intakePayload.patientId || null,
-            appointmentId: intakePayload.appointmentId || null,
-            testType: row['Test Name'] || row.testType || row.testName || row.name || '',
-            results: row.results || {},
-            fileRef: row.fileRef || null,
-            uploadedBy: userId,
-            metadata: {
-              category: row.Category || row.category || '',
-              priority: row.Priority || row.priority || 'Normal',
-              notes: row.Notes || row.notes || '',
-              ...(row.meta || {})
-            },
-          };
-          const lr = await LabReport.create(lrPayload);
-          createdLabReportIds.push(String(lr._id));
-          console.log('INTAKE POST: LabReport created ->', lr._id);
-        } catch (err) {
-          console.error('INTAKE: LabReport create error (continuing):', err && err.message ? err.message : err);
-        }
-      }
-      if (createdLabReportIds.length) {
-        intakePayload.meta = intakePayload.meta || {};
-        intakePayload.meta.labReportIds = createdLabReportIds;
-        console.log('INTAKE POST: labReportIds added to intakePayload.meta', createdLabReportIds);
-      }
+      console.log('INTAKE POST: pathology requests present, storing in meta.pathologyItems:', data.pathology.length);
+      intakePayload.meta = intakePayload.meta || {};
+
+      // Map requests to a standard format for the Pathologist
+      const pathologyRequests = data.pathology.map(row => ({
+        testName: row['Test Name'] || row.testType || row.testName || row.name || '',
+        category: row.Category || row.category || 'General',
+        priority: row.Priority || row.priority || 'Normal',
+        notes: row.Notes || row.notes || '',
+        status: 'Requested',
+        requestedAt: new Date()
+      }));
+
+      intakePayload.meta.pathologyItems = pathologyRequests;
+      console.log('INTAKE POST: pathologyItems added to intakePayload.meta');
+    } else if (Array.isArray(data.pathologyItems) && data.pathologyItems.length > 0) {
+      // Fallback for direct pathologyItems pass
+      intakePayload.meta = intakePayload.meta || {};
+      intakePayload.meta.pathologyItems = data.pathologyItems;
     }
 
     // Save Intake (models_core.Intake)
     const savedIntake = await Intake.create(intakePayload);
     console.log('INTAKE POST: Intake saved ->', savedIntake._id);
-
-    // Push prescription snapshot into patient.prescriptions if pharmacy record exists and patient exists
-    if (pharmacyRecord && intakePayload.patientId) {
-      try {
-        console.log('INTAKE POST: snapshotting prescription to patient:', intakePayload.patientId);
-        const prescriptionSnapshot = {
-          prescriptionId: undefined, // will be generated by patient schema when pushed (it's nested)
-          appointmentId: intakePayload.appointmentId || null,
-          doctorId,
-          medicines: (pharmacyRecord.items || []).map(it => ({
-            medicineId: it.medicineId || null,
-            name: it.name || '',
-            dosage: it.dosage || '',
-            frequency: it.frequency || '',
-            duration: it.duration || '',
-            quantity: it.quantity || 0,
-          })),
-          notes: pharmacyRecord.notes || intakePayload.notes || '',
-          issuedAt: pharmacyRecord.createdAt || new Date(),
-        };
-
-        // push to patient.prescriptions array
-        await Patient.findByIdAndUpdate(String(intakePayload.patientId), {
-          $push: { prescriptions: prescriptionSnapshot },
-          $set: { updatedAt: new Date() },
-        }).catch(err => {
-          console.warn('INTAKE: pushing prescription to patient failed:', err && err.message ? err.message : err);
-        });
-        console.log('INTAKE POST: prescription snapshot pushed to patient');
-      } catch (err) {
-        console.warn('INTAKE: error while snapshotting prescription to patient:', err && err.message ? err.message : err);
-      }
-    }
 
     // Update patient vitals and notes
     if (intakePayload.patientId) {
@@ -396,10 +326,10 @@ router.post('/:id/intake', auth, async (req, res) => {
           if (intakePayload.triage && intakePayload.triage.vitals) {
             const vitals = intakePayload.triage.vitals;
             patientDoc.vitals = patientDoc.vitals || {};
-            
+
             // Log what we're receiving
             console.log('INTAKE POST: Received vitals:', JSON.stringify(vitals));
-            
+
             // Update each vital if provided (check for falsy but allow 0)
             if (vitals.heightCm !== null && vitals.heightCm !== undefined && vitals.heightCm !== '') {
               patientDoc.vitals.heightCm = Number(vitals.heightCm) || null;
@@ -422,7 +352,7 @@ router.post('/:id/intake', auth, async (req, res) => {
             if (vitals.spo2 !== null && vitals.spo2 !== undefined && vitals.spo2 !== '') {
               patientDoc.vitals.spo2 = Number(vitals.spo2) || null;
             }
-            
+
             console.log('INTAKE POST: Updated patient vitals:', JSON.stringify(patientDoc.vitals));
           } else {
             console.warn('INTAKE POST: No vitals found in intakePayload.triage');
@@ -461,12 +391,12 @@ router.post('/:id/intake', auth, async (req, res) => {
             console.warn('INTAKE: skipping appointment vitals update; not owner and not admin');
           } else {
             appt.vitals = Object.assign({}, appt.vitals || {}, intakePayload.triage?.vitals || {});
-            
+
             // Update followUp data if provided
             if (data.followUp) {
               console.log('INTAKE POST: updating followUp data for appointment');
               appt.followUp = appt.followUp || {};
-              
+
               // Basic follow-up info
               if (data.followUp.isRequired !== undefined) appt.followUp.isRequired = data.followUp.isRequired;
               if (data.followUp.priority) appt.followUp.priority = data.followUp.priority;
@@ -475,29 +405,29 @@ router.post('/:id/intake', auth, async (req, res) => {
               if (data.followUp.instructions) appt.followUp.instructions = data.followUp.instructions;
               if (data.followUp.diagnosis) appt.followUp.diagnosis = data.followUp.diagnosis;
               if (data.followUp.treatmentPlan) appt.followUp.treatmentPlan = data.followUp.treatmentPlan;
-              
+
               // Lab tests
               if (Array.isArray(data.followUp.labTests)) {
                 appt.followUp.labTests = data.followUp.labTests;
               }
-              
+
               // Imaging
               if (Array.isArray(data.followUp.imaging)) {
                 appt.followUp.imaging = data.followUp.imaging;
               }
-              
+
               // Procedures
               if (Array.isArray(data.followUp.procedures)) {
                 appt.followUp.procedures = data.followUp.procedures;
               }
-              
+
               // Medication
               if (data.followUp.prescriptionReview !== undefined) appt.followUp.prescriptionReview = data.followUp.prescriptionReview;
               if (data.followUp.medicationCompliance) appt.followUp.medicationCompliance = data.followUp.medicationCompliance;
-              
+
               console.log('INTAKE POST: ✅ followUp data updated');
             }
-            
+
             appt.updatedAt = new Date();
             await appt.save();
             updatedAppointment = await Appointment.findById(appt._id)
@@ -529,8 +459,8 @@ router.post('/:id/intake', auth, async (req, res) => {
       message: 'Intake recorded successfully',
       intake: savedIntake.toObject ? savedIntake.toObject() : savedIntake,
       patient: freshPatient,
-      pharmacy: pharmacyRecord ? pharmacyRecord.toObject() : null,
-      labReportIds: createdLabReportIds,
+      pharmacy: null,
+      labReportIds: [],
       appointment: updatedAppointment,
     });
   } catch (err) {

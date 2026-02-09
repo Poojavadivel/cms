@@ -3,6 +3,7 @@
  * Exports all pharmacist-related components
  */
 
-export { default as PharmacistDashboard } from './Dashboard';
-export { default as PharmacistMedicines } from './Medicines';
-export { default as PharmacistPrescriptions } from './Prescriptions';
+export { default as PharmacistDashboard } from './Dashboard_Flutter';
+export { default as PharmacistMedicines } from './Medicines_Table';
+export { default as PharmacistPrescriptions } from './Prescriptions_Flutter';
+

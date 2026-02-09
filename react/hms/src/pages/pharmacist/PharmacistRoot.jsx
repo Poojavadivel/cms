@@ -5,6 +5,7 @@ import './PharmacistRoot.css';
 import {
   MdDashboard,
   MdLocalPharmacy,
+  MdInventory,
   MdDescription,
   MdSettings,
   MdMenu,

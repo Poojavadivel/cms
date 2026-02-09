@@ -64,9 +64,16 @@ router.get('/pending-tests', auth, async (req, res) => {
     const limit = Math.min(200, Math.max(1, parseInt(req.query.limit || '50', 10)));
     const skip = page * limit;
 
-    // Find intakes that have pathology items and haven't been completed yet
+    // Find intakes that have pathology items and haven't been fully completed yet
     const intakes = await Intake.find({
-      'meta.labReportIds': { $exists: false } // No lab reports created yet
+      $or: [
+        { 'meta.labReportIds': { $exists: false } },
+        {
+          'meta.pathologyItems': {
+            $elemMatch: { status: { $ne: 'Completed' } }
+          }
+        }
+      ]
     })
       .sort({ createdAt: -1 })
       .skip(skip)
@@ -88,7 +95,8 @@ router.get('/pending-tests', auth, async (req, res) => {
           patientPhone: intake.patientSnapshot?.phone,
           doctorId: intake.doctorId,
           appointmentId: intake.appointmentId,
-          pathologyItems: intake.meta?.pathologyItems || intake.meta?.pathology || [],
+          pathologyItems: (intake.meta?.pathologyItems || intake.meta?.pathology || [])
+            .filter(item => item.status !== 'Completed'),
           createdAt: intake.createdAt,
           notes: intake.notes
         });
@@ -108,6 +116,35 @@ router.get('/pending-tests', auth, async (req, res) => {
   } catch (err) {
     console.error('❌ [PENDING LAB TESTS] Error:', err);
     return res.status(500).json({ success: false, message: 'Failed to fetch pending lab tests', errorCode: 7004 });
+  }
+});
+
+// GET list of available tests (Master List)
+router.get('/tests', auth, async (req, res) => {
+  try {
+    // In a real app, this would come from a LabTest model
+    // For now, we return a standard set of tests
+    const masterTests = [
+      { _id: 't1', name: 'Complete Blood Count (CBC)', category: 'Hematology', price: 500 },
+      { _id: 't2', name: 'Liver Function Test (LFT)', category: 'Biochemistry', price: 1200 },
+      { _id: 't3', name: 'Kidney Function Test (KFT)', category: 'Biochemistry', price: 1500 },
+      { _id: 't4', name: 'Blood Sugar (Fasting & PP)', category: 'Biochemistry', price: 300 },
+      { _id: 't5', name: 'Lipid Profile', category: 'Biochemistry', price: 1000 },
+      { _id: 't6', name: 'Thyroid Profile (T3, T4, TSH)', category: 'Hormones', price: 1800 },
+      { _id: 't7', name: 'Urine Routine & Microscopy', category: 'Urine Analysis', price: 400 },
+      { _id: 't8', name: 'Blood Grouping & Rh Typing', category: 'Hematology', price: 200 },
+      { _id: 't9', name: 'HbA1c', category: 'Biochemistry', price: 800 },
+      { _id: 't10', name: 'Vitamin D3 / B12', category: 'Vitamins', price: 2500 }
+    ];
+
+    return res.status(200).json({
+      success: true,
+      tests: masterTests,
+      total: masterTests.length
+    });
+  } catch (err) {
+    console.error('❌ [MASTER TESTS] Error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to fetch tests' });
   }
 });
 
@@ -189,6 +226,29 @@ router.post('/reports', auth, upload.single('file'), async (req, res) => {
     };
 
     const labReport = await LabReport.create(reportData);
+    console.log('✅ [LAB REPORT CREATE] Created lab report:', labReport._id);
+
+    // Link to Patient's medical history
+    if (Patient && labReport.patientId) {
+      try {
+        await Patient.findByIdAndUpdate(labReport.patientId, {
+          $push: {
+            medicalReports: {
+              reportId: labReport._id,
+              reportType: 'LAB_REPORT',
+              imagePath: fileId ? String(fileId) : 'LAB_REPORT_ENTRY',
+              uploadDate: new Date(),
+              uploadedBy: req.user?.id || '',
+              extractedData: labReport.results || {},
+              metadata: labReport.metadata || {}
+            }
+          }
+        });
+        console.log('✅ [LAB REPORT CREATE] Reflected in Patient medical history');
+      } catch (pErr) {
+        console.warn('⚠️ [LAB REPORT CREATE] Could not update patient history:', pErr.message);
+      }
+    }
 
     // If linked to an intake, update the intake
     if (data.intakeId && Intake) {
@@ -197,12 +257,21 @@ router.post('/reports', auth, upload.single('file'), async (req, res) => {
         intake.meta = intake.meta || {};
         intake.meta.labReportIds = intake.meta.labReportIds || [];
         intake.meta.labReportIds.push(String(labReport._id));
+
+        // Also update the status in pathologyItems if found
+        if (Array.isArray(intake.meta.pathologyItems)) {
+          const idx = intake.meta.pathologyItems.findIndex(t => t.testName === labReport.testName);
+          if (idx !== -1) {
+            intake.meta.pathologyItems[idx].status = 'Completed';
+            intake.meta.pathologyItems[idx].reportId = labReport._id;
+            intake.markModified('meta.pathologyItems');
+          }
+        }
+
         await intake.save();
         console.log('✅ [LAB REPORT CREATE] Updated intake with lab report ID');
       }
     }
-
-    console.log('✅ [LAB REPORT CREATE] Created lab report:', labReport._id);
     return res.status(201).json({ success: true, report: labReport });
   } catch (err) {
     console.error('💥 [LAB REPORT CREATE] Error:', err);

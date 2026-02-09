@@ -1,8 +1,3 @@
-/**
- * IntakeFormDialog.css
- * Exact styling from Flutter's IntakeFormBody
- */
-
 .intake-form-overlay {
   position: fixed;
   top: 0;
@@ -81,8 +76,10 @@
   overflow-y: scroll;
   overflow-x: hidden;
   padding: 0 12px 100px 12px;
-  scrollbar-width: none; /* Firefox - hide scrollbar */
-  -ms-overflow-style: none; /* IE and Edge - hide scrollbar */
+  scrollbar-width: none;
+  /* Firefox - hide scrollbar */
+  -ms-overflow-style: none;
+  /* IE and Edge - hide scrollbar */
   position: relative;
 }
 
@@ -167,6 +164,7 @@
     opacity: 0;
     transform: translateY(-10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -253,16 +251,19 @@
   padding: 8px;
 }
 
-.editable-table td input {
+.editable-table td input,
+.editable-table td select {
   width: 100%;
   padding: 8px 10px;
   border: 1px solid #D1D5DB;
   border-radius: 6px;
   font-size: 13px;
   transition: border-color 0.2s;
+  background: white;
 }
 
-.editable-table td input:focus {
+.editable-table td input:focus,
+.editable-table td select:focus {
   outline: none;
   border-color: #4338CA;
 }
@@ -402,4 +403,113 @@
   .editable-table table {
     min-width: 600px;
   }
+}
+
+/* Medicine Selector Modal */
+.medicine-selector-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10002;
+}
+
+.medicine-selector-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.medicine-selector-content {
+  background: white;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 600px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+}
+
+.medicine-selector-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid #E5E7EB;
+  background: linear-gradient(135deg, #4338CA 0%, #3730A3 100%);
+}
+
+.medicine-selector-header h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: white;
+}
+
+.medicine-close-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.medicine-close-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.1);
+}
+
+.medicine-selector-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+}
+
+.medicine-item {
+  padding: 16px;
+  border: 1px solid #E5E7EB;
+  border-radius: 10px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: white;
+}
+
+.medicine-item:hover {
+  background: #F0F9FF;
+  border-color: #4338CA;
+  transform: translateX(4px);
+  box-shadow: 0 4px 12px rgba(67, 56, 202, 0.15);
+}
+
+.medicine-item-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: #0F172A;
+  margin-bottom: 4px;
+}
+
+.medicine-item-info {
+  font-size: 13px;
+  color: #64748B;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }

@@ -41,12 +41,12 @@ const PharmacistMedicines = () => {
   const loadMedicines = async () => {
     setIsLoading(true);
     setErrorMessage(null);
-    
+
     try {
       console.log('🔄 [Pharmacist] Loading medicines from API...');
       const response = await authService.get('/pharmacy/medicines?limit=100');
       console.log('✅ [Pharmacist] Received response:', response);
-      
+
       // Normalize response: support plain list OR { medicines: [...] } OR { data: [...] }
       let medicinesData = [];
       if (Array.isArray(response)) {
@@ -54,12 +54,21 @@ const PharmacistMedicines = () => {
       } else if (response && typeof response === 'object') {
         medicinesData = response.medicines || response.data || [];
       }
-      
+
       console.log('✅ [Pharmacist] Extracted medicines:', medicinesData.length);
-      
+
+      // Log first medicine to see structure
+      if (medicinesData.length > 0) {
+        console.log('📋 [Pharmacist] Sample medicine data:', medicinesData[0]);
+      }
+
       // Normalize the data
       const normalizedMedicines = medicinesData.map(med => {
+        // Try multiple fields for stock
         const stock = toInt(med.availableQty || med.stock || med.quantity || 0);
+
+        console.log(`📦 [Medicine] ${med.name}: availableQty=${med.availableQty}, stock=${med.stock}, quantity=${med.quantity}, normalized=${stock}`);
+
         return {
           _id: med._id || '',
           name: med.name || 'Unknown',
@@ -75,7 +84,9 @@ const PharmacistMedicines = () => {
           availableQty: stock,
         };
       });
-      
+
+      console.log('✅ [Pharmacist] Normalized medicines with stock:', normalizedMedicines.map(m => `${m.name}: ${m.stock}`));
+
       setMedicines(normalizedMedicines);
       setFilteredMedicines(normalizedMedicines);
     } catch (error) {
@@ -88,7 +99,7 @@ const PharmacistMedicines = () => {
 
   const filterMedicinesData = () => {
     let filtered = [...medicines];
-    
+
     // Search filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
@@ -97,20 +108,20 @@ const PharmacistMedicines = () => {
         const sku = (med.sku || '').toLowerCase();
         const category = (med.category || '').toLowerCase();
         const manufacturer = (med.manufacturer || '').toLowerCase();
-        
-        return name.includes(query) || 
-               sku.includes(query) || 
-               category.includes(query) ||
-               manufacturer.includes(query);
+
+        return name.includes(query) ||
+          sku.includes(query) ||
+          category.includes(query) ||
+          manufacturer.includes(query);
       });
     }
-    
+
     // Stock status filter
     if (filterStatus !== 'All') {
       filtered = filtered.filter(med => {
         const stock = med.stock || 0;
         const reorderLevel = med.reorderLevel || 20;
-        
+
         switch (filterStatus) {
           case 'In Stock':
             return stock > reorderLevel;
@@ -123,7 +134,7 @@ const PharmacistMedicines = () => {
         }
       });
     }
-    
+
     setFilteredMedicines(filtered);
     setCurrentPage(0);
   };
@@ -158,7 +169,7 @@ const PharmacistMedicines = () => {
       return stock > 0 && stock <= reorder;
     }).length;
     const outOfStock = medicines.filter(m => (m.stock || 0) <= 0).length;
-    
+
     return { total, lowStock, outOfStock };
   };
 
@@ -244,7 +255,7 @@ const PharmacistMedicines = () => {
             className="search-input"
           />
         </div>
-        
+
         <select
           value={filterStatus}
           onChange={(e) => setFilterStatus(e.target.value)}
@@ -255,7 +266,7 @@ const PharmacistMedicines = () => {
           <option value="Low Stock">Low Stock</option>
           <option value="Out of Stock">Out of Stock</option>
         </select>
-        
+
         <button onClick={loadMedicines} className="btn-refresh" title="Refresh">
           <MdRefresh size={20} />
         </button>
@@ -284,7 +295,7 @@ const PharmacistMedicines = () => {
               {paginatedMedicines.map((medicine, index) => {
                 const status = getStockStatus(medicine.stock, medicine.reorderLevel);
                 const isEven = index % 2 === 0;
-                
+
                 return (
                   <tr key={medicine._id || index} className={isEven ? 'row-even' : 'row-odd'}>
                     <td>
@@ -313,7 +324,7 @@ const PharmacistMedicines = () => {
               })}
             </tbody>
           </table>
-          
+
           {/* Pagination */}
           {totalPages > 1 && (
             <div className="pagination">
@@ -325,11 +336,11 @@ const PharmacistMedicines = () => {
                 <MdChevronLeft size={20} />
                 Previous
               </button>
-              
+
               <span className="pagination-info">
                 Page {currentPage + 1} of {totalPages}
               </span>
-              
+
               <button
                 onClick={handleNextPage}
                 disabled={currentPage === totalPages - 1}

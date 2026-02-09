@@ -80,6 +80,7 @@ export const DoctorEndpoints = {
   delete: (id) => `${API_BASE_URL}/doctors/${id}`,
   getSchedule: (id) => `${API_BASE_URL}/doctors/${id}/schedule`,
   getDashboard: `${API_BASE_URL}/doctors/dashboard`,
+  getMyPatients: `${API_BASE_URL}/doctors/patients/my`,
 };
 
 /**

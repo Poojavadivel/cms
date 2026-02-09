@@ -207,8 +207,11 @@
 
 .main-content {
   flex: 1;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   background: #f9fafb;
+  height: 100vh;
 }
 
 .sidebar-nav::-webkit-scrollbar {
