@@ -12,7 +12,17 @@ import { Pathologist } from '../models/Pathologist';
 import apiLogger from '../utils/apiLogger';
 import logger from './loggerService';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://hms-dev.onrender.com/api';
+const API_BASE_URL =
+  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+    ? (process.env.REACT_APP_API_URL || 'http://localhost:5000/api')
+    : '/api';
+
+if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+  if (API_BASE_URL.includes('onrender.com')) {
+    console.warn('🚨 [AUTH] Running on localhost but API_BASE_URL is pointing to Onrender! Request might fail due to CORS or missing records.');
+  }
+}
+console.log('🔗 [AUTH] Current API URL:', API_BASE_URL);
 
 /**
  * AuthResult class - equivalent to Flutter's AuthResult
@@ -48,6 +58,23 @@ class AuthService {
     this.USER_DATA_KEY = 'user_data';
 
     AuthService.instance = this;
+  }
+
+  /**
+   * Get stored user data from localStorage (synchronous)
+   */
+  getUser() {
+    try {
+      const userStr = localStorage.getItem(this.USER_DATA_KEY);
+      if (!userStr) return null;
+      const parsed = JSON.parse(userStr);
+      // Attempt to re-hydrate role-based model if needed, or return plain object
+      // For synchronous UI display, plain object is often enough if consistent
+      return parsed;
+    } catch (error) {
+      console.error('Error getting user data:', error);
+      return null;
+    }
   }
 
   /**
@@ -126,8 +153,12 @@ class AuthService {
     const headers = {
       'Content-Type': 'application/json',
       ...(token && { 'x-auth-token': token }),
+      ...(token && { 'Authorization': `Bearer ${token}` }), // Adding standard header too
       ...options.headers,
     };
+
+    console.log(`📡 [AUTH] Request: ${method} ${url}`);
+    console.log(`📡 [AUTH] Headers:`, { ...headers, 'x-auth-token': token ? 'PRESENT' : 'MISSING', 'Authorization': token ? 'PRESENT' : 'MISSING' });
 
     const config = {
       ...options,
@@ -154,10 +185,12 @@ class AuthService {
       if (!response.ok) {
         // Log error response
         apiLogger.logResponse(method, url, response.status, data, duration);
-        throw new ApiException(
-          data.message || data.error || 'Request failed',
-          response.status
-        );
+
+        const errorMessage = (typeof data === 'object' && data !== null)
+          ? (data.message || data.error || 'Request failed')
+          : (typeof data === 'string' && data.length > 0 ? data : `Request failed with status ${response.status}`);
+
+        throw new ApiException(errorMessage, response.status);
       }
 
       // Log successful response
@@ -198,6 +231,9 @@ class AuthService {
       // Save token
       this.saveToken(accessToken);
 
+      // Save user data for synchronous retrieval
+      localStorage.setItem(this.USER_DATA_KEY, JSON.stringify(userData));
+
       // Parse user based on role
       const user = this.parseUserRole(userData);
 
@@ -210,6 +246,32 @@ class AuthService {
       console.error('❌ [AUTH] Sign in failed:', error.message);
       logger.authError(`Login failed for ${email}: ${error.message}`);
       apiLogger.logAuth('SIGN_IN_FAILED', { email, error: error.message });
+      throw error;
+    }
+  }
+
+  /**
+   * Change user password
+   * @param {string} currentPassword - Current password
+   * @param {string} newPassword - New password
+   * @returns {Promise<Object>} API response
+   */
+  async changePassword(currentPassword, newPassword) {
+    try {
+      logger.info('AUTH', 'Attempting password change');
+
+      const response = await this.makeAuthRequest(`${API_BASE_URL}/auth/change-password`, {
+        method: 'POST',
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+
+      console.log('✅ [AUTH] Password changed successfully');
+      apiLogger.logAuth('PASSWORD_CHANGE_SUCCESS', {});
+
+      return response;
+    } catch (error) {
+      console.error('❌ [AUTH] Password change failed:', error.message);
+      apiLogger.logAuth('PASSWORD_CHANGE_FAILED', { error: error.message });
       throw error;
     }
   }

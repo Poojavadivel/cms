@@ -1,0 +1,268 @@
+================================================================================
+                    MEDICINE OUT-OF-STOCK FIX - TESTING GUIDE
+================================================================================
+Date: February 6, 2026, 8:13 PM IST
+Status: ✅ Fix Applied - Ready for Testing
+================================================================================
+
+🎯 WHAT WAS FIXED:
+================================================================================
+
+1. ✅ Medicine dropdown now shows "⚠️ OUT OF STOCK" instead of "Stock: 0"
+2. ✅ Warning messages are clearer and more informative
+3. ✅ Doctors can prescribe even if medicine is out of stock
+4. ✅ Form saves successfully with informational warnings
+
+================================================================================
+📋 STEP-BY-STEP TESTING INSTRUCTIONS:
+================================================================================
+
+STEP 1: Open the Application
+----------------------------
+1. Open your browser (Chrome, Firefox, Edge, etc.)
+2. Go to: http://localhost:5173
+3. You should see the HMS login page
+
+STEP 2: Login as Doctor
+-----------------------
+1. Enter your doctor credentials
+2. Click "Login"
+3. You should be redirected to the doctor dashboard
+
+STEP 3: Navigate to Schedule
+----------------------------
+1. Click on "Schedule" in the sidebar/menu
+2. You should see the calendar view
+3. Select a date with appointments
+
+STEP 4: Open Patient Intake Form
+--------------------------------
+1. Find an appointment card
+2. Click the "Intake" button
+3. The intake form dialog should open
+4. You should see patient information at the top
+
+STEP 5: Add Medicine (Testing the Fix!)
+---------------------------------------
+1. Scroll to the "Pharmacy" section
+2. Click "Add Medication" button
+3. A new row appears with a medicine dropdown
+
+STEP 6: Check Medicine Dropdown (THE FIX!)
+------------------------------------------
+Look at the dropdown options. You should now see:
+
+BEFORE THE FIX:
+  Paracetamol 500mg - ₹5 (Stock: 0)
+  Amoxicillin 250mg - ₹15 (Stock: 100)
+
+AFTER THE FIX (What you should see now):
+  Paracetamol 500mg - ₹5 (⚠️ OUT OF STOCK)  ← Clear warning!
+  Amoxicillin 250mg - ₹15 (Stock: 100)      ← Normal display
+
+STEP 7: Select Out-of-Stock Medicine
+------------------------------------
+1. Select a medicine that shows "⚠️ OUT OF STOCK"
+2. Fill in:
+   - Dosage: 500mg
+   - Frequency: 1-0-1 (BD)
+   - Duration: 5 days
+3. Notice: You CAN still select it! ✅
+
+STEP 8: Save the Form (Testing Non-Blocking)
+--------------------------------------------
+1. Fill in other required fields (vitals, notes)
+2. Click "Save Intake Form" at the bottom
+3. You should see a warning message like:
+   "⚠️ Paracetamol is currently out of stock (Pharmacist will be notified)"
+4. The form should SAVE SUCCESSFULLY! ✅
+
+STEP 9: Verify Success
+---------------------
+1. You should see: "Intake form saved successfully"
+2. The dialog should close
+3. The appointment should be updated
+
+================================================================================
+✅ WHAT TO VERIFY:
+================================================================================
+
+TEST CASE 1: Medicine with Stock
+--------------------------------
+Expected: Shows "Stock: X" where X is the quantity
+Example: "Amoxicillin 250mg - ₹15 (Stock: 100)"
+Result: ☐ PASS  ☐ FAIL
+
+TEST CASE 2: Medicine Out of Stock
+----------------------------------
+Expected: Shows "⚠️ OUT OF STOCK" instead of "Stock: 0"
+Example: "Paracetamol 500mg - ₹5 (⚠️ OUT OF STOCK)"
+Result: ☐ PASS  ☐ FAIL
+
+TEST CASE 3: Can Select Out-of-Stock Medicine
+---------------------------------------------
+Expected: Dropdown allows selection of out-of-stock medicine
+Action: Click on medicine with "⚠️ OUT OF STOCK"
+Result: ☐ PASS  ☐ FAIL
+
+TEST CASE 4: Warning Message is Clear
+-------------------------------------
+Expected: Warning says "(Pharmacist will be notified)"
+Example: "⚠️ Medicine X is currently out of stock (Pharmacist will be notified)"
+Result: ☐ PASS  ☐ FAIL
+
+TEST CASE 5: Form Saves Successfully
+------------------------------------
+Expected: Form saves even with out-of-stock medicine
+Action: Save form with out-of-stock medicine
+Result: ☐ PASS  ☐ FAIL
+
+TEST CASE 6: Missing Price Handled
+----------------------------------
+Expected: Shows "₹0" instead of "₹undefined" if price missing
+Action: Check medicines without salePrice
+Result: ☐ PASS  ☐ FAIL
+
+================================================================================
+🐛 TROUBLESHOOTING:
+================================================================================
+
+PROBLEM: Still seeing "Stock: 0" instead of "⚠️ OUT OF STOCK"
+SOLUTION:
+1. Hard refresh the browser (Ctrl + Shift + R or Cmd + Shift + R)
+2. Clear browser cache
+3. Check if React dev server reloaded (should see in terminal)
+
+PROBLEM: Changes not appearing
+SOLUTION:
+1. Check terminal for React dev server
+2. Look for "✓ built in XXXms" message
+3. If not, restart: Ctrl+C then "npm run dev"
+
+PROBLEM: Medicine dropdown empty
+SOLUTION:
+1. Check backend server is running
+2. Check browser console (F12) for errors
+3. Verify medicines exist in database
+
+PROBLEM: Form won't save
+SOLUTION:
+1. Check all required fields are filled
+2. Check browser console for errors
+3. Check backend terminal for error messages
+
+================================================================================
+🔍 BROWSER CONSOLE DEBUGGING:
+================================================================================
+
+If you encounter issues, open Browser Console (F12) and check for:
+
+GOOD SIGNS:
+✅ "✅ [PharmacyTable] Loaded medicines for dropdown: X"
+✅ "📋 [PharmacyTable] Sample medicine: {...}"
+✅ No red error messages
+
+BAD SIGNS:
+❌ "❌ [PharmacyTable] Error loading medicines"
+❌ "Failed to fetch medicines"
+❌ Red error messages about undefined variables
+
+================================================================================
+📊 EXPECTED BEHAVIOR SUMMARY:
+================================================================================
+
+MEDICINE DROPDOWN:
+┌─────────────────────────────────────────────────────────────┐
+│ Select Medicine...                                          │
+├─────────────────────────────────────────────────────────────┤
+│ Paracetamol 500mg - ₹5.00 (Stock: 100)          ← Has stock│
+│ Amoxicillin 250mg - ₹15.00 (⚠️ OUT OF STOCK)    ← No stock │
+│ Ibuprofen 400mg - ₹8.00 (Stock: 50)             ← Has stock│
+│ Aspirin 75mg - ₹3.00 (⚠️ OUT OF STOCK)          ← No stock │
+└─────────────────────────────────────────────────────────────┘
+
+WHEN SAVING WITH OUT-OF-STOCK MEDICINE:
+┌─────────────────────────────────────────────────────────────┐
+│ ⚠️ Stock Warnings:                                          │
+│                                                              │
+│ • Amoxicillin is currently out of stock                     │
+│   (Pharmacist will be notified)                             │
+│                                                              │
+│ ✅ Intake form saved successfully                           │
+└─────────────────────────────────────────────────────────────┘
+
+================================================================================
+📝 TESTING CHECKLIST:
+================================================================================
+
+Pre-Testing:
+☐ Backend server running (http://localhost:3000)
+☐ Frontend server running (http://localhost:5173)
+☐ Browser opened to http://localhost:5173
+☐ Logged in as doctor
+
+Testing:
+☐ Opened intake form
+☐ Clicked "Add Medication"
+☐ Checked medicine dropdown
+☐ Verified "⚠️ OUT OF STOCK" appears for medicines with 0 stock
+☐ Verified "Stock: X" appears for medicines with stock
+☐ Selected out-of-stock medicine
+☐ Filled in dosage, frequency, duration
+☐ Clicked "Save Intake Form"
+☐ Verified warning message appears
+☐ Verified form saves successfully
+☐ Verified success message appears
+
+Post-Testing:
+☐ Form closed successfully
+☐ No errors in browser console
+☐ No errors in backend terminal
+☐ Appointment updated
+
+================================================================================
+🎉 SUCCESS CRITERIA:
+================================================================================
+
+The fix is working correctly if:
+
+1. ✅ Medicine dropdown shows "⚠️ OUT OF STOCK" for medicines with 0 stock
+2. ✅ Medicine dropdown shows "Stock: X" for medicines with stock
+3. ✅ You can select and prescribe out-of-stock medicines
+4. ✅ Warning message includes "(Pharmacist will be notified)"
+5. ✅ Form saves successfully even with out-of-stock medicines
+6. ✅ No undefined values (₹0 instead of ₹undefined)
+7. ✅ No blocking errors preventing save
+
+================================================================================
+📞 NEED HELP?
+================================================================================
+
+If you encounter any issues during testing:
+
+1. Check the browser console (F12) for errors
+2. Check the backend terminal for error messages
+3. Verify both servers are running
+4. Try hard refresh (Ctrl + Shift + R)
+5. Check the files were modified correctly:
+   - e:\HMS-DEV\react\hms\src\components\appointments\PharmacyTable.jsx
+
+================================================================================
+🚀 NEXT STEPS AFTER TESTING:
+================================================================================
+
+If all tests pass:
+✅ The fix is working correctly!
+✅ You can use the system normally
+✅ Doctors can prescribe medicines regardless of stock
+✅ Pharmacists will see stock warnings when dispensing
+
+If any tests fail:
+❌ Note which test failed
+❌ Check browser console for errors
+❌ Check backend terminal for errors
+❌ Report the specific issue for further debugging
+
+================================================================================
+END OF TESTING GUIDE
+================================================================================

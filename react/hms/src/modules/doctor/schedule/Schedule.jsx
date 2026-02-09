@@ -191,11 +191,48 @@ const DoctorSchedule = () => {
 
   const handleSaveIntake = async (formData) => {
     try {
-      console.log('Saving intake form:', formData);
+      const patientId = selectedPatient?._id || selectedPatient?.id;
+      if (!patientId) {
+        alert('Internal Error: No patient selected');
+        return;
+      }
+
+      // Structure data for backend: pharmacyRows -> pharmacy, pathologyRows -> pathology
+      const payload = {
+        ...formData,
+        appointmentId: selectedAppointment?._id || selectedAppointment?.id,
+        pharmacy: formData.pharmacyRows?.map(row => ({
+          medicineId: row.medicineId,
+          name: row.medicine,
+          sku: row.sku,
+          dosage: row.dosage,
+          frequency: row.frequency,
+          duration: row.duration,
+          notes: row.notes,
+          quantity: row.quantity,
+          unitPrice: row.price
+        })),
+        pathology: formData.pathologyRows?.map(row => ({
+          testName: row.testName,
+          category: row.category,
+          priority: row.priority,
+          notes: row.notes
+        })),
+        vitals: {
+          heightCm: formData.height,
+          weightKg: formData.weight,
+          bmi: formData.bmi,
+          spo2: formData.spo2
+        }
+      };
+
+      await patientsService.saveIntake(patientId, payload);
       alert('Intake form saved successfully');
       await loadAppointments();
+      setShowIntakeDialog(false);
     } catch (error) {
       console.error('Error saving intake form:', error);
+      alert(error.message || 'Failed to save intake form');
       throw error;
     }
   };

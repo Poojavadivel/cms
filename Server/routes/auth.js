@@ -242,10 +242,10 @@ router.post('/create-user', auth, async (req, res) => {
     const requesterRole = req.user && req.user.role;
     if (!requesterRole || (requesterRole !== 'admin' && requesterRole !== 'superadmin')) {
       console.warn('CREATE USER FAILED: Unauthorized role:', requesterRole);
-      return res.status(403).json({ 
+      return res.status(403).json({
         success: false,
-        message: 'Forbidden: Admin role required', 
-        errorCode: 1002 
+        message: 'Forbidden: Admin role required',
+        errorCode: 1002
       });
     }
 
@@ -253,30 +253,30 @@ router.post('/create-user', auth, async (req, res) => {
 
     // Validate required fields
     if (!role || !firstName || !email || !password) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
         message: 'Missing required fields: role, firstName, email, password',
-        errorCode: 1000 
+        errorCode: 1000
       });
     }
 
     // Validate role
     const validRoles = ['admin', 'doctor', 'pharmacist', 'pathologist', 'reception'];
     if (!validRoles.includes(role)) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
         message: 'Invalid role. Must be one of: ' + validRoles.join(', '),
-        errorCode: 1001 
+        errorCode: 1001
       });
     }
 
     // Check if email already exists
     const existingUser = await User.findOne({ email: email.toLowerCase() });
     if (existingUser) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
         message: 'Email already exists',
-        errorCode: 1004 
+        errorCode: 1004
       });
     }
 
@@ -311,11 +311,55 @@ router.post('/create-user', auth, async (req, res) => {
 
   } catch (err) {
     console.error('CREATE USER ERROR:', err);
-    return res.status(500).json({ 
+    return res.status(500).json({
       success: false,
       message: 'Server error: ' + (err.message || 'Unknown error'),
-      errorCode: 5000 
+      errorCode: 5000
     });
+  }
+});
+
+/**
+ * POST /api/auth/change-password
+ * Change current user's password
+ */
+router.post('/change-password', auth, async (req, res) => {
+  console.log('🔄 [AUTH] Change password request for user:', req.user?.id);
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const userId = req.user?.id;
+
+    console.log('🔄 [AUTH] User ID from request:', userId);
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Current and new passwords are required'
+      });
+    }
+
+    // Load user with password
+    const user = await User.findById(userId).select('+password');
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // Verify current password
+    const isMatch = await user.comparePassword(currentPassword);
+    if (!isMatch) {
+      return res.status(400).json({ success: false, message: 'Incorrect current password' });
+    }
+
+    // Set new password
+    user.password = newPassword; // Will be hashed by pre-save hook
+    await user.save();
+
+    console.log('PASSWORD CHANGED SUCCESS: user', userId);
+    return res.status(200).json({ success: true, message: 'Password updated successfully' });
+
+  } catch (err) {
+    console.error('CHANGE PASSWORD ERROR:', err);
+    return res.status(500).json({ success: false, message: 'Server error' });
   }
 });
 

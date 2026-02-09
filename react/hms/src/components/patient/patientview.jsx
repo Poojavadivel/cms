@@ -1160,7 +1160,7 @@ const PrescriptionTab = ({ patientId }) => {
         setLoading(true);
         try {
             const data = await patientsService.fetchPatientPrescriptions(patientId);
-            
+
             // Flatten PharmacyRecord items to individual prescription rows
             const flattenedPrescriptions = [];
             if (Array.isArray(data)) {
@@ -1184,7 +1184,7 @@ const PrescriptionTab = ({ patientId }) => {
                     }
                 });
             }
-            
+
             setPrescriptions(flattenedPrescriptions);
         } catch (error) {
             console.error('Failed to fetch prescriptions:', error);
@@ -1255,7 +1255,8 @@ const PrescriptionTab = ({ patientId }) => {
                                     </td>
                                     <td>{item.dosage || '—'}</td>
                                     <td>{item.frequency || '—'}</td>
-                                    <td>{item.duration || '—'}</td>
+                                    <td>{item.duration ? `${item.duration} days` : '—'}</td>
+
                                     <td>{item.instructions || '—'}</td>
                                     <td>
                                         {item.createdAt
@@ -1316,12 +1317,12 @@ const LabResultTab = ({ patientId }) => {
         setLoading(true);
         const startTime = performance.now();
         console.log('[LAB RESULTS] Starting fetch for patient:', patientId);
-        
+
         try {
             const data = await patientsService.fetchPatientLabResults(patientId);
             const endTime = performance.now();
             console.log(`[LAB RESULTS] Fetch completed in ${(endTime - startTime).toFixed(0)}ms, found ${data?.length || 0} results`);
-            
+
             setLabs(Array.isArray(data) ? data : []);
         } catch (error) {
             const endTime = performance.now();
@@ -1417,19 +1418,33 @@ const LabResultTab = ({ patientId }) => {
                                         </span>
                                     </td>
                                     <td>
-                                        {item.pdfId ? (
-                                            <button
-                                                className="pv-btn-action-circle"
-                                                onClick={() => reportService.viewPdf(item.pdfId)}
-                                                title="View Report"
-                                            >
-                                                <MdPictureAsPdf />
-                                            </button>
-                                        ) : (
-                                            <button className="pv-btn-action-circle" disabled title="No PDF available">
-                                                <MdVisibility />
-                                            </button>
-                                        )}
+                                        <div style={{ display: 'flex', gap: '8px' }}>
+                                            {(item.pdfId || item.fileRef) && (
+                                                <button
+                                                    className="pv-btn-action-circle"
+                                                    onClick={() => reportService.viewPdf(item.pdfId || item.fileRef)}
+                                                    title="View Report"
+                                                    style={{ color: '#7c3aed' }}
+                                                >
+                                                    <MdVisibility size={18} />
+                                                </button>
+                                            )}
+                                            {(item.fileRef || item._id || item.id) && (
+                                                <button
+                                                    className="pv-btn-action-circle"
+                                                    onClick={() => pathologyService.downloadReport(item._id || item.id, item.testName || 'LabReport')}
+                                                    title="Download Lab Report"
+                                                    style={{ color: '#3b82f6' }}
+                                                >
+                                                    <MdPictureAsPdf size={18} />
+                                                </button>
+                                            )}
+                                            {!(item.pdfId || item.fileRef || item._id || item.id) && (
+                                                <button className="pv-btn-action-circle" disabled title="No PDF available">
+                                                    <MdVisibility />
+                                                </button>
+                                            )}
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
@@ -1514,15 +1529,16 @@ const BillingsTab = ({ patientId }) => {
                 <table className="pv-table">
                     <thead>
                         <tr>
-                            <th>Medication</th>
-                            <th>Dose</th>
-                            <th>Route</th>
-                            <th>Frequency</th>
-                            <th>Start</th>
-                            <th>End</th>
+                            <th>Invoice ID</th>
+                            <th>Date</th>
+                            <th>Amount (₹)</th>
+                            <th>Payment Mode</th>
+                            <th>Due Date</th>
+                            <th>Description</th>
                             <th>Status</th>
                             <th>Actions</th>
                         </tr>
+
                     </thead>
 
                     <tbody>

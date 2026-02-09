@@ -36,14 +36,14 @@ const AppointmentIntakeModal = ({ isOpen, onClose, appointmentId, onSuccess }) =
   const [bmi, setBmi] = useState('');
   const [spo2, setSpo2] = useState('');
   const [currentNotes, setCurrentNotes] = useState('');
-  
+
   // Pharmacy rows (for future) - eslint-disable-next-line no-unused-vars
   const [pharmacyRows, setPharmacyRows] = useState([]);
-  
+
   // Pathology rows (for future)
   // eslint-disable-next-line no-unused-vars
   const [pathologyRows, setPathologyRows] = useState([]);
-  
+
   // Follow-up data (for future)
   // eslint-disable-next-line no-unused-vars
   const [followUpData, setFollowUpData] = useState({});
@@ -87,18 +87,80 @@ const AppointmentIntakeModal = ({ isOpen, onClose, appointmentId, onSuccess }) =
         try {
           const patientData = await patientsService.fetchPatientById(patientId);
           setPatient(patientData);
-          
-          // Prefill vitals from patient data
+
+          // Prefill vitals from patient data (fallback)
           if (patientData.height) setHeight(patientData.height);
           if (patientData.weight) setWeight(patientData.weight);
           if (patientData.bmi) setBmi(patientData.bmi);
           if (patientData.oxygen) setSpo2(patientData.oxygen);
+
+          // Fetch existing intake for this appointment
+          const intakes = await patientsService.fetchIntakes(patientId, { limit: 100 });
+          // Find intake for this appointment
+          const appointmentIntake = intakes.find(i => String(i.appointmentId) === String(appointmentId));
+
+          if (appointmentIntake) {
+            console.log('✅ Found existing intake for appointment:', appointmentIntake._id);
+
+            // Override Vitals from Intake
+            if (appointmentIntake.triage && appointmentIntake.triage.vitals) {
+              const v = appointmentIntake.triage.vitals;
+              if (v.heightCm) setHeight(v.heightCm);
+              if (v.weightKg) setWeight(v.weightKg);
+              if (v.bmi) setBmi(v.bmi);
+              if (v.spo2) setSpo2(v.spo2);
+            }
+
+            // Load Notes
+            if (appointmentIntake.notes) setCurrentNotes(appointmentIntake.notes);
+
+            // Load Pharmacy Items
+            if (appointmentIntake.meta && appointmentIntake.meta.pharmacyItems && Array.isArray(appointmentIntake.meta.pharmacyItems)) {
+              const loadedPharmacyRows = await Promise.all(appointmentIntake.meta.pharmacyItems.map(async (item) => {
+                // Fetch medicine details to check current stock
+                let stock = 0;
+                if (item.medicineId) {
+                  try {
+                    const med = await pharmacyService.fetchMedicineById(item.medicineId);
+                    stock = med.availableQty ?? med.stock ?? 0;
+                  } catch (e) { console.warn('Failed to fetch stock for', item.name); }
+                }
+
+                return {
+                  medicineId: item.medicineId || '',
+                  Medicine: item.name || '',
+                  Dosage: item.dosage || '',
+                  Frequency: item.frequency || '',
+                  duration: item.duration || '',
+                  quantity: item.quantity || 1,
+                  price: item.unitPrice || 0,
+                  total: item.lineTotal || 0,
+                  Notes: item.notes || '',
+                  availableStock: stock
+                };
+
+              }));
+              setPharmacyRows(loadedPharmacyRows);
+            }
+
+            // Load Pathology Items
+            if (appointmentIntake.meta && appointmentIntake.meta.pathologyItems && Array.isArray(appointmentIntake.meta.pathologyItems)) {
+              setPathologyRows(appointmentIntake.meta.pathologyItems.map(item => ({
+                'Test Name': item.testName || '',
+                Category: item.category || '',
+                Priority: item.priority || 'Normal',
+                Notes: item.notes || ''
+              })));
+            }
+
+          }
+
         } catch (err) {
-          console.error('Failed to fetch patient details:', err);
+          console.error('Failed to fetch patient/intake details:', err);
         }
       }
 
-      // Prefill form data from appointment (override patient data if exists)
+      // Prefill form data from appointment (if no intake found or to verify)
       if (data.vitals) {
         if (data.vitals.heightCm || data.vitals.height_cm) {
           setHeight(data.vitals.heightCm || data.vitals.height_cm);
@@ -109,8 +171,9 @@ const AppointmentIntakeModal = ({ isOpen, onClose, appointmentId, onSuccess }) =
         if (data.vitals.bmi) setBmi(data.vitals.bmi);
         if (data.vitals.spo2) setSpo2(data.vitals.spo2);
       }
-      
-      if (data.currentNotes || data.notes) {
+
+      // If we haven't set notes from intake, set from appointment
+      if (!currentNotes && (data.currentNotes || data.notes)) {
         setCurrentNotes(data.currentNotes || data.notes || '');
       }
     } catch (err) {
@@ -131,13 +194,13 @@ const AppointmentIntakeModal = ({ isOpen, onClose, appointmentId, onSuccess }) =
       if (pharmacyRows.length > 0) {
         console.log('🔍 Checking stock availability for pharmacy items...');
         const stockCheck = await pharmacyService.checkStockAvailability(pharmacyRows);
-        
+
         if (stockCheck.hasWarnings) {
           const warningMessages = stockCheck.warnings.map(w => w.message).join('\n');
           const shouldContinue = window.confirm(
             `⚠️ Stock Warning:\n\n${warningMessages}\n\nDo you want to continue anyway?`
           );
-          
+
           if (!shouldContinue) {
             setIsSaving(false);
             return;
@@ -174,16 +237,24 @@ const AppointmentIntakeModal = ({ isOpen, onClose, appointmentId, onSuccess }) =
         },
         currentNotes: currentNotes || null,
         pharmacy: pharmacyRows.map(row => ({
+          medicineId: row.medicineId || null,
           name: row.Medicine || '',
           Medicine: row.Medicine || '',
           dosage: row.Dosage || '',
           Dosage: row.Dosage || '',
           frequency: row.Frequency || '',
           Frequency: row.Frequency || '',
+          duration: row.duration || '',
+          Duration: row.duration || '',
           notes: row.Notes || '',
           Notes: row.Notes || '',
+          quantity: Number(row.quantity || 1),
+          price: Number(row.price || 0),
+          total: Number(row.total || 0)
         })),
-        pathology: pathologyRows.map(row => ({...row})),
+
+
+        pathology: pathologyRows.map(row => ({ ...row })),
         followUp: followUpData,
         updatedAt: new Date().toISOString(),
       };
@@ -218,17 +289,21 @@ const AppointmentIntakeModal = ({ isOpen, onClose, appointmentId, onSuccess }) =
               Medicine: row.Medicine || '',
               Dosage: row.Dosage || '',
               Frequency: row.Frequency || '',
+              duration: row.duration || '',
+              Duration: row.duration || '',
+              notes: row.Notes || '',
               Notes: row.Notes || '',
               quantity: row.quantity || '1',
               price: row.price || '0',
             })),
+
             paid: false,
             paymentMethod: 'Cash',
           };
 
           console.log('📝 Creating prescription with', prescriptionPayload.items.length, 'items...');
           const prescriptionResult = await pharmacyService.createPrescriptionFromIntake(prescriptionPayload);
-          
+
           if (prescriptionResult) {
             const total = prescriptionResult.total || 0;
             const reductions = prescriptionResult.stockReductions || [];
@@ -256,11 +331,11 @@ const AppointmentIntakeModal = ({ isOpen, onClose, appointmentId, onSuccess }) =
 
           console.log('🧪 Creating lab reports for', pathologyPayload.pathologyRows.length, 'tests...');
           const pathologyResult = await pathologyService.createReportsFromIntake(pathologyPayload);
-          
+
           if (pathologyResult && pathologyResult.success) {
             console.log('✅ Lab reports created:', pathologyResult.reports.length);
             details.push(`🧪 Lab reports created: ${pathologyResult.reports.length} test(s)`);
-            
+
             if (pathologyResult.errors && pathologyResult.errors.length > 0) {
               console.warn('⚠️ Some lab reports failed:', pathologyResult.errors);
               details.push(`⚠️ ${pathologyResult.errors.length} test(s) failed`);
@@ -281,7 +356,7 @@ const AppointmentIntakeModal = ({ isOpen, onClose, appointmentId, onSuccess }) =
       if (onSuccess) {
         await onSuccess();
       }
-      
+
       onClose();
     } catch (err) {
       setError(err.message || 'Failed to save intake data');
@@ -296,7 +371,7 @@ const AppointmentIntakeModal = ({ isOpen, onClose, appointmentId, onSuccess }) =
   // Convert appointment to PatientDetails for header card
   const convertToPatient = () => {
     if (patient) return patient;
-    
+
     if (!appointment) return null;
 
     // Extract patient ID safely
@@ -355,9 +430,9 @@ const AppointmentIntakeModal = ({ isOpen, onClose, appointmentId, onSuccess }) =
     <div className="intake-modal-overlay">
       <div className="intake-modal-dialog">
         {/* Floating Close Button */}
-        <button 
-          className="intake-modal-close-floating" 
-          onClick={onClose} 
+        <button
+          className="intake-modal-close-floating"
+          onClick={onClose}
           disabled={isSaving}
           title="Close"
         >
@@ -383,7 +458,7 @@ const AppointmentIntakeModal = ({ isOpen, onClose, appointmentId, onSuccess }) =
                 {/* Patient Profile Header Card */}
                 {patientForHeader && (
                   <div className="intake-patient-header">
-                    <PatientProfileHeaderCard 
+                    <PatientProfileHeaderCard
                       patient={patientForHeader}
                       onEdit={null}
                     />
@@ -526,15 +601,15 @@ const AppointmentIntakeModal = ({ isOpen, onClose, appointmentId, onSuccess }) =
 
               {/* Fixed Bottom Save Bar */}
               <div className="intake-modal-save-bar">
-                <button 
-                  className="btn-intake-cancel" 
+                <button
+                  className="btn-intake-cancel"
                   onClick={onClose}
                   disabled={isSaving}
                 >
                   Cancel
                 </button>
-                <button 
-                  className="btn-intake-save" 
+                <button
+                  className="btn-intake-save"
                   onClick={handleSave}
                   disabled={isSaving}
                 >

@@ -6,7 +6,7 @@
 import axios from 'axios';
 import logger from './loggerService';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://hms-dev.onrender.com/api';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000/api';
 
 /**
  * Get auth token from localStorage
@@ -41,16 +41,16 @@ export const searchMedicines = async (query = '', limit = 50) => {
     if (query) params.append('search', query);
     if (query) params.append('q', query); // alternate param name
     params.append('limit', limit);
-    
-    const url = `/api/medicines?${params.toString()}`;
-    
+
+    const url = `/pharmacy/medicines?${params.toString()}`;
+
     logger.apiRequest('GET', url);
-    
+
     const axiosInstance = createAxiosInstance();
     const response = await axiosInstance.get(url);
-    
+
     logger.apiResponse('GET', url, response.status);
-    
+
     // Handle different response formats
     let medicines = [];
     if (Array.isArray(response.data)) {
@@ -60,7 +60,7 @@ export const searchMedicines = async (query = '', limit = 50) => {
     } else if (response.data.data) {
       medicines = response.data.data;
     }
-    
+
     logger.success('MEDICINES', `Fetched ${medicines.length} medicines`);
     return medicines;
   } catch (error) {
@@ -77,21 +77,21 @@ export const searchMedicines = async (query = '', limit = 50) => {
 export const fetchMedicines = async (options = {}) => {
   try {
     const { page = 0, limit = 100, q = '' } = options;
-    
+
     const params = new URLSearchParams();
     params.append('page', page);
     params.append('limit', limit);
     if (q) params.append('q', q);
-    
-    const url = `/api/medicines?${params.toString()}`;
-    
+
+    const url = `/pharmacy/medicines?${params.toString()}`;
+
     logger.apiRequest('GET', url);
-    
+
     const axiosInstance = createAxiosInstance();
     const response = await axiosInstance.get(url);
-    
+
     logger.apiResponse('GET', url, response.status);
-    
+
     let medicines = [];
     if (Array.isArray(response.data)) {
       medicines = response.data;
@@ -100,7 +100,7 @@ export const fetchMedicines = async (options = {}) => {
     } else if (response.data.data) {
       medicines = response.data.data;
     }
-    
+
     logger.success('MEDICINES', `Fetched ${medicines.length} medicines`);
     return medicines;
   } catch (error) {
@@ -116,17 +116,17 @@ export const fetchMedicines = async (options = {}) => {
  */
 export const fetchMedicineById = async (id) => {
   try {
-    const url = `/api/medicines/${id}`;
-    
+    const url = `/pharmacy/medicines/${id}`;
+
     logger.apiRequest('GET', url);
-    
+
     const axiosInstance = createAxiosInstance();
     const response = await axiosInstance.get(url);
-    
+
     logger.apiResponse('GET', url, response.status);
-    
+
     const medicine = response.data.medicine || response.data.data || response.data;
-    
+
     logger.success('MEDICINES', `Fetched medicine ${id}`);
     return medicine;
   } catch (error) {
@@ -142,17 +142,17 @@ export const fetchMedicineById = async (id) => {
  */
 export const checkStock = async (medicineId) => {
   try {
-    const url = `/api/medicines/${medicineId}/stock`;
-    
+    const url = `/pharmacy/medicines/${medicineId}/stock`;
+
     logger.apiRequest('GET', url);
-    
+
     const axiosInstance = createAxiosInstance();
     const response = await axiosInstance.get(url);
-    
+
     logger.apiResponse('GET', url, response.status);
-    
+
     const stock = response.data.stock || response.data.data || response.data;
-    
+
     logger.success('MEDICINES', `Checked stock for medicine ${medicineId}: ${stock}`);
     return stock;
   } catch (error) {

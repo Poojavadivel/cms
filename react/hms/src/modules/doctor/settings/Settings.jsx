@@ -14,8 +14,13 @@ import {
   MdToggleOn,
   MdToggleOff,
   MdLogout,
+  MdLock,
+  MdSave,
+  MdVisibility,
+  MdVisibilityOff,
 } from 'react-icons/md';
 import { useApp } from '../../../provider';
+import authService from '../../../services/authService';
 import './Settings.css';
 
 const DoctorSettings = () => {
@@ -24,6 +29,52 @@ const DoctorSettings = () => {
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [pushNotifications, setPushNotifications] = useState(true);
   const [currentStatus, setCurrentStatus] = useState('Available');
+
+  // Password change state
+  const [passwords, setPasswords] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [message, setMessage] = useState({ type: '', text: '' });
+  const [showPasswords, setShowPasswords] = useState({
+    current: false,
+    new: false,
+    confirm: false,
+  });
+
+  const toggleVisibility = (field) => {
+    setShowPasswords(prev => ({ ...prev, [field]: !prev[field] }));
+  };
+
+  const handlePasswordChange = async (e) => {
+    e.preventDefault();
+    setMessage({ type: '', text: '' });
+
+    if (passwords.newPassword !== passwords.confirmPassword) {
+      setMessage({ type: 'error', text: 'New passwords do not match' });
+      return;
+    }
+
+    if (passwords.newPassword.length < 6) {
+      setMessage({ type: 'error', text: 'Password must be at least 6 characters' });
+      return;
+    }
+
+    setIsChangingPassword(true);
+    try {
+      await authService.changePassword(passwords.currentPassword, passwords.newPassword);
+      setMessage({ type: 'success', text: 'Password changed successfully!' });
+      setPasswords({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    } catch (error) {
+      console.error('Password change error details:', error);
+      const errorMsg = error.message || 'Failed to change password';
+      setMessage({ type: 'error', text: errorMsg });
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
 
   const handleLogout = async () => {
     const confirmed = window.confirm('Are you sure you want to logout?');
@@ -103,6 +154,88 @@ const DoctorSettings = () => {
             <div className="status-description">
               Current status: <strong>{currentStatus}</strong>
             </div>
+          </div>
+
+          {/* Security Section (Password Change) */}
+          <div className="settings-section security-section">
+            <div className="section-title">
+              <MdLock />
+              <h2>Security</h2>
+            </div>
+            <form onSubmit={handlePasswordChange} className="password-form">
+              <div className="input-group password-group">
+                <label>Current Password</label>
+                <div className="input-wrapper">
+                  <input
+                    type={showPasswords.current ? "text" : "password"}
+                    placeholder="Enter current password"
+                    value={passwords.currentPassword}
+                    onChange={(e) => setPasswords({ ...passwords, currentPassword: e.target.value })}
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="visibility-toggle"
+                    onClick={() => toggleVisibility('current')}
+                  >
+                    {showPasswords.current ? <MdVisibilityOff /> : <MdVisibility />}
+                  </button>
+                </div>
+              </div>
+              <div className="input-group password-group">
+                <label>New Password</label>
+                <div className="input-wrapper">
+                  <input
+                    type={showPasswords.new ? "text" : "password"}
+                    placeholder="Enter new password"
+                    value={passwords.newPassword}
+                    onChange={(e) => setPasswords({ ...passwords, newPassword: e.target.value })}
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="visibility-toggle"
+                    onClick={() => toggleVisibility('new')}
+                  >
+                    {showPasswords.new ? <MdVisibilityOff /> : <MdVisibility />}
+                  </button>
+                </div>
+              </div>
+              <div className="input-group password-group">
+                <label>Confirm New Password</label>
+                <div className="input-wrapper">
+                  <input
+                    type={showPasswords.confirm ? "text" : "password"}
+                    placeholder="Confirm new password"
+                    value={passwords.confirmPassword}
+                    onChange={(e) => setPasswords({ ...passwords, confirmPassword: e.target.value })}
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="visibility-toggle"
+                    onClick={() => toggleVisibility('confirm')}
+                  >
+                    {showPasswords.confirm ? <MdVisibilityOff /> : <MdVisibility />}
+                  </button>
+                </div>
+              </div>
+
+              {message.text && (
+                <div className={`form-message ${message.type}`}>
+                  {message.text}
+                </div>
+              )}
+
+              <button type="submit" className="save-password-btn" disabled={isChangingPassword}>
+                {isChangingPassword ? 'Updating...' : (
+                  <>
+                    <MdSave />
+                    <span>Update Password</span>
+                  </>
+                )}
+              </button>
+            </form>
           </div>
 
           {/* Notifications Section */}

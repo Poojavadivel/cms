@@ -6,7 +6,7 @@
  */
 
 import axios from 'axios';
-import { PatientEndpoints, ReportsEndpoints } from './apiConstants';
+import { PatientEndpoints, ReportsEndpoints, DoctorEndpoints, IntakeEndpoints } from './apiConstants';
 import logger from './loggerService';
 import { PatientDetails } from '../models/Patients';
 import { fetchPrescriptions, fetchLabReports } from './prescriptionService';
@@ -79,6 +79,40 @@ export const fetchPatients = async (options = {}) => {
   } catch (error) {
     logger.apiError('GET', PatientEndpoints.getAll, error);
     throw new Error(error.response?.data?.message || 'Failed to fetch patients');
+  }
+};
+
+/**
+ * Fetch patients for the logged-in doctor
+ * @returns {Promise<Array>} List of patients
+ */
+export const fetchMyPatients = async () => {
+  try {
+    const url = DoctorEndpoints.getMyPatients;
+
+    logger.apiRequest('GET', url);
+
+    const axiosInstance = createAxiosInstance();
+    const response = await axiosInstance.get(url);
+
+    logger.apiResponse('GET', url, response.status);
+
+    // Backend returns { success: true, patients: [...] }
+    let rawPatients = [];
+    if (response.data && response.data.patients) {
+      rawPatients = response.data.patients;
+    } else if (Array.isArray(response.data)) {
+      rawPatients = response.data;
+    }
+
+    // Transform each patient using PatientDetails.fromJSON
+    const patients = rawPatients.map(p => PatientDetails.fromJSON(p));
+
+    logger.success('PATIENTS', `Fetched ${patients.length} patients for current doctor`);
+    return patients;
+  } catch (error) {
+    logger.apiError('GET', DoctorEndpoints.getMyPatients, error);
+    throw new Error(error.response?.data?.message || 'Failed to fetch your patients');
   }
 };
 
@@ -336,6 +370,7 @@ export const createFollowUp = async (patientId, followUpData) => {
 // Export as default
 const patientsService = {
   fetchPatients,
+  fetchMyPatients,
   fetchPatientById,
   createPatient,
   updatePatient,
@@ -345,6 +380,47 @@ const patientsService = {
   fetchPatientPrescriptions,
   fetchPatientLabResults,
   createFollowUp,
+  /**
+   * Submit patient intake form (doctor side)
+   * @param {string} patientId - Patient ID
+   * @param {Object} intakeData - Intake form data
+   * @returns {Promise<Object>} Created intake record
+   */
+  saveIntake: async (patientId, intakeData) => {
+    try {
+      const api = createAxiosInstance();
+      const url = IntakeEndpoints.create(patientId);
+      logger.apiRequest('POST', url, intakeData);
+      const response = await api.post(url, intakeData);
+      logger.apiResponse('POST', url, response.status);
+      return response.data;
+    } catch (error) {
+      logger.apiError('POST', `/intake/${patientId}/intake`, error);
+      throw new Error(error.response?.data?.message || 'Failed to save intake form');
+    }
+  },
+
+  /**
+   * Fetch intakes for a patient
+   * @param {string} patientId - Patient ID
+   * @param {Object} options - { limit, skip }
+   */
+  fetchIntakes: async (patientId, options = {}) => {
+    try {
+      const api = createAxiosInstance();
+      const params = new URLSearchParams(options).toString();
+      const url = `${IntakeEndpoints.get(patientId)}?${params}`;
+
+      logger.apiRequest('GET', url);
+      const response = await api.get(url);
+      logger.apiResponse('GET', url, response.status);
+
+      return response.data.intakes || [];
+    } catch (error) {
+      logger.apiError('GET', `/intake/${patientId}/intake`, error);
+      return [];
+    }
+  },
 };
 
 export default patientsService;

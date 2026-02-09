@@ -45,14 +45,14 @@ const DoctorPatients = () => {
   const fetchPatients = useCallback(async () => {
     setIsLoading(true);
     try {
-      const data = await patientsService.fetchPatients({ limit: 100 });
-      
+      const data = await patientsService.fetchMyPatients();
+
       console.log('📊 Raw patient data from API:', data.slice(0, 2)); // Log first 2 patients
 
       const transformed = data.map((p, index) => {
         // Extract medical condition from various possible sources
         let condition = 'No diagnosis';
-        
+
         // Try metadata first
         if (p.metadata?.medicalHistory?.currentConditions && Array.isArray(p.metadata.medicalHistory.currentConditions) && p.metadata.medicalHistory.currentConditions.length > 0) {
           condition = p.metadata.medicalHistory.currentConditions.join(', ');
@@ -148,7 +148,7 @@ const DoctorPatients = () => {
 
   const handlePatientClick = async (patient) => {
     console.log('🔍 Patient clicked:', patient);
-    
+
     try {
       // Fetch full patient details using the ID
       const fullPatient = await patientsService.fetchPatientById(patient.id);

@@ -1,55 +1,32 @@
-// Quick script to check medicines in database
+// Simple DB check
 require('dotenv').config();
 const mongoose = require('mongoose');
-const { Medicine, MedicineBatch } = require('./Models');
 
-const MONGODB_URI = process.env.MANGODB_URL || process.env.MONGODB_URI;
-
-async function checkDatabase() {
+async function checkDB() {
   try {
-    console.log('🔌 Connecting to MongoDB...');
-    await mongoose.connect(MONGODB_URI);
-    console.log('✅ Connected!\n');
+    const uri = process.env.MONGO_URI || 'mongodb://localhost:27017/hms';
+    console.log('Connecting to:', uri);
+    await mongoose.connect(uri);
 
-    // Count medicines
-    const medicineCount = await Medicine.countDocuments();
-    console.log(`📊 Total Medicines in Database: ${medicineCount}\n`);
+    const Medicine = mongoose.model('Medicine', new mongoose.Schema({}, { strict: false, collection: 'medicines' }));
+    const count = await Medicine.countDocuments();
+    console.log('\n📊 Total medicines in DB:', count);
 
-    // Get all medicines
-    const medicines = await Medicine.find().limit(10).lean();
-    
-    if (medicines.length === 0) {
-      console.log('❌ No medicines found in database!');
-      console.log('💡 Run: node Server/seed_sample_medicines.js to add sample data\n');
+    if (count > 0) {
+      const samples = await Medicine.find().limit(5).lean();
+      console.log('\n📋 Sample medicines:');
+      samples.forEach(m => {
+        console.log(`  - ${m.name} (ID: ${m._id})`);
+      });
     } else {
-      console.log('📋 Medicines in Database:\n');
-      for (const med of medicines) {
-        // Get stock for this medicine
-        const batches = await MedicineBatch.find({ medicineId: String(med._id) });
-        const totalStock = batches.reduce((sum, b) => sum + (b.quantity || 0), 0);
-        
-        console.log(`  ${med.name}`);
-        console.log(`    - ID: ${med._id}`);
-        console.log(`    - SKU: ${med.sku || 'N/A'}`);
-        console.log(`    - Category: ${med.category || 'N/A'}`);
-        console.log(`    - Stock: ${totalStock} units (from ${batches.length} batches)`);
-        console.log(`    - Status: ${med.status || 'N/A'}`);
-        console.log('');
-      }
+      console.log('\n⚠️ No medicines found in database!');
     }
 
-    // Count batches
-    const batchCount = await MedicineBatch.countDocuments();
-    console.log(`📦 Total Batches in Database: ${batchCount}\n`);
-
-    await mongoose.connection.close();
-    console.log('✅ Database check complete!');
-    process.exit(0);
-
+    await mongoose.disconnect();
+    console.log('\n✅ Done');
   } catch (error) {
-    console.error('❌ Error:', error.message);
-    process.exit(1);
+    console.error('💥 Error:', error.message);
   }
 }
 
-checkDatabase();
+checkDB();

@@ -36,6 +36,24 @@ const PathologyEndpoints = {
   downloadReport: (id) => `${API_BASE}/reports/${id}/download`,
   uploadReport: `${API_BASE}/reports/upload`,
   properReport: (id) => `reports-proper/pathology/${id}`,
+  pendingTests: `${API_BASE}/pending-tests`,
+};
+
+const fetchPendingTests = async (params = {}) => {
+  try {
+    const { page = 0, limit = 50 } = params;
+    let url = `${PathologyEndpoints.pendingTests}?page=${page}&limit=${limit}`;
+
+    logger.apiRequest('GET', url);
+    const response = await api.get(url);
+    logger.apiResponse('GET', url, response.status, response.data);
+
+    return response.data.tests || [];
+  } catch (error) {
+    logger.apiError('GET', PathologyEndpoints.pendingTests, error);
+    console.error('Failed to fetch pending pathology tests:', error);
+    return [];
+  }
 };
 
 const fetchReports = async (params = {}) => {
@@ -336,13 +354,13 @@ const printProperReport = async (id) => {
 const createReportsFromIntake = async (intakeData) => {
   try {
     const { patientId, patientName, appointmentId, intakeId, pathologyRows } = intakeData;
-    
+
     if (!pathologyRows || pathologyRows.length === 0) {
       return { success: true, message: 'No pathology tests to create', reports: [] };
     }
 
     console.log(`🧪 Creating ${pathologyRows.length} lab report(s) from intake...`);
-    
+
     const createdReports = [];
     const errors = [];
 
@@ -364,7 +382,7 @@ const createReportsFromIntake = async (intakeData) => {
         logger.apiRequest('POST', PathologyEndpoints.create, reportPayload);
         const response = await api.post(PathologyEndpoints.create, reportPayload);
         logger.apiResponse('POST', PathologyEndpoints.create, response.status, response.data);
-        
+
         createdReports.push(response.data);
         console.log(`✅ Lab report created: ${reportPayload.testName}`);
       } catch (error) {
@@ -396,7 +414,8 @@ const pathologyServiceExport = {
   printReport,
   downloadProperReport,
   printProperReport,
-  createReportsFromIntake
+  createReportsFromIntake,
+  fetchPendingTests
 };
 
 export default pathologyServiceExport;

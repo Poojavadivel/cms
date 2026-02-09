@@ -11,7 +11,9 @@ const getAuthToken = () => {
 };
 
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'https://hms-dev.onrender.com/api',
+  baseURL: (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
+    ? (process.env.REACT_APP_API_URL || 'http://localhost:5000/api')
+    : '/api',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -46,7 +48,7 @@ const PharmacyEndpoints = {
 const fetchMedicines = async (params = {}) => {
   try {
     const { page = 0, limit = 100, q = '', status = '' } = params;
-    
+
     // Build query parameters
     let url = PharmacyEndpoints.getAll;
     const queryParams = [];
@@ -54,15 +56,15 @@ const fetchMedicines = async (params = {}) => {
     if (limit) queryParams.push(`limit=${limit}`);
     if (q) queryParams.push(`q=${encodeURIComponent(q)}`);
     if (status) queryParams.push(`status=${encodeURIComponent(status)}`);
-    
+
     if (queryParams.length > 0) {
       url += `?${queryParams.join('&')}`;
     }
-    
+
     logger.apiRequest('GET', url);
     const response = await api.get(url);
     logger.apiResponse('GET', url, response.status, response.data);
-    
+
     // Handle different response formats from backend
     let medicinesData;
     if (Array.isArray(response.data)) {
@@ -74,7 +76,7 @@ const fetchMedicines = async (params = {}) => {
     } else {
       medicinesData = [];
     }
-    
+
     // Transform backend data to match frontend expectations
     return medicinesData.map(med => ({
       id: med._id || med.id,
@@ -156,7 +158,7 @@ const downloadMedicineReport = async (id) => {
     const response = await api.get(PharmacyEndpoints.downloadReport(id), {
       responseType: 'blob'
     });
-    
+
     const url = window.URL.createObjectURL(new Blob([response.data]));
     const link = document.createElement('a');
     link.href = url;
@@ -164,7 +166,7 @@ const downloadMedicineReport = async (id) => {
     document.body.appendChild(link);
     link.click();
     link.remove();
-    
+
     logger.apiResponse('GET', PharmacyEndpoints.downloadReport(id), response.status, 'File downloaded');
     return response.data;
   } catch (error) {
@@ -182,16 +184,16 @@ const downloadMedicineReport = async (id) => {
 const createPrescriptionFromIntake = async (prescriptionData) => {
   try {
     logger.apiRequest('POST', PharmacyEndpoints.createPrescriptionFromIntake, prescriptionData);
-    
+
     const response = await api.post(PharmacyEndpoints.createPrescriptionFromIntake, prescriptionData);
-    
+
     logger.apiResponse('POST', PharmacyEndpoints.createPrescriptionFromIntake, response.status, response.data);
-    
+
     // Log prescription creation details
     const { total, stockReductions } = response.data;
     console.log('✅ Prescription created! Total: ₹' + (total || 0));
     console.log('📦 Stock reduced from ' + (stockReductions?.length || 0) + ' batch(es)');
-    
+
     return response.data;
   } catch (error) {
     logger.apiError('POST', PharmacyEndpoints.createPrescriptionFromIntake, error);
@@ -211,12 +213,12 @@ const checkStockAvailability = async (pharmacyItems) => {
     const stockChecks = await Promise.all(
       pharmacyItems.map(async (item) => {
         if (!item.medicineId) return null;
-        
+
         try {
           const medicine = await fetchMedicineById(item.medicineId);
           const requestedQty = parseInt(item.quantity || 1);
           const availableQty = medicine.quantity || medicine.stock || 0;
-          
+
           if (availableQty === 0) {
             warnings.push({
               medicine: item.Medicine,
@@ -234,7 +236,7 @@ const checkStockAvailability = async (pharmacyItems) => {
               requested: requestedQty
             });
           }
-          
+
           return {
             medicineId: item.medicineId,
             medicineName: item.Medicine,
@@ -248,7 +250,7 @@ const checkStockAvailability = async (pharmacyItems) => {
         }
       })
     );
-    
+
     return {
       hasWarnings: warnings.length > 0,
       warnings,
@@ -271,11 +273,11 @@ const fetchBatches = async (params = {}) => {
   try {
     const { page = 0, limit = 100 } = params;
     const url = `${PharmacyEndpoints.getBatches}?page=${page}&limit=${limit}`;
-    
+
     logger.apiRequest('GET', url);
     const response = await api.get(url);
     logger.apiResponse('GET', url, response.status, response.data);
-    
+
     let batchesData;
     if (Array.isArray(response.data)) {
       batchesData = response.data;
@@ -286,7 +288,7 @@ const fetchBatches = async (params = {}) => {
     } else {
       batchesData = [];
     }
-    
+
     return batchesData;
   } catch (error) {
     logger.apiError('GET', PharmacyEndpoints.getBatches, error);

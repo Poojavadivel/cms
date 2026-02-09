@@ -13,6 +13,9 @@ import {
   MdPerson,
   MdWarning,
   MdDescription,
+  MdDelete,
+  MdAttachMoney,
+  MdShowChart,
 } from 'react-icons/md';
 import './Prescriptions_Flutter.css';
 
@@ -39,47 +42,63 @@ const PharmacistPrescriptions = () => {
   const [filteredPrescriptions, setFilteredPrescriptions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
+
   const [searchQuery, setSearchQuery] = useState('');
   const [currentFilter, setCurrentFilter] = useState(PrescriptionFilter.ALL);
   const [currentSort, setCurrentSort] = useState(PrescriptionSort.NEWEST);
   const [viewMode, setViewMode] = useState(ViewMode.LIST);
-  
+
   const [stats, setStats] = useState({
-    today: 0,
-    week: 0,
     total: 0,
+  });
+
+  const [summaryStats, setSummaryStats] = useState({
+    totalStockValue: 0,
+    totalEarnings: 0,
+    todayEarnings: 0
   });
 
   const [showDispenseDialog, setShowDispenseDialog] = useState(false);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [selectedPrescription, setSelectedPrescription] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [activeBucket, setActiveBucket] = useState('pending'); // 'pending' or 'completed'
 
   useEffect(() => {
     loadPrescriptions();
-  }, []);
+  }, [activeBucket]);
 
   useEffect(() => {
     filterAndSortPrescriptions();
-  }, [searchQuery, currentFilter, currentSort, prescriptions]);
+  }, [searchQuery, currentFilter, currentSort, prescriptions, activeBucket]);
 
   const loadPrescriptions = async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
-      const response = await authService.get('/pharmacy/pending-prescriptions');
-      
+      const response = await authService.get(`/pharmacy/pending-prescriptions?status=${activeBucket}`);
+
       let prescriptionsList = [];
       if (response && typeof response === 'object') {
         prescriptionsList = response.prescriptions || response.data || [];
       } else if (Array.isArray(response)) {
         prescriptionsList = response;
       }
-      
+
       setPrescriptions(prescriptionsList);
       calculateStatistics(prescriptionsList);
+
+      // Fetch summary stats
+      const summary = await authService.get('/pharmacy/summary');
+      if (summary && summary.success) {
+        setSummaryStats({
+          totalStockValue: summary.totalStockValue || 0,
+          totalEarnings: summary.totalEarnings || 0,
+          pendingCount: summary.pendingCount || 0,
+          completedCount: summary.completedCount || 0
+        });
+      }
     } catch (err) {
       console.error('Error loading prescriptions:', err);
       setError(err.message || 'Failed to load prescriptions');
@@ -93,10 +112,10 @@ const PharmacistPrescriptions = () => {
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const weekAgo = new Date(today);
     weekAgo.setDate(weekAgo.getDate() - 7);
-    
+
     let todayCount = 0;
     let weekCount = 0;
-    
+
     list.forEach(prescription => {
       const createdAt = prescription.createdAt ? new Date(prescription.createdAt) : null;
       if (createdAt) {
@@ -104,7 +123,7 @@ const PharmacistPrescriptions = () => {
         if (createdAt >= weekAgo) weekCount++;
       }
     });
-    
+
     setStats({
       today: todayCount,
       week: weekCount,
@@ -114,7 +133,7 @@ const PharmacistPrescriptions = () => {
 
   const filterAndSortPrescriptions = () => {
     let filtered = [...prescriptions];
-    
+
     // Apply date filter
     const now = new Date();
     switch (currentFilter) {
@@ -144,7 +163,7 @@ const PharmacistPrescriptions = () => {
       default:
         break;
     }
-    
+
     // Apply search filter
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
@@ -155,7 +174,7 @@ const PharmacistPrescriptions = () => {
         return patientName.includes(query) || patientPhone.includes(query) || notes.includes(query);
       });
     }
-    
+
     // Apply sorting
     switch (currentSort) {
       case PrescriptionSort.NEWEST:
@@ -188,7 +207,7 @@ const PharmacistPrescriptions = () => {
       default:
         break;
     }
-    
+
     setFilteredPrescriptions(filtered);
   };
 
@@ -212,7 +231,17 @@ const PharmacistPrescriptions = () => {
     setShowDispenseDialog(true);
   };
 
+  const recalculateTotal = (prescription) => {
+    if (!prescription || !prescription.pharmacyItems) return 0;
+    return prescription.pharmacyItems.reduce((sum, item) => {
+      const qty = Number(item.quantity || 1);
+      const price = Number(item.unitPrice || item.price || 0);
+      return sum + (qty * price);
+    }, 0);
+  };
+
   const confirmDispense = async () => {
+
     if (!selectedPrescription) return;
 
     setIsProcessing(true);
@@ -228,7 +257,9 @@ const PharmacistPrescriptions = () => {
         notes: selectedPrescription.notes || '',
       });
 
+      alert('✅ Prescription dispensed successfully!');
       setShowDispenseDialog(false);
+
       setSelectedPrescription(null);
       await loadPrescriptions(); // Reload the list
     } catch (error) {
@@ -242,6 +273,34 @@ const PharmacistPrescriptions = () => {
   const handleViewDetails = (prescription) => {
     setSelectedPrescription(prescription);
     setShowDetailsDialog(true);
+  };
+
+  const handleDelete = async (prescription) => {
+    if (prescription.dispensed) {
+      alert('Cannot delete a prescription that has already been dispensed.');
+      return;
+    }
+
+    if (!window.confirm(`Are you sure you want to delete the prescription for ${prescription.patientName}? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      setIsProcessing(true);
+      const response = await authService.delete(`/pharmacy/prescriptions/${prescription._id}`);
+
+      if (response && response.success) {
+        alert('✅ Prescription deleted successfully!');
+        await loadPrescriptions();
+      } else {
+        throw new Error(response?.message || 'Failed to delete prescription');
+      }
+    } catch (error) {
+      console.error('Error deleting prescription:', error);
+      alert(`❌ Error: ${error.message || 'Failed to delete prescription'}`);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   if (loading) {
@@ -275,33 +334,51 @@ const PharmacistPrescriptions = () => {
       {/* Statistics Dashboard */}
       <div className="flutter-prescription-stats">
         <div className="flutter-stat-item">
-          <MdCalendarToday size={20} color="#10b981" />
-          <span className="flutter-stat-value">{stats.today}</span>
-          <span className="flutter-stat-label">Today</span>
+          <MdAttachMoney size={20} color="#10b981" />
+          <span className="flutter-stat-value">₹{summaryStats.totalEarnings?.toLocaleString() || 0}</span>
+          <span className="flutter-stat-label">Total Earnings</span>
         </div>
         <div className="flutter-stat-divider"></div>
         <div className="flutter-stat-item">
-          <MdCalendarToday size={20} color="#3b82f6" />
-          <span className="flutter-stat-value">{stats.week}</span>
-          <span className="flutter-stat-label">This Week</span>
+          <MdShowChart size={20} color="#8b5cf6" />
+          <span className="flutter-stat-value">₹{summaryStats.totalStockValue?.toLocaleString() || 0}</span>
+          <span className="flutter-stat-label">Stock Value</span>
         </div>
         <div className="flutter-stat-divider"></div>
-        <div className="flutter-stat-item">
+        <div
+          className={`flutter-stat-item clickable ${activeBucket === 'pending' ? 'active' : ''}`}
+          onClick={() => setActiveBucket('pending')}
+        >
           <MdLocalPharmacy size={20} color="#4f46e5" />
-          <span className="flutter-stat-value">{stats.total}</span>
-          <span className="flutter-stat-label">Total</span>
+          <span className="flutter-stat-value" style={{ color: activeBucket === 'pending' ? '#4f46e5' : '#1f2937' }}>
+            {summaryStats.pendingCount || 0}
+          </span>
+          <span className="flutter-stat-label">Pending</span>
+        </div>
+        <div className="flutter-stat-divider"></div>
+        <div
+          className={`flutter-stat-item clickable ${activeBucket === 'completed' ? 'active' : ''}`}
+          onClick={() => setActiveBucket('completed')}
+        >
+          <MdCheckCircle size={20} color="#10b981" />
+          <span className="flutter-stat-value" style={{ color: activeBucket === 'completed' ? '#10b981' : '#1f2937' }}>
+            {summaryStats.completedCount || 0}
+          </span>
+          <span className="flutter-stat-label">Completed</span>
         </div>
         <div className="flutter-stat-divider"></div>
         <div className="flutter-stat-item">
           <MdFilterList size={20} color="#f97316" />
           <span className="flutter-stat-value">{filteredPrescriptions.length}</span>
-          <span className="flutter-stat-label">Filtered</span>
+          <span className="flutter-stat-label">Results</span>
         </div>
         <div className="flutter-stat-divider"></div>
         <button onClick={loadPrescriptions} className="flutter-refresh-icon-btn" title="Refresh">
           <MdRefresh size={20} />
         </button>
       </div>
+
+
 
       {/* Search and Filter Bar */}
       <div className="flutter-prescription-search-bar">
@@ -315,7 +392,7 @@ const PharmacistPrescriptions = () => {
             className="flutter-search-input-wide"
           />
         </div>
-        
+
         <select
           value={currentFilter}
           onChange={(e) => setCurrentFilter(e.target.value)}
@@ -376,16 +453,21 @@ const PharmacistPrescriptions = () => {
                   <span>{formatDate(prescription.createdAt)}</span>
                 </div>
               </div>
-              
+
               <div className="flutter-prescription-body">
-                <div className="flutter-prescription-info">
-                  <span className="flutter-info-label">Doctor:</span>
-                  <span className="flutter-info-value">{prescription.doctorName || 'N/A'}</span>
-                </div>
                 <div className="flutter-prescription-info">
                   <span className="flutter-info-label">Phone:</span>
                   <span className="flutter-info-value">{prescription.patientPhone || 'N/A'}</span>
                 </div>
+                <div className="flutter-prescription-info">
+                  <span className="flutter-info-label">Doctor:</span>
+                  <span className="flutter-info-value" style={{ fontWeight: 600 }}>{prescription.doctorName || 'N/A'}</span>
+                </div>
+                <div className="flutter-prescription-info">
+                  <span className="flutter-info-label">Total Amount:</span>
+                  <span className="flutter-info-value" style={{ fontWeight: 700, color: '#10b981' }}>₹{recalculateTotal(prescription).toLocaleString()}</span>
+                </div>
+
                 {prescription.notes && (
                   <div className="flutter-prescription-notes">
                     <span className="flutter-info-label">Notes:</span>
@@ -393,9 +475,9 @@ const PharmacistPrescriptions = () => {
                   </div>
                 )}
               </div>
-              
+
               <div className="flutter-prescription-footer">
-                <button 
+                <button
                   className={`flutter-dispense-btn ${prescription.dispensed ? 'dispensed' : ''}`}
                   onClick={() => handleDispenseClick(prescription)}
                   disabled={prescription.dispensed}
@@ -403,11 +485,18 @@ const PharmacistPrescriptions = () => {
                   <MdCheckCircle size={18} />
                   <span>{prescription.dispensed ? 'Dispensed' : 'Dispense'}</span>
                 </button>
-                <button 
+                <button
                   className="flutter-view-details-btn"
                   onClick={() => handleViewDetails(prescription)}
                 >
-                  <span>View Details</span>
+                  <span>Details</span>
+                </button>
+                <button
+                  className="flutter-delete-btn"
+                  onClick={() => handleDelete(prescription)}
+                  title="Delete Prescription"
+                >
+                  <MdDelete size={18} />
                 </button>
               </div>
             </div>
@@ -424,20 +513,32 @@ const PharmacistPrescriptions = () => {
               <div className="flutter-grid-card-body">
                 <div className="flutter-grid-info">
                   <span className="flutter-grid-label">Doctor</span>
-                  <span className="flutter-grid-value">{prescription.doctorName || 'N/A'}</span>
+                  <span className="flutter-grid-value" style={{ fontWeight: 600 }}>{prescription.doctorName || 'N/A'}</span>
+                </div>
+                <div className="flutter-grid-info">
+                  <span className="flutter-grid-label">Total Amount</span>
+                  <span className="flutter-grid-value" style={{ fontWeight: 700, color: '#10b981' }}>₹{recalculateTotal(prescription).toLocaleString()}</span>
                 </div>
                 <div className="flutter-grid-info">
                   <span className="flutter-grid-label">Date</span>
                   <span className="flutter-grid-value">{formatDate(prescription.createdAt)}</span>
                 </div>
               </div>
-              <button 
+              <button
                 className={`flutter-grid-dispense-btn ${prescription.dispensed ? 'dispensed' : ''}`}
                 onClick={() => handleDispenseClick(prescription)}
                 disabled={prescription.dispensed}
               >
                 <MdCheckCircle size={18} />
                 <span>{prescription.dispensed ? 'Dispensed' : 'Dispense'}</span>
+              </button>
+              <button
+                className="flutter-delete-btn"
+                style={{ marginTop: '8px' }}
+                onClick={() => handleDelete(prescription)}
+                title="Delete Prescription"
+              >
+                <MdDelete size={18} />
               </button>
             </div>
           ))}
@@ -453,7 +554,7 @@ const PharmacistPrescriptions = () => {
                 <MdLocalPharmacy size={24} />
               </div>
               <h2>Dispense Prescription</h2>
-              <button 
+              <button
                 className="flutter-modal-close"
                 onClick={() => setShowDispenseDialog(false)}
                 disabled={isProcessing}
@@ -478,8 +579,11 @@ const PharmacistPrescriptions = () => {
                 </div>
                 <div className="flutter-modal-info-row">
                   <span className="flutter-modal-label">Total:</span>
-                  <span className="flutter-modal-value">₹{selectedPrescription.total || 0}</span>
+                  <span className="flutter-modal-value" style={{ fontWeight: 700, color: '#10b981' }}>
+                    ₹{recalculateTotal(selectedPrescription).toLocaleString()}
+                  </span>
                 </div>
+
               </div>
             </div>
             <div className="flutter-modal-footer">
@@ -514,7 +618,7 @@ const PharmacistPrescriptions = () => {
                 <h2>Prescription Details</h2>
                 <p>{formatDate(selectedPrescription.createdAt)}</p>
               </div>
-              <button 
+              <button
                 className="flutter-modal-close flutter-modal-close-white"
                 onClick={() => setShowDetailsDialog(false)}
               >
@@ -558,10 +662,14 @@ const PharmacistPrescriptions = () => {
                       <div key={index} className="flutter-medicine-item">
                         <div className="flutter-medicine-number">{index + 1}</div>
                         <div className="flutter-medicine-details">
-                          <div className="flutter-medicine-name">{item.medicineName || item.Medicine || 'Unknown'}</div>
+                          <div className="flutter-medicine-name">
+                            {item.name || item.medicineName || item.Medicine || 'Unknown'}
+                            {item.sku && <span className="flutter-medicine-sku">[{item.sku}]</span>}
+                          </div>
                           <div className="flutter-medicine-meta">
                             {item.dosage && <span>Dosage: {item.dosage}</span>}
-                            {item.frequency && <span>Frequency: {item.frequency}</span>}
+                            {item.frequency && <span>Freq: {item.frequency}</span>}
+                            {item.duration && <span>Days: {item.duration}</span>}
                             {item.quantity && <span>Qty: {item.quantity}</span>}
                           </div>
                           {item.notes && (

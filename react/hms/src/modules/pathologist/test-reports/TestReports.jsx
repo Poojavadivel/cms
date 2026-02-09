@@ -24,6 +24,7 @@ import {
   MdChevronRight,
 } from 'react-icons/md';
 import pathologyService from '../../../services/pathologyService';
+import reportService from '../../../services/reportService';
 import './TestReports.css';
 
 // Import patient gender icons
@@ -55,13 +56,16 @@ const Icons = {
 
 const TestReports = () => {
   const [reports, setReports] = useState([]);
+  const [pendingTests, setPendingTests] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
+  const [activeTab, setActiveTab] = useState('Reports');
   const [currentPage, setCurrentPage] = useState(0);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showViewDialog, setShowViewDialog] = useState(false);
   const [selectedReport, setSelectedReport] = useState(null);
+  const [prefilledData, setPrefilledData] = useState(null);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
   // Calculate items per page based on viewport height
@@ -83,18 +87,30 @@ const TestReports = () => {
   }, []);
 
   useEffect(() => {
-    loadReports();
+    loadData();
   }, []);
 
-  const loadReports = async () => {
+  const loadData = async () => {
     setLoading(true);
+    await Promise.all([loadReports(), loadPendingTests()]);
+    setLoading(false);
+  };
+
+  const loadReports = async () => {
     try {
       const data = await pathologyService.fetchReports({ limit: 100 });
       setReports(data);
     } catch (error) {
       console.error('Error loading reports:', error);
-    } finally {
-      setLoading(false);
+    }
+  };
+
+  const loadPendingTests = async () => {
+    try {
+      const data = await pathologyService.fetchPendingTests();
+      setPendingTests(data);
+    } catch (error) {
+      console.error('Error loading pending tests:', error);
     }
   };
 
@@ -102,7 +118,8 @@ const TestReports = () => {
     try {
       await pathologyService.createReport(reportData);
       setShowAddDialog(false);
-      loadReports();
+      setPrefilledData(null);
+      loadData();
     } catch (error) {
       console.error('Error adding report:', error);
       alert('Failed to add report: ' + error.message);
@@ -111,7 +128,7 @@ const TestReports = () => {
 
   const handleDeleteReport = async (reportId) => {
     if (!window.confirm('Are you sure you want to delete this report?')) return;
-    
+
     try {
       await pathologyService.deleteReport(reportId);
       loadReports();
@@ -132,7 +149,7 @@ const TestReports = () => {
 
     try {
       await pathologyService.updateReport(reportId, formData);
-      loadReports();
+      loadData();
       setShowViewDialog(false);
     } catch (error) {
       console.error('Error uploading file:', error);
@@ -149,9 +166,30 @@ const TestReports = () => {
     }
   };
 
+  const handleViewReportFile = (fileRef) => {
+    if (!fileRef) {
+      alert('No file attached to this report');
+      return;
+    }
+    reportService.viewPdf(fileRef);
+  };
+
+  const handleProcessPending = (test, item) => {
+    setPrefilledData({
+      patientId: test.patientId || '',
+      patientName: test.patientName || '',
+      testName: item.testName || '',
+      category: item.category || 'General',
+      priority: item.priority || 'Normal',
+      intakeId: test._id,
+      appointmentId: test.appointmentId
+    });
+    setShowAddDialog(true);
+  };
+
   // Filter reports
-  const filteredReports = reports.filter(report => {
-    const matchesSearch = searchQuery === '' || 
+  const filteredReports = activeTab === 'Reports' ? reports.filter(report => {
+    const matchesSearch = searchQuery === '' ||
       report.patientName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       report.patientCode?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       report.testName?.toLowerCase().includes(searchQuery.toLowerCase());
@@ -161,13 +199,22 @@ const TestReports = () => {
       (statusFilter === 'Pending' && !report.fileRef);
 
     return matchesSearch && matchesStatus;
-  });
+  }) : [];
+
+  const filteredPending = activeTab === 'Pending' ? pendingTests.filter(test => {
+    const matchesSearch = searchQuery === '' ||
+      test.patientName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      test.pathologyItems?.some(item => item.testName?.toLowerCase().includes(searchQuery.toLowerCase()));
+
+    return matchesSearch;
+  }) : [];
 
   // Paginate
+  const displayData = activeTab === 'Reports' ? filteredReports : filteredPending;
   const startIndex = currentPage * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const paginatedReports = filteredReports.slice(startIndex, endIndex);
-  const totalPages = Math.ceil(filteredReports.length / itemsPerPage);
+  const paginatedData = displayData.slice(startIndex, endIndex);
+  const totalPages = Math.ceil(displayData.length / itemsPerPage);
 
   // Status badge component (matching Admin Pathology)
   const StatusBadge = ({ status }) => {
@@ -229,19 +276,73 @@ const TestReports = () => {
           />
         </div>
 
-        <div className="filter-right-group">
-          <select
-            value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value);
-              setCurrentPage(0);
-            }}
-            className="tab-btn"
-          >
-            <option value="All">All</option>
-            <option value="Completed">Completed</option>
-            <option value="Pending">Pending</option>
-          </select>
+        <div className="filter-right-group" style={{ display: 'flex', gap: '12px' }}>
+          <div className="tab-switcher" style={{ display: 'flex', background: '#f3f4f6', borderRadius: '8px', padding: '4px' }}>
+            <button
+              className={`tab-btn ${activeTab === 'Reports' ? 'active' : ''}`}
+              onClick={() => { setActiveTab('Reports'); setCurrentPage(0); }}
+              style={{
+                padding: '6px 16px',
+                borderRadius: '6px',
+                border: 'none',
+                background: activeTab === 'Reports' ? 'white' : 'transparent',
+                boxShadow: activeTab === 'Reports' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                cursor: 'pointer',
+                fontWeight: '500'
+              }}
+            >
+              All Reports
+            </button>
+            <button
+              className={`tab-btn ${activeTab === 'Pending' ? 'active' : ''}`}
+              onClick={() => { setActiveTab('Pending'); setCurrentPage(0); }}
+              style={{
+                padding: '6px 16px',
+                borderRadius: '6px',
+                border: 'none',
+                background: activeTab === 'Pending' ? 'white' : 'transparent',
+                boxShadow: activeTab === 'Pending' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                cursor: 'pointer',
+                fontWeight: '500',
+                position: 'relative'
+              }}
+            >
+              Pending Orders
+              {pendingTests.length > 0 && (
+                <span style={{
+                  position: 'absolute',
+                  top: '-5px',
+                  right: '-5px',
+                  background: '#ef4444',
+                  color: 'white',
+                  fontSize: '10px',
+                  borderRadius: '50%',
+                  width: '18px',
+                  height: '18px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  {pendingTests.length}
+                </span>
+              )}
+            </button>
+          </div>
+
+          {activeTab === 'Reports' && (
+            <select
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setCurrentPage(0);
+              }}
+              className="tab-btn"
+            >
+              <option value="All">All Status</option>
+              <option value="Completed">Completed</option>
+              <option value="Pending">Pending</option>
+            </select>
+          )}
         </div>
       </div>
 
@@ -262,57 +363,108 @@ const TestReports = () => {
           ) : (
             <table className="modern-table">
               <thead>
-                <tr>
-                  <th style={{ width: '20%' }}>Patient</th>
-                  <th style={{ width: '25%' }}>Test</th>
-                  <th style={{ width: '15%' }}>Report Date</th>
-                  <th style={{ width: '12%' }}>Status</th>
-                  <th style={{ width: '15%' }}>Technician</th>
-                  <th style={{ width: '13%' }}>Actions</th>
-                </tr>
+                {activeTab === 'Reports' ? (
+                  <tr>
+                    <th style={{ width: '20%' }}>Patient</th>
+                    <th style={{ width: '25%' }}>Test</th>
+                    <th style={{ width: '15%' }}>Report Date</th>
+                    <th style={{ width: '12%' }}>Status</th>
+                    <th style={{ width: '15%' }}>Technician</th>
+                    <th style={{ width: '13%' }}>Actions</th>
+                  </tr>
+                ) : (
+                  <tr>
+                    <th style={{ width: '25%' }}>Patient</th>
+                    <th style={{ width: '30%' }}>Requested Tests</th>
+                    <th style={{ width: '15%' }}>Ordered Date</th>
+                    <th style={{ width: '15%' }}>Doctor</th>
+                    <th style={{ width: '15%' }}>Actions</th>
+                  </tr>
+                )}
               </thead>
               <tbody>
-                {paginatedReports.map((report, index) => (
-                  <tr key={report.id || index}>
-                    <td>
-                      <div className="patient-info-with-avatar">
-                        <img
-                          src={report.gender === 'Female' || report.patientGender === 'Female' ? girlIcon : boyIcon}
-                          alt={report.patientName}
-                          className="patient-avatar"
-                        />
-                        <div className="info-group">
-                          <span className="primary">{report.patientName || 'Unknown'}</span>
-                          <span className="secondary">{report.patientCode || ''}</span>
+                {activeTab === 'Reports' ? (
+                  paginatedData.map((report, index) => (
+                    <tr key={report.id || index}>
+                      <td>
+                        <div className="patient-info-with-avatar">
+                          <img
+                            src={report.gender === 'Female' || report.patientGender === 'Female' ? girlIcon : boyIcon}
+                            alt={report.patientName}
+                            className="patient-avatar"
+                          />
+                          <div className="info-group">
+                            <span className="primary">{report.patientName || 'Unknown'}</span>
+                            <span className="secondary">{report.patientCode || ''}</span>
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                    <td>
-                      <div className="info-group">
-                        <span className="primary">{report.testName || 'N/A'}</span>
-                        <span className="secondary">{report.testType || 'General'}</span>
-                      </div>
-                    </td>
-                    <td>{formatDate(report.reportDate || report.collectionDate || report.createdAt)}</td>
-                    <td><StatusBadge status={report.fileRef ? 'Completed' : 'Pending'} /></td>
-                    <td>
-                      <span className="technician-badge">{report.technician || 'N/A'}</span>
-                    </td>
-                    <td>
-                      <div className="action-buttons-group">
-                        <button className="btn-action view" title="View" onClick={() => handleViewReport(report)}>
-                          <Icons.Eye />
-                        </button>
-                        <button className="btn-action delete" title="Delete" onClick={() => handleDeleteReport(report.id)}>
-                          <Icons.Delete />
-                        </button>
-                        <button className="btn-action download" title="Download" onClick={() => handleDownloadReport(report.id, report.testName || 'report')}>
-                          <Icons.Download />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td>
+                        <div className="info-group">
+                          <span className="primary">{report.testName || 'N/A'}</span>
+                          <span className="secondary">{report.testType || 'General'}</span>
+                        </div>
+                      </td>
+                      <td>{formatDate(report.reportDate || report.collectionDate || report.createdAt)}</td>
+                      <td><StatusBadge status={report.fileRef ? 'Completed' : 'Pending'} /></td>
+                      <td>
+                        <span className="technician-badge">{report.technician || 'N/A'}</span>
+                      </td>
+                      <td>
+                        <div className="action-buttons-group">
+                          <button className="btn-action view" title="View" onClick={() => handleViewReport(report)}>
+                            <Icons.Eye />
+                          </button>
+                          <button className="btn-action delete" title="Delete" onClick={() => handleDeleteReport(report.id)}>
+                            <Icons.Delete />
+                          </button>
+                          <button className="btn-action download" title="Download" onClick={() => handleDownloadReport(report.id, report.testName || 'report')}>
+                            <Icons.Download />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  paginatedData.map((test, index) => (
+                    <tr key={test._id || index}>
+                      <td>
+                        <div className="patient-info-with-avatar">
+                          <img src={boyIcon} alt={test.patientName} className="patient-avatar" />
+                          <div className="info-group">
+                            <span className="primary">{test.patientName || 'Unknown'}</span>
+                            <span className="secondary">{test.patientPhone || ''}</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <div className="pending-items-list" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          {test.pathologyItems?.map((item, idx) => (
+                            <div key={idx} className="pending-item" style={{ fontSize: '12px', background: '#f8fafc', padding: '4px 8px', borderRadius: '4px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <span>{item.testName} <small style={{ color: '#64748b' }}>({item.priority})</small></span>
+                              <button
+                                className="process-btn"
+                                onClick={() => handleProcessPending(test, item)}
+                                style={{ background: '#8b5cf6', color: 'white', border: 'none', borderRadius: '4px', padding: '2px 8px', fontSize: '10px', cursor: 'pointer' }}
+                              >
+                                Process
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </td>
+                      <td>{formatDate(test.createdAt)}</td>
+                      <td><span className="technician-badge">Dr. {test.doctorId?.name || 'Doctor'}</span></td>
+                      <td>
+                        <div className="action-buttons-group">
+                          <button className="btn-action view" title="View Intake Notes" onClick={() => alert('Notes: ' + (test.notes || 'No notes'))}>
+                            <MdNote size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           )}
@@ -324,7 +476,7 @@ const TestReports = () => {
             <div className="page-indicator-box">
               Page {currentPage + 1} of {totalPages || 1}
             </div>
-            
+
             <div className="pagination-controls">
               <button
                 className="page-arrow-circle leading"
@@ -349,8 +501,12 @@ const TestReports = () => {
       {/* Add Report Dialog */}
       {showAddDialog && (
         <AddReportDialog
-          onClose={() => setShowAddDialog(false)}
+          onClose={() => {
+            setShowAddDialog(false);
+            setPrefilledData(null);
+          }}
           onSubmit={handleAddReport}
+          prefill={prefilledData}
         />
       )}
 
@@ -361,6 +517,7 @@ const TestReports = () => {
           onClose={() => setShowViewDialog(false)}
           onUploadFile={handleUploadFile}
           onDownload={handleDownloadReport}
+          onViewFile={handleViewReportFile}
         />
       )}
     </div>
@@ -368,17 +525,22 @@ const TestReports = () => {
 };
 
 // Add Report Dialog Component
-const AddReportDialog = ({ onClose, onSubmit }) => {
+const AddReportDialog = ({ onClose, onSubmit, prefill }) => {
   const [formData, setFormData] = useState({
-    patientId: '',
-    testType: '',
+    patientId: prefill?.patientId || '',
+    patientName: prefill?.patientName || '',
+    testName: prefill?.testName || '',
+    testType: prefill?.category || '',
+    priority: prefill?.priority || 'Normal',
+    intakeId: prefill?.intakeId || '',
+    appointmentId: prefill?.appointmentId || '',
     notes: '',
   });
   const [file, setFile] = useState(null);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!formData.patientId || !formData.testType) {
+    if (!formData.patientId || (!formData.testName && !formData.testType)) {
       alert('Please fill required fields');
       return;
     }
@@ -429,10 +591,30 @@ const AddReportDialog = ({ onClose, onSubmit }) => {
             <input
               type="text"
               placeholder="e.g., Blood Test, X-Ray, etc."
-              value={formData.testType}
-              onChange={(e) => setFormData({ ...formData, testType: e.target.value })}
+              value={formData.testName || formData.testType}
+              onChange={(e) => setFormData({ ...formData, testName: e.target.value })}
               required
             />
+          </div>
+          <div className="form-group">
+            <label>Test Category</label>
+            <input
+              type="text"
+              placeholder="e.g., Hematology, Biochemistry"
+              value={formData.testType}
+              onChange={(e) => setFormData({ ...formData, testType: e.target.value })}
+            />
+          </div>
+          <div className="form-group">
+            <label>Priority</label>
+            <select
+              value={formData.priority}
+              onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
+            >
+              <option value="Normal">Normal</option>
+              <option value="Urgent">Urgent</option>
+              <option value="Emergency">Emergency</option>
+            </select>
           </div>
           <div className="form-group">
             <label>Notes</label>
@@ -444,13 +626,43 @@ const AddReportDialog = ({ onClose, onSubmit }) => {
             />
           </div>
           <div className="form-group">
-            <label>Upload File (Optional)</label>
-            <input
-              type="file"
-              accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-              onChange={(e) => setFile(e.target.files[0])}
-            />
-            {file && <p className="file-name">Selected: {file.name}</p>}
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>
+              Attach Diagnostic Report *
+            </label>
+            <div
+              style={{
+                border: '2px dashed #ddd6fe',
+                borderRadius: '12px',
+                padding: '24px',
+                textAlign: 'center',
+                background: file ? '#f5f3ff' : '#f8fbfc',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+              onClick={() => document.getElementById('report-file-input').click()}
+              onMouseOver={(e) => e.currentTarget.style.borderColor = '#7c3aed'}
+              onMouseOut={(e) => e.currentTarget.style.borderColor = file ? '#c4b5fd' : '#ddd6fe'}
+            >
+              <MdUploadFile size={40} color={file ? '#7c3aed' : '#94a3b8'} />
+              <div style={{ marginTop: '12px' }}>
+                <span style={{ fontWeight: '500', color: file ? '#7c3aed' : '#64748b' }}>
+                  {file ? `File selected: ${file.name}` : 'Click to upload PDF or Image report'}
+                </span>
+                {!file && <p style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px' }}>Supports PDF, JPG, PNG (Max 10MB)</p>}
+              </div>
+              <input
+                id="report-file-input"
+                type="file"
+                hidden
+                accept=".pdf,.jpg,.jpeg,.png"
+                onChange={(e) => setFile(e.target.files[0])}
+              />
+            </div>
+            {prefill && !file && (
+              <p style={{ fontSize: '11px', color: '#ef4444', marginTop: '4px' }}>
+                ⚠️ Attaching a report file is recommended for pending doctor orders.
+              </p>
+            )}
           </div>
           <div className="dialog-actions">
             <button type="button" className="cancel-btn" onClick={onClose}>
@@ -467,7 +679,7 @@ const AddReportDialog = ({ onClose, onSubmit }) => {
 };
 
 // View Report Dialog Component
-const ViewReportDialog = ({ report, onClose, onUploadFile, onDownload }) => {
+const ViewReportDialog = ({ report, onClose, onUploadFile, onDownload, onViewFile }) => {
   const [uploadingFile, setUploadingFile] = useState(null);
 
   const handleFileUpload = async () => {
@@ -568,15 +780,26 @@ const ViewReportDialog = ({ report, onClose, onUploadFile, onDownload }) => {
                 </div>
                 <div className="file-info">
                   <div className="file-name">{report.fileName || report.fileRef || 'Report File'}</div>
-                  <div className="file-action">Click to download</div>
+                  <div className="file-action">Download or view online</div>
                 </div>
-                <button
-                  className="download-btn"
-                  onClick={() => onDownload(report.id, report.testName || 'report')}
-                >
-                  <MdDownload size={18} />
-                  Download
-                </button>
+                <div className="file-buttons" style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    className="view-btn"
+                    style={{ background: '#f5f3ff', color: '#7c3aed', border: '1px solid #ddd6fe', padding: '8px 16px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontWeight: '500' }}
+                    onClick={() => onViewFile(report.fileRef)}
+                  >
+                    <MdVisibility size={18} />
+                    View Online
+                  </button>
+                  <button
+                    className="download-btn"
+                    style={{ background: '#7c3aed', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontWeight: '500' }}
+                    onClick={() => onDownload(report.id, report.testName || 'report')}
+                  >
+                    <MdDownload size={18} />
+                    Download
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="file-upload-section">

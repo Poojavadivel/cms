@@ -65,10 +65,18 @@ const AddMedicineDialog = ({ isOpen, onClose, medicine, onSuccess }) => {
     try {
       if (!formData.name.trim()) throw new Error('Medicine name is required');
 
+      // Prepare payload - ensure stock is sent for initial batch creation
+      const payload = {
+        ...formData,
+        stock: parseInt(formData.availableQty) || 0
+      };
+
       if (medicine) {
-        await pharmacyService.updateMedicine(medicine._id, formData);
+        // For updates, we send specific fields. 
+        // If stock is changed in UI, we send it as 'stock' to trigger batch update
+        await pharmacyService.updateMedicine(medicine._id, payload);
       } else {
-        await pharmacyService.createMedicine(formData);
+        await pharmacyService.createMedicine(payload);
       }
 
       onSuccess();
