@@ -228,10 +228,16 @@ class AuthService {
         body: JSON.stringify({ email, password }),
       });
 
+      console.log('🔍 [AUTH] Login response:', response);
+
       const accessToken = response.accessToken;
       const userData = response.user;
 
+      console.log('🔍 [AUTH] accessToken:', accessToken);
+      console.log('🔍 [AUTH] userData:', userData);
+
       if (!accessToken || !userData) {
+        console.error('❌ [AUTH] Missing data - accessToken:', !!accessToken, 'userData:', !!userData);
         throw new ApiException('Invalid response from server');
       }
 
