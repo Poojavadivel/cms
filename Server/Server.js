@@ -15,7 +15,7 @@ const path = require('path');
 
 // --- Initialization ---
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5000;
 
 // --- Core Middleware ---
 app.use(cors({
