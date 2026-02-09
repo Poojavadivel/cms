@@ -1008,6 +1008,15 @@ router.get('/pending-prescriptions', auth, async (req, res) => {
   }
 });
 
+// GET generic prescriptions (Alias for pending-prescriptions to prevent 404)
+router.get('/prescriptions', auth, async (req, res) => {
+  console.log('🔄 [PRESCRIPTIONS] Redirecting /prescriptions to /pending-prescriptions');
+  // Re-use the pending prescriptions logic by calling the handler manually or redirecting
+  // For simplicity implementation, we'll just redirect to pending-prescriptions logic internally
+  req.url = '/pending-prescriptions';
+  return router.handle(req, res);
+});
+
 // DELETE prescription (remove pharmacyItems from intake)
 router.delete('/prescriptions/:id', auth, async (req, res) => {
   try {
