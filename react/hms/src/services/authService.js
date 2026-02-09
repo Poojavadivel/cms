@@ -12,12 +12,19 @@ import { Pathologist } from '../models/Pathologist';
 import apiLogger from '../utils/apiLogger';
 import logger from './loggerService';
 
-const API_BASE_URL =
-  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-    ? (process.env.REACT_APP_API_URL || 'http://localhost:5000/api')
-    : '/api';
+const getApiBaseUrl = () => {
+  if (typeof window !== 'undefined') {
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    return isLocalhost 
+      ? (process.env.REACT_APP_API_URL || 'http://localhost:5000/api')
+      : '/api';
+  }
+  return process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+};
 
-if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+const API_BASE_URL = getApiBaseUrl();
+
+if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
   if (API_BASE_URL.includes('onrender.com')) {
     console.warn('🚨 [AUTH] Running on localhost but API_BASE_URL is pointing to Onrender! Request might fail due to CORS or missing records.');
   }
