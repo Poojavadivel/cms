@@ -17,7 +17,7 @@ const getApiBaseUrl = () => {
     const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     return isLocalhost 
       ? (process.env.REACT_APP_API_URL || 'http://localhost:5000/api')
-      : '/api';
+      : 'https://hms-dev-2.onrender.com/api';
   }
   return process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 };
