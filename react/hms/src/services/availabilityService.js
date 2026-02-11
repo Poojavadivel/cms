@@ -6,13 +6,13 @@
 import axios from 'axios';
 import logger from './loggerService';
 
-const getAuthToken = () => 
-  localStorage.getItem('auth_token') || 
-  localStorage.getItem('x-auth-token') || 
+const getAuthToken = () =>
+  localStorage.getItem('auth_token') ||
+  localStorage.getItem('x-auth-token') ||
   localStorage.getItem('authToken');
 
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'https://hms-dev.onrender.com/api',
+  baseURL: process.env.REACT_APP_API_URL || 'https://hms-dev-2.onrender.com/api',
   headers: { 'Content-Type': 'application/json' },
 });
 
@@ -75,7 +75,7 @@ export const getDoctorSchedule = async (doctorId, date) => {
 export const getAvailableSlots = async (doctorId, date, duration = 30) => {
   try {
     const schedule = await getDoctorSchedule(doctorId, date);
-    
+
     if (!schedule.success) {
       throw new Error('Failed to get doctor schedule');
     }
@@ -100,10 +100,10 @@ export const getAvailableSlots = async (doctorId, date, duration = 30) => {
  */
 const formatTime = (dateStr) => {
   const date = new Date(dateStr);
-  return date.toLocaleTimeString('en-US', { 
-    hour: '2-digit', 
+  return date.toLocaleTimeString('en-US', {
+    hour: '2-digit',
     minute: '2-digit',
-    hour12: true 
+    hour12: true
   });
 };
 

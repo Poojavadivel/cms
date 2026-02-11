@@ -22,7 +22,7 @@ const getAuthToken = () => {
 const createAxiosInstance = () => {
   const token = getAuthToken();
   return axios.create({
-    baseURL: process.env.REACT_APP_API_URL || 'https://hms-dev.onrender.com/api',
+    baseURL: process.env.REACT_APP_API_URL || 'https://hms-dev-2.onrender.com/api',
     headers: {
       'Content-Type': 'application/json',
       ...(token && { 'x-auth-token': token })
@@ -169,14 +169,14 @@ export const fetchPatients = async () => {
 
     let patients = response.data.patients || response.data.data || (Array.isArray(response.data) ? response.data : []);
     const total = response.data.total || patients.length;
-    
+
     logger.info('PATIENTS', `Fetched page 0: ${patients.length} of ${total} total patients`);
 
     // If there are more patients, fetch all remaining pages
     if (total > 100) {
       const totalPages = Math.ceil(total / 100);
       const additionalRequests = [];
-      
+
       for (let page = 1; page < totalPages; page++) {
         logger.info('PATIENTS', `Fetching page ${page}...`);
         additionalRequests.push(
@@ -185,7 +185,7 @@ export const fetchPatients = async () => {
           })
         );
       }
-      
+
       const additionalResponses = await Promise.all(additionalRequests);
       additionalResponses.forEach((res, idx) => {
         const morePatients = res.data.patients || res.data.data || (Array.isArray(res.data) ? res.data : []);

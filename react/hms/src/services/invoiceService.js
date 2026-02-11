@@ -11,7 +11,7 @@ const getAuthToken = () => {
 };
 
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'https://hms-dev.onrender.com/api',
+  baseURL: process.env.REACT_APP_API_URL || 'https://hms-dev-2.onrender.com/api',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -76,7 +76,7 @@ const fetchInvoices = async (params = {}) => {
       // ✅ Extract staff details from populated staffId or staff field
       // Check 'staff' first (from aggregation), then 'staffId' (from populate)
       const staff = payroll.staff || payroll.staffId || {};
-      
+
       // Debug logging
       console.log('📊 [INVOICE SERVICE] Processing payroll:', {
         payrollId: payroll._id,
@@ -85,12 +85,12 @@ const fetchInvoices = async (params = {}) => {
         hasStaffField: !!payroll.staff,
         staffObject: staff
       });
-      
+
       const staffName = typeof staff === 'object' && staff !== null ? (staff.name || '') : '';
       const department = typeof staff === 'object' && staff !== null ? (staff.department || '') : '';
       const designation = typeof staff === 'object' && staff !== null ? (staff.designation || '') : '';
       const staffCode = typeof staff === 'object' && staff !== null ? (staff.patientFacingId || staff.metadata?.staffCode || '') : '';
-      
+
       const result = {
         id: payroll._id || payroll.id,
         invoiceNumber: payroll.metadata?.payrollCode || staffCode || payroll._id,
@@ -113,7 +113,7 @@ const fetchInvoices = async (params = {}) => {
         tax: 0,
         historyLog: payroll.historyLog || []
       };
-      
+
       console.log('📊 [INVOICE SERVICE] Mapped record:', {
         id: result.id,
         staffName: result.staffName,
@@ -121,7 +121,7 @@ const fetchInvoices = async (params = {}) => {
         department: result.department,
         hasStaffData: !!staff && typeof staff === 'object'
       });
-      
+
       return result;
     });
   } catch (error) {

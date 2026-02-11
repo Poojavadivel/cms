@@ -22,7 +22,7 @@ const getAuthToken = () => {
 const createAxiosInstance = () => {
   const token = getAuthToken();
   return axios.create({
-    baseURL: process.env.REACT_APP_API_URL || 'https://hms-dev.onrender.com/api',
+    baseURL: process.env.REACT_APP_API_URL || 'https://hms-dev-2.onrender.com/api',
     headers: {
       'Content-Type': 'application/json',
       ...(token && { 'x-auth-token': token })
@@ -49,19 +49,19 @@ export const fetchPrescriptions = async (patientId, limit = 50, page = 0) => {
     const pharmacyEndpoint = `/pharmacy/records?patientId=${patientId}&type=Dispense&limit=${limit}&page=${page}`;
     logger.apiRequest('GET', pharmacyEndpoint);
     logger.info('PRESCRIPTIONS', `Fetching from pharmacy records: ${pharmacyEndpoint}`);
-    
+
     const axiosInstance = createAxiosInstance();
     const response = await axiosInstance.get(pharmacyEndpoint);
-    
+
     logger.apiResponse('GET', pharmacyEndpoint, response.status);
-    
+
     // Check for successful response with records
     if (response.data && response.data.success && response.data.records) {
       const prescriptions = response.data.records;
       logger.success('PRESCRIPTIONS', `Found ${prescriptions.length} pharmacy records (prescriptions)`);
       return prescriptions;
     }
-    
+
   } catch (pharmacyError) {
     logger.warning('PRESCRIPTIONS', `Pharmacy endpoint failed: ${pharmacyError.message}`);
   }
@@ -71,19 +71,19 @@ export const fetchPrescriptions = async (patientId, limit = 50, page = 0) => {
     const scannerEndpoint = ScannerEndpoints.getPrescriptions(patientId);
     logger.apiRequest('GET', scannerEndpoint);
     logger.info('PRESCRIPTIONS', `Trying scanned prescriptions: ${scannerEndpoint}`);
-    
+
     const axiosInstance = createAxiosInstance();
     const response = await axiosInstance.get(scannerEndpoint);
-    
+
     logger.apiResponse('GET', scannerEndpoint, response.status);
-    
+
     // Check for successful response with prescriptions
     if (response.data && response.data.success && response.data.prescriptions) {
       const prescriptions = response.data.prescriptions;
       logger.success('PRESCRIPTIONS', `Found ${prescriptions.length} scanned prescriptions`);
       return prescriptions;
     }
-    
+
   } catch (error) {
     logger.warning('PRESCRIPTIONS', `Scanner endpoint failed: ${error.message}`);
   }
@@ -92,28 +92,28 @@ export const fetchPrescriptions = async (patientId, limit = 50, page = 0) => {
     // THIRD: Try fallback to combined reports endpoint
     const reportsEndpoint = ScannerEndpoints.getReports(patientId);
     logger.info('PRESCRIPTIONS', `Trying fallback combined endpoint: ${reportsEndpoint}`);
-    
+
     const axiosInstance = createAxiosInstance();
     const response = await axiosInstance.get(reportsEndpoint);
-    
+
     if (response.data && response.data.success && response.data.reports) {
       const reports = response.data.reports;
-      
+
       // Filter only PRESCRIPTION type reports
       const prescriptions = reports.filter(report => {
         const intent = report.intent?.toString().toUpperCase();
         const testType = report.testType?.toString().toUpperCase();
         return intent === 'PRESCRIPTION' || testType === 'PRESCRIPTION';
       });
-      
+
       logger.success('PRESCRIPTIONS', `Found ${prescriptions.length} prescriptions out of ${reports.length} total reports`);
       return prescriptions;
     }
-    
+
   } catch (fallbackError) {
     logger.apiError('GET', ScannerEndpoints.getReports(patientId), fallbackError);
   }
-  
+
   logger.warning('PRESCRIPTIONS', 'No prescriptions found from any endpoint');
   return [];
 };
@@ -134,17 +134,17 @@ export const fetchLabReports = async (patientId) => {
     const pathologyEndpoint = `/pathology/reports?patientId=${patientId}&limit=100`;
     logger.apiRequest('GET', pathologyEndpoint);
     logger.info('LAB_REPORTS', `Fetching from pathology reports: ${pathologyEndpoint}`);
-    
+
     const axiosInstance = createAxiosInstance();
     const response = await axiosInstance.get(pathologyEndpoint);
-    
+
     logger.apiResponse('GET', pathologyEndpoint, response.status);
-    
+
     if (response.data && response.data.success && response.data.reports) {
       logger.success('LAB_REPORTS', `Found ${response.data.reports.length} pathology reports`);
       return response.data.reports;
     }
-    
+
   } catch (pathologyError) {
     logger.warning('LAB_REPORTS', `Pathology endpoint failed: ${pathologyError.message}`);
   }
@@ -154,21 +154,21 @@ export const fetchLabReports = async (patientId) => {
     const endpoint = ScannerEndpoints.getLabReports(patientId);
     logger.apiRequest('GET', endpoint);
     logger.info('LAB_REPORTS', `Trying scanned lab reports: ${endpoint}`);
-    
+
     const axiosInstance = createAxiosInstance();
     const response = await axiosInstance.get(endpoint);
-    
+
     logger.apiResponse('GET', endpoint, response.status);
-    
+
     if (response.data && response.data.success && response.data.labReports) {
       logger.success('LAB_REPORTS', `Found ${response.data.labReports.length} scanned lab reports`);
       return response.data.labReports;
     }
-    
+
   } catch (error) {
     logger.apiError('GET', ScannerEndpoints.getLabReports(patientId), error);
   }
-  
+
   logger.warning('LAB_REPORTS', 'No lab reports found from any endpoint');
   return [];
 };
@@ -187,17 +187,17 @@ export const fetchMedicalHistory = async (patientId) => {
   try {
     const endpoint = ScannerEndpoints.getMedicalHistory(patientId);
     logger.apiRequest('GET', endpoint);
-    
+
     const axiosInstance = createAxiosInstance();
     const response = await axiosInstance.get(endpoint);
-    
+
     logger.apiResponse('GET', endpoint, response.status);
-    
+
     if (response.data && response.data.success && response.data.medicalHistory) {
       logger.success('MEDICAL_HISTORY', `Found ${response.data.medicalHistory.length} medical history records`);
       return response.data.medicalHistory;
     }
-    
+
     return [];
   } catch (error) {
     logger.apiError('GET', ScannerEndpoints.getMedicalHistory(patientId), error);

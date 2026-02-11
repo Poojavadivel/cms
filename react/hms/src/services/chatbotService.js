@@ -9,7 +9,7 @@ import logger from './loggerService';
 const getAuthToken = () => localStorage.getItem('auth_token') || localStorage.getItem('x-auth-token') || localStorage.getItem('authToken');
 
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'https://hms-dev.onrender.com/api',
+  baseURL: process.env.REACT_APP_API_URL || 'https://hms-dev-2.onrender.com/api',
   headers: { 'Content-Type': 'application/json' },
 });
 
@@ -29,9 +29,9 @@ api.interceptors.request.use((config) => {
 const sendChatMessage = async (message, conversationId = null, metadata = null) => {
   try {
     console.log('🤖 [sendChatMessage] Sending:', message);
-    
+
     logger.apiRequest('POST', '/bot/chat');
-    
+
     const payload = {
       message,
       ...(conversationId && { chatId: conversationId }),
@@ -88,7 +88,7 @@ const sendChatMessage = async (message, conversationId = null, metadata = null) 
 const getConversations = async () => {
   try {
     console.log('🤖 [getConversations] Fetching conversations...');
-    
+
     logger.apiRequest('GET', '/bot/chats');
     const response = await api.get('/bot/chats');
     logger.apiResponse('GET', '/bot/chats', response.status, response.data);
@@ -140,7 +140,7 @@ const getConversationMessages = async (conversationId) => {
     }
 
     console.log('🤖 [getConversationMessages] Fetching messages for:', conversationId);
-    
+
     logger.apiRequest('GET', `/bot/chats/${conversationId}`);
     const response = await api.get(`/bot/chats/${conversationId}`);
     logger.apiResponse('GET', `/bot/chats/${conversationId}`, response.status, response.data);
@@ -192,7 +192,7 @@ const deleteConversation = async (conversationId) => {
     }
 
     console.log('🤖 [deleteConversation] Deleting:', conversationId);
-    
+
     logger.apiRequest('DELETE', `/bot/chats/${conversationId}`);
     const response = await api.delete(`/bot/chats/${conversationId}`);
     logger.apiResponse('DELETE', `/bot/chats/${conversationId}`, response.status, response.data);
@@ -215,7 +215,7 @@ const deleteConversation = async (conversationId) => {
 const sendChatbotFeedback = async (messageId, type, conversationId) => {
   try {
     console.log('🤖 [sendChatbotFeedback] Sending feedback:', { messageId, type, conversationId });
-    
+
     logger.apiRequest('POST', '/bot/chat/feedback');
     const response = await api.post('/bot/chat/feedback', {
       messageId,

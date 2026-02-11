@@ -15,7 +15,7 @@ const getAuthToken = () => {
 
 // Create axios instance with default config
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'https://hms-dev.onrender.com/api',
+  baseURL: process.env.REACT_APP_API_URL || 'https://hms-dev-2.onrender.com/api',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -94,13 +94,13 @@ export const fetchAllDoctors = async (forceRefresh = false) => {
 
   } catch (error) {
     logger.error('❌ Failed to fetch doctors:', error);
-    
+
     // If network error or server error, return cached data if available
     if (doctorsCache && (error.code === 'ECONNABORTED' || error.response?.status >= 500)) {
       logger.warn('⚠️ Using stale cached doctors due to network/server error');
       return doctorsCache;
     }
-    
+
     throw error;
   }
 };
@@ -115,7 +115,7 @@ export const getDoctorById = async (doctorId) => {
     logger.apiRequest('GET', `/doctors/${doctorId}`);
     const response = await api.get(DoctorEndpoints.getById(doctorId));
     logger.apiResponse('GET', `/doctors/${doctorId}`, response.status, response.data);
-    
+
     return response.data?.doctor || response.data;
   } catch (error) {
     logger.error(`❌ Failed to fetch doctor ${doctorId}:`, error);
@@ -133,7 +133,7 @@ export const getDoctorSchedule = async (doctorId) => {
     logger.apiRequest('GET', `/doctors/${doctorId}/schedule`);
     const response = await api.get(DoctorEndpoints.getSchedule(doctorId));
     logger.apiResponse('GET', `/doctors/${doctorId}/schedule`, response.status, response.data);
-    
+
     return response.data?.schedule || response.data;
   } catch (error) {
     logger.error(`❌ Failed to fetch schedule for doctor ${doctorId}:`, error);
@@ -161,10 +161,10 @@ export const createDoctor = async (doctorData) => {
     logger.apiRequest('POST', '/doctors', doctorData);
     const response = await api.post(DoctorEndpoints.create, doctorData);
     logger.apiResponse('POST', '/doctors', response.status, response.data);
-    
+
     // Clear cache after creating
     clearDoctorsCache();
-    
+
     return response.data?.doctor || response.data;
   } catch (error) {
     logger.error('❌ Failed to create doctor:', error);
@@ -183,10 +183,10 @@ export const updateDoctor = async (doctorId, doctorData) => {
     logger.apiRequest('PUT', `/doctors/${doctorId}`, doctorData);
     const response = await api.put(DoctorEndpoints.update(doctorId), doctorData);
     logger.apiResponse('PUT', `/doctors/${doctorId}`, response.status, response.data);
-    
+
     // Clear cache after updating
     clearDoctorsCache();
-    
+
     return response.data?.doctor || response.data;
   } catch (error) {
     logger.error(`❌ Failed to update doctor ${doctorId}:`, error);
@@ -204,10 +204,10 @@ export const deleteDoctor = async (doctorId) => {
     logger.apiRequest('DELETE', `/doctors/${doctorId}`);
     const response = await api.delete(DoctorEndpoints.delete(doctorId));
     logger.apiResponse('DELETE', `/doctors/${doctorId}`, response.status, response.data);
-    
+
     // Clear cache after deleting
     clearDoctorsCache();
-    
+
     return response.data;
   } catch (error) {
     logger.error(`❌ Failed to delete doctor ${doctorId}:`, error);

@@ -20,7 +20,7 @@ const getAuthToken = () => {
 const createAxiosInstance = () => {
   const token = getAuthToken();
   return axios.create({
-    baseURL: process.env.REACT_APP_API_URL || 'https://hms-dev.onrender.com/api',
+    baseURL: process.env.REACT_APP_API_URL || 'https://hms-dev-2.onrender.com/api',
     headers: {
       'Content-Type': 'application/json',
       ...(token && {
@@ -263,7 +263,7 @@ class ReportService {
       console.error('No PDF ID provided');
       return;
     }
-    const baseUrl = process.env.REACT_APP_API_URL || 'https://hms-dev.onrender.com/api';
+    const baseUrl = process.env.REACT_APP_API_URL || 'https://hms-dev-2.onrender.com/api';
     const url = `${baseUrl}/scanner-enterprise/pdf-public/${pdfId}`;
     window.open(url, '_blank');
   }

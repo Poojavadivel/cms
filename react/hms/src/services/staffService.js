@@ -10,7 +10,7 @@ import { Staff } from '../models/Staff';
 const getAuthToken = () => localStorage.getItem('auth_token') || localStorage.getItem('x-auth-token') || localStorage.getItem('authToken');
 
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'https://hms-dev.onrender.com/api',
+  baseURL: process.env.REACT_APP_API_URL || 'https://hms-dev-2.onrender.com/api',
   headers: { 'Content-Type': 'application/json' },
 });
 
@@ -36,7 +36,7 @@ const fetchStaffs = async (forceRefresh = false) => {
     logger.apiRequest('GET', '/staff');
     const response = await api.get('/staff');
     logger.apiResponse('GET', '/staff', response.status, response.data);
-    
+
     // Handle multiple response formats (Flutter compatibility)
     let data;
     if (Array.isArray(response.data)) {
@@ -48,7 +48,7 @@ const fetchStaffs = async (forceRefresh = false) => {
     } else {
       throw new Error('Unexpected response format');
     }
-    
+
     staffCache = data.map(item => Staff.fromJSON(item));
     return staffCache;
   } catch (error) {
@@ -65,13 +65,13 @@ const fetchStaffById = async (id) => {
     logger.apiRequest('GET', `/staff/${id}`);
     const response = await api.get(`/staff/${id}`);
     logger.apiResponse('GET', `/staff/${id}`, response.status, response.data);
-    
+
     // Handle wrapped response
     const data = response.data?.staff || response.data?.data || response.data;
     const staff = Staff.fromJSON(data);
-    
+
     currentStaff = staff;
-    
+
     // Update cache
     const idx = staffCache.findIndex(s => s.id === staff.id);
     if (idx === -1) {
@@ -79,7 +79,7 @@ const fetchStaffById = async (id) => {
     } else {
       staffCache[idx] = staff;
     }
-    
+
     return staff;
   } catch (error) {
     logger.apiError('GET', `/staff/${id}`, error);
@@ -93,17 +93,17 @@ const fetchStaffById = async (id) => {
 const createStaff = async (staffDraft) => {
   try {
     const payload = staffDraft instanceof Staff ? staffDraft.toJSON() : staffDraft;
-    
+
     logger.apiRequest('POST', '/staff', payload);
     const response = await api.post('/staff', payload);
     logger.apiResponse('POST', '/staff', response.status, response.data);
-    
+
     const data = response.data?.staff || response.data?.data || response.data;
     const created = Staff.fromJSON(data);
-    
+
     // Add to cache
     staffCache.unshift(created);
-    
+
     return created;
   } catch (error) {
     logger.apiError('POST', '/staff', error);
@@ -118,11 +118,11 @@ const updateStaff = async (staffDraft) => {
   try {
     const payload = staffDraft instanceof Staff ? staffDraft.toJSON() : staffDraft;
     const id = payload._id || payload.id;
-    
+
     logger.apiRequest('PUT', `/staff/${id}`, payload);
     const response = await api.put(`/staff/${id}`, payload);
     logger.apiResponse('PUT', `/staff/${id}`, response.status, response.data);
-    
+
     // Handle different success response formats
     if (response.data?.success === true || response.data?.status === 200) {
       // Success without returning data - update cache with our draft
@@ -135,7 +135,7 @@ const updateStaff = async (staffDraft) => {
       }
       return true;
     }
-    
+
     const data = response.data?.staff || response.data?.data || response.data;
     if (data && typeof data === 'object') {
       const updated = Staff.fromJSON(data);
@@ -150,7 +150,7 @@ const updateStaff = async (staffDraft) => {
       }
       return true;
     }
-    
+
     return false;
   } catch (error) {
     logger.apiError('PUT', `/staff/${staffDraft.id}`, error);
@@ -166,13 +166,13 @@ const deleteStaff = async (id) => {
     logger.apiRequest('DELETE', `/staff/${id}`);
     const response = await api.delete(`/staff/${id}`);
     logger.apiResponse('DELETE', `/staff/${id}`, response.status, response.data);
-    
+
     if (response.data?.success === true || response.data?.status === 200 || response.status === 200) {
       staffCache = staffCache.filter(s => s.id !== id);
       if (currentStaff?.id === id) currentStaff = null;
       return true;
     }
-    
+
     return false;
   } catch (error) {
     logger.apiError('DELETE', `/staff/${id}`, error);
@@ -194,7 +194,7 @@ const downloadStaffReport = async (staffId) => {
     }
 
     const url = `${api.defaults.baseURL}/reports-proper/staff/${staffId}`;
-    
+
     const response = await fetch(url, {
       headers: {
         'x-auth-token': token,
@@ -204,7 +204,7 @@ const downloadStaffReport = async (staffId) => {
 
     if (response.status === 200) {
       const blob = await response.blob();
-      
+
       // Get filename from header or create default
       let filename = `Staff_Report_${Date.now()}.pdf`;
       const contentDisposition = response.headers.get('content-disposition');
@@ -262,7 +262,7 @@ const downloadDoctorReport = async (doctorId) => {
     }
 
     const url = `${api.defaults.baseURL}/reports-proper/doctor/${doctorId}`;
-    
+
     const response = await fetch(url, {
       headers: {
         'x-auth-token': token,
@@ -272,7 +272,7 @@ const downloadDoctorReport = async (doctorId) => {
 
     if (response.status === 200) {
       const blob = await response.blob();
-      
+
       let filename = `Doctor_Report_${Date.now()}.pdf`;
       const contentDisposition = response.headers.get('content-disposition');
       if (contentDisposition) {
@@ -322,7 +322,7 @@ const generateStaffId = async (department, designation) => {
     logger.apiRequest('POST', '/staff/generate-id', { department, designation });
     const response = await api.post('/staff/generate-id', { department, designation });
     logger.apiResponse('POST', '/staff/generate-id', response.status, response.data);
-    
+
     return {
       success: true,
       patientFacingId: response.data?.patientFacingId || null,
@@ -349,11 +349,11 @@ const checkStaffIdUnique = async (patientFacingId, excludeId = null) => {
 
     const normalizedId = patientFacingId.trim().toUpperCase();
     const url = `/staff/check-unique/${encodeURIComponent(normalizedId)}${excludeId ? `?excludeId=${excludeId}` : ''}`;
-    
+
     logger.apiRequest('GET', url);
     const response = await api.get(url);
     logger.apiResponse('GET', url, response.status, response.data);
-    
+
     return {
       isUnique: response.data?.isUnique ?? false,
       message: response.data?.message || ''
