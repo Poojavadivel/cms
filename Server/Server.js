@@ -43,6 +43,10 @@ app.use('/api/payroll', require('./routes/payroll'));
 app.use('/api/reports', require('./routes/enterpriseReports'));
 app.use('/api/reports-proper', require('./routes/properReports'));
 
+// --- Telegram Bot ---
+app.use('/api/telegram', require('./routes/telegram'));
+console.log('✅ Telegram Bot activated and running...');
+
 // --- Static Files & SPA Support ---
 // Serve static assets (images, js, css)
 app.use(express.static(webAppPath));
