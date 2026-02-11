@@ -74,8 +74,19 @@ const PatientSchema = new Schema({
   deleted_at: { type: Date, default: null }
 }, Object.assign({}, commonOptions));
 
+// Indexes
 PatientSchema.index({ phone: 1 });
 PatientSchema.index({ lastName: 1, dateOfBirth: 1 });
 PatientSchema.index({ phone: 1, dateOfBirth: 1 });
+
+// Generate patient code before saving if not exists
+PatientSchema.pre('save', function (next) {
+  if (!this.patientCode) {
+    const timestamp = Date.now().toString(36).toUpperCase();
+    const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+    this.patientCode = `PAT-${timestamp}-${random}`;
+  }
+  next();
+});
 
 module.exports = mongoose.model('Patient', PatientSchema);

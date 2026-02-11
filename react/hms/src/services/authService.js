@@ -12,10 +12,15 @@ import { Pathologist } from '../models/Pathologist';
 import apiLogger from '../utils/apiLogger';
 import logger from './loggerService';
 
-const API_BASE_URL =
-  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-    ? (process.env.REACT_APP_API_URL || 'http://localhost:5000/api')
-    : 'https://hms-dev.onrender.com/api';
+const getApiBaseUrl = () => {
+  if (typeof window !== 'undefined') {
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    return isLocalhost
+      ? (process.env.REACT_APP_API_URL || 'http://localhost:5000/api')
+      : 'https://hms-dev-2.onrender.com/api';
+  }
+  return process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+};
 
 if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
   if (API_BASE_URL.includes('onrender.com')) {
@@ -176,11 +181,19 @@ class AuthService {
       const contentType = response.headers.get('content-type');
       let data;
 
+      console.log('📥 [AUTH] Response status:', response.status);
+      console.log('📥 [AUTH] Response content-type:', contentType);
+
       if (contentType && contentType.includes('application/json')) {
         data = await response.json();
       } else {
-        data = await response.text();
+        const textData = await response.text();
+        console.warn('⚠️ [AUTH] Non-JSON response received:', textData.substring(0, 200));
+        data = textData;
       }
+
+      console.log('📥 [AUTH] Parsed data type:', typeof data);
+      console.log('📥 [AUTH] Parsed data:', data);
 
       if (!response.ok) {
         // Log error response
@@ -221,10 +234,13 @@ class AuthService {
         body: JSON.stringify({ email, password }),
       });
 
+      console.log('🔍 [AUTH] Login response:', response);
+
       const accessToken = response.accessToken;
       const userData = response.user;
 
       if (!accessToken || !userData) {
+        console.error('❌ [AUTH] Missing data - accessToken:', !!accessToken, 'userData:', !!userData);
         throw new ApiException('Invalid response from server');
       }
 
