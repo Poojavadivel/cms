@@ -305,7 +305,7 @@
   align-items: center;
   gap: 8px;
   padding: 10px 20px;
-  background-color: #10b981;
+  background-color: #207DC0;
   color: white;
   border: none;
   border-radius: 8px;
@@ -316,9 +316,9 @@
 }
 
 .flutter-dispense-btn:hover {
-  background-color: #059669;
+  background-color: #165a8a;
   transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);
+  box-shadow: 0 4px 8px rgba(32, 125, 192, 0.3);
 }
 
 .flutter-dispense-btn.dispensed {
@@ -449,7 +449,7 @@
   justify-content: center;
   gap: 8px;
   padding: 12px;
-  background-color: #10b981;
+  background-color: #207DC0;
   color: white;
   border: none;
   border-radius: 8px;
@@ -461,7 +461,7 @@
 }
 
 .flutter-grid-dispense-btn:hover {
-  background-color: #059669;
+  background-color: #165a8a;
 }
 
 .flutter-grid-dispense-btn.dispensed {
@@ -822,8 +822,8 @@
 }
 
 .flutter-detail-badge.dispensed {
-  background-color: rgba(16, 185, 129, 0.1);
-  color: #10b981;
+  background-color: rgba(32, 125, 192, 0.1);
+  color: #207DC0;
 }
 
 .flutter-medicines-list {
@@ -918,7 +918,7 @@
 
 .flutter-total-amount {
   font-size: 24px;
-  color: #10b981;
+  color: #207DC0;
 }
 
 @media (max-width: 640px) {

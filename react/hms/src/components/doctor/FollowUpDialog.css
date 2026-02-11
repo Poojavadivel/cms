@@ -143,9 +143,9 @@
 }
 
 .quick-date-btn:hover {
-  border-color: #3b82f6;
+  border-color: #207DC0;
   background-color: #eff6ff;
-  color: #3b82f6;
+  color: #207DC0;
 }
 
 .quick-date-btn:active {
@@ -189,8 +189,8 @@
 .text-input:focus,
 .textarea-input:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: #207DC0;
+  box-shadow: 0 0 0 3px rgba(32, 125, 192, 0.1);
 }
 
 .textarea-input {
@@ -223,12 +223,12 @@
 }
 
 .btn-primary {
-  background-color: #3b82f6;
+  background-color: #207DC0;
   color: white;
 }
 
 .btn-primary:hover:not(:disabled) {
-  background-color: #2563eb;
+  background-color: #207DC0;
 }
 
 .btn-secondary {

@@ -278,6 +278,8 @@ router.patch('/:id/status', auth, async (req, res) => {
 
     const normalized = normalizeAppointments([populated])[0];
 
+
+
     res.status(200).json({ success: true, message: 'Appointment status updated', appointment: normalized });
   } catch (err) {
     console.error('💥 UPDATE status error:', err);

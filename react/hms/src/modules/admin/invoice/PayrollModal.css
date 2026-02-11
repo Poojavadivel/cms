@@ -19,17 +19,18 @@
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
 }
 
 .modal-container {
-  width: 90%;
-  max-width: 1200px;
-  height: 90vh;
+  width: 85%;
+  max-width: 1280px;
+  height: 85vh;
   background: #ffffff;
-  border-radius: 16px;
+  border-radius: 24px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   display: flex;
   overflow: hidden;
@@ -41,6 +42,7 @@
     transform: translateY(20px);
     opacity: 0;
   }
+
   to {
     transform: translateY(0);
     opacity: 1;
@@ -50,11 +52,24 @@
 /* Sidebar */
 .modal-sidebar {
   width: 280px;
-  background: linear-gradient(180deg, #1e40af 0%, #1e3a8a 100%);
+  background: linear-gradient(135deg, #207DC0 0%, #165a8a 100%);
   padding: 32px 24px;
   display: flex;
   flex-direction: column;
   color: white;
+  position: relative;
+  overflow: hidden;
+}
+
+.modal-sidebar::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+  pointer-events: none;
 }
 
 .modal-sidebar-header h2 {
@@ -108,7 +123,7 @@
 }
 
 .modal-step.completed {
-  background: rgba(16, 185, 129, 0.2);
+  background: rgba(32, 125, 192, 0.2);
 }
 
 .step-icon {
@@ -124,11 +139,11 @@
 
 .modal-step.active .step-icon {
   background: white;
-  color: #1e40af;
+  color: #165a8a;
 }
 
 .modal-step.completed .step-icon {
-  background: #10b981;
+  background: #207DC0;
   color: white;
 }
 
@@ -255,9 +270,9 @@
 
 .form-group input.search-input:focus {
   background: white;
-  border-color: #3b82f6;
+  border-color: #207DC0;
   outline: none;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  box-shadow: 0 0 0 3px rgba(32, 125, 192, 0.1);
 }
 
 .form-group input.search-input::placeholder {
@@ -269,8 +284,10 @@
 .form-group select:focus,
 .form-group textarea:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: #207DC0;
+  box-shadow: 0 0 0 3px rgba(32, 125, 192, 0.1);
+  transform: translateY(-1px);
+  background: #ffffff;
 }
 
 .form-group input.error,
@@ -356,7 +373,7 @@
   padding-top: 16px;
   border-top: 2px solid #d1d5db;
   font-size: 18px;
-  color: #10b981;
+  color: #207DC0;
 }
 
 .summary-row strong {
@@ -427,7 +444,7 @@
 .net-salary-display {
   margin-top: 24px;
   padding: 24px;
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  background: linear-gradient(135deg, #207DC0 0%, #165a8a 100%);
   border-radius: 12px;
   display: flex;
   justify-content: space-between;
@@ -478,15 +495,16 @@
 }
 
 .btn-primary {
-  background: #3b82f6;
+  background: #207DC0;
   color: white;
   flex: 1;
   max-width: 300px;
 }
 
-.btn-primary:hover {
-  background: #2563eb;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+.btn-primary:hover:not(:disabled) {
+  background: #165a8a;
+  box-shadow: 0 4px 12px rgba(32, 125, 192, 0.4);
+  transform: translateY(-2px);
 }
 
 .btn-primary:disabled,
@@ -495,34 +513,159 @@
   cursor: not-allowed;
 }
 
-/* Responsive */
+/* Responsive - Enhanced for all devices */
+@media (max-width: 1100px) {
+  .modal-container {
+    width: 90%;
+  }
+
+  .modal-sidebar {
+    width: 260px;
+    padding: 24px 20px;
+  }
+
+  .modal-body {
+    padding: 32px 40px;
+  }
+}
+
 @media (max-width: 1024px) {
   .modal-container {
     width: 95%;
     height: 95vh;
   }
-  
+
   .modal-sidebar {
     width: 240px;
+    padding: 24px 16px;
   }
-  
+
+  .modal-body {
+    padding: 28px 32px;
+  }
+
   .form-row,
   .review-grid,
   .review-breakdown {
     grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .step-content-wrapper h2 {
+    font-size: 24px;
+  }
+
+  .step-description {
+    font-size: 14px;
   }
 }
 
 @media (max-width: 768px) {
+  .modal-container {
+    width: 98%;
+    height: 98vh;
+  }
+
   .modal-sidebar {
     display: none;
   }
-  
+
   .modal-body {
-    padding: 24px;
+    padding: 20px;
   }
-  
+
   .modal-footer {
-    padding: 16px 24px;
+    padding: 16px 20px;
+    flex-direction: column;
+  }
+
+  .btn-primary,
+  .btn-secondary {
+    width: 100%;
+    max-width: none;
+  }
+
+  .step-content-wrapper h2 {
+    font-size: 22px;
+  }
+
+  .form-row {
+    gap: 12px;
+  }
+
+  .salary-section h3 {
+    font-size: 16px;
+  }
+
+  .net-salary-display {
+    flex-direction: column;
+    gap: 12px;
+    text-align: center;
+  }
+
+  .net-salary-display strong {
+    font-size: 28px;
+  }
+}
+
+@media (max-width: 480px) {
+  .modal-container {
+    border-radius: 12px;
+  }
+
+  .modal-body {
+    padding: 16px;
+  }
+
+  .modal-close-btn {
+    top: 12px;
+    right: 12px;
+    width: 36px;
+    height: 36px;
+  }
+
+  .step-content-wrapper h2 {
+    font-size: 20px;
+  }
+
+  .step-description {
+    font-size: 13px;
+  }
+
+  .form-group label {
+    font-size: 12px;
+  }
+
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    padding: 10px 14px;
+    font-size: 13px;
+  }
+
+  .calculation-summary,
+  .selected-staff-info,
+  .review-section {
+    padding: 16px;
+  }
+
+  .summary-row {
+    font-size: 14px;
+  }
+
+  .summary-row strong {
+    font-size: 16px;
+  }
+
+  .summary-row.net strong {
+    font-size: 20px;
+  }
+
+  .net-salary-display span {
+    font-size: 14px;
+  }
+
+  .net-salary-display strong {
+    font-size: 24px;
   }
 }

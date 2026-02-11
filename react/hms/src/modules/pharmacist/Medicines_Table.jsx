@@ -489,7 +489,7 @@ const ViewMedicineModal = ({ isOpen, onClose, medicine }) => {
         <div className="modal-body">
           <div className="detail-row">
             <span className="detail-label">Name</span>
-            <span className="detail-value" style={{ fontSize: '1.2rem', color: '#2663FF' }}>{medicine.name}</span>
+            <span className="detail-value" style={{ fontSize: '1.2rem', color: '#207DC0' }}>{medicine.name}</span>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '12px' }}>
             <div className="detail-row">

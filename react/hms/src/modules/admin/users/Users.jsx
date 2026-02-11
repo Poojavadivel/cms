@@ -20,7 +20,7 @@ const Users = () => {
       setLoading(true);
       setError(null);
       const response = await UsersService.getAllUsers();
-      
+
       if (response.success) {
         setUsers(response.data);
       } else {
@@ -49,7 +49,7 @@ const Users = () => {
 
   const filteredUsers = users.filter(u => {
     const matchesSearch = u.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         u.email?.toLowerCase().includes(searchQuery.toLowerCase());
+      u.email?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesRole = roleFilter === 'all' || u.role === roleFilter;
     return matchesSearch && matchesRole;
   });
@@ -76,19 +76,12 @@ const Users = () => {
     <div className="users-container">
       <div className="users-header">
         <h1>User Management</h1>
-        <button className="btn-primary" onClick={() => console.log('Add user')}>
-          Add User
-        </button>
       </div>
 
       <div className="users-filters">
-        <input
-          type="text"
-          placeholder="Search users..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="search-input"
-        />
+        <button className="btn-primary" onClick={() => console.log('Add user')}>
+          <span>+</span> Add User
+        </button>
         <select
           value={roleFilter}
           onChange={(e) => setRoleFilter(e.target.value)}
@@ -100,6 +93,13 @@ const Users = () => {
           <option value="nurse">Nurse</option>
           <option value="receptionist">Receptionist</option>
         </select>
+        <input
+          type="text"
+          placeholder="Search users..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="search-input"
+        />
       </div>
 
       <div className="users-table">

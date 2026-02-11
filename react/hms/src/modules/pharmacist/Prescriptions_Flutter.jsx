@@ -334,7 +334,7 @@ const PharmacistPrescriptions = () => {
       {/* Statistics Dashboard */}
       <div className="flutter-prescription-stats">
         <div className="flutter-stat-item">
-          <MdAttachMoney size={20} color="#10b981" />
+          <MdAttachMoney size={20} color="#207DC0" />
           <span className="flutter-stat-value">₹{summaryStats.totalEarnings?.toLocaleString() || 0}</span>
           <span className="flutter-stat-label">Total Earnings</span>
         </div>
@@ -360,8 +360,8 @@ const PharmacistPrescriptions = () => {
           className={`flutter-stat-item clickable ${activeBucket === 'completed' ? 'active' : ''}`}
           onClick={() => setActiveBucket('completed')}
         >
-          <MdCheckCircle size={20} color="#10b981" />
-          <span className="flutter-stat-value" style={{ color: activeBucket === 'completed' ? '#10b981' : '#1f2937' }}>
+          <MdCheckCircle size={20} color="#207DC0" />
+          <span className="flutter-stat-value" style={{ color: activeBucket === 'completed' ? '#207DC0' : '#1f2937' }}>
             {summaryStats.completedCount || 0}
           </span>
           <span className="flutter-stat-label">Completed</span>
@@ -465,7 +465,7 @@ const PharmacistPrescriptions = () => {
                 </div>
                 <div className="flutter-prescription-info">
                   <span className="flutter-info-label">Total Amount:</span>
-                  <span className="flutter-info-value" style={{ fontWeight: 700, color: '#10b981' }}>₹{recalculateTotal(prescription).toLocaleString()}</span>
+                  <span className="flutter-info-value" style={{ fontWeight: 700, color: '#207DC0' }}>₹{recalculateTotal(prescription).toLocaleString()}</span>
                 </div>
 
                 {prescription.notes && (
@@ -517,7 +517,7 @@ const PharmacistPrescriptions = () => {
                 </div>
                 <div className="flutter-grid-info">
                   <span className="flutter-grid-label">Total Amount</span>
-                  <span className="flutter-grid-value" style={{ fontWeight: 700, color: '#10b981' }}>₹{recalculateTotal(prescription).toLocaleString()}</span>
+                  <span className="flutter-grid-value" style={{ fontWeight: 700, color: '#207DC0' }}>₹{recalculateTotal(prescription).toLocaleString()}</span>
                 </div>
                 <div className="flutter-grid-info">
                   <span className="flutter-grid-label">Date</span>
@@ -579,7 +579,7 @@ const PharmacistPrescriptions = () => {
                 </div>
                 <div className="flutter-modal-info-row">
                   <span className="flutter-modal-label">Total:</span>
-                  <span className="flutter-modal-value" style={{ fontWeight: 700, color: '#10b981' }}>
+                  <span className="flutter-modal-value" style={{ fontWeight: 700, color: '#207DC0' }}>
                     ₹{recalculateTotal(selectedPrescription).toLocaleString()}
                   </span>
                 </div>

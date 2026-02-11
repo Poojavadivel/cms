@@ -13,6 +13,7 @@ import {
   MdLogout,
   MdPerson,
 } from 'react-icons/md';
+import MoviLogo from '../../components/common/Logo';
 
 const PharmacistRoot = () => {
   const navigate = useNavigate();
@@ -54,6 +55,12 @@ const PharmacistRoot = () => {
     <div className="pharmacist-root">
       <div className={`sidebar ${isCollapsed ? 'collapsed' : 'expanded'}`}>
         <div className="sidebar-header">
+          {!isCollapsed && (
+            <div className="logo-section">
+              <MoviLogo size={32} />
+              <span className="sidebar-title">MOVI HOSPITAL</span>
+            </div>
+          )}
           <button
             className="toggle-btn"
             onClick={toggleSidebar}
@@ -61,9 +68,6 @@ const PharmacistRoot = () => {
           >
             {isCollapsed ? <MdMenuOpen size={24} /> : <MdMenu size={24} />}
           </button>
-          {!isCollapsed && (
-            <span className="sidebar-title">MOVI HOSPITAL</span>
-          )}
         </div>
 
         <div className="sidebar-divider" />

@@ -194,13 +194,13 @@ const Invoice = () => {
     const getStatusStyle = (status) => {
       const statusLower = (status || '').toLowerCase();
       if (statusLower === 'paid' || statusLower === 'completed') {
-        return { bg: 'rgba(16, 185, 129, 0.1)', color: '#10B981' };
+        return { bg: 'rgba(32, 125, 192, 0.1)', color: '#207DC0' };
       } else if (statusLower === 'pending') {
         return { bg: 'rgba(251, 146, 60, 0.1)', color: '#FB923C' };
       } else if (statusLower === 'cancelled') {
         return { bg: 'rgba(239, 68, 68, 0.1)', color: '#EF4444' };
       } else if (statusLower === 'partial') {
-        return { bg: 'rgba(59, 130, 246, 0.1)', color: '#3B82F6' };
+        return { bg: 'rgba(32, 125, 192, 0.1)', color: '#207DC0' };
       }
       return { bg: 'rgba(107, 114, 128, 0.1)', color: '#6B7280' };
     };
@@ -306,14 +306,14 @@ const Invoice = () => {
     if (!window.confirm('Confirm all pending payrolls for this month? This will mark them as approved.')) {
       return;
     }
-    
+
     try {
       const pendingPayrolls = filteredInvoices.filter(inv => inv.status === 'pending');
-      
+
       for (const payroll of pendingPayrolls) {
         await invoiceService.updateInvoice(payroll.id, { ...payroll, status: 'approved' });
       }
-      
+
       await fetchInvoices();
       alert(`Successfully approved ${pendingPayrolls.length} payroll(s)!`);
       setShowBulkActions(false);
@@ -327,16 +327,16 @@ const Invoice = () => {
     if (!window.confirm('Stop all payroll processing for this month? This will mark them as draft.')) {
       return;
     }
-    
+
     try {
-      const activePayrolls = filteredInvoices.filter(inv => 
+      const activePayrolls = filteredInvoices.filter(inv =>
         inv.status === 'pending' || inv.status === 'approved' || inv.status === 'processed'
       );
-      
+
       for (const payroll of activePayrolls) {
         await invoiceService.updateInvoice(payroll.id, { ...payroll, status: 'draft' });
       }
-      
+
       await fetchInvoices();
       alert(`Successfully stopped ${activePayrolls.length} payroll(s)!`);
       setShowBulkActions(false);
@@ -361,25 +361,25 @@ const Invoice = () => {
   };
 
   return (
-    <div className="dashboard-container">
+    <div className="invoice-page dashboard-container">
       {/* Header */}
       <div className="dashboard-header">
         <div className="header-content">
-          <h1 className="main-title">Payroll Management</h1>
+          <h1 className="main-title">PAYROLL</h1>
           <p className="main-subtitle">Manage employee payroll and salary records</p>
         </div>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
           <div style={{ position: 'relative' }}>
-            <button 
-              className="btn-filter-date" 
+            <button
+              className="btn-filter-date"
               onClick={() => setShowBulkActions(!showBulkActions)}
               style={{ padding: '10px 16px' }}
             >
               <MdMoreVert size={20} />
             </button>
-            
+
             {showBulkActions && (
-              <div 
+              <div
                 style={{
                   position: 'absolute',
                   right: 0,
@@ -402,7 +402,7 @@ const Invoice = () => {
                     background: 'transparent',
                     cursor: 'pointer',
                     fontSize: '14px',
-                    color: '#10b981',
+                    color: '#207DC0',
                     fontWeight: '500'
                   }}
                   onMouseOver={(e) => e.target.style.background = '#f3f4f6'}
@@ -432,9 +432,9 @@ const Invoice = () => {
               </div>
             )}
           </div>
-          
-          <button 
-            className="btn-new-appointment" 
+
+          <button
+            className="btn-new-appointment"
             onClick={() => {
               setPayrollMode('create');
               setEditingInvoice(null);
@@ -520,14 +520,21 @@ const Invoice = () => {
                 <tr key={invoice.id || index}>
                   <td>
                     <div className="info-group">
-                      <span className="primary">{invoice.staffName || 'Unknown'}</span>
-                      <span className="secondary">{invoice.department || 'General'} • {invoice.staffCode || 'N/A'}</span>
+                      <div className="primary">
+                        {invoice.staffName || 'Unknown'}
+                        <span style={{ marginLeft: '8px', opacity: 0.5, fontWeight: 500 }}>
+                          #{invoice.staffCode || 'N/A'}
+                        </span>
+                      </div>
+                      <div className="secondary">
+                        {invoice.department || 'General'}
+                      </div>
                     </div>
                   </td>
-                  <td style={{ fontWeight: 600, color: '#2563EB' }}>{invoice.periodDisplay || 'N/A'}</td>
+                  <td style={{ fontWeight: 600, color: '#207DC0' }}>{invoice.periodDisplay || 'N/A'}</td>
                   <td>{formatDate(invoice.date)}</td>
                   <td style={{ fontWeight: 600, color: '#334155' }}>{formatCurrency(invoice.amount)}</td>
-                  <td style={{ fontWeight: 600, color: '#28C76F' }}>{formatCurrency(invoice.paidAmount)}</td>
+                  <td style={{ fontWeight: 600, color: '#207DC0' }}>{formatCurrency(invoice.paidAmount)}</td>
                   <td><StatusBadge status={invoice.status} /></td>
                   <td>
                     <div className="action-buttons-group" style={{ gap: '6px' }}>
@@ -537,9 +544,9 @@ const Invoice = () => {
                       <button className="btn-action edit" title="Edit" onClick={() => handleEdit(invoice)}>
                         <Icons.Edit />
                       </button>
-                      <button 
-                        className="btn-action" 
-                        title="Copy to Next Month" 
+                      <button
+                        className="btn-action copy"
+                        title="Copy to Next Month"
                         onClick={() => handleCopyToNextMonth(invoice)}
                       >
                         <MdArrowForward size={16} />
@@ -555,7 +562,7 @@ const Invoice = () => {
                 <tr>
                   <td colSpan="7" style={{ textAlign: 'center', padding: '48px', color: '#9CA3AF' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-                      <div style={{ width: '32px', height: '32px', border: '3px solid #e5e7eb', borderTopColor: '#3b82f6', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }}></div>
+                      <div style={{ width: '32px', height: '32px', border: '3px solid #e5e7eb', borderTopColor: '#207DC0', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }}></div>
                       <span>Loading payroll...</span>
                     </div>
                   </td>

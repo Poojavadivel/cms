@@ -239,8 +239,8 @@
 }
 
 .kpi-icon.green {
-  background: rgba(16, 185, 129, 0.1);
-  color: #10B981;
+  background: rgba(32, 125, 192, 0.1);
+  color: #207DC0;
 }
 
 .kpi-content {
@@ -597,7 +597,7 @@
 
 /* ============== DOCTOR'S FEEDBACK (AUTO-SCROLL) ============== */
 .doctors-feedback {
-  background: linear-gradient(135deg, #0D9488 0%, #14B8A6 100%);
+  background: linear-gradient(135deg, #165a8a 0%, #207DC0 100%);
   padding: 20px;
   position: relative;
   overflow: hidden;

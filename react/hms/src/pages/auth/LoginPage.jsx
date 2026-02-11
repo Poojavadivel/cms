@@ -12,6 +12,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useApp } from '../../provider';
 import { authService, logger } from '../../services';
 import './LoginPage.css';
+import MoviLogo from '../../components/common/Logo';
 
 const PREFS_REMEMBER_ME_KEY = 'remember_me';
 const PREFS_EMAIL_KEY = 'saved_email';
@@ -122,7 +123,7 @@ const LoginPage = () => {
     // Calculate text positioning for proper centering
     ctx.font = 'bold 20px "Roboto Mono", monospace';
     ctx.textBaseline = 'middle';
-    
+
     // Calculate total width with spacing
     let totalWidth = 0;
     const charWidths = [];
@@ -146,11 +147,11 @@ const LoginPage = () => {
       ctx.save();
       ctx.translate(x + charWidth / 2, y);
       ctx.rotate(rotation);
-      
+
       ctx.fillStyle = '#1F2937'; // grey-800 matching Flutter
       ctx.font = 'bold 20px "Roboto Mono", monospace';
       ctx.fillText(char, -charWidth / 2, 0);
-      
+
       ctx.restore();
 
       x += charWidth + 2; // Move to next character position with spacing
@@ -203,7 +204,7 @@ const LoginPage = () => {
 
       // Set user in context
       setUser(authResult.user, authResult.token);
-      
+
       console.log('✅ [Login] User authenticated:', authResult.user.fullName);
       logger.success('LOGIN_PAGE', `User authenticated: ${authResult.user.fullName}`);
 
@@ -218,9 +219,9 @@ const LoginPage = () => {
       // Otherwise, navigate based on role
       const userRole = authResult.user.role.toLowerCase();
       console.log('👤 [Login] User role:', userRole);
-      
+
       let targetPath = '/doctor'; // Default fallback
-      
+
       if (userRole === 'admin' || userRole === 'superadmin') {
         console.log('➡️ [Login] Navigating to Admin dashboard');
         targetPath = '/admin';
@@ -237,7 +238,7 @@ const LoginPage = () => {
         console.warn('⚠️ [Login] Unknown role, falling back to Doctor');
         logger.warn('LOGIN_PAGE', `Unknown role: ${userRole}, using fallback`);
       }
-      
+
       logger.navigate('/login', targetPath, authResult.user);
       navigate(targetPath, { replace: true });
     } catch (err) {
@@ -312,11 +313,7 @@ const DesktopLayout = (props) => {
             {/* Top Section */}
             <div className="hero-top">
               <div className="brand-header">
-                <div className="brand-icon">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z" fill="currentColor"/>
-                  </svg>
-                </div>
+                <MoviLogo size={40} />
                 <div className="brand-text">
                   <div className="brand-title">MOVI HOSPITAL</div>
                   <div className="brand-subtitle">Healthcare Management</div>
@@ -328,7 +325,7 @@ const DesktopLayout = (props) => {
               </h1>
 
               <p className="hero-description">
-                Secure, HIPAA-compliant platform with role-based access control, 
+                Secure, HIPAA-compliant platform with role-based access control,
                 comprehensive audit trails, and real-time analytics for modern healthcare operations.
               </p>
             </div>
@@ -348,7 +345,7 @@ const DesktopLayout = (props) => {
             <div className="hero-bottom">
               <div className="trust-badge">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                  <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
                 </svg>
                 <span>Trusted by 150+ Healthcare Institutions</span>
               </div>
@@ -376,11 +373,7 @@ const MobileLayout = (props) => {
     <div className="mobile-layout">
       {/* Compact Hero */}
       <div className="mobile-hero">
-        <div className="mobile-brand-icon">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/>
-          </svg>
-        </div>
+        <MoviLogo size={60} />
         <div className="mobile-brand-title">MOVI HOSPITAL</div>
         <div className="mobile-brand-subtitle">Healthcare Management System</div>
       </div>
@@ -417,11 +410,7 @@ const LoginForm = ({
       {/* Desktop Brand Header */}
       {!compact && (
         <div className="form-brand-header">
-          <div className="form-brand-icon">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/>
-            </svg>
-          </div>
+          <MoviLogo size={32} />
           <div className="form-brand-text">
             <div className="form-brand-title">MOVI HOSPITAL</div>
             <div className="form-brand-subtitle">Healthcare Management</div>
@@ -437,7 +426,7 @@ const LoginForm = ({
       {error && (
         <div className="error-message">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
           </svg>
           {error}
         </div>
@@ -448,7 +437,7 @@ const LoginForm = ({
         <label className="field-label">Email Address or Mobile</label>
         <div className="input-wrapper">
           <svg className="input-icon" width="19" height="19" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+            <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" />
           </svg>
           <input
             type="text"
@@ -466,7 +455,7 @@ const LoginForm = ({
         <label className="field-label">Password</label>
         <div className="input-wrapper">
           <svg className="input-icon" width="19" height="19" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
+            <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z" />
           </svg>
           <input
             type={obscurePassword ? 'password' : 'text'}
@@ -484,9 +473,9 @@ const LoginForm = ({
           >
             <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor">
               {obscurePassword ? (
-                <path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z"/>
+                <path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z" />
               ) : (
-                <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+                <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" />
               )}
             </svg>
           </button>
@@ -499,7 +488,7 @@ const LoginForm = ({
         <div className="captcha-row">
           <div className="captcha-input-wrapper">
             <svg className="input-icon" width="19" height="19" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/>
+              <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z" />
             </svg>
             <input
               type="text"
@@ -520,7 +509,7 @@ const LoginForm = ({
               title="Refresh CAPTCHA"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+                <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z" />
               </svg>
             </button>
           </div>
@@ -538,7 +527,7 @@ const LoginForm = ({
           />
           <span>Remember me for 30 days</span>
         </label>
-        <button type="button" className="forgot-link" onClick={() => {}}>
+        <button type="button" className="forgot-link" onClick={() => { }}>
           Forgot Password?
         </button>
       </div>
@@ -555,7 +544,7 @@ const LoginForm = ({
           <>
             <span>Sign In to Dashboard</span>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/>
+              <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z" />
             </svg>
           </>
         )}
@@ -568,7 +557,7 @@ const LoginForm = ({
           <div className="form-footer">
             <div className="security-badge">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/>
+                <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z" />
               </svg>
               <span>Enterprise-grade Security</span>
             </div>
@@ -585,10 +574,10 @@ const LoginForm = ({
 // Feature Chip Component
 const FeatureChip = ({ icon, text }) => {
   const iconMap = {
-    lock: <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zM15.1 8H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>,
-    shield: <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/>,
-    analytics: <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>,
-    backup: <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/>
+    lock: <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zM15.1 8H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z" />,
+    shield: <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z" />,
+    analytics: <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z" />,
+    backup: <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z" />
   };
 
   return (

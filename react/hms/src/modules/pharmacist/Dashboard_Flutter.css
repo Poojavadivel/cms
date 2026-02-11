@@ -142,8 +142,8 @@
 }
 
 .flutter-stat-icon-blue {
-  background-color: rgba(59, 130, 246, 0.1);
-  color: #3b82f6;
+  background-color: rgba(32, 125, 192, 0.1);
+  color: #207DC0;
 }
 
 .flutter-stat-icon-orange {
@@ -399,13 +399,13 @@
 }
 
 .flutter-action-success {
-  color: #10b981;
-  background-color: rgba(16, 185, 129, 0.05);
-  border-color: rgba(16, 185, 129, 0.1);
+  color: #207DC0;
+  background-color: rgba(32, 125, 192, 0.05);
+  border-color: rgba(32, 125, 192, 0.1);
 }
 
 .flutter-action-success:hover {
-  background-color: rgba(16, 185, 129, 0.1);
+  background-color: rgba(32, 125, 192, 0.1);
 }
 
 .flutter-action-warning {
@@ -419,13 +419,13 @@
 }
 
 .flutter-action-info {
-  color: #3b82f6;
-  background-color: rgba(59, 130, 246, 0.05);
-  border-color: rgba(59, 130, 246, 0.1);
+  color: #207DC0;
+  background-color: rgba(32, 125, 192, 0.05);
+  border-color: rgba(32, 125, 192, 0.1);
 }
 
 .flutter-action-info:hover {
-  background-color: rgba(59, 130, 246, 0.1);
+  background-color: rgba(32, 125, 192, 0.1);
 }
 
 /* Status Items */
@@ -448,8 +448,8 @@
 }
 
 .flutter-status-success {
-  background-color: rgba(16, 185, 129, 0.05);
-  color: #10b981;
+  background-color: rgba(32, 125, 192, 0.05);
+  color: #207DC0;
 }
 
 .flutter-status-primary {

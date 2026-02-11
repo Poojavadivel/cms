@@ -211,7 +211,7 @@
 }
 
 .status-dot.available {
-  background: #10B981;
+  background: #207DC0;
 }
 
 .status-dot.busy {
@@ -352,8 +352,8 @@
 }
 
 .form-message.success {
-  background: rgba(16, 185, 129, 0.1);
-  color: #10B981;
+  background: rgba(32, 125, 192, 0.1);
+  color: #207DC0;
 }
 
 .form-message.error {

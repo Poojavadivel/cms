@@ -66,7 +66,7 @@ const InvoiceDetail = ({ invoiceId, invoice, onClose }) => {
 
     const getStatusColor = (status) => {
         const s = (status || '').toLowerCase();
-        if (s === 'paid' || s === 'completed') return '#10B981';
+        if (s === 'paid' || s === 'completed') return '#207DC0';
         if (s === 'pending' || s === 'approved') return '#F59E0B';
         if (s === 'rejected' || s === 'cancelled') return '#EF4444';
         return '#64748b';
@@ -260,8 +260,8 @@ const InvoiceDetail = ({ invoiceId, invoice, onClose }) => {
 
             {/* Hidden container for PDF download */}
             <div ref={fullReportRef} style={{ display: 'none', padding: '40px', background: 'white', width: '800px', color: '#1e293b' }}>
-                <div style={{ borderBottom: '2px solid #3b82f6', paddingBottom: '20px', marginBottom: '20px' }}>
-                    <h1 style={{ margin: 0, color: '#3b82f6' }}>Payslip</h1>
+                <div style={{ borderBottom: '2px solid #207DC0', paddingBottom: '20px', marginBottom: '20px' }}>
+                    <h1 style={{ margin: 0, color: '#207DC0' }}>Payslip</h1>
                     <p style={{ margin: '5px 0', fontSize: '14px' }}>Unified Hospital Management System</p>
                 </div>
 
@@ -304,10 +304,10 @@ const InvoiceDetail = ({ invoiceId, invoice, onClose }) => {
                     </table>
                 </div>
 
-                <div style={{ width: '300px', marginLeft: 'auto', border: '2px solid #3b82f6', padding: '15px' }}>
+                <div style={{ width: '300px', marginLeft: 'auto', border: '2px solid #207DC0', padding: '15px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '20px', fontWeight: 'bold' }}>
                         <span>NET SALARY:</span>
-                        <span style={{ color: '#2563eb' }}>₹{payrollData.netSalary?.toLocaleString()}</span>
+                        <span style={{ color: '#207DC0' }}>₹{payrollData.netSalary?.toLocaleString()}</span>
                     </div>
                 </div>
 

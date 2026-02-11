@@ -75,6 +75,12 @@ const Icons = {
       <line x1="8" y1="2" x2="8" y2="6"></line>
       <line x1="3" y1="10" x2="21" y2="10"></line>
     </svg>
+  ),
+  Plus: () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="12" y1="5" x2="12" y2="19"></line>
+      <line x1="5" y1="12" x2="19" y2="12"></line>
+    </svg>
   )
 };
 
@@ -291,6 +297,9 @@ const Patients = () => {
         }
       });
     }
+
+    // Sort alphabetically by name
+    filtered.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
     setFilteredPatients(filtered);
     setCurrentPage(0); // Reset to first page
@@ -818,33 +827,22 @@ const Patients = () => {
   }, [currentPage, totalPages, activeModal, handlePreviousPage, handleNextPage]);
 
   return (
-    <div className="dashboard-container">
+    <div className="patients-page dashboard-container">
       {/* Header */}
       <div className="dashboard-header">
         <div className="header-content">
-          <h1 className="main-title">Patient Management</h1>
+          <h1 className="main-title">PATIENTS</h1>
           <p className="main-subtitle">Manage patient records, medical history, and appointments.</p>
         </div>
-        <div style={{ display: 'flex', gap: '12px' }}>
+        <div className="header-actions">
           <button className="btn-new-appointment" onClick={handleAdd}>
-            <span>+</span> New Patient
+            <Icons.Plus /> New Patient
           </button>
         </div>
       </div>
 
       {/* Search & Filter Bar */}
       <div className="filter-bar-container">
-        <div className="search-wrapper">
-          <span className="search-icon-lg"><MdSearch size={18} /></span>
-          <input
-            type="text"
-            placeholder="Search by patient name, doctor, or ID..."
-            className="search-input-lg"
-            value={searchQuery}
-            onChange={handleSearchChange}
-          />
-        </div>
-
         <div className="filter-right-group">
           <div className="tabs-wrapper">
             <button
@@ -872,6 +870,19 @@ const Patients = () => {
           >
             More Filters <span style={{ fontSize: '11px', marginLeft: '2px' }}>▼</span>
           </button>
+        </div>
+
+        <div className="search-group">
+          <div className="search-wrapper">
+            <span className="search-icon-lg"><MdSearch size={18} /></span>
+            <input
+              type="text"
+              placeholder="Search by patient name, doctor, or ID..."
+              className="search-input-lg"
+              value={searchQuery}
+              onChange={handleSearchChange}
+            />
+          </div>
         </div>
       </div>
 
@@ -921,7 +932,7 @@ const Patients = () => {
           <table className="modern-table">
             <thead>
               <tr>
-                <th style={{ width: '25%' }}>Patient</th>
+                <th style={{ width: '25%' }}>Patient Name</th>
                 <th style={{ width: '10%' }}>Age</th>
                 <th style={{ width: '12%' }}>Gender</th>
                 <th style={{ width: '15%' }}>Last Visit</th>
@@ -940,17 +951,19 @@ const Patients = () => {
                 return (
                   <tr key={patient.id}>
                     {/* PATIENT COLUMN */}
-                    <td className="cell-patient">
-                      <img
-                        src={avatarSrc}
-                        alt={patient.gender}
-                        className="patient-avatar"
-                      />
-                      <div className="info-group">
-                        <span className="primary">{patient.name}</span>
-                        <span className="secondary">
-                          {patient.patientCode || 'PAT-SYNCING...'}
-                        </span>
+                    <td>
+                      <div className="cell-patient">
+                        <img
+                          src={avatarSrc}
+                          alt={patient.gender}
+                          className="patient-avatar"
+                        />
+                        <div className="info-group">
+                          <span className="primary font-semibold">{patient.name}</span>
+                          <span className="secondary opacity-60 text-xs">
+                            {patient.patientCode || 'PAT-SYNCING...'}
+                          </span>
+                        </div>
                       </div>
                     </td>
 
@@ -962,9 +975,7 @@ const Patients = () => {
 
                     {/* LAST VISIT */}
                     <td>
-                      <div className="info-group">
-                        <span className="primary">{formatLastVisit(patient.lastVisit)}</span>
-                      </div>
+                      <span className="primary">{formatLastVisit(patient.lastVisit)}</span>
                     </td>
 
                     {/* DOCTOR - Match Appointments page style */}
@@ -1036,7 +1047,7 @@ const Patients = () => {
                 <tr>
                   <td colSpan="7" style={{ textAlign: 'center', padding: '48px', color: '#9CA3AF' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-                      <div style={{ width: '32px', height: '32px', border: '3px solid #e5e7eb', borderTopColor: '#3b82f6', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }}></div>
+                      <div style={{ width: '32px', height: '32px', border: '3px solid #e5e7eb', borderTopColor: '#207DC0', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }}></div>
                       <span>Loading patients...</span>
                     </div>
                   </td>

@@ -6,8 +6,8 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { 
-  MdSearch, MdRefresh, MdFilterList, MdCalendarToday, 
+import {
+  MdSearch, MdRefresh, MdFilterList, MdCalendarToday,
   MdPerson, MdWarning, MdCheckCircle, MdSchedule,
   MdPriorityHigh, MdEvent
 } from 'react-icons/md';
@@ -73,7 +73,7 @@ const FollowUpManagement = ({ initialPatientFilter }) => {
         const patientName = f.patientId?.firstName || f.patientName || '';
         const reason = f.followUp?.reason || f.followUpReason || '';
         const diagnosis = f.followUp?.diagnosis || f.diagnosis || '';
-        
+
         return (
           patientName.toLowerCase().includes(query) ||
           reason.toLowerCase().includes(query) ||
@@ -87,10 +87,10 @@ const FollowUpManagement = ({ initialPatientFilter }) => {
       const priorityOrder = { 'Critical': 0, 'Urgent': 1, 'Important': 2, 'Routine': 3 };
       const aPriority = a.followUp?.priority || a.priority || 'Routine';
       const bPriority = b.followUp?.priority || b.priority || 'Routine';
-      
+
       const priorityCompare = (priorityOrder[aPriority] || 3) - (priorityOrder[bPriority] || 3);
       if (priorityCompare !== 0) return priorityCompare;
-      
+
       const aDate = a.followUp?.recommendedDate || a.startAt;
       const bDate = b.followUp?.recommendedDate || b.startAt;
       if (aDate && bDate) {
@@ -106,7 +106,7 @@ const FollowUpManagement = ({ initialPatientFilter }) => {
     const completedDate = followUp.followUp?.completedDate || followUp.completedDate;
     const scheduledDate = followUp.followUp?.scheduledDate || followUp.startAt;
     const recommendedDate = followUp.followUp?.recommendedDate || followUp.followUpDate;
-    
+
     if (completedDate) return 'Completed';
     if (scheduledDate) return 'Scheduled';
     if (recommendedDate) {
@@ -121,15 +121,15 @@ const FollowUpManagement = ({ initialPatientFilter }) => {
       case 'Critical': return '#dc2626';
       case 'Urgent': return '#ea580c';
       case 'Important': return '#f59e0b';
-      case 'Routine': return '#3b82f6';
+      case 'Routine': return '#207DC0';
       default: return '#6b7280';
     }
   };
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'Completed': return '#10b981';
-      case 'Scheduled': return '#3b82f6';
+      case 'Completed': return '#207DC0';
+      case 'Scheduled': return '#207DC0';
       case 'Pending': return '#f59e0b';
       case 'Overdue': return '#dc2626';
       default: return '#6b7280';
@@ -148,7 +148,7 @@ const FollowUpManagement = ({ initialPatientFilter }) => {
 
   const handleMarkComplete = async (followUp) => {
     if (!window.confirm('Mark this follow-up as completed?')) return;
-    
+
     try {
       await authService.put(`/appointments/${followUp._id || followUp.id}`, {
         'followUp.completedDate': new Date().toISOString(),
@@ -272,7 +272,7 @@ const FollowUpManagement = ({ initialPatientFilter }) => {
               const priority = followUp.followUp?.priority || followUp.priority || 'Routine';
               const patient = followUp.patientId || followUp.patient || {};
               const patientName = patient.firstName || followUp.patientName || 'Unknown Patient';
-              
+
               return (
                 <div key={followUp._id || followUp.id} className="followup-card">
                   <div className="card-header">
@@ -281,14 +281,14 @@ const FollowUpManagement = ({ initialPatientFilter }) => {
                       <span className="patient-name">{patientName}</span>
                     </div>
                     <div className="badges">
-                      <span 
-                        className="priority-badge" 
+                      <span
+                        className="priority-badge"
                         style={{ backgroundColor: getPriorityColor(priority) }}
                       >
                         {priority}
                       </span>
-                      <span 
-                        className="status-badge" 
+                      <span
+                        className="status-badge"
                         style={{ backgroundColor: getStatusColor(status) }}
                       >
                         {status}
@@ -320,14 +320,14 @@ const FollowUpManagement = ({ initialPatientFilter }) => {
                   <div className="card-actions">
                     {status === 'Pending' || status === 'Overdue' ? (
                       <>
-                        <button 
+                        <button
                           className="btn-action schedule"
                           onClick={() => handleReschedule(followUp)}
                         >
                           <MdCalendarToday size={16} />
                           Schedule
                         </button>
-                        <button 
+                        <button
                           className="btn-action complete"
                           onClick={() => handleMarkComplete(followUp)}
                         >
@@ -337,14 +337,14 @@ const FollowUpManagement = ({ initialPatientFilter }) => {
                       </>
                     ) : status === 'Scheduled' ? (
                       <>
-                        <button 
+                        <button
                           className="btn-action reschedule"
                           onClick={() => handleReschedule(followUp)}
                         >
                           <MdSchedule size={16} />
                           Reschedule
                         </button>
-                        <button 
+                        <button
                           className="btn-action complete"
                           onClick={() => handleMarkComplete(followUp)}
                         >

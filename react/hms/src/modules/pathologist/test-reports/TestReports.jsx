@@ -221,7 +221,7 @@ const TestReports = () => {
     const getStatusStyle = (status) => {
       const statusLower = (status || '').toLowerCase();
       if (statusLower === 'completed' || statusLower === 'ready') {
-        return { bg: 'rgba(16, 185, 129, 0.1)', color: '#10B981' };
+        return { bg: 'rgba(32, 125, 192, 0.1)', color: '#207DC0' };
       } else if (statusLower === 'pending' || statusLower === 'in progress') {
         return { bg: 'rgba(251, 146, 60, 0.1)', color: '#FB923C' };
       } else if (statusLower === 'cancelled') {
@@ -352,7 +352,7 @@ const TestReports = () => {
           {loading ? (
             <div style={{ textAlign: 'center', padding: '48px', color: '#9CA3AF' }}>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-                <div style={{ width: '32px', height: '32px', border: '3px solid #e5e7eb', borderTopColor: '#3b82f6', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }}></div>
+                <div style={{ width: '32px', height: '32px', border: '3px solid #e5e7eb', borderTopColor: '#207DC0', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }}></div>
                 <span>Loading reports...</span>
               </div>
             </div>

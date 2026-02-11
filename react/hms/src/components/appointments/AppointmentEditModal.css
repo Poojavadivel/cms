@@ -35,7 +35,7 @@
 
 /* Header Section */
 .neo-header {
-  background: linear-gradient(135deg, #1E40AF 0%, #1E3A8A 100%);
+  background: linear-gradient(135deg, #165a8a 0%, #165a8a 100%);
   padding: 28px 36px;
   display: flex;
   align-items: center;
@@ -43,7 +43,7 @@
   gap: 20px;
   flex-shrink: 0;
   border-radius: 20px 20px 0 0;
-  box-shadow: 0 4px 20px rgba(30, 64, 175, 0.15);
+  box-shadow: 0 4px 20px rgba(14, 74, 75, 0.15);
 }
 
 .neo-title-group {
@@ -177,8 +177,8 @@
 }
 
 .neo-input:focus {
-  border-color: #1E40AF;
-  box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.08);
+  border-color: #165a8a;
+  box-shadow: 0 0 0 3px rgba(14, 74, 75, 0.08);
   background: #ffffff;
 }
 
@@ -251,14 +251,14 @@ select.neo-input {
 }
 
 .neo-btn-primary {
-  background: linear-gradient(135deg, #1E40AF 0%, #1E3A8A 100%);
+  background: linear-gradient(135deg, #165a8a 0%, #165a8a 100%);
   color: #ffffff;
-  box-shadow: 0 4px 12px rgba(30, 64, 175, 0.25);
+  box-shadow: 0 4px 12px rgba(14, 74, 75, 0.25);
 }
 
 .neo-btn-primary:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(30, 64, 175, 0.35);
+  box-shadow: 0 6px 20px rgba(14, 74, 75, 0.35);
 }
 
 .neo-btn-primary:active:not(:disabled) {
@@ -328,7 +328,7 @@ select.neo-input {
 .neo-section-icon {
   width: 32px;
   height: 32px;
-  background: linear-gradient(135deg, #1E40AF 0%, #1E3A8A 100%);
+  background: linear-gradient(135deg, #165a8a 0%, #165a8a 100%);
   border-radius: 8px;
   display: flex;
   align-items: center;

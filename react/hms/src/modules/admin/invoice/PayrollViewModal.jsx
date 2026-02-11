@@ -17,8 +17,8 @@ const PayrollViewModal = ({ isOpen, onClose, payroll }) => {
 
   const getStatusColor = (status) => {
     const colors = {
-      paid: '#10b981',
-      approved: '#3b82f6',
+      paid: '#207DC0',
+      approved: '#207DC0',
       processed: '#f59e0b',
       pending: '#ef4444',
       draft: '#6b7280'

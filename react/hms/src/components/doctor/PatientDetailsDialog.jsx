@@ -600,7 +600,7 @@ const HistoryTab = ({ patient }) => {
               <button
                 onClick={handleCloseDetailModal}
                 style={{
-                  background: '#3b82f6',
+                  background: '#207DC0',
                   color: 'white',
                   border: 'none',
                   padding: '10px 24px',

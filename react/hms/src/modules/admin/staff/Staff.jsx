@@ -8,7 +8,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { MdChevronLeft, MdChevronRight, MdSearch } from 'react-icons/md';
 import staffService from '../../../services/staffService';
 import { Staff as StaffModel } from '../../../models/Staff';
-import StaffFormEnterprise from './StaffFormEnterprise';
+import AddStaffDialog from './components/AddStaffDialog';
 import StaffDetailEnterprise from './StaffDetailEnterprise';
 import './Staff.css';
 import adminFemaleIcon from '../../../assets/admin-femaleicon.png';
@@ -56,6 +56,12 @@ const Icons = {
       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
       <polyline points="7 10 12 15 17 10"></polyline>
       <line x1="12" y1="15" x2="12" y2="3"></line>
+    </svg>
+  ),
+  Plus: () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="12" y1="5" x2="12" y2="19"></line>
+      <line x1="5" y1="12" x2="19" y2="12"></line>
     </svg>
   )
 };
@@ -197,6 +203,9 @@ const Staff = () => {
         getStaffCode(s).toLowerCase().includes(query)
       );
     }
+
+    // Sort alphabetically by name
+    result.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
     setFilteredStaff(dedupeById(result));
     setCurrentPage(0);
@@ -484,31 +493,22 @@ const Staff = () => {
   };
 
   return (
-    <div className="dashboard-container">
+    <div className="staff-page dashboard-container">
       {/* Header */}
       <div className="dashboard-header">
         <div className="header-content">
-          <h1 className="main-title">Staff Management</h1>
+          <h1 className="main-title">STAFF</h1>
           <p className="main-subtitle">Manage hospital staff members, roles, and departments.</p>
         </div>
-        <button className="btn-new-appointment" onClick={handleAdd}>
-          <span>+</span> New Staff Member
-        </button>
+        <div className="header-actions">
+          <button className="btn-new-appointment" onClick={handleAdd}>
+            <Icons.Plus /> New Staff Member
+          </button>
+        </div>
       </div>
 
       {/* Search & Filter Bar */}
       <div className="filter-bar-container">
-        <div className="search-wrapper">
-          <span className="search-icon-lg"><MdSearch size={18} /></span>
-          <input
-            type="text"
-            placeholder="Search by name, employee ID, department, or role..."
-            className="search-input-lg"
-            value={searchQuery}
-            onChange={handleSearchChange}
-          />
-        </div>
-
         <div className="filter-right-group">
           <div className="tabs-wrapper">
             <button
@@ -536,6 +536,19 @@ const Staff = () => {
           >
             More Filters <span style={{ fontSize: '11px', marginLeft: '2px' }}>▼</span>
           </button>
+        </div>
+
+        <div className="search-group">
+          <div className="search-wrapper">
+            <span className="search-icon-lg"><MdSearch size={18} /></span>
+            <input
+              type="text"
+              placeholder="Search by name, employee ID, department, or role..."
+              className="search-input-lg"
+              value={searchQuery}
+              onChange={handleSearchChange}
+            />
+          </div>
         </div>
       </div>
 
@@ -589,33 +602,29 @@ const Staff = () => {
 
                 return (
                   <tr key={staff.id || index}>
-                    {/* STAFF CODE COLUMN (with avatar) */}
-                    <td className="cell-patient">
-                      <img
-                        src={avatarSrc}
-                        alt={staff.name}
-                        className="patient-avatar"
-                        onError={(e) => {
-                          e.target.src = '/boyicon.png';
-                        }}
-                      />
-                      <div className="info-group">
-                        <span className="primary">{staffCode}</span>
-                      </div>
+                    {/* STAFF CODE COLUMN */}
+                    <td>
+                      <span className="primary font-semibold">{staffCode || '-'}</span>
                     </td>
 
-                    {/* STAFF NAME */}
+                    {/* STAFF NAME COLUMN (with avatar) */}
                     <td>
-                      <div className="info-group">
-                        <span className="primary">{staff.name || '-'}</span>
+                      <div className="cell-patient">
+                        <img
+                          src={avatarSrc}
+                          alt={staff.name}
+                          className="patient-avatar"
+                          onError={(e) => {
+                            e.target.src = '/boyicon.png';
+                          }}
+                        />
+                        <span className="primary font-semibold">{staff.name || '-'}</span>
                       </div>
                     </td>
 
                     {/* DESIGNATION */}
                     <td>
-                      <div className="info-group">
-                        <span className="primary">{staff.designation || '-'}</span>
-                      </div>
+                      <span className="primary font-semibold">{staff.designation || '-'}</span>
                     </td>
 
                     {/* DEPARTMENT */}
@@ -628,9 +637,7 @@ const Staff = () => {
 
                     {/* CONTACT */}
                     <td>
-                      <div className="info-group">
-                        <span className="primary">{staff.contact || '-'}</span>
-                      </div>
+                      <span className="primary">{staff.contact || '-'}</span>
                     </td>
 
                     {/* STATUS */}
@@ -669,7 +676,7 @@ const Staff = () => {
                 <tr>
                   <td colSpan="7" style={{ textAlign: 'center', padding: '48px', color: '#9CA3AF' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-                      <div style={{ width: '32px', height: '32px', border: '3px solid #e5e7eb', borderTopColor: '#3b82f6', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }}></div>
+                      <div style={{ width: '32px', height: '32px', border: '3px solid #e5e7eb', borderTopColor: '#207DC0', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }}></div>
                       <span>Loading staff...</span>
                     </div>
                   </td>
@@ -708,34 +715,40 @@ const Staff = () => {
             <MdChevronRight size={20} />
           </button>
         </div>
-      </div>
+      </div >
 
       {/* Modals */}
-      {showForm && (
-        <StaffFormEnterprise
-          key={selectedStaff?.id || 'new'}
-          initial={selectedStaff}
-          onSubmit={handleFormSubmit}
-          onCancel={handleFormCancel}
-        />
-      )}
+      {
+        showForm && (
+          <AddStaffDialog
+            key={selectedStaff?.id || 'new'}
+            initial={selectedStaff}
+            onSubmit={handleFormSubmit}
+            onCancel={handleFormCancel}
+          />
+        )
+      }
 
-      {showDetail && selectedStaff && (
-        <StaffDetailEnterprise
-          staffId={selectedStaff.id}
-          initial={selectedStaff}
-          onClose={handleDetailClose}
-          onUpdate={handleDetailUpdate}
-        />
-      )}
+      {
+        showDetail && selectedStaff && (
+          <StaffDetailEnterprise
+            staffId={selectedStaff.id}
+            initial={selectedStaff}
+            onClose={handleDetailClose}
+            onUpdate={handleDetailUpdate}
+          />
+        )
+      }
 
       {/* Notification Toast */}
-      {notification && (
-        <div className={`notification-toast ${notification.type}`}>
-          {notification.message}
-        </div>
-      )}
-    </div>
+      {
+        notification && (
+          <div className={`notification-toast ${notification.type}`}>
+            {notification.message}
+          </div>
+        )
+      }
+    </div >
   );
 };
 

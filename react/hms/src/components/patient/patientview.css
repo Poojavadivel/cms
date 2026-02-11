@@ -233,7 +233,7 @@
     gap: 6px;
     background: #EFF6FF;
     border: 1px solid #DBEAFE;
-    color: #1E40AF;
+    color: #207DC0;
     padding: 2px 8px;
     border-radius: 6px;
     font-size: 11px;
@@ -392,7 +392,7 @@
 
 .pv-tag.barrier {
     background: #EFF6FF;
-    color: #1D4ED8;
+    color: #165a8a;
     border: 1px solid #DBEAFE;
 }
 
@@ -421,13 +421,13 @@
 }
 
 .patient-tab-btn:hover {
-    color: #1E40AF;
+    color: #207DC0;
     background-color: #F8FAFC;
 }
 
 .patient-tab-btn.active {
-    color: #1E40AF;
-    border-bottom-color: #1E40AF;
+    color: #207DC0;
+    border-bottom-color: #207DC0;
 }
 
 /* --- TAB CONTENT AREA --- */

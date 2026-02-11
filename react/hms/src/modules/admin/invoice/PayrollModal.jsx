@@ -485,9 +485,9 @@ const PayrollModal = ({ isOpen, onClose, onSubmit, staffList = [], mode = 'creat
                         alignItems: 'center',
                         gap: '8px',
                         padding: '12px 16px',
-                        background: selectedDepartment ? '#3b82f6' : 'white',
+                        background: selectedDepartment ? '#207DC0' : 'white',
                         color: selectedDepartment ? 'white' : '#374151',
-                        border: selectedDepartment ? '2px solid #3b82f6' : '2px solid #e5e7eb',
+                        border: selectedDepartment ? '2px solid #207DC0' : '2px solid #e5e7eb',
                         borderRadius: '8px',
                         cursor: 'pointer',
                         fontSize: '14px',
@@ -538,7 +538,7 @@ const PayrollModal = ({ isOpen, onClose, onSubmit, staffList = [], mode = 'creat
                             borderBottom: '1px solid #f3f4f6',
                             background: !selectedDepartment ? '#f0f9ff' : 'white',
                             fontWeight: !selectedDepartment ? '600' : '400',
-                            color: !selectedDepartment ? '#3b82f6' : '#374151',
+                            color: !selectedDepartment ? '#207DC0' : '#374151',
                             fontSize: '14px'
                           }}
                         >
@@ -559,7 +559,7 @@ const PayrollModal = ({ isOpen, onClose, onSubmit, staffList = [], mode = 'creat
                                 borderBottom: '1px solid #f3f4f6',
                                 background: selectedDepartment === dept ? '#f0f9ff' : 'white',
                                 fontWeight: selectedDepartment === dept ? '600' : '400',
-                                color: selectedDepartment === dept ? '#3b82f6' : '#374151',
+                                color: selectedDepartment === dept ? '#207DC0' : '#374151',
                                 fontSize: '14px',
                                 transition: 'background 0.15s ease'
                               }}
@@ -592,7 +592,7 @@ const PayrollModal = ({ isOpen, onClose, onSubmit, staffList = [], mode = 'creat
                       style={{
                         background: 'none',
                         border: 'none',
-                        color: '#3b82f6',
+                        color: '#207DC0',
                         cursor: 'pointer',
                         fontSize: '12px',
                         textDecoration: 'underline',
@@ -730,7 +730,7 @@ const PayrollModal = ({ isOpen, onClose, onSubmit, staffList = [], mode = 'creat
                         alignItems: 'center',
                         gap: '8px',
                         padding: '10px 16px',
-                        background: '#10b981',
+                        background: '#207DC0',
                         color: 'white',
                         border: 'none',
                         borderRadius: '8px',

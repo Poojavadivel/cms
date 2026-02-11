@@ -17,7 +17,7 @@ const EditAppointmentForm = ({ appointmentId, onClose, onUpdate, onDelete }) => 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [doctors, setDoctors] = useState([]);
-  
+
   // Availability checking state
   const [isAvailable, setIsAvailable] = useState(true);
 
@@ -35,10 +35,10 @@ const EditAppointmentForm = ({ appointmentId, onClose, onUpdate, onDelete }) => 
     gender: 'Male',
     patientCode: ''
   });
-  
+
   // Calculate startAt for availability checking
-  const startAt = formData.date && formData.time 
-    ? new Date(`${formData.date}T${formData.time}`) 
+  const startAt = formData.date && formData.time
+    ? new Date(`${formData.date}T${formData.time}`)
     : null;
 
   const loadAppointment = useCallback(async () => {
@@ -149,7 +149,7 @@ const EditAppointmentForm = ({ appointmentId, onClose, onUpdate, onDelete }) => 
       alert('Doctor is required');
       return;
     }
-    
+
     // Check availability before submitting
     if (!isAvailable) {
       alert('The selected time slot is not available. Please choose a different time.');
@@ -200,7 +200,7 @@ const EditAppointmentForm = ({ appointmentId, onClose, onUpdate, onDelete }) => 
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
         <div className="bg-white rounded-2xl p-8 flex flex-col items-center">
-          <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+          <div className="w-8 h-8 border-4 border-[#207DC0] border-t-transparent rounded-full animate-spin mb-4"></div>
           <p className="text-gray-600 font-medium">Loading details...</p>
         </div>
       </div>
@@ -211,10 +211,10 @@ const EditAppointmentForm = ({ appointmentId, onClose, onUpdate, onDelete }) => 
   const FormSection = ({ icon: Icon, title, children }) => (
     <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm mb-4">
       <div className="flex items-center gap-3 mb-6">
-        <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
+        <div className="p-2 bg-[#207DC0]/10 text-[#207DC0] rounded-lg">
           <Icon size={20} />
         </div>
-        <h3 className="text-lg font-bold text-gray-900">{title}</h3>
+        <h3 className="text-[15px] font-bold text-[#0f172a] uppercase tracking-wider">{title}</h3>
       </div>
       {children}
     </div>
@@ -222,7 +222,7 @@ const EditAppointmentForm = ({ appointmentId, onClose, onUpdate, onDelete }) => 
 
   const InputField = ({ label, value, onChange, type = 'text', required = false, placeholder = '', disabled = false, fullWidth = false }) => (
     <div className={`flex flex-col ${fullWidth ? 'col-span-full' : ''}`}>
-      <label className="text-sm font-semibold text-gray-700 mb-2">
+      <label className="text-[13px] font-bold text-[#334155] mb-2 tracking-tight">
         {label} {required && <span className="text-red-500">*</span>}
       </label>
       <input
@@ -231,7 +231,7 @@ const EditAppointmentForm = ({ appointmentId, onClose, onUpdate, onDelete }) => 
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
         placeholder={placeholder}
-        className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all disabled:bg-gray-50 disabled:text-gray-500"
+        className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-[14px] font-medium text-[#0f172a] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#207DC0] focus:border-transparent transition-all disabled:bg-gray-50 disabled:text-gray-500 tracking-tight"
       />
     </div>
   );
@@ -241,13 +241,13 @@ const EditAppointmentForm = ({ appointmentId, onClose, onUpdate, onDelete }) => 
       <div className="bg-[#f8fafc] w-[96%] h-[92vh] max-w-[1600px] rounded-2xl shadow-2xl flex flex-col overflow-hidden">
 
         {/* HEADER */}
-        <div className="bg-[#1e3a8a] text-white px-8 py-6 flex justify-between items-center shrink-0">
+        <div className="bg-[#165a8a] text-white px-8 py-6 flex justify-between items-center shrink-0">
           <div>
-            <h2 className="text-2xl font-bold flex items-center gap-3">
-              <MdCheckCircle size={24} className="text-green-400" />
+            <h2 className="text-2xl font-extrabold flex items-center gap-3 tracking-tight">
+              <MdCheckCircle size={24} className="text-[#207DC0]" />
               Edit Appointment
             </h2>
-            <p className="text-blue-100 mt-1 text-sm opacity-90">Update details for {formData.patientName}</p>
+            <p className="text-white/80 mt-1 text-[13px] font-medium tracking-tight opacity-90">Update details for {formData.patientName}</p>
           </div>
           <button onClick={onClose} className="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors text-white">
             <MdClose size={24} />
@@ -279,7 +279,7 @@ const EditAppointmentForm = ({ appointmentId, onClose, onUpdate, onDelete }) => 
                     handleChange('doctorId', e.target.value);
                     handleChange('doctorName', doctor ? doctor.name : '');
                   }}
-                  className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                  className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#207DC0] focus:border-transparent transition-all"
                 >
                   <option value="">Select a doctor</option>
                   {doctors.map(doc => (
@@ -315,8 +315,8 @@ const EditAppointmentForm = ({ appointmentId, onClose, onUpdate, onDelete }) => 
                         type="button"
                         onClick={() => handleChange('status', s)}
                         className={`py-3 px-2 rounded-lg border font-bold text-sm transition-all ${formData.status === s
-                            ? 'bg-blue-600 text-white border-blue-600 shadow-md transform scale-105'
-                            : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                          ? 'bg-[#207DC0] text-white border-[#207DC0] shadow-md transform scale-105'
+                          : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
                           }`}
                       >
                         {s}
@@ -353,7 +353,7 @@ const EditAppointmentForm = ({ appointmentId, onClose, onUpdate, onDelete }) => 
                   value={formData.notes}
                   onChange={(e) => handleChange('notes', e.target.value)}
                   rows={3}
-                  className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all resize-none"
+                  className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#207DC0] transition-all resize-none"
                   placeholder="Add any private notes here..."
                 />
               </div>
@@ -381,7 +381,7 @@ const EditAppointmentForm = ({ appointmentId, onClose, onUpdate, onDelete }) => 
             <button
               onClick={handleSubmit}
               disabled={saving || !isAvailable}
-              className="px-8 py-3 rounded-xl bg-[#1e3a8a] text-white font-bold hover:bg-blue-900 transition-colors shadow-lg shadow-blue-900/20 flex items-center gap-2 disabled:opacity-70"
+              className="px-8 py-3 rounded-xl bg-[#207DC0] text-white font-bold hover:bg-[#165a8a] transition-colors shadow-lg shadow-[#207DC0]/20 flex items-center gap-2 disabled:opacity-70"
               style={{
                 opacity: !isAvailable ? 0.5 : 1,
                 cursor: !isAvailable ? 'not-allowed' : 'pointer'

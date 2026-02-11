@@ -20,6 +20,7 @@ export class PatientDetails {
     emergencyContactName,
     emergencyContactPhone,
     phone,
+    email,
     houseNo = '',
     street = '',
     city,
@@ -28,6 +29,7 @@ export class PatientDetails {
     country = '',
     address = '',
     insuranceNumber,
+    insuranceProvider,
     expiryDate,
     avatarUrl,
     dateOfBirth,
@@ -37,6 +39,7 @@ export class PatientDetails {
     doctorName = '',
     medicalHistory = [],
     allergies = [],
+    currentMedications = '',
     notes = '',
     oxygen = '',
     bmi = '',
@@ -58,6 +61,7 @@ export class PatientDetails {
     this.emergencyContactName = emergencyContactName;
     this.emergencyContactPhone = emergencyContactPhone;
     this.phone = phone;
+    this.email = email;
     this.houseNo = houseNo;
     this.street = street;
     this.city = city;
@@ -66,6 +70,7 @@ export class PatientDetails {
     this.country = country;
     this.address = address;
     this.insuranceNumber = insuranceNumber;
+    this.insuranceProvider = insuranceProvider;
     this.expiryDate = expiryDate;
     this.avatarUrl = avatarUrl;
     this.dateOfBirth = dateOfBirth;
@@ -75,6 +80,7 @@ export class PatientDetails {
     this.doctorName = doctorName;
     this.medicalHistory = medicalHistory;
     this.allergies = allergies;
+    this.currentMedications = currentMedications;
     this.notes = notes;
     this.oxygen = oxygen;
     this.bmi = bmi;
@@ -126,7 +132,7 @@ export class PatientDetails {
   static fromJSON(json) {
     // Debug: Log incoming data structure
     console.log('🔍 [PatientDetails.fromJSON] Raw data:', JSON.stringify(json, null, 2));
-    
+
     const first = json.firstName?.toString() || '';
     const last = json.lastName?.toString() || '';
     const fullName = json.name?.toString() || `${first} ${last}`.trim();
@@ -166,11 +172,11 @@ export class PatientDetails {
       } else if (json.metadata && typeof json.metadata === 'object') {
         extractedPatientCode = json.metadata.patientCode || json.metadata.patient_code || null;
       }
-    } catch {}
+    } catch { }
 
     const metadata = json.metadata && typeof json.metadata === 'object' ? json.metadata : {};
     const addressObj = json.address && typeof json.address === 'object' ? json.address : {};
-    
+
     console.log('📦 [PatientDetails] Extracted metadata:', metadata);
     console.log('📦 [PatientDetails] Extracted addressObj:', addressObj);
 
@@ -193,7 +199,7 @@ export class PatientDetails {
             extractedAge--;
           }
         }
-      } catch {}
+      } catch { }
     }
 
     const doctorIdValue = (() => {
@@ -220,7 +226,7 @@ export class PatientDetails {
         } else if (Array.isArray(json.medicalHistory)) {
           return json.medicalHistory.map(e => e.toString());
         }
-      } catch {}
+      } catch { }
       return [];
     })();
 
@@ -229,7 +235,7 @@ export class PatientDetails {
         if (Array.isArray(json.allergies)) {
           return json.allergies.map(e => e.toString());
         }
-      } catch {}
+      } catch { }
       return [];
     })();
 
@@ -259,6 +265,7 @@ export class PatientDetails {
       country: addressObj.country?.toString() || json.country?.toString() || '',
       address: addressObj.line1?.toString() || json.address?.toString() || '',
       insuranceNumber: metadata.insuranceNumber?.toString() || json.insuranceNumber?.toString() || '',
+      insuranceProvider: metadata.insuranceProvider?.toString() || json.insuranceProvider?.toString() || '',
       expiryDate: metadata.expiryDate?.toString() || json.expiryDate?.toString() || '',
       avatarUrl: metadata.avatarUrl?.toString() || json.avatarUrl?.toString() || '',
       dateOfBirth: json.dateOfBirth?.toString() || '',
@@ -268,6 +275,8 @@ export class PatientDetails {
       doctorName: parsedDoctorName,
       medicalHistory: medicalHistoryValue,
       allergies: allergiesValue,
+      currentMedications: json.currentMedications?.toString() || (Array.isArray(metadata.prescriptions) ? metadata.prescriptions.join(', ') : '') || '',
+      email: json.email?.address || json.email || '',
       notes: json.notes?.toString() || '',
       isSelected: json.isSelected === true,
       patientCode: extractedPatientCode,

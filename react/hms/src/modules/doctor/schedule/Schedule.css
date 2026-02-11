@@ -22,7 +22,7 @@
   width: 48px;
   height: 48px;
   border: 4px solid #E2E8F0;
-  border-top-color: #1E40AF;
+  border-top-color: #165a8a;
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin-bottom: 16px;
@@ -87,7 +87,7 @@
 .header-icon {
   width: 40px;
   height: 40px;
-  background: linear-gradient(135deg, #1E40AF 0%, #1E3A8A 100%);
+  background: linear-gradient(135deg, #165a8a 0%, #165a8a 100%);
   color: white;
   border-radius: 10px;
   display: flex;
@@ -105,8 +105,8 @@
 
 .appointments-badge {
   padding: 6px 12px;
-  background: rgba(30, 64, 175, 0.1);
-  color: #1E40AF;
+  background: rgba(14, 74, 75, 0.1);
+  color: #165a8a;
   border-radius: 8px;
   font-size: 12px;
   font-weight: 600;
@@ -124,8 +124,8 @@
   width: 36px;
   height: 36px;
   border: none;
-  background: rgba(30, 64, 175, 0.1);
-  color: #1E40AF;
+  background: rgba(14, 74, 75, 0.1);
+  color: #165a8a;
   border-radius: 8px;
   cursor: pointer;
   display: flex;
@@ -136,7 +136,7 @@
 }
 
 .calendar-controls button:hover {
-  background: rgba(30, 64, 175, 0.2);
+  background: rgba(14, 74, 75, 0.2);
 }
 
 .current-month {
@@ -177,7 +177,7 @@
 }
 
 .calendar-day:hover {
-  background: rgba(30, 64, 175, 0.05);
+  background: rgba(14, 74, 75, 0.05);
 }
 
 .calendar-day.other-month {
@@ -200,7 +200,7 @@
 }
 
 .calendar-day.selected {
-  background: linear-gradient(135deg, #1E40AF 0%, #1E3A8A 100%);
+  background: linear-gradient(135deg, #165a8a 0%, #165a8a 100%);
   color: white;
 }
 
@@ -219,7 +219,7 @@
   position: absolute;
   bottom: 4px;
   padding: 2px 5px;
-  background: #1E40AF;
+  background: #165a8a;
   color: white;
   border-radius: 10px;
   font-size: 9px;
@@ -230,7 +230,7 @@
 
 .calendar-day.selected .appointment-count {
   background: white;
-  color: #1E40AF;
+  color: #165a8a;
 }
 
 /* Appointments Card */
@@ -267,7 +267,7 @@
 
 .count-badge {
   padding: 6px 14px;
-  background: linear-gradient(135deg, #1E40AF 0%, #1E3A8A 100%);
+  background: linear-gradient(135deg, #165a8a 0%, #165a8a 100%);
   color: white;
   border-radius: 20px;
   font-size: 14px;
@@ -309,7 +309,7 @@
 }
 
 .patient-avatar[data-gender="male"] {
-  background: linear-gradient(135deg, #1E40AF 0%, #1E3A8A 100%);
+  background: linear-gradient(135deg, #165a8a 0%, #165a8a 100%);
   color: white;
 }
 
@@ -382,7 +382,7 @@
 }
 
 .detail-label svg {
-  color: #1E40AF;
+  color: #165a8a;
   font-size: 16px;
 }
 
@@ -428,14 +428,14 @@
 }
 
 .confirm-btn {
-  background: linear-gradient(135deg, #10B981, #059669);
+  background: linear-gradient(135deg, #207DC0, #165a8a);
   color: white;
   flex: 1;
 }
 
 .confirm-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+  box-shadow: 0 4px 12px rgba(32, 125, 192, 0.3);
 }
 
 .delete-btn {
@@ -491,7 +491,7 @@
 
 .empty-state svg {
   font-size: 64px;
-  color: rgba(30, 64, 175, 0.3);
+  color: rgba(14, 74, 75, 0.3);
   margin-bottom: 24px;
 }
 
@@ -544,7 +544,7 @@
 
 /* Status Borders */
 .status-border-confirmed {
-  border-left: 5px solid #10B981 !important;
+  border-left: 5px solid #207DC0 !important;
 }
 
 .status-border-scheduled {
@@ -580,7 +580,7 @@
 
 .patient-avatar-box[data-gender="male"] {
   background: #EFF6FF;
-  color: #2563EB;
+  color: #207DC0;
 }
 
 .patient-avatar-box[data-gender="female"] {
@@ -605,7 +605,7 @@
 }
 
 .clickable-title:hover {
-  color: #2563EB;
+  color: #207DC0;
   text-decoration: underline;
 }
 
@@ -663,7 +663,7 @@
 
 .icon-tiny {
   font-size: 16px;
-  color: #3B82F6;
+  color: #207DC0;
 }
 
 .time-label {
@@ -725,24 +725,24 @@
 }
 
 .btn-confirm {
-  background: #10B981;
+  background: #207DC0;
   color: white;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+  box-shadow: 0 4px 12px rgba(32, 125, 192, 0.2);
 }
 
 .btn-confirm:hover {
-  background: #059669;
+  background: #165a8a;
   transform: scale(1.02);
 }
 
 .btn-intake {
-  background: #2563EB;
+  background: #207DC0;
   color: white;
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+  box-shadow: 0 4px 12px rgba(32, 125, 192, 0.2);
 }
 
 .btn-intake:hover {
-  background: #1D4ED8;
+  background: #165a8a;
   transform: scale(1.02);
 }
 

@@ -22,7 +22,7 @@
   width: 48px;
   height: 48px;
   border: 4px solid #E2E8F0;
-  border-top-color: #1E40AF;
+  border-top-color: #165a8a;
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin: 0 auto 16px;
@@ -34,13 +34,13 @@
 
 /* Header */
 .dashboard-header {
-  background: linear-gradient(135deg, #1E40AF 0%, #1E3A8A 100%);
+  background: linear-gradient(135deg, #165a8a 0%, #165a8a 100%);
   border-radius: 12px;
   padding: 20px;
   display: flex;
   align-items: center;
   gap: 16px;
-  box-shadow: 0 4px 16px rgba(30, 64, 175, 0.25);
+  box-shadow: 0 4px 16px rgba(14, 74, 75, 0.25);
   color: white;
   flex-shrink: 0;
   min-height: 88px;
@@ -152,12 +152,12 @@
 }
 
 .action-btn.success {
-  border-color: rgba(16, 185, 129, 0.2);
-  color: #10B981;
+  border-color: rgba(32, 125, 192, 0.2);
+  color: #207DC0;
 }
 
 .action-btn.success:hover {
-  background: rgba(16, 185, 129, 0.05);
+  background: rgba(32, 125, 192, 0.05);
 }
 
 .action-btn.danger {
@@ -405,10 +405,10 @@
 .queue-action {
   width: 32px;
   height: 32px;
-  background: rgba(16, 185, 129, 0.1);
+  background: rgba(32, 125, 192, 0.1);
   border: none;
   border-radius: 6px;
-  color: #10B981;
+  color: #207DC0;
   font-size: 18px;
   cursor: pointer;
   display: flex;
@@ -418,7 +418,7 @@
 }
 
 .queue-action:hover {
-  background: rgba(16, 185, 129, 0.2);
+  background: rgba(32, 125, 192, 0.2);
 }
 
 /* Upcoming Card */
@@ -519,7 +519,7 @@
 }
 
 .status-card .header-title svg {
-  color: #10B981;
+  color: #207DC0;
 }
 
 .status-content {
@@ -618,7 +618,7 @@
 }
 
 .legend-dot.completed {
-  background: #10B981;
+  background: #207DC0;
 }
 
 /* Responsive */
@@ -784,15 +784,15 @@
 }
 
 .primary-btn {
-  background: #1E40AF;
-  border: 1px solid #1E40AF;
+  background: #165a8a;
+  border: 1px solid #165a8a;
   color: white;
 }
 
 .primary-btn:hover {
-  background: #1E3A8A;
+  background: #165a8a;
   transform: translateY(-1px);
-  box-shadow: 0 4px 6px -1px rgba(30, 64, 175, 0.2);
+  box-shadow: 0 4px 6px -1px rgba(14, 74, 75, 0.2);
 }
 
 .queue-item:hover, .upcoming-item:hover {

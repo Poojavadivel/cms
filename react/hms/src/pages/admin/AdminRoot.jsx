@@ -18,6 +18,7 @@ import {
   MdLocalHospital,
 } from 'react-icons/md';
 import { ChatbotFloatingButton } from '../../components/chatbot';
+import MoviLogo from '../../components/common/Logo';
 
 const AdminRoot = () => {
   const navigate = useNavigate();
@@ -65,6 +66,12 @@ const AdminRoot = () => {
       <div className={`sidebar ${isCollapsed ? 'collapsed' : 'expanded'}`}>
         {/* Header with toggle */}
         <div className="sidebar-header">
+          {!isCollapsed && (
+            <div className="logo-section">
+              <MoviLogo size={32} />
+              <span className="sidebar-title">MOVI HOSPITAL</span>
+            </div>
+          )}
           <button
             className="toggle-btn"
             onClick={toggleSidebar}
@@ -72,9 +79,6 @@ const AdminRoot = () => {
           >
             {isCollapsed ? <MdMenuOpen size={24} /> : <MdMenu size={24} />}
           </button>
-          {!isCollapsed && (
-            <span className="sidebar-title">MOVI HOSPITAL</span>
-          )}
         </div>
 
         <div className="sidebar-divider" />

@@ -466,11 +466,11 @@
 
 /* Voice Button */
 .btn-voice {
-  background: #10b981 !important;
+  background: #207DC0 !important;
 }
 
 .btn-voice:hover:not(:disabled) {
-  background: #059669 !important;
+  background: #165a8a !important;
 }
 
 .btn-voice.recording {

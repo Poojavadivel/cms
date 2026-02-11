@@ -45,7 +45,7 @@
   height: 40px;
   border-radius: 10px;
   background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
-  color: #3B82F6;
+  color: #207DC0;
   flex-shrink: 0;
 }
 
@@ -121,12 +121,12 @@
 
 .section-card-icon.notes {
   background: linear-gradient(135deg, #DBEAFE 0%, #BFDBFE 100%);
-  color: #3B82F6;
+  color: #207DC0;
 }
 
 .section-card-icon.pharmacy {
   background: linear-gradient(135deg, #D1FAE5 0%, #A7F3D0 100%);
-  color: #10B981;
+  color: #207DC0;
 }
 
 .section-card-icon.pathology {

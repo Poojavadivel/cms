@@ -329,7 +329,7 @@ const NextMonthPayrollModal = ({ isOpen, onClose, onSubmit, previousPayroll }) =
                     alignItems: 'center',
                     gap: '8px',
                     padding: '10px 16px',
-                    background: '#10b981',
+                    background: '#207DC0',
                     color: 'white',
                     border: 'none',
                     borderRadius: '8px',

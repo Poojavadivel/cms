@@ -10,9 +10,9 @@
 
 :root {
   /* 1. BRAND COLORS */
-  --primary: #2663FF;
-  --primary-hover: #1e54e4;
-  --secondary: #28C76F;
+  --primary: #207DC0;
+  --primary-hover: #165a8a;
+  --secondary: #207DC0;
   --accent-yellow: #F4B400;
   --accent-red: #FF5A5F;
   --neutral-gray: #9CA3AF;
@@ -88,11 +88,11 @@ body {
   justify-content: space-between;
   padding: 12px 20px;
   animation: slideDownIn 0.3s ease-out;
-  border-left: 5px solid #28C76F;
+  border-left: 5px solid #207DC0;
 }
 
 .modern-notification.success {
-  border-left-color: #28C76F;
+  border-left-color: #207DC0;
 }
 
 .modern-notification.error {
@@ -165,7 +165,7 @@ body {
   font-size: 22px;
   /* Smaller title */
   font-weight: 700;
-  color: #1E293B !important;
+  color: #0F172A !important;
   margin: 0;
   letter-spacing: -0.01em;
 }
@@ -202,14 +202,14 @@ body {
 .btn-approve-all {
   height: 38px;
   padding: 0 16px;
-  background-color: #059669;
+  background-color: #207DC0;
   color: white;
   border: none;
   border-radius: var(--radius-btn);
   font-weight: 600;
   font-size: 13px;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.2);
+  box-shadow: 0 4px 12px rgba(14, 74, 75, 0.2);
   transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   display: flex;
   align-items: center;
@@ -220,7 +220,7 @@ body {
 .btn-approve-all:hover {
   background-color: #047857;
   transform: translateY(-2px) scale(1.02);
-  box-shadow: 0 6px 15px rgba(5, 150, 105, 0.3);
+  box-shadow: 0 6px 15px rgba(14, 74, 75, 0.3);
 }
 
 .btn-approve-all:active {
@@ -732,7 +732,7 @@ body {
 
 .status-pill.confirmed {
   background: rgba(40, 199, 111, 0.12);
-  color: #28C76F;
+  color: #207DC0;
 }
 
 .status-pill.pending {
@@ -747,9 +747,9 @@ body {
 
 /* New status colors */
 .status-pill.scheduled {
-  background: rgba(59, 130, 246, 0.12);
+  background: rgba(32, 125, 192, 0.12);
   /* Blue */
-  color: #3B82F6;
+  color: #207DC0;
 }
 
 .status-pill.rescheduled {
@@ -759,9 +759,9 @@ body {
 }
 
 .status-pill.completed {
-  background: rgba(34, 197, 94, 0.12);
+  background: rgba(32, 125, 192, 0.12);
   /* Green */
-  color: #22C55E;
+  color: #207DC0;
 }
 
 .status-pill.no-show {
@@ -801,8 +801,8 @@ body {
 }
 
 .btn-action.edit:hover {
-  background: rgba(5, 150, 105, 0.1);
-  color: #059669;
+  background: rgba(14, 74, 75, 0.1);
+  color: #207DC0;
 }
 
 .btn-action.view:hover {

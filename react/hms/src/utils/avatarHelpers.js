@@ -11,14 +11,14 @@
  */
 export const getGenderAvatar = (gender) => {
   if (!gender) return '/boyicon.png'; // Default to male icon
-  
+
   const g = gender.toLowerCase().trim();
-  
+
   // Check for female variations
   if (g.includes('female') || g.startsWith('f') || g === 'woman' || g === 'girl') {
     return '/girlicon.png';
   }
-  
+
   // Default to male icon
   return '/boyicon.png';
 };
@@ -29,17 +29,17 @@ export const getGenderAvatar = (gender) => {
  * @returns {string} Color hex code
  */
 export const getGenderColor = (gender) => {
-  if (!gender) return '#3b82f6'; // Default blue
-  
+  if (!gender) return '#207DC0'; // Default blue
+
   const g = gender.toLowerCase().trim();
-  
+
   // Female - Pink
   if (g.includes('female') || g.startsWith('f')) {
     return '#ec4899';
   }
-  
+
   // Male - Blue
-  return '#3b82f6';
+  return '#207DC0';
 };
 
 /**
@@ -49,13 +49,13 @@ export const getGenderColor = (gender) => {
  */
 export const getInitials = (name) => {
   if (!name) return '??';
-  
+
   const parts = name.trim().split(/\s+/);
-  
+
   if (parts.length === 1) {
     return parts[0].substring(0, 2).toUpperCase();
   }
-  
+
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 };
 
@@ -66,24 +66,24 @@ export const getInitials = (name) => {
  */
 export const getAvatarColorFromName = (name) => {
   if (!name) return '#64748b'; // Default gray
-  
+
   const colors = [
     '#ef4444', // red
     '#f59e0b', // orange
-    '#10b981', // green
-    '#3b82f6', // blue
+    '#207DC0', // teal
+    '#207DC0', // blue
     '#8b5cf6', // purple
     '#ec4899', // pink
     '#14b8a6', // teal
     '#f97316', // orange
   ];
-  
+
   // Generate consistent hash from name
   let hash = 0;
   for (let i = 0; i < name.length; i++) {
     hash = name.charCodeAt(i) + ((hash << 5) - hash);
   }
-  
+
   const index = Math.abs(hash) % colors.length;
   return colors[index];
 };
@@ -95,7 +95,7 @@ export const getAvatarColorFromName = (name) => {
  */
 export const isValidAvatarUrl = (url) => {
   if (!url) return false;
-  
+
   // Check if it's a valid URL or path
   return url.startsWith('http') || url.startsWith('/') || url.startsWith('data:');
 };
@@ -117,7 +117,7 @@ export const getAvatarConfig = ({ avatarUrl, gender, name }) => {
       value: avatarUrl
     };
   }
-  
+
   // Priority 2: Gender-based avatar
   if (gender) {
     return {
@@ -125,7 +125,7 @@ export const getAvatarConfig = ({ avatarUrl, gender, name }) => {
       value: getGenderAvatar(gender)
     };
   }
-  
+
   // Priority 3: Initials
   if (name) {
     return {
@@ -134,7 +134,7 @@ export const getAvatarConfig = ({ avatarUrl, gender, name }) => {
       color: getAvatarColorFromName(name)
     };
   }
-  
+
   // Fallback: Default avatar
   return {
     type: 'image',

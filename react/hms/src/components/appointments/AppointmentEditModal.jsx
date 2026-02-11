@@ -219,7 +219,7 @@ const AppointmentEditModal = ({ isOpen, onClose, appointmentId, onSuccess }) => 
           {isLoading ? (
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '60px', color: '#6B7280' }}>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ width: '40px', height: '40px', border: '4px solid #e5e7eb', borderTopColor: '#3b82f6', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 16px' }}></div>
+                <div style={{ width: '40px', height: '40px', border: '4px solid #e5e7eb', borderTopColor: '#207DC0', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 16px' }}></div>
                 <p>Loading appointment details...</p>
               </div>
             </div>

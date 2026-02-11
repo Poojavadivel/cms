@@ -45,11 +45,12 @@
   width: 48px;
   height: 48px;
   border-radius: 10px;
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  background: linear-gradient(135deg, #207DC0 0%, #165a8a 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
+  box-shadow: 0 4px 12px rgba(32, 125, 192, 0.3);
 }
 
 .edit-modal-header h2 {
@@ -118,13 +119,13 @@
 }
 
 .edit-tab:hover {
-  color: #3b82f6;
-  background: rgba(59, 130, 246, 0.05);
+  color: #207DC0;
+  background: rgba(32, 125, 192, 0.05);
 }
 
 .edit-tab.active {
-  color: #3b82f6;
-  border-bottom-color: #3b82f6;
+  color: #207DC0;
+  border-bottom-color: #207DC0;
   background: white;
 }
 
@@ -185,8 +186,8 @@
 .edit-form-field select:focus,
 .edit-form-field textarea:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: #207DC0;
+  box-shadow: 0 0 0 3px rgba(32, 125, 192, 0.1);
 }
 
 .edit-form-field input::placeholder,
@@ -239,14 +240,16 @@
 }
 
 .btn-save {
-  background: #3b82f6;
+  background: #207DC0;
   border: none;
   color: white;
+  box-shadow: 0 4px 12px rgba(32, 125, 192, 0.2);
 }
 
 .btn-save:hover:not(:disabled) {
-  background: #2563eb;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+  background: #165a8a;
+  box-shadow: 0 6px 16px rgba(32, 125, 192, 0.4);
+  transform: translateY(-1px);
 }
 
 .btn-cancel:disabled,
@@ -261,6 +264,7 @@
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);

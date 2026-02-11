@@ -1,4 +1,4 @@
-/* --- ENTERPRISE DESIGN SYSTEM (Patients - Matching Appointments) --- */
+/* Invoice.css - ENTERPRISE DESIGN SYSTEM */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 /* Loading spinner animation */
@@ -8,11 +8,12 @@
   }
 }
 
-:root {
+.invoice-page {
   /* BRAND COLORS */
-  --primary: #2663FF;
-  --primary-hover: #1e54e4;
-  --secondary: #28C76F;
+  --primary: #207DC0;
+  /* Logo Blue */
+  --primary-hover: #165a8a;
+  --secondary: #207DC0;
   --accent-yellow: #F4B400;
   --accent-red: #FF5A5F;
   --neutral-gray: #9CA3AF;
@@ -31,38 +32,25 @@
   /* SHADOWS */
   --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.04);
   --shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.08);
-  --shadow-active: 0 0 0 2px rgba(38, 99, 255, 0.2);
 
   /* SPACING */
-  --space-05: 4px;
-  --space-1: 8px;
-  --space-2: 12px;
   --space-3: 16px;
-  --space-4: 24px;
 
   /* RADIUS */
   --radius-btn: 8px;
   --radius-card: 12px;
   --radius-search: 12px;
-  --radius-pill: 20px;
 }
 
-body {
-  background-color: var(--bg-page);
-  color: var(--text-body);
-  font-family: 'Inter', -apple-system, sans-serif;
-  margin: 0;
-  overflow: hidden;
-}
-
-.dashboard-container {
-  max-width: 100%;
+.invoice-page.dashboard-container {
+  width: 100%;
   padding: 16px 24px;
   height: 100vh;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
   overflow: hidden;
+  background-color: var(--bg-page);
 }
 
 /* --- HEADER --- */
@@ -74,40 +62,51 @@ body {
   flex-shrink: 0;
 }
 
-.main-title {
-  font-size: 22px;
-  font-weight: 700;
-  color: var(--text-title);
+.invoice-page .main-title {
+  font-size: 28px;
+  font-weight: 800;
+  color: #0F172A;
   margin: 0;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.04em;
+  line-height: 1.1;
+  text-transform: uppercase;
 }
 
-.main-subtitle {
-  font-size: 13px;
-  color: var(--neutral-gray);
-  margin: 2px 0 0 0;
+.invoice-page .main-subtitle {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin: 4px 0 0 0;
+  letter-spacing: var(--ls-body);
+  font-weight: 500;
+  white-space: nowrap;
+  /* Enforce single line */
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .btn-new-appointment {
-  height: 36px;
-  padding: 0 16px;
-  background-color: var(--primary);
+  height: 40px;
+  padding: 0 20px;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
   color: white;
   border: none;
   border-radius: var(--radius-btn);
-  font-weight: 600;
+  font-weight: 700;
   font-size: 13px;
   cursor: pointer;
-  box-shadow: 0 2px 6px rgba(38, 99, 255, 0.2);
-  transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(32, 125, 192, 0.2);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  position: relative;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 .btn-new-appointment:hover {
-  transform: translateY(-1px);
-  background-color: var(--primary-hover);
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 15px 30px -8px rgba(32, 125, 192, 0.4);
 }
 
 /* --- SEARCH & FILTER --- */
@@ -159,7 +158,7 @@ body {
 .search-input-lg:focus {
   outline: none;
   background: white;
-  box-shadow: 0 0 0 3px rgba(38, 99, 255, 0.1);
+  box-shadow: 0 0 0 3px rgba(32, 125, 192, 0.1);
   border-color: var(--primary);
   transform: translateY(-1px);
 }
@@ -193,28 +192,16 @@ body {
 }
 
 .tab-btn:hover {
-  background: rgba(38, 99, 255, 0.08);
+  background: rgba(32, 125, 192, 0.08);
   color: var(--primary);
 }
 
 .tab-btn.active {
-  background: transparent;
-  color: var(--primary);
-  font-weight: 700;
-  box-shadow: none;
-  transform: none;
-  position: relative;
-}
-
-.tab-btn.active::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 16px;
-  right: 16px;
-  height: 2px;
-  background-color: var(--primary);
-  border-radius: 2px;
+  background: var(--primary);
+  color: white;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(32, 125, 192, 0.25);
+  transform: translateY(-1px);
 }
 
 .btn-filter-date {
@@ -256,9 +243,11 @@ body {
 
 .modern-table-wrapper {
   flex: 1;
+  overflow-x: auto;
   overflow-y: auto;
-  overflow-x: hidden;
   padding: 0;
+  width: 100%;
+  -webkit-overflow-scrolling: touch;
 }
 
 .modern-table-wrapper::-webkit-scrollbar {
@@ -281,9 +270,9 @@ body {
 
 .modern-table {
   width: 100%;
-  max-width: 100%;
   border-collapse: collapse;
-  table-layout: fixed;
+  table-layout: auto;
+  min-width: 900px;
 }
 
 .modern-table thead th {
@@ -301,7 +290,7 @@ body {
 }
 
 .modern-table tbody tr {
-  height: 58px;
+  min-height: 58px;
   border-bottom: 1px solid #F1F5F9;
   transition: background 0.1s;
 }
@@ -317,21 +306,6 @@ body {
   color: var(--text-title);
 }
 
-/* Patient Cell */
-.cell-patient {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.patient-avatar {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  object-fit: cover;
-  flex-shrink: 0;
-}
-
 .info-group {
   display: flex;
   flex-direction: column;
@@ -339,55 +313,18 @@ body {
 }
 
 .info-group .primary {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--text-title);
-  line-height: 1.4;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 200px;
+  line-height: 1.2;
 }
 
 .info-group .secondary {
   font-size: 11px;
-  font-weight: 400;
-  color: var(--neutral-gray);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 200px;
-}
-
-/* Doctor Cell */
-.cell-doctor {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.doc-avatar-sm {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: 1px solid #E2E8F0;
-  background: white;
-  color: var(--primary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-}
-
-.doc-avatar-sm svg {
-  width: 16px;
-  height: 16px;
-}
-
-.font-medium {
   font-weight: 500;
-  font-size: 13px;
-  color: var(--text-title);
+  color: #64748B;
+  opacity: 0.8;
+  letter-spacing: 0.02em;
 }
 
 /* Actions */
@@ -411,7 +348,6 @@ body {
   transition: all 0.2s;
 }
 
-/* View - Gray */
 .btn-action.view svg {
   stroke: #6B7280;
 }
@@ -424,9 +360,8 @@ body {
   stroke: #374151;
 }
 
-/* Edit - Green */
 .btn-action.edit svg {
-  stroke: #059669;
+  stroke: #165a8a;
 }
 
 .btn-action.edit:hover {
@@ -437,7 +372,6 @@ body {
   stroke: #047857;
 }
 
-/* Delete - Red */
 .btn-action.delete svg {
   stroke: #DC2626;
 }
@@ -446,21 +380,12 @@ body {
   background: #FEF2F2;
 }
 
-.btn-action.delete:hover svg {
-  stroke: #B91C1C;
+.btn-action.copy svg {
+  stroke: var(--primary);
 }
 
-/* Download - Amber */
-.btn-action.download svg {
-  stroke: #D97706;
-}
-
-.btn-action.download:hover {
-  background: #FEF3C7;
-}
-
-.btn-action.download:hover svg {
-  stroke: #B45309;
+.btn-action.copy:hover {
+  background: rgba(32, 125, 192, 0.08);
 }
 
 .btn-action:disabled {
@@ -496,7 +421,7 @@ body {
 
 .page-arrow-circle:hover:not(:disabled) {
   border-color: var(--primary);
-  background: #EEF3FF;
+  background: #F0FDFD;
   color: var(--primary);
   transform: scale(1.05);
 }
@@ -511,46 +436,4 @@ body {
   font-weight: 500;
   color: var(--text-title);
   padding: 0 8px;
-}
-
-/* Responsive */
-@media (max-width: 1024px) {
-  .modern-table {
-    font-size: 12px;
-  }
-
-  .modern-table thead th,
-  .modern-table tbody td {
-    padding: 10px 16px;
-  }
-}
-
-@media (max-width: 768px) {
-  .dashboard-container {
-    padding: 12px 16px;
-  }
-
-  .dashboard-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-  }
-
-  .filter-bar-container {
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .search-wrapper {
-    max-width: 100%;
-  }
-
-  .filter-right-group {
-    width: 100%;
-    flex-wrap: wrap;
-  }
-
-  .tabs-wrapper {
-    flex: 1;
-  }
 }

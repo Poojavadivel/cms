@@ -2,9 +2,9 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 :root {
-  --primary: #2663FF;
-  --primary-hover: #1e54e4;
-  --secondary: #28C76F;
+  --primary: #207DC0;
+  --primary-hover: #165a8a;
+  --secondary: #207DC0;
   --accent-yellow: #F4B400;
   --accent-red: #FF5A5F;
   --neutral-gray: #9CA3AF;
@@ -58,7 +58,7 @@
 .main-title {
   font-size: 22px;
   font-weight: 700;
-  color: var(--text-title);
+  color: #0F172A;
   margin: 0;
   letter-spacing: -0.01em;
 }
@@ -320,7 +320,7 @@
 
 .badge-male {
   background: #DBEAFE;
-  color: #1E40AF;
+  color: #165a8a;
 }
 
 .badge-female {
@@ -385,7 +385,7 @@
 /* Appointment - Green */
 .action-btn.action-appt svg,
 .action-appt svg {
-  stroke: #059669;
+  stroke: #207DC0;
 }
 
 .action-btn.action-appt:hover,
@@ -445,10 +445,13 @@
 
 /* Hide scrollbar in table */
 .modern-table-wrapper {
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE/Edge */
+  scrollbar-width: none;
+  /* Firefox */
+  -ms-overflow-style: none;
+  /* IE/Edge */
 }
 
 .modern-table-wrapper::-webkit-scrollbar {
-  display: none; /* Chrome/Safari/Opera */
+  display: none;
+  /* Chrome/Safari/Opera */
 }

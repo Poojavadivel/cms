@@ -897,7 +897,7 @@ const MedicalHistoryTab = ({ patientId }) => {
                                     border: '1px solid #e2e8f0'
                                 }}>
                                     <div style={{
-                                        background: '#3b82f6',
+                                        background: '#207DC0',
                                         borderRadius: '8px',
                                         padding: '10px',
                                         marginRight: '16px',
@@ -946,7 +946,7 @@ const MedicalHistoryTab = ({ patientId }) => {
                                     border: '1px solid #e2e8f0'
                                 }}>
                                     <div style={{
-                                        background: '#10b981',
+                                        background: '#207DC0',
                                         borderRadius: '8px',
                                         padding: '10px',
                                         marginRight: '16px',
@@ -1434,7 +1434,7 @@ const LabResultTab = ({ patientId }) => {
                                                     className="pv-btn-action-circle"
                                                     onClick={() => pathologyService.downloadReport(item._id || item.id, item.testName || 'LabReport')}
                                                     title="Download Lab Report"
-                                                    style={{ color: '#3b82f6' }}
+                                                    style={{ color: '#207DC0' }}
                                                 >
                                                     <MdPictureAsPdf size={18} />
                                                 </button>

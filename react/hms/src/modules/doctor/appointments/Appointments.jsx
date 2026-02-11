@@ -19,7 +19,7 @@ const MOCK_APPOINTMENTS = [
     doctor: 'Dr. Smith',
     doctorInitials: 'DS',
     doctorColor: '#DBEAFE',
-    doctorTextColor: '#1E40AF',
+    doctorTextColor: '#165a8a',
     date: 'Oct 24, 2023',
     time: '10:00 AM',
     service: 'General Checkup',
@@ -47,7 +47,7 @@ const MOCK_APPOINTMENTS = [
     doctor: 'Dr. Smith',
     doctorInitials: 'DS',
     doctorColor: '#DBEAFE',
-    doctorTextColor: '#1E40AF',
+    doctorTextColor: '#165a8a',
     date: 'Oct 24, 2023',
     time: '02:15 PM',
     service: 'Consultation',
@@ -89,7 +89,7 @@ const MOCK_APPOINTMENTS = [
     doctor: 'Dr. Smith',
     doctorInitials: 'DS',
     doctorColor: '#DBEAFE',
-    doctorTextColor: '#1E40AF',
+    doctorTextColor: '#165a8a',
     date: 'Oct 26, 2023',
     time: '11:00 AM',
     service: 'General Checkup',
@@ -161,7 +161,7 @@ const Icons = {
     </svg>
   ),
   Male: () => (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#207DC0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="10" cy="10" r="7"></circle>
       <line x1="21" y1="3" x2="15" y2="9"></line>
       <line x1="21" y1="3" x2="21" y2="8"></line>
@@ -187,7 +187,7 @@ const Icons = {
     </svg>
   ),
   Edit: () => (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#207DC0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
       <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
     </svg>
@@ -372,7 +372,7 @@ const getDoctorColor = (index) => {
 
 // Get doctor text color (cycle through predefined colors)
 const getDoctorTextColor = (index) => {
-  const colors = ['#1E40AF', '#6B21A8', '#065F46', '#9A3412', '#BE185D'];
+  const colors = ['#165a8a', '#6B21A8', '#065F46', '#9A3412', '#BE185D'];
   return colors[index % colors.length];
 };
 
@@ -913,7 +913,7 @@ const Appointments = () => {
                 <tr>
                   <td colSpan="6" style={{ textAlign: 'center', padding: '48px', color: '#9CA3AF' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-                      <div style={{ width: '32px', height: '32px', border: '3px solid #e5e7eb', borderTopColor: '#3b82f6', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }}></div>
+                      <div style={{ width: '32px', height: '32px', border: '3px solid #e5e7eb', borderTopColor: '#207DC0', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }}></div>
                       <span>Loading appointments...</span>
                     </div>
                   </td>

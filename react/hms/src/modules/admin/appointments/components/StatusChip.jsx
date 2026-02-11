@@ -11,12 +11,12 @@ const StatusChip = ({ status }) => {
   // Get status styling based on value
   const getStatusStyle = (status) => {
     const statusLower = (status || '').toLowerCase();
-    
+
     switch (statusLower) {
       case 'completed':
         return {
-          bg: 'rgba(16, 185, 129, 0.12)',
-          fg: '#10b981',
+          bg: 'rgba(32, 125, 192, 0.12)',
+          fg: '#207DC0',
           label: 'Completed'
         };
       case 'pending':
@@ -33,8 +33,8 @@ const StatusChip = ({ status }) => {
         };
       case 'scheduled':
         return {
-          bg: 'rgba(100, 116, 139, 0.12)',
-          fg: '#64748b',
+          bg: 'rgba(32, 125, 192, 0.12)',
+          fg: '#207DC0',
           label: 'Scheduled'
         };
       default:

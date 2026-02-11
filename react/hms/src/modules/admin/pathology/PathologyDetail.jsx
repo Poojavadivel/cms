@@ -97,9 +97,9 @@ const PathologyDetail = ({ reportId, report, onClose }) => {
 
   const getStatusColor = (status) => {
     const statusLower = status?.toLowerCase() || '';
-    if (statusLower === 'completed' || statusLower === 'ready') return '#22C55E';
+    if (statusLower === 'completed' || statusLower === 'ready') return '#207DC0';
     if (statusLower === 'pending') return '#F59E0B';
-    if (statusLower === 'in progress') return '#3B82F6';
+    if (statusLower === 'in progress') return '#207DC0';
     return '#6B7280';
   };
 

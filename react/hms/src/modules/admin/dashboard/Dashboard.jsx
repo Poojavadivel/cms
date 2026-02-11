@@ -38,20 +38,20 @@ const AdminDashboard = () => {
         staffService.fetchStaffs().catch(() => []),
         DashboardService.getStats().catch(() => null)
       ]);
-      
+
       // Count patients
-      const patientCount = Array.isArray(patientsData) 
-        ? patientsData.length 
+      const patientCount = Array.isArray(patientsData)
+        ? patientsData.length
         : (patientsData?.patients?.length || 0);
-      
+
       // Count staff/beds (you can adjust this logic)
-      const staffCount = Array.isArray(staffData) 
-        ? staffData.length 
+      const staffCount = Array.isArray(staffData)
+        ? staffData.length
         : (staffData?.staff?.length || 0);
-      
+
       // Get stats from dashboard service or use calculated values
       const stats = statsData?.data || statsData || {};
-      
+
       setData({
         invoice: stats.totalInvoices || stats.invoices || 0,
         patients: stats.totalPatients || patientCount,
@@ -76,11 +76,11 @@ const AdminDashboard = () => {
     try {
       setAppointmentsLoading(true);
       const appointments = await fetchAppointments();
-      
+
       // Filter for today and upcoming appointments
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      
+
       const upcoming = appointments
         .filter(apt => {
           const aptDate = new Date(apt.date || apt.startAt);
@@ -96,7 +96,7 @@ const AdminDashboard = () => {
           // Extract patient info
           let patientName = '';
           let gender = '';
-          
+
           if (apt.patientId && typeof apt.patientId === 'object') {
             const p = apt.patientId;
             patientName = `${p.firstName || ''} ${p.lastName || ''}`.trim();
@@ -104,17 +104,17 @@ const AdminDashboard = () => {
           } else if (typeof apt.patientId === 'string') {
             patientName = apt.clientName || '';
           }
-          
+
           // Fallback to direct fields
           if (!patientName) {
             patientName = apt.clientName || apt.patientName || 'Unknown Patient';
           }
-          
+
           // Check appointment metadata for gender
           if (!gender && apt.metadata && typeof apt.metadata === 'object') {
             gender = apt.metadata.gender || '';
           }
-          
+
           // Extract doctor info
           let doctorName = '';
           if (apt.doctorId && typeof apt.doctorId === 'object') {
@@ -127,11 +127,11 @@ const AdminDashboard = () => {
           } else if (apt.doctor) {
             doctorName = apt.doctor;
           }
-          
+
           if (!doctorName || doctorName === 'Dr. ') {
             doctorName = 'Unknown Doctor';
           }
-          
+
           return {
             name: patientName,
             doctor: doctorName,
@@ -142,9 +142,9 @@ const AdminDashboard = () => {
             originalData: apt
           };
         });
-      
+
       setUpcomingAppointments(upcoming);
-      
+
       // Update dashboard stats with real appointment count
       setData(prevData => ({
         ...prevData,
@@ -162,10 +162,10 @@ const AdminDashboard = () => {
     if (!dateStr) return 'N/A';
     try {
       const date = new Date(dateStr);
-      return date.toLocaleTimeString('en-US', { 
-        hour: '2-digit', 
+      return date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
         minute: '2-digit',
-        hour12: true 
+        hour12: true
       });
     } catch {
       return 'N/A';
@@ -242,7 +242,7 @@ const AdminDashboard = () => {
   const events = {
     [new Date().toDateString()]: [
       { title: "Morning Staff Meeting", time: "08:00 - 09:00", color: "#14b8a6" },
-      { title: "Patient Consultation - General Medicine", time: "10:00 - 12:00", color: "#3b82f6" },
+      { title: "Patient Consultation - General Medicine", time: "10:00 - 12:00", color: "#207DC0" },
       { title: "Surgery - Orthopedics", time: "13:00 - 15:00", color: "#ef4444" },
       { title: "Training Session", time: "16:00 - 17:00", color: "#a855f7" },
     ],
@@ -292,14 +292,14 @@ const AdminDashboard = () => {
           icon="📄"
           title="Total Invoice"
           value={data.invoice}
-          iconColor="#3b82f6"
+          iconColor="#207DC0"
           onClick={() => navigate('/admin/invoice')}
         />
         <StatCard
           icon="👥"
           title="Total Patients"
           value={data.patients}
-          iconColor="#22c55e"
+          iconColor="#207DC0"
           onClick={() => navigate('/admin/patients')}
         />
         <StatCard
@@ -313,7 +313,7 @@ const AdminDashboard = () => {
           icon="👤"
           title="Staff"
           value={data.staff}
-          iconColor="#3b82f6"
+          iconColor="#207DC0"
           onClick={() => navigate('/admin/staff')}
         />
       </div>
@@ -330,14 +330,14 @@ const AdminDashboard = () => {
                   <XAxis dataKey="day" tick={{ fontSize: 10, fill: '#6b7280' }} />
                   <YAxis tick={{ fontSize: 10, fill: '#6b7280' }} domain={[0, 180]} ticks={[0, 40, 80, 120, 160]} />
                   <Tooltip />
-                  <Bar dataKey="Child" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="Adult" fill="#22c55e" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="Child" fill="#207DC0" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="Adult" fill="#207DC0" radius={[4, 4, 0, 0]} />
                   <Bar dataKey="Elderly" fill="#ef4444" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
               <div className="chart-legend">
-                <LegendItem color="#3b82f6" label="Child" />
-                <LegendItem color="#22c55e" label="Adult" />
+                <LegendItem color="#207DC0" label="Child" />
+                <LegendItem color="#207DC0" label="Adult" />
                 <LegendItem color="#ef4444" label="Elderly" />
               </div>
             </ChartCard>
@@ -361,7 +361,7 @@ const AdminDashboard = () => {
                   <YAxis tick={{ fontSize: 10, fill: '#6b7280' }} />
                   <Tooltip />
                   <Line type="monotone" dataKey="current" stroke="#1f2937" strokeWidth={2} dot={{ r: 4 }} />
-                  <Line type="monotone" dataKey="previous" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4 }} />
+                  <Line type="monotone" dataKey="previous" stroke="#207DC0" strokeWidth={2} dot={{ r: 4 }} />
                 </LineChart>
               </ResponsiveContainer>
             </ChartCard>
@@ -381,8 +381,8 @@ const AdminDashboard = () => {
                   </div>
                 ) : (
                   upcomingAppointments.map((apt, idx) => (
-                    <AppointmentItem 
-                      key={apt.id || idx} 
+                    <AppointmentItem
+                      key={apt.id || idx}
                       {...apt}
                       onClick={() => handleViewAppointment(apt)}
                     />
@@ -447,9 +447,9 @@ const AdminDashboard = () => {
 // Component Definitions
 const StatCard = ({ icon, title, value, iconColor, onClick }) => (
   <div className="stat-card" onClick={onClick} style={{ cursor: 'pointer' }}>
-    <div className="stat-icon" style={{ 
-      backgroundColor: `${iconColor}1A`, 
-      borderColor: `${iconColor}4D` 
+    <div className="stat-icon" style={{
+      backgroundColor: `${iconColor}1A`,
+      borderColor: `${iconColor}4D`
     }}>
       <span style={{ color: iconColor }}>{icon}</span>
     </div>
@@ -499,10 +499,10 @@ const AppointmentItem = ({ name, doctor, time, status, gender, onClick }) => {
     }
     return '/boyicon.png';
   };
-  
+
   const statusColors = {
     Confirmed: { bg: '#dcfce7', text: '#166534' },
-    Scheduled: { bg: '#dbeafe', text: '#1e40af' },
+    Scheduled: { bg: '#dbeafe', text: '#165a8a' },
     Pending: { bg: '#fef3c7', text: '#92400e' },
     Cancelled: { bg: '#fee2e2', text: '#991b1b' },
     Completed: { bg: '#e0e7ff', text: '#4338ca' }
@@ -514,12 +514,12 @@ const AppointmentItem = ({ name, doctor, time, status, gender, onClick }) => {
   return (
     <div className="appointment-item" onClick={onClick} style={{ cursor: 'pointer' }}>
       <div className="appointment-avatar">
-        <img 
-          src={getAvatar()} 
+        <img
+          src={getAvatar()}
           alt={name}
-          style={{ 
-            width: '36px', 
-            height: '36px', 
+          style={{
+            width: '36px',
+            height: '36px',
             borderRadius: '50%',
             objectFit: 'cover'
           }}
@@ -533,11 +533,11 @@ const AppointmentItem = ({ name, doctor, time, status, gender, onClick }) => {
         <p className="appointment-name">{name}</p>
         <p className="appointment-details">{doctor} • {time}</p>
       </div>
-      <div 
+      <div
         className="appointment-status"
-        style={{ 
-          backgroundColor: statusStyle.bg, 
-          color: statusStyle.text 
+        style={{
+          backgroundColor: statusStyle.bg,
+          color: statusStyle.text
         }}
       >
         {status}

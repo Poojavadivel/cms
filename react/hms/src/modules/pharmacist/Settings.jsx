@@ -137,7 +137,7 @@ const PharmacistSettings = () => {
                                         style={{ marginBottom: '16px', background: msg.type === 'success' ? '#ECFDF5' : undefined, borderColor: msg.type === 'success' ? '#A7F3D0' : undefined }}>
                                         <div className="flutter-alert-icon" style={{
                                             background: msg.type === 'success' ? '#D1FAE5' : undefined,
-                                            color: msg.type === 'success' ? '#059669' : undefined
+                                            color: msg.type === 'success' ? '#207DC0' : undefined
                                         }}>
                                             {msg.type === 'error' ? <MdError /> : <MdCheckCircle />}
                                         </div>

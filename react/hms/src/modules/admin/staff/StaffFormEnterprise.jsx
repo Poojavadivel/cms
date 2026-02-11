@@ -18,7 +18,7 @@ const InputGroup = ({ label, error, children, className = "" }) => (
       relative bg-white border transition-all duration-200 rounded-lg overflow-hidden shadow-sm
       ${error ? 'border-red-500/50 ring-1 ring-red-500/20' : 'border-slate-200 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500/30 hover:border-slate-300'}
     `}>
-      <label className="block px-3 pt-2 pb-0 text-[10px] uppercase tracking-wider font-bold text-slate-400 transition-colors group-focus-within:text-blue-600 select-none">
+      <label className="block px-3 pt-2 pb-0 text-[10px] uppercase tracking-wider font-bold text-slate-400 transition-colors group-focus-within:text-[#207DC0] select-none">
         {label}
       </label>
       <div className="px-3 pb-2">
@@ -96,7 +96,7 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
   // Departments - Functional areas/divisions of the hospital
   const departments = [
     'Nursing Department',
-    'Medical Department', 
+    'Medical Department',
     'Laboratory & Pathology',
     'Pharmacy',
     'Administration',
@@ -106,7 +106,7 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
     'Support Services',
     'Other'
   ];
-  
+
   // Designations - Job roles/positions
   const designations = [
     'Doctor',
@@ -136,12 +136,12 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
     'Ward Boy',
     'Other'
   ];
-  
+
   const shifts = ['Morning', 'Evening', 'Night', 'Rotational'];
   const statuses = ['Available', 'On Leave', 'Off Duty', 'Busy'];
 
   /* Validation & Handlers */
-  
+
   // Auto-check createUserAccount when Doctor/Admin is selected
   useEffect(() => {
     if (formData.designation === 'Doctor' || formData.designation === 'Admin') {
@@ -160,7 +160,7 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
       }));
     }
   }, [formData.designation]);
-  
+
   // Auto-generate Staff ID when department or designation changes
   useEffect(() => {
     // Only auto-generate if:
@@ -181,15 +181,15 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
       generateId();
     }
   }, [formData.department, formData.designation, initial, formData.patientFacingId]);
-  
+
   // Debounced Staff ID uniqueness check
   const checkStaffIdUniqueness = useCallback(async (staffId) => {
     if (!staffId || !staffId.trim()) return;
-    
+
     setIsCheckingStaffId(true);
     try {
       const result = await staffService.checkStaffIdUnique(staffId, initial?.id);
-      
+
       if (!result.isUnique) {
         setErrors(prev => ({
           ...prev,
@@ -212,14 +212,14 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
   // Debounce timer for Staff ID check
   useEffect(() => {
     if (!formData.patientFacingId || !formData.patientFacingId.trim()) return;
-    
+
     const timer = setTimeout(() => {
       checkStaffIdUniqueness(formData.patientFacingId);
     }, 500); // Wait 500ms after user stops typing
-    
+
     return () => clearTimeout(timer);
   }, [formData.patientFacingId, checkStaffIdUniqueness]);
-  
+
   const validateStep = (step) => {
     const newErrors = {};
     if (step === 1) {
@@ -240,7 +240,7 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
       if (!formData.designation) newErrors.designation = 'Required';
       if (!formData.department) newErrors.department = 'Required';
       if (!formData.patientFacingId.trim()) newErrors.patientFacingId = 'Required';
-      
+
       // Validate user account fields if creating Doctor/Admin
       if (formData.createUserAccount) {
         if (!formData.userRole) newErrors.userRole = 'Required';
@@ -274,7 +274,7 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
     setFormData(prev => ({ ...prev, [name]: value }));
     if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }));
   };
-  
+
   const handleCancel = () => {
     const hasData = Object.values(formData).some(v => v && v !== '' && v !== 0 && (!Array.isArray(v) || v.length > 0));
     if (hasData && !initial) {
@@ -296,10 +296,10 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
     try {
       // Remove avatarUrl and user-specific fields from staff data
       const { avatarUrl, createUserAccount, userRole, password, confirmPassword, ...staffData } = formData;
-      
+
       // Submit staff data
       await onSubmit({ ...staffData, ...(initial?.id && { id: initial.id, _id: initial.id }) });
-      
+
       // If creating user account (Doctor/Admin), create user in Users collection
       if (createUserAccount && !initial) {
         try {
@@ -317,7 +317,7 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
               department: formData.department
             }
           };
-          
+
           // Call user creation API
           const response = await fetch(`${process.env.REACT_APP_API_URL || 'https://hms-dev.onrender.com/api'}/auth/create-user`, {
             method: 'POST',
@@ -327,12 +327,12 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
             },
             body: JSON.stringify(userPayload)
           });
-          
+
           if (!response.ok) {
             const errorData = await response.json();
             throw new Error(errorData.message || 'Failed to create user account');
           }
-          
+
           if (window.showNotification) {
             window.showNotification('Staff and user account created successfully!', 'success');
           } else {
@@ -353,16 +353,16 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
           alert(initial ? 'Staff updated successfully!' : 'Staff added successfully!');
         }
       }
-    } catch (error) { 
-      console.error(error); 
+    } catch (error) {
+      console.error(error);
       const errorMsg = 'Failed to save staff: ' + (error.message || 'Unknown error');
       if (window.showNotification) {
         window.showNotification(errorMsg, 'error');
       } else {
         alert(errorMsg);
       }
-    } finally { 
-      setIsSubmitting(false); 
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -400,11 +400,11 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
                   {/* Dot */}
                   <div className={`
                        absolute left-0 top-1.5 w-2 h-2 rounded-full ring-4 ring-white transition-colors duration-300
-                       ${isActive ? 'bg-blue-600 shadow-md' : isComplete ? 'bg-emerald-500' : 'bg-slate-300'}
+                       ${isActive ? 'bg-[#207DC0] shadow-md' : isComplete ? 'bg-[#207DC0]' : 'bg-slate-300'}
                     `} />
 
                   <div className={`${isActive ? 'opacity-100' : 'opacity-60'} transition-opacity`}>
-                    <span className={`text-xs font-bold uppercase tracking-widest block mb-0.5 ${isActive ? 'text-blue-600' : 'text-slate-400'}`}>
+                    <span className={`text-xs font-bold uppercase tracking-widest block mb-0.5 ${isActive ? 'text-[#207DC0]' : 'text-slate-400'}`}>
                       Step {step.id}
                     </span>
                     <h3 className="text-sm font-semibold text-slate-800">{step.name}</h3>
@@ -431,8 +431,8 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
               <div className="text-slate-800 font-bold mb-1">Step {currentStep} of 4</div>
               <div className="text-xs text-slate-500">{steps[currentStep - 1].name}</div>
               <div className="w-full bg-slate-200 rounded-full h-1.5 mt-2">
-                <div 
-                  className="bg-blue-600 h-1.5 rounded-full transition-all duration-300"
+                <div
+                  className="bg-[#207DC0] h-1.5 rounded-full transition-all duration-300"
                   style={{ width: `${(currentStep / 4) * 100}%` }}
                 />
               </div>
@@ -454,62 +454,62 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
 
                   <div className="grid grid-cols-2 gap-4">
                     <InputGroup label="Full Name *" error={errors.name} className="col-span-2">
-                      <input 
-                        name="name" 
-                        value={formData.name} 
-                        onChange={handleChange} 
+                      <input
+                        name="name"
+                        value={formData.name}
+                        onChange={handleChange}
                         maxLength={100}
-                        className="w-full bg-transparent border-none py-1 px-0 text-slate-900 focus:outline-none focus:ring-0 placeholder-slate-300 font-medium" 
-                        placeholder="e.g. Sarah Johnson" 
+                        className="w-full bg-transparent border-none py-1 px-0 text-slate-900 focus:outline-none focus:ring-0 placeholder-slate-300 font-medium"
+                        placeholder="e.g. Sarah Johnson"
                         autoComplete="name"
                       />
                     </InputGroup>
 
                     <InputGroup label="Email Address *" error={errors.email}>
-                      <input 
+                      <input
                         type="email"
-                        name="email" 
-                        value={formData.email} 
-                        onChange={handleChange} 
+                        name="email"
+                        value={formData.email}
+                        onChange={handleChange}
                         maxLength={100}
-                        className="w-full bg-transparent border-none py-1 px-0 text-slate-900 focus:outline-none focus:ring-0 placeholder-slate-300" 
-                        placeholder="name@hospital.com" 
+                        className="w-full bg-transparent border-none py-1 px-0 text-slate-900 focus:outline-none focus:ring-0 placeholder-slate-300"
+                        placeholder="name@hospital.com"
                         autoComplete="email"
                       />
                     </InputGroup>
 
                     <InputGroup label="Phone *" error={errors.contact}>
-                      <input 
+                      <input
                         type="tel"
-                        name="contact" 
-                        value={formData.contact} 
-                        onChange={handleChange} 
+                        name="contact"
+                        value={formData.contact}
+                        onChange={handleChange}
                         title="Enter a valid phone number with 7-15 digits (spaces and dashes allowed)"
                         maxLength={20}
-                        className="w-full bg-transparent border-none py-1 px-0 text-slate-900 focus:outline-none focus:ring-0 placeholder-slate-300" 
-                        placeholder="+91 98765 43210" 
+                        className="w-full bg-transparent border-none py-1 px-0 text-slate-900 focus:outline-none focus:ring-0 placeholder-slate-300"
+                        placeholder="+91 98765 43210"
                         autoComplete="tel"
                       />
                     </InputGroup>
 
                     <InputGroup label="Emergency Contact">
-                      <input 
+                      <input
                         type="tel"
-                        name="emergencyContact" 
-                        value={formData.emergencyContact} 
-                        onChange={handleChange} 
+                        name="emergencyContact"
+                        value={formData.emergencyContact}
+                        onChange={handleChange}
                         maxLength={20}
-                        className="w-full bg-transparent border-none py-1 px-0 text-slate-900 focus:outline-none focus:ring-0 placeholder-slate-300" 
-                        placeholder="+91 98765 43211" 
+                        className="w-full bg-transparent border-none py-1 px-0 text-slate-900 focus:outline-none focus:ring-0 placeholder-slate-300"
+                        placeholder="+91 98765 43211"
                         autoComplete="tel"
                       />
                     </InputGroup>
 
                     <InputGroup label="Gender *" error={errors.gender}>
-                      <select 
-                        name="gender" 
-                        value={formData.gender} 
-                        onChange={handleChange} 
+                      <select
+                        name="gender"
+                        value={formData.gender}
+                        onChange={handleChange}
                         className="w-full bg-transparent border-none py-1 px-0 text-slate-900 focus:outline-none focus:ring-0"
                       >
                         <option value="">Select...</option>
@@ -520,25 +520,25 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
                     </InputGroup>
 
                     <InputGroup label="Date of Birth">
-                      <input 
-                        type="date" 
-                        name="dob" 
-                        value={formData.dob} 
-                        onChange={handleChange} 
+                      <input
+                        type="date"
+                        name="dob"
+                        value={formData.dob}
+                        onChange={handleChange}
                         max={new Date().toISOString().split('T')[0]}
-                        className="w-full bg-transparent border-none py-1 px-0 text-slate-900 focus:outline-none focus:ring-0" 
+                        className="w-full bg-transparent border-none py-1 px-0 text-slate-900 focus:outline-none focus:ring-0"
                         autoComplete="bday"
                       />
                     </InputGroup>
 
                     <InputGroup label="Address" className="col-span-2">
-                      <input 
-                        name="address" 
-                        value={formData.address} 
-                        onChange={handleChange} 
+                      <input
+                        name="address"
+                        value={formData.address}
+                        onChange={handleChange}
                         maxLength={200}
-                        className="w-full bg-transparent border-none py-1 px-0 text-slate-900 focus:outline-none focus:ring-0 placeholder-slate-300" 
-                        placeholder="Full residential address" 
+                        className="w-full bg-transparent border-none py-1 px-0 text-slate-900 focus:outline-none focus:ring-0 placeholder-slate-300"
+                        placeholder="Full residential address"
                         autoComplete="street-address"
                       />
                     </InputGroup>
@@ -556,10 +556,10 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
 
                   <div className="grid grid-cols-2 gap-4">
                     <InputGroup label="Department *" error={errors.department} className="col-span-2">
-                      <select 
-                        name="department" 
-                        value={formData.department} 
-                        onChange={handleChange} 
+                      <select
+                        name="department"
+                        value={formData.department}
+                        onChange={handleChange}
                         className="w-full bg-transparent border-none py-1 px-0 text-slate-900 focus:outline-none focus:ring-0"
                       >
                         <option value="">Select Department...</option>
@@ -568,10 +568,10 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
                     </InputGroup>
 
                     <InputGroup label="Designation *" error={errors.designation} className="col-span-2">
-                      <select 
-                        name="designation" 
-                        value={formData.designation} 
-                        onChange={handleChange} 
+                      <select
+                        name="designation"
+                        value={formData.designation}
+                        onChange={handleChange}
                         className="w-full bg-transparent border-none py-1 px-0 text-slate-900 focus:outline-none focus:ring-0"
                       >
                         <option value="">Select Designation...</option>
@@ -581,25 +581,25 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
 
                     <InputGroup label="Staff ID * (Auto-generated)" error={errors.patientFacingId}>
                       <div className="relative">
-                        <input 
-                          name="patientFacingId" 
-                          value={formData.patientFacingId} 
-                          onChange={handleChange} 
+                        <input
+                          name="patientFacingId"
+                          value={formData.patientFacingId}
+                          onChange={handleChange}
                           maxLength={20}
                           readOnly={!initial}
-                          style={{textTransform: 'uppercase'}}
+                          style={{ textTransform: 'uppercase' }}
                           className={`w-full bg-transparent border-none py-1 px-0 pr-6 text-slate-900 font-mono focus:outline-none focus:ring-0 placeholder-slate-300 ${!initial ? 'cursor-not-allowed opacity-75' : ''}`}
-                          placeholder={formData.department && formData.designation ? "Generating..." : "Select dept & role first"} 
+                          placeholder={formData.department && formData.designation ? "Generating..." : "Select dept & role first"}
                           autoComplete="off"
                           title={!initial ? "Staff ID is auto-generated based on department and designation" : "You can edit the Staff ID"}
                         />
                         {isCheckingStaffId && (
                           <div className="absolute right-0 top-1/2 -translate-y-1/2">
-                            <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-500 border-t-transparent"></div>
+                            <div className="animate-spin rounded-full h-4 w-4 border-2 border-[#207DC0] border-t-transparent"></div>
                           </div>
                         )}
                         {!isCheckingStaffId && formData.patientFacingId.trim() && !errors.patientFacingId && (
-                          <div className="absolute right-0 top-1/2 -translate-y-1/2 text-green-500">
+                          <div className="absolute right-0 top-1/2 -translate-y-1/2 text-[#207DC0]">
                             <FiCheck size={16} />
                           </div>
                         )}
@@ -607,25 +607,25 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
                     </InputGroup>
 
                     <InputGroup label="Experience (Years)">
-                      <input 
-                        type="number" 
-                        name="experienceYears" 
-                        value={formData.experienceYears} 
-                        onChange={handleChange} 
+                      <input
+                        type="number"
+                        name="experienceYears"
+                        value={formData.experienceYears}
+                        onChange={handleChange}
                         min="0"
                         max="50"
-                        className="w-full bg-transparent border-none py-1 px-0 text-slate-900 focus:outline-none focus:ring-0" 
+                        className="w-full bg-transparent border-none py-1 px-0 text-slate-900 focus:outline-none focus:ring-0"
                         autoComplete="off"
                       />
                     </InputGroup>
 
                     <InputGroup label="Qualifications" className="col-span-2">
-                      <input 
-                        value={formData.qualifications.join(', ')} 
-                        onChange={e => handleArrayChange('qualifications', e.target.value)} 
+                      <input
+                        value={formData.qualifications.join(', ')}
+                        onChange={e => handleArrayChange('qualifications', e.target.value)}
                         maxLength={200}
-                        className="w-full bg-transparent border-none py-1 px-0 text-slate-900 focus:outline-none focus:ring-0 placeholder-slate-300" 
-                        placeholder="Comma-separated (e.g., BSc Nursing, Certificate)" 
+                        className="w-full bg-transparent border-none py-1 px-0 text-slate-900 focus:outline-none focus:ring-0 placeholder-slate-300"
+                        placeholder="Comma-separated (e.g., BSc Nursing, Certificate)"
                         autoComplete="off"
                       />
                     </InputGroup>
@@ -636,7 +636,7 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
                         <div className="col-span-2 mt-6 pt-6 border-t border-slate-200">
                           <div className="flex items-center gap-2 mb-4">
                             <div className="h-8 w-8 rounded-lg bg-blue-50 flex items-center justify-center">
-                              <FiUser className="text-blue-600" size={18} />
+                              <FiUser className="text-[#207DC0]" size={18} />
                             </div>
                             <div>
                               <h3 className="text-lg font-semibold text-slate-900">Login Credentials</h3>
@@ -648,10 +648,10 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
                         </div>
 
                         <InputGroup label="User Role *" error={errors.userRole}>
-                          <select 
-                            name="userRole" 
-                            value={formData.userRole} 
-                            onChange={handleChange} 
+                          <select
+                            name="userRole"
+                            value={formData.userRole}
+                            onChange={handleChange}
                             className="w-full bg-transparent border-none py-1 px-0 text-slate-900 focus:outline-none focus:ring-0"
                             disabled={formData.designation === 'Doctor' || formData.designation === 'Admin'}
                           >
@@ -662,12 +662,12 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
                         </InputGroup>
 
                         <InputGroup label="Email (for login) *" error={errors.email}>
-                          <input 
-                            name="email" 
+                          <input
+                            name="email"
                             type="email"
-                            value={formData.email} 
-                            onChange={handleChange} 
-                            className="w-full bg-transparent border-none py-1 px-0 text-slate-900 focus:outline-none focus:ring-0" 
+                            value={formData.email}
+                            onChange={handleChange}
+                            className="w-full bg-transparent border-none py-1 px-0 text-slate-900 focus:outline-none focus:ring-0"
                             placeholder="user@example.com"
                             autoComplete="email"
                             readOnly
@@ -676,12 +676,12 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
                         </InputGroup>
 
                         <InputGroup label="Password *" error={errors.password} className="col-span-2">
-                          <input 
-                            name="password" 
+                          <input
+                            name="password"
                             type="password"
-                            value={formData.password} 
-                            onChange={handleChange} 
-                            className="w-full bg-transparent border-none py-1 px-0 text-slate-900 focus:outline-none focus:ring-0" 
+                            value={formData.password}
+                            onChange={handleChange}
+                            className="w-full bg-transparent border-none py-1 px-0 text-slate-900 focus:outline-none focus:ring-0"
                             placeholder="Min 8 characters, include uppercase, lowercase & number"
                             autoComplete="new-password"
                           />
@@ -691,12 +691,12 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
                         </InputGroup>
 
                         <InputGroup label="Confirm Password *" error={errors.confirmPassword} className="col-span-2">
-                          <input 
-                            name="confirmPassword" 
+                          <input
+                            name="confirmPassword"
                             type="password"
-                            value={formData.confirmPassword} 
-                            onChange={handleChange} 
-                            className="w-full bg-transparent border-none py-1 px-0 text-slate-900 focus:outline-none focus:ring-0" 
+                            value={formData.confirmPassword}
+                            onChange={handleChange}
+                            className="w-full bg-transparent border-none py-1 px-0 text-slate-900 focus:outline-none focus:ring-0"
                             placeholder="Re-enter password"
                             autoComplete="new-password"
                           />
@@ -727,22 +727,22 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
 
                   <div className="grid grid-cols-2 gap-4">
                     <InputGroup label="Joining Date *" error={errors.joinedAt}>
-                      <input 
-                        type="date" 
-                        name="joinedAt" 
-                        value={formData.joinedAt} 
-                        onChange={handleChange} 
+                      <input
+                        type="date"
+                        name="joinedAt"
+                        value={formData.joinedAt}
+                        onChange={handleChange}
                         max={new Date().toISOString().split('T')[0]}
-                        className="w-full bg-transparent border-none py-1 px-0 text-slate-900 focus:outline-none focus:ring-0" 
+                        className="w-full bg-transparent border-none py-1 px-0 text-slate-900 focus:outline-none focus:ring-0"
                         autoComplete="off"
                       />
                     </InputGroup>
 
                     <InputGroup label="Shift *" error={errors.shift}>
-                      <select 
-                        name="shift" 
-                        value={formData.shift} 
-                        onChange={handleChange} 
+                      <select
+                        name="shift"
+                        value={formData.shift}
+                        onChange={handleChange}
                         className="w-full bg-transparent border-none py-1 px-0 text-slate-900 focus:outline-none focus:ring-0"
                       >
                         <option value="">Select Shift...</option>
@@ -751,22 +751,22 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
                     </InputGroup>
 
                     <InputGroup label="Work Location *" error={errors.location} className="col-span-2">
-                      <input 
-                        name="location" 
-                        value={formData.location} 
-                        onChange={handleChange} 
+                      <input
+                        name="location"
+                        value={formData.location}
+                        onChange={handleChange}
                         maxLength={100}
-                        className="w-full bg-transparent border-none py-1 px-0 text-slate-900 focus:outline-none focus:ring-0 placeholder-slate-300" 
-                        placeholder="Building A, Floor 2" 
+                        className="w-full bg-transparent border-none py-1 px-0 text-slate-900 focus:outline-none focus:ring-0 placeholder-slate-300"
+                        placeholder="Building A, Floor 2"
                         autoComplete="off"
                       />
                     </InputGroup>
 
                     <InputGroup label="Availability Status" className="col-span-2">
-                      <select 
-                        name="status" 
-                        value={formData.status} 
-                        onChange={handleChange} 
+                      <select
+                        name="status"
+                        value={formData.status}
+                        onChange={handleChange}
                         className="w-full bg-transparent border-none py-1 px-0 text-slate-900 focus:outline-none focus:ring-0"
                       >
                         {statuses.map(s => <option key={s} value={s}>{s}</option>)}
@@ -780,7 +780,7 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
               {currentStep === 4 && (
                 <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-300 fade-in">
                   <div className="text-center py-8">
-                    <div className="w-20 h-20 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6 border border-emerald-100 shadow-sm">
+                    <div className="w-20 h-20 bg-[#207DC0]/10 text-[#207DC0] rounded-full flex items-center justify-center mx-auto mb-6 border border-[#207DC0]/20 shadow-sm">
                       <FiCheck size={40} />
                     </div>
                     <h2 className="text-3xl font-bold text-slate-900 mb-2">Ready to {initial ? 'Update' : 'Create'}?</h2>
@@ -846,14 +846,14 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
                   )}
 
                   <InputGroup label="Additional Notes">
-                    <textarea 
-                      name="notes" 
-                      value={formData.notes} 
-                      onChange={handleChange} 
+                    <textarea
+                      name="notes"
+                      value={formData.notes}
+                      onChange={handleChange}
                       maxLength={500}
                       rows={3}
-                      className="w-full bg-transparent border-none py-1 px-0 text-slate-900 focus:outline-none focus:ring-0 placeholder-slate-300 resize-none" 
-                      placeholder="Any additional comments or notes..." 
+                      className="w-full bg-transparent border-none py-1 px-0 text-slate-900 focus:outline-none focus:ring-0 placeholder-slate-300 resize-none"
+                      placeholder="Any additional comments or notes..."
                       autoComplete="off"
                     />
                   </InputGroup>

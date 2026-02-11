@@ -28,7 +28,9 @@
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Header */
@@ -140,8 +142,8 @@
 }
 
 .stat-icon-blue {
-  background-color: rgba(59, 130, 246, 0.1);
-  color: #3b82f6;
+  background-color: rgba(32, 125, 192, 0.1);
+  color: #207DC0;
 }
 
 .stat-icon-orange {
@@ -425,13 +427,13 @@
 }
 
 .action-success {
-  color: #10b981;
-  background-color: rgba(16, 185, 129, 0.05);
-  border-color: rgba(16, 185, 129, 0.1);
+  color: #207DC0;
+  background-color: rgba(32, 125, 192, 0.05);
+  border-color: rgba(32, 125, 192, 0.1);
 }
 
 .action-success:hover {
-  background-color: rgba(16, 185, 129, 0.1);
+  background-color: rgba(32, 125, 192, 0.1);
 }
 
 .action-warning {
@@ -445,13 +447,13 @@
 }
 
 .action-info {
-  color: #3b82f6;
-  background-color: rgba(59, 130, 246, 0.05);
-  border-color: rgba(59, 130, 246, 0.1);
+  color: #207DC0;
+  background-color: rgba(32, 125, 192, 0.05);
+  border-color: rgba(32, 125, 192, 0.1);
 }
 
 .action-info:hover {
-  background-color: rgba(59, 130, 246, 0.1);
+  background-color: rgba(32, 125, 192, 0.1);
 }
 
 /* Status Items */
@@ -474,8 +476,8 @@
 }
 
 .status-success {
-  background-color: rgba(16, 185, 129, 0.05);
-  color: #10b981;
+  background-color: rgba(32, 125, 192, 0.05);
+  color: #207DC0;
 }
 
 .status-primary {
@@ -503,7 +505,7 @@
 }
 
 .status-success .status-value {
-  color: #10b981;
+  color: #207DC0;
 }
 
 .status-primary .status-value {
@@ -515,7 +517,7 @@
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
   }
-  
+
   .dashboard-content {
     grid-template-columns: 1fr;
   }

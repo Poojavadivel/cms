@@ -260,7 +260,7 @@
 }
 
 .status-indicator.completed {
-  background: #10B981;
+  background: #207DC0;
 }
 
 .status-indicator.pending {
@@ -301,7 +301,7 @@
 
 .report-status.done {
   background: #D1FAE5;
-  color: #10B981;
+  color: #207DC0;
 }
 
 .report-status.pending {

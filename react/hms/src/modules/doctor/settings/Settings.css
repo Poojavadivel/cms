@@ -80,7 +80,7 @@
 
 .section-title svg {
   font-size: 24px;
-  color: #3B82F6;
+  color: #207DC0;
 }
 
 .section-title h2 {
@@ -100,14 +100,14 @@
 .profile-avatar-large {
   width: 120px;
   height: 120px;
-  background: linear-gradient(135deg, #3B82F6 0%, #1E40AF 100%);
+  background: linear-gradient(135deg, #207DC0 0%, #165a8a 100%);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
   font-size: 60px;
-  box-shadow: 0 8px 20px rgba(59, 130, 246, 0.3);
+  box-shadow: 0 8px 20px rgba(32, 125, 192, 0.3);
 }
 
 .profile-info-grid {
@@ -129,8 +129,8 @@
 .info-icon {
   width: 40px;
   height: 40px;
-  background: rgba(59, 130, 246, 0.1);
-  color: #3B82F6;
+  background: rgba(32, 125, 192, 0.1);
+  color: #207DC0;
   border-radius: 10px;
   display: flex;
   align-items: center;
@@ -186,13 +186,13 @@
 }
 
 .status-btn:hover {
-  border-color: #3B82F6;
+  border-color: #207DC0;
 }
 
 .status-btn.active {
-  background: rgba(59, 130, 246, 0.1);
-  border-color: #3B82F6;
-  color: #3B82F6;
+  background: rgba(32, 125, 192, 0.1);
+  border-color: #207DC0;
+  color: #207DC0;
 }
 
 .status-dot {
@@ -202,7 +202,7 @@
 }
 
 .status-dot.available {
-  background: #10B981;
+  background: #207DC0;
 }
 
 .status-dot.busy {
@@ -279,7 +279,7 @@
 }
 
 .toggle-btn.active {
-  background: #3B82F6;
+  background: #207DC0;
 }
 
 .toggle-btn.active svg {
@@ -340,8 +340,8 @@
 }
 
 .visibility-toggle:hover {
-  color: #3B82F6;
-  background: rgba(59, 130, 246, 0.1);
+  color: #207DC0;
+  background: rgba(32, 125, 192, 0.1);
 }
 
 .visibility-toggle svg {
@@ -350,9 +350,9 @@
 
 .input-group input:focus {
   outline: none;
-  border-color: #3B82F6;
+  border-color: #207DC0;
   background: white;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  box-shadow: 0 0 0 3px rgba(32, 125, 192, 0.1);
 }
 
 .save-password-btn {
@@ -393,9 +393,9 @@
 }
 
 .form-message.success {
-  background: rgba(16, 185, 129, 0.1);
-  color: #10B981;
-  border: 1px solid rgba(16, 185, 129, 0.2);
+  background: rgba(32, 125, 192, 0.1);
+  color: #207DC0;
+  border: 1px solid rgba(32, 125, 192, 0.2);
 }
 
 .form-message.error {

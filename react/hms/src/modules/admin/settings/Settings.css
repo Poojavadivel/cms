@@ -195,7 +195,7 @@
   align-items: center;
   gap: 4px;
   padding: 6px 12px;
-  background: #3B82F6;
+  background: #207DC0;
   color: white;
   border: none;
   border-radius: 6px;
@@ -206,7 +206,7 @@
 }
 
 .pdf-btn:hover {
-  background: #2563EB;
+  background: #207DC0;
   transform: translateY(-1px);
 }
 

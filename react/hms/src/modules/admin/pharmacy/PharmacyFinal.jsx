@@ -13,32 +13,77 @@ import AddMedicineDialog from './AddMedicineDialog';
 import AddBatchDialog from './AddBatchDialog';
 import './PharmacyFinal.css';
 
-// Custom SVG Icons (matching other pages)
+// Custom SVG Icons (matching Appointments)
 const Icons = {
   Eye: () => (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
       <circle cx="12" cy="12" r="3"></circle>
     </svg>
   ),
   Edit: () => (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
       <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
     </svg>
   ),
   Delete: () => (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <polyline points="3 6 5 6 21 6"></polyline>
       <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
     </svg>
   ),
+  Plus: () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="12" y1="5" x2="12" y2="19"></line>
+      <line x1="5" y1="12" x2="19" y2="12"></line>
+    </svg>
+  ),
+  Search: () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="11" cy="11" r="8"></circle>
+      <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+    </svg>
+  ),
+  Pill: () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"></path>
+      <path d="m8.5 8.5 7 7"></path>
+    </svg>
+  ),
   Box: () => (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+      <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+      <line x1="12" y1="22.08" x2="12" y2="12"></line>
+    </svg>
+  ),
+  ChevronLeft: () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="15 18 9 12 15 6"></polyline>
+    </svg>
+  ),
+  ChevronRight: () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  ),
+  X: () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="18" y1="6" x2="6" y2="18"></line>
+      <line x1="6" y1="6" x2="18" y2="18"></line>
     </svg>
   )
 };
+
+const Header = () => (
+  <div className="dashboard-header">
+    <div className="header-content">
+      <h1 className="main-title">PHARMACY</h1>
+      <p className="main-subtitle">Secure medicine inventory and batch management system</p>
+    </div>
+  </div>
+);
 
 const PharmacyFinal = () => {
   const [activeTab, setActiveTab] = useState(0);
@@ -303,57 +348,50 @@ const PharmacyFinal = () => {
   };
 
   return (
-    <div className="dashboard-container">
-      {/* Header */}
-      <div className="dashboard-header">
-        <div className="header-content">
-          <h1 className="main-title">Pharmacy Management</h1>
-          <p className="main-subtitle">Manage medicine inventory, batches, and analytics.</p>
-        </div>
-      </div>
+    <div className="pharmacy-page dashboard-container">
+      <Header />
 
-      {/* TABS */}
       <div className="filter-bar-container">
-        <div className="tabs-wrapper">
-          <button
-            className={`tab-btn ${activeTab === 0 ? 'active' : ''}`}
-            onClick={() => setActiveTab(0)}
-          >
-            Medicine Inventory
-          </button>
-          <button
-            className={`tab-btn ${activeTab === 1 ? 'active' : ''}`}
-            onClick={() => setActiveTab(1)}
-          >
-            Batches
-          </button>
-          <button
-            className={`tab-btn ${activeTab === 2 ? 'active' : ''}`}
-            onClick={() => setActiveTab(2)}
-          >
-            Analytics
-          </button>
+        <div className="filter-right-group">
+          <div className="tabs-wrapper">
+            <button
+              className={`tab-btn ${activeTab === 0 ? 'active' : ''}`}
+              onClick={() => setActiveTab(0)}
+            >
+              Inventory
+            </button>
+            <button
+              className={`tab-btn ${activeTab === 1 ? 'active' : ''}`}
+              onClick={() => setActiveTab(1)}
+            >
+              Batches
+            </button>
+            <button
+              className={`tab-btn ${activeTab === 2 ? 'active' : ''}`}
+              onClick={() => setActiveTab(2)}
+            >
+              Analytics
+            </button>
+          </div>
+        </div>
+
+        <div className="search-left-part">
+          <div className="search-wrapper">
+            <span className="search-icon-lg"><Icons.Search /></span>
+            <input
+              type="text"
+              placeholder={activeTab === 1 ? "Search batches..." : "Search medicines by name, SKU, or category..."}
+              className="search-input-lg"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
         </div>
       </div>
 
       {/* TAB 1: MEDICINE INVENTORY */}
       {activeTab === 0 && (
         <>
-          {/* Search Only */}
-          <div className="filter-bar-container">
-            <div className="search-wrapper">
-              <span className="search-icon-lg"><MdSearch size={18} /></span>
-              <input
-                type="text"
-                placeholder="Search medicines by name, SKU, or category..."
-                className="search-input-lg"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-          </div>
-
-          {/* Table Card */}
           <div className="table-card">
             <div className="modern-table-wrapper">
               <table className="modern-table">
@@ -388,10 +426,8 @@ const PharmacyFinal = () => {
                       return (
                         <tr key={med._id || index}>
                           <td>
-                            <div className="info-group">
-                              <span className="primary">{med.name}</span>
-                              {med.strength && <span className="secondary">{med.strength}</span>}
-                            </div>
+                            <span className="primary font-semibold">{med.name}</span>
+                            {med.strength && <span className="secondary ml-2 opacity-60 text-xs">({med.strength})</span>}
                           </td>
                           <td>{med.sku}</td>
                           <td>{med.category}</td>
@@ -426,14 +462,22 @@ const PharmacyFinal = () => {
 
             {/* Pagination */}
             <div className="pagination-footer">
-              <button className="page-arrow-circle leading" disabled={currentPage === 0} onClick={handlePreviousPage}>
-                <MdChevronLeft size={20} />
+              <button
+                className="page-arrow-circle"
+                onClick={() => setCurrentPage(Math.max(0, currentPage - 1))}
+                disabled={currentPage === 0}
+              >
+                <Icons.ChevronLeft />
               </button>
               <div className="page-indicator-box">
-                Page {currentPage + 1} of {totalPages || 1}
+                Page {currentPage + 1} of {Math.ceil(filteredMedicines.length / itemsPerPage) || 1}
               </div>
-              <button className="page-arrow-circle trailing" disabled={currentPage >= totalPages - 1} onClick={handleNextPage}>
-                <MdChevronRight size={20} />
+              <button
+                className="page-arrow-circle"
+                onClick={() => setCurrentPage(Math.min(Math.ceil(filteredMedicines.length / itemsPerPage) - 1, currentPage + 1))}
+                disabled={currentPage >= Math.ceil(filteredMedicines.length / itemsPerPage) - 1}
+              >
+                <Icons.ChevronRight />
               </button>
             </div>
           </div>
@@ -443,16 +487,6 @@ const PharmacyFinal = () => {
       {/* TAB 2: BATCHES */}
       {activeTab === 1 && (
         <>
-          <div className="filter-bar-container">
-            <div className="header-content">
-              <h2 className="main-title" style={{ fontSize: '18px' }}>Batch Management</h2>
-            </div>
-            {/* <button className="btn-new-appointment" onClick={handleAddBatch}>
-              <MdAdd size={16} />
-              Add Batch
-            </button> */}
-          </div>
-
           <div className="table-card">
             <div className="modern-table-wrapper">
               <table className="modern-table">
@@ -476,21 +510,28 @@ const PharmacyFinal = () => {
                       </td>
                     </tr>
                   ) : (
-                    paginatedBatches.map((batch, index) => {
+                    paginatedBatches.map((batch) => {
                       const expiryDate = batch.expiryDate ? new Date(batch.expiryDate) : null;
                       const daysUntilExpiry = expiryDate ? Math.floor((expiryDate - new Date()) / (1000 * 60 * 60 * 24)) : null;
                       const isExpiring = daysUntilExpiry !== null && daysUntilExpiry > 0 && daysUntilExpiry <= 90;
                       const isExpired = daysUntilExpiry !== null && daysUntilExpiry < 0;
 
                       return (
-                        <tr key={batch._id || index}>
-                          <td className="font-semibold">{batch.batchNumber}</td>
-                          <td>{batch.medicineName}</td>
+                        <tr key={batch.id}>
+                          <td className="cell-patient">
+                            <div className="patient-avatar-circle" style={{ backgroundColor: 'rgba(244, 180, 0, 0.1)', color: '#F4B400' }}>
+                              <Icons.Box />
+                            </div>
+                            <span className="primary font-semibold">{batch.batchNumber}</span>
+                          </td>
+                          <td>
+                            <span className="primary font-semibold">{batch.medicineName}</span>
+                          </td>
                           <td>{batch.supplier}</td>
                           <td>
                             <span className="quantity-badge">{batch.quantity}</span>
                           </td>
-                          <td className="price-success">₹{batch.salePrice.toFixed(2)}</td>
+                          <td><span className="price-success">₹{batch.salePrice.toFixed(2)}</span></td>
                           <td className="price-muted">₹{batch.purchasePrice.toFixed(2)}</td>
                           <td>
                             <span className={`expiry-badge ${isExpired ? 'expired' : isExpiring ? 'expiring' : ''}`}>
@@ -517,14 +558,22 @@ const PharmacyFinal = () => {
 
             {/* Pagination */}
             <div className="pagination-footer">
-              <button className="page-arrow-circle leading" disabled={batchPage === 0} onClick={handlePreviousBatchPage}>
-                <MdChevronLeft size={20} />
+              <button
+                className="page-arrow-circle"
+                onClick={() => setBatchPage(Math.max(0, batchPage - 1))}
+                disabled={batchPage === 0}
+              >
+                <Icons.ChevronLeft />
               </button>
               <div className="page-indicator-box">
-                Page {batchPage + 1} of {totalBatchPages || 1}
+                Page {batchPage + 1} of {Math.ceil(batches.length / batchesPerPage) || 1}
               </div>
-              <button className="page-arrow-circle trailing" disabled={batchPage >= totalBatchPages - 1} onClick={handleNextBatchPage}>
-                <MdChevronRight size={20} />
+              <button
+                className="page-arrow-circle"
+                onClick={() => setBatchPage(Math.min(Math.ceil(batches.length / batchesPerPage) - 1, batchPage + 1))}
+                disabled={batchPage >= Math.ceil(batches.length / batchesPerPage) - 1}
+              >
+                <Icons.ChevronRight />
               </button>
             </div>
           </div>
@@ -558,58 +607,105 @@ const PharmacyFinal = () => {
       {/* Analytics Details Popup */}
       {analyticsPopup.isOpen && (
         <div className="analytics-overlay" onClick={() => setAnalyticsPopup({ ...analyticsPopup, isOpen: false })}>
-          <div className="analytics-modal" onClick={e => e.stopPropagation()}>
-            <div className="analytics-header">
-              <div>
-                <h2>{analyticsPopup.type} Items</h2>
-                <p>Showing detailed list of medicines</p>
+          <div className="analytics-modal premium-modal" onClick={e => e.stopPropagation()}>
+            {/* Sidebar for Analytics */}
+            <div className="modal-sidebar">
+              <div className="sidebar-header">
+                <div className="sidebar-icon-circle">
+                  {analyticsPopup.type === 'Total' ? <MdLocalPharmacy /> :
+                    analyticsPopup.type === 'Low Stock' ? <Icons.Box /> : <Icons.Delete />}
+                </div>
+                <h3>{analyticsPopup.type} Analysis</h3>
               </div>
-              <button className="analytics-close-btn" onClick={() => setAnalyticsPopup({ ...analyticsPopup, isOpen: false })}>
-                <MdClose size={20} />
-              </button>
+
+              <div className="sidebar-content">
+                <div className="sidebar-card">
+                  <h4>Category View</h4>
+                  <p>A detailed view of all items categorized as {analyticsPopup.type.toLowerCase()}.</p>
+                </div>
+
+                <div className="sidebar-card">
+                  <h4>Quick Action</h4>
+                  <p>Review the stock levels and take necessary procurement actions.</p>
+                </div>
+              </div>
+
+              <div className="sidebar-footer">
+                <p>Pharmacy Insights</p>
+              </div>
             </div>
 
-            <div className="analytics-body modern-table-wrapper">
-              <table className="modern-table">
-                <thead>
-                  <tr>
-                    <th>Medicine Name</th>
-                    <th>SKU</th>
-                    <th>Category</th>
-                    <th style={{ textAlign: 'center' }}>Stock</th>
-                    <th style={{ textAlign: 'center' }}>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {analyticsPopup.items.length === 0 ? (
-                    <tr>
-                      <td colSpan="5" style={{ textAlign: 'center', padding: '32px', color: '#9CA3AF' }}>No items found</td>
-                    </tr>
-                  ) : (
-                    analyticsPopup.items.map((med, idx) => {
-                      const status = getStockStatus(med.availableQty, med.reorderLevel);
-                      return (
-                        <tr key={idx}>
-                          <td>
-                            <div className="info-group">
-                              <span className="primary">{med.name}</span>
-                              {med.strength && <span className="secondary">{med.strength}</span>}
-                            </div>
-                          </td>
-                          <td>{med.sku}</td>
-                          <td>{med.category}</td>
-                          <td style={{ textAlign: 'center' }}>
-                            <span className={`stock-badge ${status.color}`}>{med.availableQty}</span>
-                          </td>
-                          <td style={{ textAlign: 'center' }}>
-                            <span className={`status-badge ${status.color}`}>{status.label}</span>
-                          </td>
+            {/* Main Content Area */}
+            <div className="analytics-content-area">
+              <div className="modal-header-accent bg-blue-primary text-white p-6 flex justify-between items-center">
+                <div className="header-info">
+                  <h2 className="text-xl font-bold uppercase tracking-tight">{analyticsPopup.type} Products</h2>
+                  <p className="text-sm opacity-80">Inventory single-line analysis</p>
+                </div>
+                <button
+                  className="close-btn-circle hover:bg-white/10 p-2 rounded-full transition-all"
+                  onClick={() => setAnalyticsPopup({ ...analyticsPopup, isOpen: false })}
+                >
+                  <Icons.X />
+                </button>
+              </div>
+
+              {/* Scrollable Table Body */}
+              <div className="modal-scroll-content">
+                <div className="modern-table-wrapper">
+                  <table className="modern-table">
+                    <thead>
+                      <tr>
+                        <th>Medicine Name</th>
+                        <th>SKU</th>
+                        <th>Category</th>
+                        <th style={{ textAlign: 'center' }}>Stock</th>
+                        <th style={{ textAlign: 'center' }}>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {analyticsPopup.items.length === 0 ? (
+                        <tr>
+                          <td colSpan="5" style={{ textAlign: 'center', padding: '48px', color: '#9CA3AF' }}>No items found</td>
                         </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
+                      ) : (
+                        analyticsPopup.items.map((med, idx) => {
+                          const status = getStockStatus(med.availableQty, med.reorderLevel);
+                          return (
+                            <tr key={med.id}>
+                              <td className="cell-patient">
+                                <div className="patient-avatar-circle" style={{ backgroundColor: 'rgba(32, 125, 192, 0.1)', color: '#207DC0' }}>
+                                  <Icons.Pill />
+                                </div>
+                                <span className="primary font-semibold">{med.name}</span>
+                                {med.strength && <span className="secondary ml-2 opacity-60 text-xs text-blue-primary">({med.strength})</span>}
+                              </td>
+                              <td>
+                                <span className="primary font-semibold">{med.sku || 'N/A'}</span>
+                                <span className="secondary ml-2 opacity-60 text-xs">[{med.category || 'General'}]</span>
+                              </td>
+                              <td>{med.category}</td>
+                              <td style={{ textAlign: 'center' }}>
+                                <span className={`stock-badge ${status.color}`}>{med.availableQty}</span>
+                              </td>
+                              <td style={{ textAlign: 'center' }}>
+                                <span className={`status-badge ${status.color}`}>{status.label}</span>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Static Footer */}
+              <div className="modal-footer-premium">
+                <button className="btn-secondary-premium" onClick={() => setAnalyticsPopup({ ...analyticsPopup, isOpen: false })}>
+                  Dismiss
+                </button>
+              </div>
             </div>
           </div>
         </div>

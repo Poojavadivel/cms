@@ -22,10 +22,10 @@
   /* Slate 400 */
 
   /* Accents */
-  --neo-accent: #2563eb;
-  /* Blue 600 */
-  --neo-accent-glow: rgba(37, 99, 235, 0.15);
-  --neo-success: #10b981;
+  --neo-accent: #207DC0;
+  /* Updated Primary Blue */
+  --neo-accent-glow: rgba(32, 125, 192, 0.15);
+  --neo-success: #207DC0;
   /* Emerald 500 */
   --neo-warning: #f59e0b;
   /* Amber 500 */
@@ -38,7 +38,7 @@
 /* Base Modal Reset */
 .enterprise-modal * {
   box-sizing: border-box;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
   letter-spacing: -0.01em;
 }
 
@@ -262,13 +262,13 @@
   background: var(--neo-accent);
   color: white;
   border: none;
-  box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.15);
+  box-shadow: 0 4px 6px -1px rgba(32, 125, 192, 0.15);
 }
 
 .btn-primary-glow:hover {
-  background: #1d4ed8;
+  background: #165a8a;
   color: white;
-  box-shadow: 0 6px 12px -1px rgba(37, 99, 235, 0.25);
+  box-shadow: 0 6px 12px -1px rgba(32, 125, 192, 0.25);
 }
 
 /* =========================================
@@ -408,5 +408,7 @@
 
 /* Loading spinner animation */
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }

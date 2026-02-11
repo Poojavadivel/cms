@@ -105,7 +105,7 @@
 /* Dark theme support */
 @media (prefers-color-scheme: dark) {
   .splash-screen {
-    background: linear-gradient(135deg, #1e3a8a 0%, #312e81 100%);
+    background: linear-gradient(135deg, #165a8a 0%, #312e81 100%);
   }
 }
 

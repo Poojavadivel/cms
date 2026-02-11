@@ -421,7 +421,7 @@ const AppointmentCard = ({ appointment, onViewIntake, onViewPatient, onDelete, o
 
   const getStatusColor = (status) => {
     const s = String(status).toLowerCase();
-    if (s.includes('confirm')) return '#10B981'; // Green
+    if (s.includes('confirm')) return '#207DC0'; // Green
     if (s.includes('sched')) return '#0EA5E9';   // Blue
     if (s.includes('pend')) return '#F59E0B';    // Amber
     if (s.includes('cancel')) return '#EF4444';   // Red

@@ -27,7 +27,7 @@ const MOCK_APPOINTMENTS = [
     doctor: 'Dr. Smith',
     doctorInitials: 'DS',
     doctorColor: '#DBEAFE',
-    doctorTextColor: '#1E40AF',
+    doctorTextColor: '#165a8a',
     date: 'Oct 24, 2023',
     time: '10:00 AM',
     service: 'General Checkup',
@@ -55,7 +55,7 @@ const MOCK_APPOINTMENTS = [
     doctor: 'Dr. Smith',
     doctorInitials: 'DS',
     doctorColor: '#DBEAFE',
-    doctorTextColor: '#1E40AF',
+    doctorTextColor: '#165a8a',
     date: 'Oct 24, 2023',
     time: '02:15 PM',
     service: 'Consultation',
@@ -97,7 +97,7 @@ const MOCK_APPOINTMENTS = [
     doctor: 'Dr. Smith',
     doctorInitials: 'DS',
     doctorColor: '#DBEAFE',
-    doctorTextColor: '#1E40AF',
+    doctorTextColor: '#165a8a',
     date: 'Oct 26, 2023',
     time: '11:00 AM',
     service: 'General Checkup',
@@ -175,7 +175,7 @@ const Icons = {
     </svg>
   ),
   Male: () => (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#207DC0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="10" cy="10" r="7"></circle>
       <line x1="21" y1="3" x2="15" y2="9"></line>
       <line x1="21" y1="3" x2="21" y2="8"></line>
@@ -201,7 +201,7 @@ const Icons = {
     </svg>
   ),
   Edit: () => (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#165a8a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
       <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
     </svg>
@@ -287,20 +287,8 @@ const FilterBar = ({
     }
     setShowCalendar(false);
   };
-
   return (
     <div className="filter-bar-container">
-      <div className="search-wrapper">
-        <span className="search-icon-lg"><Icons.Search /></span>
-        <input
-          type="text"
-          placeholder="Search by patient name, doctor, or status..."
-          className="search-input-lg"
-          value={searchQuery}
-          onChange={(e) => onSearchChange(e.target.value)}
-        />
-      </div>
-
       <div className="filter-right-group">
         <div className="tabs-wrapper">
           <button
@@ -345,26 +333,34 @@ const FilterBar = ({
             <span style={{ fontSize: '11px', marginLeft: '4px' }}>▼</span>
           </button>
 
-          {selectedDate && (
-            <button className="btn-clear-date-mini" onClick={() => onDateChange(null)} title="Clear date filter">
-              <Icons.Close />
-            </button>
-          )}
-
           {showCalendar && (
             <div className="calendar-dropdown">
               <Calendar
                 onChange={handleDateSelect}
                 value={selectedDate ? new Date(selectedDate) : new Date()}
-                className="premium-calendar"
+                className="custom-calendar"
               />
             </div>
           )}
         </div>
       </div>
+
+      <div className="search-left-part">
+        <div className="search-wrapper">
+          <span className="search-icon-lg"><Icons.Search /></span>
+          <input
+            type="text"
+            placeholder="Search by patient name, doctor, or status..."
+            className="search-input-lg"
+            value={searchQuery}
+            onChange={(e) => onSearchChange(e.target.value)}
+          />
+        </div>
+      </div>
     </div>
   );
 };
+
 
 // --- HELPER FUNCTIONS ---
 
@@ -384,7 +380,7 @@ const getDoctorColor = (index) => {
 
 // Get doctor text color (cycle through predefined colors)
 const getDoctorTextColor = (index) => {
-  const colors = ['#1E40AF', '#6B21A8', '#065F46', '#9A3412', '#BE185D'];
+  const colors = ['#165a8a', '#6B21A8', '#065F46', '#9A3412', '#BE185D'];
   return colors[index % colors.length];
 };
 
@@ -527,11 +523,29 @@ const transformAppointment = (apt, index) => {
   let date = apt.date || '';
   let time = apt.time || '';
 
+  // Normalize date to YYYY-MM-DD for consistent filtering
+  if (date && date.includes('T')) {
+    // If it's an ISO timestamp, parse it to local date to align with filter
+    try {
+      const dt = new Date(date);
+      const year = dt.getFullYear();
+      const month = String(dt.getMonth() + 1).padStart(2, '0');
+      const day = String(dt.getDate()).padStart(2, '0');
+      date = `${year}-${month}-${day}`;
+    } catch (e) {
+      date = date.split('T')[0];
+    }
+  }
+
   // If date/time not present, try startAt
   if (!date && apt.startAt) {
     try {
       const dt = new Date(apt.startAt);
-      date = dt.toISOString().split('T')[0]; // YYYY-MM-DD
+      const year = dt.getFullYear();
+      const month = String(dt.getMonth() + 1).padStart(2, '0');
+      const day = String(dt.getDate()).padStart(2, '0');
+      date = `${year}-${month}-${day}`; // Local YYYY-MM-DD
+
       time = dt.toTimeString().split(' ')[0].substring(0, 5); // HH:MM
     } catch (e) {
       // Ignore parse errors
@@ -695,6 +709,10 @@ const Appointments = () => {
         a.status.toLowerCase().includes(q)
       );
     }
+
+    // Sort alphabetically by patient name
+    result.sort((a, b) => a.patientName.localeCompare(b.patientName));
+
     setFilteredAppointments(result);
     setCurrentPage(1);
   }, [activeTab, searchQuery, selectedDate, allAppointments]);
@@ -935,7 +953,7 @@ const Appointments = () => {
   };
 
   return (
-    <div className="dashboard-container">
+    <div className="appointments-page dashboard-container">
       <Header />
       {notification && (
         <div className={`modern-notification ${notification.type}`}>
@@ -996,61 +1014,56 @@ const Appointments = () => {
                 return (
                   <tr key={apt.id}>
                     {/* PATIENT COLUMN - Clickable */}
-                    {/* PATIENT COLUMN - Clickable */}
-                    <td
-                      className="cell-patient clickable"
-                      onClick={() => handlePatientNameClick(apt)}
-                      style={{ cursor: 'pointer' }}
-                    >
-                      <img
-                        src={avatarSrc}
-                        alt={apt.gender}
-                        className="patient-avatar"
-                        onError={(e) => {
-                          // Fallback if image doesn't load
-                          e.target.style.display = 'none';
-                          e.target.nextElementSibling.style.display = 'flex';
-                        }}
-                      />
-                      <div className="gender-icon-box" style={{ display: 'none' }}>
-                        {apt.gender === 'Female' ? <Icons.Female /> : <Icons.Male />}
-                      </div>
-                      <div className="info-group">
-                        <span className="primary patient-name-clickable">
-                          {apt.patientName}
-                        </span>
-                        <span className="secondary">{apt.patientId}</span>
+                    <td>
+                      <div
+                        className="cell-patient clickable"
+                        onClick={() => handlePatientNameClick(apt)}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <img
+                          src={avatarSrc}
+                          alt={apt.gender}
+                          className="patient-avatar"
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.nextElementSibling.style.display = 'flex';
+                          }}
+                        />
+                        <div className="gender-icon-box" style={{ display: 'none' }}>
+                          {apt.gender === 'Female' ? <Icons.Female /> : <Icons.Male />}
+                        </div>
+                        <div className="info-group">
+                          <span className="primary font-semibold">{apt.patientName}</span>
+                          <span className="secondary opacity-60 text-xs">{apt.patientId}</span>
+                        </div>
                       </div>
                     </td>
 
                     {/* DOCTOR COLUMN - Match Patient List Style */}
                     <td>
-                      <div className="cell-doctor">
+                      <div className="cell-doctor" onClick={() => handleDoctorNameClick(apt)}>
                         <img
                           src={apt.doctorGender === 'Female' ? doctorFemaleIcon : doctorMaleIcon}
                           alt={apt.doctor}
                           className="patient-avatar"
-                          style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }}
                         />
-                        <span
-                          className="doctor-name-clickable"
-                          onClick={() => handleDoctorNameClick(apt)}
-                        >
-                          {apt.doctor}
-                        </span>
+                        <div className="info-group">
+                          <span className="primary font-semibold">{apt.doctor}</span>
+                          <span className="secondary opacity-60 text-xs text-blue-primary">(MD)</span>
+                        </div>
                       </div>
                     </td>
 
                     {/* DATE & TIME - Split View */}
                     <td>
                       <div className="info-group">
-                        <span className="primary">{apt.date}</span>
-                        <span className="secondary">{apt.time}</span>
+                        <span className="primary font-semibold">{apt.date}</span>
+                        <span className="secondary opacity-60 text-xs">@{apt.time}</span>
                       </div>
                     </td>
 
                     {/* CONDITION */}
-                    <td style={{ fontWeight: 500, color: '#334155' }}>{apt.condition}</td>
+                    <td className="cell-condition">{apt.condition}</td>
 
                     {/* STATUS */}
                     <td>
@@ -1084,7 +1097,7 @@ const Appointments = () => {
                 <tr>
                   <td colSpan="6" style={{ textAlign: 'center', padding: '48px', color: '#9CA3AF' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-                      <div style={{ width: '32px', height: '32px', border: '3px solid #e5e7eb', borderTopColor: '#3b82f6', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }}></div>
+                      <div style={{ width: '32px', height: '32px', border: '3px solid #e5e7eb', borderTopColor: '#207DC0', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }}></div>
                       <span>Loading appointments...</span>
                     </div>
                   </td>

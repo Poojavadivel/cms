@@ -6,15 +6,13 @@
 
 /* Color Variables - Matching Flutter AppColors EXACTLY */
 :root {
-  /* Primary Colors - Enterprise Blue Family */
-  --primary: #1E3A72;
-  /* Enterprise blue - Flutter primary */
-  --primary-600: #2F5BA0;
-  /* Medium blue - Flutter primary600 */
-  --primary-700: #264E86;
-  /* Darker blue - Flutter primary700 */
-  --primary-800: #1A365D;
-  /* Deep corporate blue - Flutter primary800 */
+  /* Primary Colors - Professional Blue Theme */
+  --primary: #207DC0;
+  --secondary: #207DC0;
+  /* Analyzed Logo Color */
+  --primary-600: #165a8a;
+  --primary-700: #124d77;
+  --primary-800: #0e3755;
 
   /* Grey Scale - Exact Flutter match */
   --grey-50: #F9FAFB;
@@ -241,7 +239,7 @@
 .hero-gradient {
   width: 100%;
   height: 100%;
-  background: linear-gradient(135deg, #1E3A72 0%, #2F5BA0 100%);
+  background: linear-gradient(135deg, #207DC0 0%, #165a8a 100%);
   position: relative;
 }
 
@@ -493,7 +491,7 @@
 .mobile-hero {
   width: 100%;
   padding: 16px;
-  background: linear-gradient(135deg, #1E3A72 0%, #2F5BA0 100%);
+  background: linear-gradient(135deg, #207DC0 0%, #165a8a 100%);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -780,7 +778,7 @@
   border-width: 2px;
   padding: 11px 11px 11px 39px;
   /* Compensate for border width */
-  box-shadow: 0 0 0 3px rgba(30, 58, 114, 0.1);
+  box-shadow: 0 0 0 3px rgba(32, 125, 192, 0.1);
 }
 
 .form-input:disabled {
@@ -965,12 +963,12 @@
 
 .submit-button:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(30, 58, 114, 0.45);
+  box-shadow: 0 6px 16px rgba(32, 125, 192, 0.35);
 }
 
 .submit-button:active:not(:disabled) {
   transform: translateY(0);
-  box-shadow: 0 2px 8px rgba(30, 58, 114, 0.3);
+  box-shadow: 0 2px 8px rgba(32, 125, 192, 0.25);
 }
 
 .submit-button:disabled {

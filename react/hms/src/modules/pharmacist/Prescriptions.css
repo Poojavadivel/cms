@@ -96,11 +96,11 @@
 }
 
 .stat-success {
-  color: #10b981;
+  color: #207DC0;
 }
 
 .stat-info {
-  color: #3b82f6;
+  color: #207DC0;
 }
 
 .stat-primary {
@@ -124,11 +124,11 @@
 }
 
 .stat-success+.stat-content .stat-value {
-  color: #10b981;
+  color: #207DC0;
 }
 
 .stat-info+.stat-content .stat-value {
-  color: #3b82f6;
+  color: #207DC0;
 }
 
 .stat-primary+.stat-content .stat-value {
@@ -528,7 +528,7 @@
   justify-content: center;
   gap: 8px;
   padding: 10px 16px;
-  background-color: #10b981;
+  background-color: #207DC0;
   color: white;
   border: none;
   border-radius: 8px;
@@ -539,7 +539,7 @@
 }
 
 .btn-dispense:hover {
-  background-color: #059669;
+  background-color: #165a8a;
 }
 
 /* Responsive Design */
@@ -669,7 +669,7 @@
 }
 
 .amount-cell strong {
-  color: #10b981;
+  color: #207DC0;
   font-size: 15px;
 }
 
@@ -719,22 +719,22 @@
 }
 
 .btn-view {
-  color: #3b82f6;
-  background-color: rgba(59, 130, 246, 0.1);
+  color: #207DC0;
+  background-color: rgba(32, 125, 192, 0.1);
 }
 
 .btn-view:hover {
-  background-color: rgba(59, 130, 246, 0.2);
+  background-color: rgba(32, 125, 192, 0.2);
   transform: scale(1.05);
 }
 
 .btn-approve {
-  color: #10b981;
-  background-color: rgba(16, 185, 129, 0.1);
+  color: #207DC0;
+  background-color: rgba(32, 125, 192, 0.1);
 }
 
 .btn-approve:hover {
-  background-color: rgba(16, 185, 129, 0.2);
+  background-color: rgba(32, 125, 192, 0.2);
   transform: scale(1.05);
 }
 
@@ -905,7 +905,7 @@
   align-items: center;
   gap: 8px;
   padding: 12px 24px;
-  background-color: #10b981;
+  background-color: #207DC0;
   color: white;
   border: none;
   border-radius: 8px;
@@ -916,7 +916,7 @@
 }
 
 .btn-modal-approve:hover {
-  background-color: #059669;
+  background-color: #165a8a;
 }
 
 .btn-modal-close {
@@ -959,7 +959,7 @@
   padding-top: 12px;
   border-top: 2px solid #e5e7eb;
   text-align: right;
-  color: #10b981;
+  color: #207DC0;
 }
 
 /* Responsive Table */

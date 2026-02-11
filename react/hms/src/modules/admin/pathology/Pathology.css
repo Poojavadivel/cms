@@ -1,61 +1,82 @@
-/* --- ENTERPRISE DESIGN SYSTEM (Patients - Matching Appointments) --- */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+/* --- ENTERPRISE DESIGN SYSTEM (Pathology - Matching Appointments) --- */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
-/* Loading spinner animation */
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-:root {
-  /* BRAND COLORS */
-  --primary: #2663FF;
-  --primary-hover: #1e54e4;
-  --secondary: #28C76F;
+/* Main Title Alignment */
+.pathology-page {
+  /* 1. BRAND COLORS */
+  --primary: #207DC0;
+  --primary-hover: #165a8a;
+  --secondary: #207DC0;
   --accent-yellow: #F4B400;
   --accent-red: #FF5A5F;
   --neutral-gray: #9CA3AF;
 
-  /* SURFACES */
+  /* 2. SURFACES */
   --bg-page: #F7F9FC;
   --bg-card: #FFFFFF;
   --bg-input: #F1F3F7;
   --bg-hover-row: #EEF3FF;
 
-  /* TYPOGRAPHY COLORS */
+  /* 3. TYPOGRAPHY COLORS */
   --text-title: #1E293B;
   --text-body: #334155;
   --text-muted: #64748B;
 
-  /* SHADOWS */
+  /* 4. SHADOWS */
   --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.04);
   --shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.08);
-  --shadow-active: 0 0 0 2px rgba(38, 99, 255, 0.2);
 
-  /* SPACING */
-  --space-05: 4px;
-  --space-1: 8px;
-  --space-2: 12px;
-  --space-3: 16px;
-  --space-4: 24px;
-
-  /* RADIUS */
+  /* 5. RADIUS */
   --radius-btn: 8px;
   --radius-card: 12px;
   --radius-search: 12px;
-  --radius-pill: 20px;
+
+  /* 6. SPACING */
+  --space-3: 16px;
 }
 
-body {
-  background-color: var(--bg-page);
-  color: var(--text-body);
-  font-family: 'Inter', -apple-system, sans-serif;
-  margin: 0;
-  overflow: hidden;
+/* Main Subtitle Standardized */
+.pathology-page .main-subtitle {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-top: 4px;
+  letter-spacing: var(--ls-body);
+  font-weight: 500;
 }
 
-.dashboard-container {
+/* Technician Badge - Brand Blue */
+.technician-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  background: linear-gradient(135deg, #207DC0 0%, #165a8a 100%);
+  color: white;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(32, 125, 192, 0.2);
+}
+
+/* Table Alignment */
+.modern-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed !important;
+}
+
+/* Pagination Footer Alignment */
+.pagination-footer {
+  padding: 16px 24px;
+  border-top: 1px solid #E2E8F0;
+  display: flex;
+  justify-content: flex-start !important;
+  gap: 12px;
+  align-items: center;
+}
+
+
+.pathology-page.dashboard-container {
   width: 100%;
   padding: 16px 24px;
   height: 100vh;
@@ -70,44 +91,55 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: var(--space-3);
+  margin-bottom: 28px;
   flex-shrink: 0;
 }
 
+.header-content {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Main title color standardized to premium dark */
 .main-title {
-  font-size: 22px;
-  font-weight: 700;
-  color: var(--text-title);
+  font-size: 28px;
+  font-weight: 800;
+  color: #0F172A;
   margin: 0;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.04em;
+  line-height: 1.1;
 }
 
 .main-subtitle {
-  font-size: 13px;
-  color: var(--neutral-gray);
-  margin: 2px 0 0 0;
+  font-size: 14px;
+  color: var(--text-muted);
+  margin: 4px 0 0 0;
+  font-weight: 500;
 }
 
 .btn-new-appointment {
-  height: 36px;
-  padding: 0 16px;
-  background-color: var(--primary);
+  height: 40px;
+  padding: 0 20px;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
   color: white;
   border: none;
   border-radius: var(--radius-btn);
-  font-weight: 600;
+  font-weight: 700;
   font-size: 13px;
   cursor: pointer;
-  box-shadow: 0 2px 6px rgba(38, 99, 255, 0.2);
-  transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(32, 125, 192, 0.2);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  position: relative;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 .btn-new-appointment:hover {
-  transform: translateY(-1px);
-  background-color: var(--primary-hover);
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 15px 30px -8px rgba(32, 125, 192, 0.4);
 }
 
 /* --- SEARCH & FILTER --- */
@@ -159,7 +191,7 @@ body {
 .search-input-lg:focus {
   outline: none;
   background: white;
-  box-shadow: 0 0 0 3px rgba(38, 99, 255, 0.1);
+  box-shadow: 0 0 0 3px rgba(32, 125, 192, 0.1);
   border-color: var(--primary);
   transform: translateY(-1px);
 }
@@ -193,7 +225,7 @@ body {
 }
 
 .tab-btn:hover {
-  background: rgba(38, 99, 255, 0.08);
+  background: rgba(32, 125, 192, 0.08);
   color: var(--primary);
 }
 
@@ -201,7 +233,7 @@ body {
   background: var(--primary);
   color: white;
   font-weight: 600;
-  box-shadow: 0 2px 8px rgba(38, 99, 255, 0.25);
+  box-shadow: 0 2px 8px rgba(32, 125, 192, 0.25);
   transform: translateY(-1px);
 }
 
@@ -327,28 +359,22 @@ body {
 .info-group {
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: 2px;
 }
 
 .info-group .primary {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--text-title);
-  line-height: 1.4;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 200px;
+  line-height: 1.2;
 }
 
 .info-group .secondary {
   font-size: 11px;
-  font-weight: 400;
-  color: var(--neutral-gray);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 200px;
+  font-weight: 500;
+  color: #64748B;
+  opacity: 0.8;
+  letter-spacing: 0.02em;
 }
 
 /* Doctor Cell */
@@ -418,7 +444,7 @@ body {
 
 /* Edit - Green */
 .btn-action.edit svg {
-  stroke: #059669;
+  stroke: #207DC0;
 }
 
 .btn-action.edit:hover {
@@ -461,16 +487,16 @@ body {
 }
 
 /* Technician Badge */
-.technician-badge {
+.pathology-page .technician-badge {
   display: inline-block;
   padding: 6px 12px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #207DC0 0%, #165a8a 100%);
   color: white;
   border-radius: 6px;
   font-size: 12px;
   font-weight: 600;
   text-transform: capitalize;
-  box-shadow: 0 2px 4px rgba(102, 126, 234, 0.2);
+  box-shadow: 0 2px 4px rgba(32, 125, 192, 0.2);
 }
 
 /* Pagination */
@@ -501,7 +527,7 @@ body {
 
 .page-arrow-circle:hover:not(:disabled) {
   border-color: var(--primary);
-  background: #EEF3FF;
+  background: #F0FDFD;
   color: var(--primary);
   transform: scale(1.05);
 }

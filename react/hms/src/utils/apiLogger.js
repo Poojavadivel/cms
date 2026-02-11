@@ -55,7 +55,7 @@ class ApiLogger {
 
     console.log(
       `%c🚀 [API REQUEST] ${method} ${url}`,
-      'color: #3b82f6; font-weight: bold',
+      'color: #207DC0; font-weight: bold',
       entry
     );
   }
@@ -74,7 +74,7 @@ class ApiLogger {
       duration: `${duration}ms`
     });
 
-    const color = status >= 200 && status < 300 ? '#10b981' : '#ef4444';
+    const color = status >= 200 && status < 300 ? '#207DC0' : '#ef4444';
     console.log(
       `%c✅ [API RESPONSE] ${method} ${url} - ${status} (${duration}ms)`,
       `color: ${color}; font-weight: bold`,
@@ -145,7 +145,7 @@ class ApiLogger {
    */
   sanitizeHeaders(headers) {
     if (!headers) return {};
-    
+
     const sanitized = { ...headers };
     if (sanitized.Authorization) {
       sanitized.Authorization = 'Bearer [REDACTED]';

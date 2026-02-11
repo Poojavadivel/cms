@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Calendar from 'react-calendar';
+import { motion, AnimatePresence } from 'framer-motion';
 import 'react-calendar/dist/Calendar.css';
 import appointmentsService from '../../../../services/appointmentsService';
 import AvailabilityChecker from '../../../../components/appointments/AvailabilityChecker';
@@ -224,14 +225,14 @@ const NewAppointmentForm = ({ onClose, onSave, initialPatient }) => {
   const [status, setStatus] = useState('Scheduled');
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
-  
+
   // Availability checking state
   const [isAvailable, setIsAvailable] = useState(true);
   const [checkingAvailability, setCheckingAvailability] = useState(false);
-  
+
   // Calculate startAt for availability checking
-  const startAt = selectedDate && selectedTime 
-    ? new Date(`${selectedDate.toISOString().split('T')[0]}T${selectedTime}`) 
+  const startAt = selectedDate && selectedTime
+    ? new Date(`${selectedDate.toISOString().split('T')[0]}T${selectedTime}`)
     : null;
 
   const loadPatients = useCallback(async () => {
@@ -283,15 +284,18 @@ const NewAppointmentForm = ({ onClose, onSave, initialPatient }) => {
     if (!selectedPatient) return alert('Please select a patient');
     if (!selectedDoctor) return alert('Please select a doctor');
     if (!reason.trim()) return alert('Please enter a reason');
-    
+
     // Check availability before submitting
     if (!isAvailable) {
       return alert('The selected time slot is not available. Please choose a different time.');
     }
-    
+
     setIsSaving(true);
     try {
-      const dateStr = selectedDate.toISOString().split('T')[0];
+      const year = selectedDate.getFullYear();
+      const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+      const day = String(selectedDate.getDate()).padStart(2, '0');
+      const dateStr = `${year}-${month}-${day}`;
       const payload = {
         patientId: selectedPatient.id,
         clientName: selectedPatient.name,
@@ -355,7 +359,7 @@ const NewAppointmentForm = ({ onClose, onSave, initialPatient }) => {
             />
           </div>
           <div className="patient-count">
-            {filteredPatients.length} {filteredPatients.length === 1 ? 'Patient' : 'Patients'} 
+            {filteredPatients.length} {filteredPatients.length === 1 ? 'Patient' : 'Patients'}
             {searchQuery && ` (filtered from ${patients.length})`}
           </div>
           <div className="patient-list">
@@ -391,14 +395,18 @@ const NewAppointmentForm = ({ onClose, onSave, initialPatient }) => {
           </div>
         </div>
         <div className={`right-panel ${!selectedPatient ? 'disabled' : ''}`}>
-          <div className="panel-content">
-            <div className="rp-header">
-              <div className="icon-badge">📅</div>
+          {/* Static Header */}
+          <div className="rp-header bg-white px-8 py-5 border-b-2 border-slate-100 z-10 shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="icon-badge w-10 h-10 text-xl">📅</div>
               <div>
-                <h2>New Appointment</h2>
-                <p className="subtitle">Select a patient to continue</p>
+                <h2 className="text-2xl font-black text-[#0f172a] tracking-tight">New Appointment</h2>
+                <p className="subtitle text-[9px] uppercase font-bold text-slate-400 tracking-widest">Select a patient to continue</p>
               </div>
             </div>
+          </div>
+
+          <div className="panel-content flex-1 overflow-y-auto p-6 md:p-8 md:pt-8 no-scrollbar">
             <h3 className="section-title">Schedule</h3>
             <div className="form-row">
               <div className="form-group half">
@@ -418,7 +426,7 @@ const NewAppointmentForm = ({ onClose, onSave, initialPatient }) => {
                 </div>
               </div>
             </div>
-            
+
             <h3 className="section-title">
               <Icons.Stethoscope />
               Assigned Doctor
@@ -504,20 +512,20 @@ const NewAppointmentForm = ({ onClose, onSave, initialPatient }) => {
               ))}
             </div>
           </div>
-          <div className="rp-footer">
+          <div className="rp-footer px-8 py-4">
             <button className="btn-cancel" onClick={onClose}>
               <Icons.Close /> Cancel
             </button>
-            <button 
-              className="btn-save" 
-              onClick={handleSubmit} 
+            <button
+              className="btn-save shadow-lg"
+              onClick={handleSubmit}
               disabled={isSaving || !isAvailable}
               style={{
                 opacity: !isAvailable ? 0.6 : 1,
                 cursor: !isAvailable ? 'not-allowed' : 'pointer'
               }}
             >
-              {isSaving ? 'Saving...' : isAvailable ? 'Save Appointment' : 'Time Slot Not Available'}
+              {isSaving ? 'Saving...' : isAvailable ? 'Save Appointment' : 'Slot Unavailable'}
             </button>
           </div>
         </div>

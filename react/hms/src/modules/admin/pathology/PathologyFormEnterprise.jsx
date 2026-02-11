@@ -15,7 +15,7 @@ const PathologyFormEnterprise = ({ initial, onSubmit, onCancel }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
-  
+
   // Patient search states
   const [patientSearchQuery, setPatientSearchQuery] = useState('');
   const [patientSearchResults, setPatientSearchResults] = useState([]);
@@ -77,7 +77,7 @@ const PathologyFormEnterprise = ({ initial, onSubmit, onCancel }) => {
       // Load all available patients on mount for new form
       loadAvailablePatients();
     }
-    
+
     // Load doctors on mount
     loadDoctors();
   }, [initial]);
@@ -155,18 +155,18 @@ const PathologyFormEnterprise = ({ initial, onSubmit, onCancel }) => {
     console.log('Patient.patientId:', patient.patientId);
     console.log('Patient.id:', patient.id);
     console.log('Patient._id:', patient._id);
-    
+
     const fullName = `${patient.firstName || ''} ${patient.lastName || ''}`.trim() || patient.name || '';
     // Try all possible ID fields
     const patientId = patient.patientId || patient.id || patient._id || '';
     const patientCode = patient.patientCode || patient.code || '';
-    
+
     console.log('Extracted values:', { patientId, patientCode, fullName });
-    
+
     if (!patientId) {
       console.error('❌ No patient ID found! Patient object:', JSON.stringify(patient, null, 2));
     }
-    
+
     // Update form data synchronously
     setFormData(prev => ({
       ...prev,
@@ -174,13 +174,13 @@ const PathologyFormEnterprise = ({ initial, onSubmit, onCancel }) => {
       patientCode: patientCode,
       patientName: fullName,
     }));
-    
+
     setPatientSearchQuery(fullName);
     setPatientSelected(true);
     setShowPatientDropdown(false);
     setPatientSearchResults([]);
     setSelectedPatientIndex(-1);
-    
+
     // Clear any errors
     setErrors(prev => {
       const newErrors = { ...prev };
@@ -188,7 +188,7 @@ const PathologyFormEnterprise = ({ initial, onSubmit, onCancel }) => {
       delete newErrors.patientId;
       return newErrors;
     });
-    
+
     console.log('Patient selection completed with ID:', patientId);
   };
 
@@ -202,7 +202,7 @@ const PathologyFormEnterprise = ({ initial, onSubmit, onCancel }) => {
     switch (e.key) {
       case 'ArrowDown':
         e.preventDefault();
-        setSelectedPatientIndex(prev => 
+        setSelectedPatientIndex(prev =>
           prev < patientSearchResults.length - 1 ? prev + 1 : prev
         );
         break;
@@ -214,7 +214,7 @@ const PathologyFormEnterprise = ({ initial, onSubmit, onCancel }) => {
         // Prevent form submission and next button
         e.preventDefault();
         e.stopPropagation();
-        
+
         if (selectedPatientIndex >= 0 && selectedPatientIndex < patientSearchResults.length) {
           selectPatient(patientSearchResults[selectedPatientIndex]);
         } else if (patientSearchResults.length > 0) {
@@ -283,13 +283,13 @@ const PathologyFormEnterprise = ({ initial, onSubmit, onCancel }) => {
       console.log('patientId:', formData.patientId);
       console.log('patientName:', formData.patientName);
       console.log('patientSelected flag:', patientSelected);
-      
+
       // Check if patient is actually selected (has ID)
       if (!formData.patientId || (typeof formData.patientId === 'string' && formData.patientId.trim() === '')) {
         newErrors.patientName = 'Please search and select a patient from the list';
         console.log('Patient validation failed - no patientId');
       }
-      
+
       if (!formData.patientName || (typeof formData.patientName === 'string' && formData.patientName.trim() === '')) {
         newErrors.patientName = 'Please search and select a patient from the list';
         console.log('Patient validation failed - no patientName');
@@ -360,9 +360,9 @@ const PathologyFormEnterprise = ({ initial, onSubmit, onCancel }) => {
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div 
-        className="bg-white shadow-2xl overflow-hidden flex flex-col" 
-        style={{ 
+      <div
+        className="bg-white shadow-2xl overflow-hidden flex flex-col"
+        style={{
           width: '95%',
           maxWidth: '1200px',
           height: '90vh',
@@ -372,13 +372,13 @@ const PathologyFormEnterprise = ({ initial, onSubmit, onCancel }) => {
       >
 
         {/* Header */}
-        <div className="bg-gradient-to-r from-emerald-600 to-teal-600 px-8 py-6">
+        <div className="bg-gradient-to-r from-[#207DC0] to-[#165a8a] px-8 py-6">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-2xl font-bold text-white">
                 {initial ? 'Edit Lab Report' : 'Add New Lab Report'}
               </h2>
-              <p className="text-emerald-50 text-sm mt-1">
+              <p className="text-blue-50 text-sm mt-1">
                 {initial ? 'Update report information' : 'Fill in the details to create a new pathology report'}
               </p>
             </div>
@@ -399,7 +399,7 @@ const PathologyFormEnterprise = ({ initial, onSubmit, onCancel }) => {
                 <div className="flex items-center">
                   <div
                     className={`flex items-center justify-center w-10 h-10 rounded-full transition-all ${currentStep >= step.id
-                      ? 'bg-emerald-600 text-white shadow-lg'
+                      ? 'bg-[#207DC0] text-white shadow-lg'
                       : 'bg-gray-300 text-gray-600'
                       }`}
                   >
@@ -411,7 +411,7 @@ const PathologyFormEnterprise = ({ initial, onSubmit, onCancel }) => {
                   </div>
                   <div className="ml-3 hidden md:block">
                     <p
-                      className={`text-sm font-semibold ${currentStep >= step.id ? 'text-emerald-600' : 'text-gray-500'
+                      className={`text-sm font-semibold ${currentStep >= step.id ? 'text-[#207DC0]' : 'text-gray-500'
                         }`}
                     >
                       {step.name}
@@ -420,7 +420,7 @@ const PathologyFormEnterprise = ({ initial, onSubmit, onCancel }) => {
                 </div>
                 {index < steps.length - 1 && (
                   <div
-                    className={`flex-1 h-0.5 mx-4 transition-all ${currentStep > step.id ? 'bg-emerald-600' : 'bg-gray-300'
+                    className={`flex-1 h-0.5 mx-4 transition-all ${currentStep > step.id ? 'bg-[#207DC0]' : 'bg-gray-300'
                       }`}
                   />
                 )}
@@ -436,9 +436,9 @@ const PathologyFormEnterprise = ({ initial, onSubmit, onCancel }) => {
             {/* Step 1: Patient Information */}
             {currentStep === 1 && (
               <div className="space-y-6 animate-fadeIn">
-                <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl p-6 border border-emerald-100">
+                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-100">
                   <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 bg-emerald-600 rounded-lg flex items-center justify-center">
+                    <div className="w-10 h-10 bg-[#207DC0] rounded-lg flex items-center justify-center">
                       <FiUser className="text-white" size={20} />
                     </div>
                     <div>
@@ -485,21 +485,20 @@ const PathologyFormEnterprise = ({ initial, onSubmit, onCancel }) => {
                           }}
                           placeholder="Type patient name or ID to search... (Press Enter to select)"
                           readOnly={!!initial}
-                          className={`w-full pl-12 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
-                            errors.patientName ? 'border-red-500' : 'border-gray-300'
-                          } ${initial ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                          className={`w-full pl-12 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#207DC0] focus:border-transparent transition-all ${errors.patientName ? 'border-red-500' : 'border-gray-300'
+                            } ${initial ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                         />
                         {isSearchingPatients && (
                           <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
-                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-emerald-600"></div>
+                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#207DC0]"></div>
                           </div>
                         )}
                       </div>
                       {errors.patientName && <p className="text-red-500 text-xs mt-1">{errors.patientName}</p>}
-                      
+
                       {/* Search Results Dropdown */}
                       {showPatientDropdown && patientSearchResults.length > 0 && !initial && (
-                        <div 
+                        <div
                           className="absolute w-full mt-2 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto"
                           style={{ zIndex: 9999 }}
                         >
@@ -511,28 +510,27 @@ const PathologyFormEnterprise = ({ initial, onSubmit, onCancel }) => {
                                 selectPatient(patient);
                               }}
                               onMouseEnter={() => setSelectedPatientIndex(index)}
-                              className={`px-4 py-3 cursor-pointer border-b border-gray-100 last:border-b-0 transition-colors ${
-                                index === selectedPatientIndex 
-                                  ? 'bg-emerald-100 border-l-4 border-l-emerald-600' 
-                                  : 'hover:bg-emerald-50'
-                              }`}
+                              className={`px-4 py-3 cursor-pointer border-b border-gray-100 last:border-b-0 transition-colors ${index === selectedPatientIndex
+                                ? 'bg-blue-100 border-l-4 border-l-[#207DC0]'
+                                : 'hover:bg-blue-50'
+                                }`}
                             >
                               <div className="font-semibold text-gray-800">
                                 {patient.firstName} {patient.lastName}
                               </div>
                               <div className="text-sm text-gray-600">
-                                Code: {patient.patientCode || patient.code || 'N/A'} • 
-                                {patient.gender ? ` ${patient.gender}` : ''} • 
+                                Code: {patient.patientCode || patient.code || 'N/A'} •
+                                {patient.gender ? ` ${patient.gender}` : ''} •
                                 {patient.age ? ` Age: ${patient.age}` : ''}
                               </div>
                             </div>
                           ))}
                         </div>
                       )}
-                      
+
                       {/* No results message */}
                       {showPatientDropdown && patientSearchResults.length === 0 && !isSearchingPatients && patientSearchQuery.length >= 2 && (
-                        <div 
+                        <div
                           className="absolute w-full mt-2 bg-white border border-gray-200 rounded-lg shadow-lg p-4"
                           style={{ zIndex: 9999 }}
                         >
@@ -543,10 +541,10 @@ const PathologyFormEnterprise = ({ initial, onSubmit, onCancel }) => {
 
                     {/* Display Selected Patient Info */}
                     {formData.patientId && (
-                      <div className="bg-white border border-emerald-200 rounded-lg p-4">
+                      <div className="bg-white border border-blue-200 rounded-lg p-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center">
-                            <FiUser className="text-emerald-600" size={24} />
+                          <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                            <FiUser className="text-[#207DC0]" size={24} />
                           </div>
                           <div>
                             <p className="font-semibold text-gray-800">{formData.patientName}</p>
@@ -565,9 +563,9 @@ const PathologyFormEnterprise = ({ initial, onSubmit, onCancel }) => {
             {/* Step 2: Test Details */}
             {currentStep === 2 && (
               <div className="space-y-6 animate-fadeIn">
-                <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl p-6 border border-emerald-100">
+                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-100">
                   <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 bg-emerald-600 rounded-lg flex items-center justify-center">
+                    <div className="w-10 h-10 bg-[#207DC0] rounded-lg flex items-center justify-center">
                       <MdOutlineScience className="text-white" size={20} />
                     </div>
                     <div>
@@ -588,7 +586,7 @@ const PathologyFormEnterprise = ({ initial, onSubmit, onCancel }) => {
                         value={formData.testName}
                         onChange={handleChange}
                         placeholder="e.g., Complete Blood Count"
-                        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${errors.testName ? 'border-red-500' : 'border-gray-300'
+                        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#207DC0] focus:border-transparent transition-all ${errors.testName ? 'border-red-500' : 'border-gray-300'
                           }`}
                       />
                       {errors.testName && <p className="text-red-500 text-xs mt-1">{errors.testName}</p>}
@@ -603,7 +601,7 @@ const PathologyFormEnterprise = ({ initial, onSubmit, onCancel }) => {
                         name="testType"
                         value={formData.testType}
                         onChange={handleChange}
-                        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${errors.testType ? 'border-red-500' : 'border-gray-300'
+                        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#207DC0] focus:border-transparent transition-all ${errors.testType ? 'border-red-500' : 'border-gray-300'
                           }`}
                       >
                         <option value="">Select test type</option>
@@ -628,7 +626,7 @@ const PathologyFormEnterprise = ({ initial, onSubmit, onCancel }) => {
                         name="testCategory"
                         value={formData.testCategory}
                         onChange={handleChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#207DC0] focus:border-transparent transition-all"
                       >
                         <option value="">Select category</option>
                         <option value="Hematology">Hematology</option>
@@ -650,7 +648,7 @@ const PathologyFormEnterprise = ({ initial, onSubmit, onCancel }) => {
                         name="collectionDate"
                         value={formData.collectionDate}
                         onChange={handleChange}
-                        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${errors.collectionDate ? 'border-red-500' : 'border-gray-300'
+                        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#207DC0] focus:border-transparent transition-all ${errors.collectionDate ? 'border-red-500' : 'border-gray-300'
                           }`}
                       />
                       {errors.collectionDate && <p className="text-red-500 text-xs mt-1">{errors.collectionDate}</p>}
@@ -666,7 +664,7 @@ const PathologyFormEnterprise = ({ initial, onSubmit, onCancel }) => {
                         name="reportDate"
                         value={formData.reportDate}
                         onChange={handleChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#207DC0] focus:border-transparent transition-all"
                       />
                     </div>
 
@@ -679,7 +677,7 @@ const PathologyFormEnterprise = ({ initial, onSubmit, onCancel }) => {
                         name="priority"
                         value={formData.priority}
                         onChange={handleChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#207DC0] focus:border-transparent transition-all"
                       >
                         <option value="Normal">Normal</option>
                         <option value="Urgent">Urgent</option>
@@ -694,9 +692,9 @@ const PathologyFormEnterprise = ({ initial, onSubmit, onCancel }) => {
             {/* Step 3: Additional Information */}
             {currentStep === 3 && (
               <div className="space-y-6 animate-fadeIn">
-                <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl p-6 border border-emerald-100">
+                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-100">
                   <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 bg-emerald-600 rounded-lg flex items-center justify-center">
+                    <div className="w-10 h-10 bg-[#207DC0] rounded-lg flex items-center justify-center">
                       <MdOutlineNoteAlt className="text-white" size={20} />
                     </div>
                     <div>
@@ -713,7 +711,7 @@ const PathologyFormEnterprise = ({ initial, onSubmit, onCancel }) => {
                       </label>
                       {isLoadingDoctors ? (
                         <div className="w-full px-4 py-3 border border-gray-300 rounded-lg flex items-center gap-2 text-gray-500">
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-emerald-600"></div>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#207DC0]"></div>
                           Loading doctors...
                         </div>
                       ) : (
@@ -721,7 +719,7 @@ const PathologyFormEnterprise = ({ initial, onSubmit, onCancel }) => {
                           name="doctorName"
                           value={formData.doctorName}
                           onChange={handleChange}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#207DC0] focus:border-transparent transition-all"
                         >
                           <option value="">Select a doctor</option>
                           {doctors.map((doctor) => (
@@ -744,7 +742,7 @@ const PathologyFormEnterprise = ({ initial, onSubmit, onCancel }) => {
                         value={formData.technician}
                         onChange={handleChange}
                         placeholder="Enter technician name"
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#207DC0] focus:border-transparent transition-all"
                       />
                     </div>
 
@@ -757,7 +755,7 @@ const PathologyFormEnterprise = ({ initial, onSubmit, onCancel }) => {
                         name="status"
                         value={formData.status}
                         onChange={handleChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#207DC0] focus:border-transparent transition-all"
                       >
                         <option value="Pending">Pending</option>
                         <option value="In Progress">In Progress</option>
@@ -777,7 +775,7 @@ const PathologyFormEnterprise = ({ initial, onSubmit, onCancel }) => {
                         onChange={handleChange}
                         placeholder="Enter any additional notes or observations..."
                         rows={4}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all resize-none"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#207DC0] focus:border-transparent transition-all resize-none"
                       />
                     </div>
                   </div>
@@ -788,9 +786,9 @@ const PathologyFormEnterprise = ({ initial, onSubmit, onCancel }) => {
             {/* Step 4: File Upload */}
             {currentStep === 4 && (
               <div className="space-y-6 animate-fadeIn">
-                <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl p-6 border border-emerald-100">
+                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-100">
                   <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 bg-emerald-600 rounded-lg flex items-center justify-center">
+                    <div className="w-10 h-10 bg-[#207DC0] rounded-lg flex items-center justify-center">
                       <FiUpload className="text-white" size={20} />
                     </div>
                     <div>
@@ -800,15 +798,15 @@ const PathologyFormEnterprise = ({ initial, onSubmit, onCancel }) => {
                   </div>
 
                   <div className="mt-6">
-                    <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-emerald-300 rounded-xl cursor-pointer bg-white hover:bg-emerald-50 transition-all">
+                    <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-[#207DC0]/30 rounded-xl cursor-pointer bg-white hover:bg-[#207DC0]/5 transition-all">
                       <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                        <FiUpload className="w-12 h-12 text-emerald-600 mb-3" />
+                        <FiUpload className="w-12 h-12 text-[#207DC0] mb-3" />
                         <p className="mb-2 text-sm text-gray-700">
                           <span className="font-semibold">Click to upload</span> or drag and drop
                         </p>
                         <p className="text-xs text-gray-500">PDF, JPG, PNG (max. 5MB)</p>
                         {formData.fileName && (
-                          <p className="mt-3 text-sm text-emerald-600 font-semibold">
+                          <p className="mt-3 text-sm text-[#207DC0] font-semibold">
                             ✓ {formData.fileName}
                           </p>
                         )}
@@ -844,7 +842,7 @@ const PathologyFormEnterprise = ({ initial, onSubmit, onCancel }) => {
               <button
                 type="button"
                 onClick={() => setCurrentStep(4)}
-                className="flex items-center gap-2 px-6 py-2.5 text-emerald-600 bg-white border border-emerald-600 rounded-lg hover:bg-emerald-50 transition-colors font-medium"
+                className="flex items-center gap-2 px-6 py-2.5 text-[#207DC0] bg-white border border-[#207DC0] rounded-lg hover:bg-[#207DC0]/5 transition-colors font-medium"
               >
                 Skip
               </button>
@@ -854,30 +852,30 @@ const PathologyFormEnterprise = ({ initial, onSubmit, onCancel }) => {
               <button
                 type="button"
                 onClick={handleNext}
-                className="flex items-center gap-2 px-6 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium shadow-lg shadow-emerald-500/30"
+                className="flex items-center gap-2 px-6 py-2.5 bg-[#207DC0] text-white rounded-lg hover:bg-[#0F7D7E] transition-colors font-medium shadow-lg shadow-[#207DC0]/30"
               >
                 Next
                 <FiArrowRight size={18} />
               </button>
             ) : (
-            <button
-              type="submit"
-              onClick={handleSubmit}
-              disabled={isSubmitting}
-              className="flex items-center gap-2 px-8 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium shadow-lg shadow-emerald-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isSubmitting ? (
-                <>
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <FiSave size={18} />
-                  Save Report
-                </>
-              )}
-            </button>
+              <button
+                type="submit"
+                onClick={handleSubmit}
+                disabled={isSubmitting}
+                className="flex items-center gap-2 px-8 py-2.5 bg-[#207DC0] text-white rounded-lg hover:bg-[#0F7D7E] transition-colors font-medium shadow-lg shadow-[#207DC0]/30 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSubmitting ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <FiSave size={18} />
+                    Save Report
+                  </>
+                )}
+              </button>
             )}
           </div>
         </div>

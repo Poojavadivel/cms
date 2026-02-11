@@ -15,56 +15,44 @@ html {
     }
 }
 
-:root {
-    /* BRAND COLORS */
-    --primary: #2663FF;
-    --primary-hover: #1e54e4;
-    --secondary: #28C76F;
+/* Staff Page Scoped Styles */
+.staff-page {
+    --primary: #207DC0;
+    /* Logo Blue */
+    --primary-hover: #165a8a;
+    --secondary: #207DC0;
     --accent-yellow: #F4B400;
     --accent-red: #FF5A5F;
     --neutral-gray: #9CA3AF;
-
-    /* SURFACES */
     --bg-page: #F7F9FC;
     --bg-card: #FFFFFF;
     --bg-input: #F1F3F7;
     --bg-hover-row: #EEF3FF;
-
-    /* TYPOGRAPHY COLORS */
     --text-title: #1E293B;
     --text-body: #334155;
     --text-muted: #64748B;
-
-    /* SHADOWS */
     --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.04);
     --shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.08);
-    --shadow-active: 0 0 0 2px rgba(38, 99, 255, 0.2);
-
-    /* SPACING */
-    --space-05: 4px;
-    --space-1: 8px;
-    --space-2: 12px;
-    --space-3: 16px;
-    --space-4: 24px;
-
-    /* RADIUS */
     --radius-btn: 8px;
     --radius-card: 12px;
     --radius-search: 12px;
-    --radius-pill: 20px;
+    --space-3: 16px;
 }
 
 /* Removed body styles - should be in global CSS, not component CSS */
 
-/* Prevent horizontal scroll globally */
-* {
-    box-sizing: border-box;
-}
-
-html,
-body {
-    overflow-x: hidden !important;
+/* Main Container */
+.staff-page.dashboard-container {
     max-width: 100vw;
+    width: 100%;
+    padding: 16px 24px;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    overflow-x: hidden;
+    overflow-y: auto;
+    background-color: var(--bg-page);
 }
 
 .dashboard-container {
@@ -79,49 +67,96 @@ body {
     overflow-y: auto;
 }
 
-/* --- HEADER --- */
+/* --- HEADER & ACTIONS --- */
 .dashboard-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: var(--space-3);
+    margin-bottom: 28px;
     flex-shrink: 0;
+    animation: fadeInDown 0.6s ease-out;
 }
 
-.main-title {
-    font-size: 22px;
-    font-weight: 700;
-    color: var(--text-title);
+@keyframes fadeInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.staff-page .main-title {
+    font-size: 28px;
+    font-weight: 800;
+    color: #0F172A;
     margin: 0;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.04em;
+    line-height: 1.1;
+    text-transform: uppercase;
 }
 
-.main-subtitle {
-    font-size: 13px;
-    color: var(--neutral-gray);
-    margin: 2px 0 0 0;
+.staff-page .main-subtitle {
+    font-size: 14px;
+    color: var(--text-muted);
+    margin: 4px 0 0 0;
+    font-weight: 500;
+    white-space: nowrap;
+    /* Enforce single line */
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-.btn-new-appointment {
-    height: 36px;
-    padding: 0 16px;
-    background-color: var(--primary);
+.staff-page .btn-new-appointment {
+    height: 40px;
+    /* Reduced from 48px to be more compact */
+    padding: 0 20px;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
     color: white;
     border: none;
     border-radius: var(--radius-btn);
-    font-weight: 600;
+    font-weight: 700;
     font-size: 13px;
     cursor: pointer;
-    box-shadow: 0 2px 6px rgba(38, 99, 255, 0.2);
-    transition: all 0.2s;
+    box-shadow: 0 4px 12px rgba(32, 125, 192, 0.2);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
+    position: relative;
+    overflow: hidden;
+    white-space: nowrap;
+    /* Enforce single line */
+}
+
+.btn-new-appointment::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 150%;
+    height: 150%;
+    background: rgba(255, 255, 255, 0.2);
+    transform: translate(-50%, -50%) scale(0);
+    border-radius: 50%;
+    transition: transform 0.5s;
 }
 
 .btn-new-appointment:hover {
-    transform: translateY(-1px);
-    background-color: var(--primary-hover);
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 15px 30px -8px rgba(32, 125, 192, 0.4);
+}
+
+.btn-new-appointment:hover::after {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0;
+}
+
+.btn-new-appointment:active {
+    transform: translateY(0) scale(0.98);
 }
 
 /* --- SEARCH & FILTER --- */
@@ -140,6 +175,13 @@ body {
     max-width: 100%;
     overflow-x: hidden;
     flex-wrap: wrap;
+}
+
+.search-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
 }
 
 .search-wrapper {
@@ -165,12 +207,15 @@ body {
     border: 1px solid #E2E8F0;
     border-radius: 10px;
     font-size: 14px;
+    font-weight: 500;
     color: var(--text-title);
     transition: all 0.2s ease;
+    letter-spacing: var(--ls-body);
 }
 
 .search-input-lg::placeholder {
     color: #94A3B8;
+    font-weight: 400;
 }
 
 .search-input-lg:focus {
@@ -304,8 +349,8 @@ body {
 .modern-table thead th {
     text-align: left;
     padding: 12px 20px;
-    font-size: 12px;
-    font-weight: 600;
+    font-size: 11px;
+    font-weight: 700;
     text-transform: uppercase;
     color: #64748B;
     border-bottom: 1px solid #E2E8F0;
@@ -313,6 +358,7 @@ body {
     position: sticky;
     top: 0;
     z-index: 10;
+    letter-spacing: 0.05em;
 }
 
 .modern-table thead th:last-child {
@@ -335,8 +381,9 @@ body {
 .modern-table tbody td {
     padding: 0 20px;
     vertical-align: middle;
-    font-size: 13px;
+    font-size: 14px;
     color: var(--text-title);
+    letter-spacing: var(--ls-body);
 }
 
 .modern-table tbody td:last-child {
@@ -368,10 +415,11 @@ body {
 }
 
 .info-group .primary {
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 600;
     color: var(--text-title);
     line-height: 1.4;
+    letter-spacing: var(--ls-body);
 }
 
 .info-group .secondary {
@@ -413,8 +461,8 @@ body {
 
 /* Status Pills - Staff Specific */
 .status-active {
-    background: rgba(34, 197, 94, 0.12);
-    color: #22C55E;
+    background: rgba(32, 125, 192, 0.12);
+    color: #207DC0;
 }
 
 .status-inactive {
@@ -476,7 +524,7 @@ body {
 
 /* Edit - Green */
 .btn-action.edit svg {
-    stroke: #059669;
+    stroke: #207DC0;
 }
 
 .btn-action.edit:hover {
@@ -577,8 +625,8 @@ body {
 
 /* Status pills - Staff specific (matches Flutter) */
 .status-pill.status-available {
-    background: rgba(16, 185, 129, 0.12);
-    color: #10b981;
+    background: rgba(32, 125, 192, 0.12);
+    color: #207DC0;
 }
 
 .status-pill.status-busy {
@@ -606,7 +654,7 @@ body {
 }
 
 .notification-toast.success {
-    background: #10b981;
+    background: #207DC0;
     color: white;
 }
 

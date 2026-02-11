@@ -20,11 +20,11 @@ const NotFoundPage = () => {
           <svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
             {/* Stethoscope illustration */}
             <circle cx="100" cy="100" r="80" stroke="#E5E7EB" strokeWidth="2" strokeDasharray="5 5" />
-            <path d="M70 60C70 60 80 50 100 50C120 50 130 60 130 60" stroke="#3B82F6" strokeWidth="3" strokeLinecap="round"/>
-            <line x1="70" y1="60" x2="70" y2="120" stroke="#3B82F6" strokeWidth="3" strokeLinecap="round"/>
-            <line x1="130" y1="60" x2="130" y2="120" stroke="#3B82F6" strokeWidth="3" strokeLinecap="round"/>
-            <circle cx="70" cy="130" r="15" fill="#3B82F6"/>
-            <circle cx="130" cy="130" r="15" fill="#3B82F6"/>
+            <path d="M70 60C70 60 80 50 100 50C120 50 130 60 130 60" stroke="#207DC0" strokeWidth="3" strokeLinecap="round"/>
+            <line x1="70" y1="60" x2="70" y2="120" stroke="#207DC0" strokeWidth="3" strokeLinecap="round"/>
+            <line x1="130" y1="60" x2="130" y2="120" stroke="#207DC0" strokeWidth="3" strokeLinecap="round"/>
+            <circle cx="70" cy="130" r="15" fill="#207DC0"/>
+            <circle cx="130" cy="130" r="15" fill="#207DC0"/>
             <circle cx="70" cy="130" r="10" fill="white" opacity="0.5"/>
             <circle cx="130" cy="130" r="10" fill="white" opacity="0.5"/>
             
@@ -35,8 +35,8 @@ const NotFoundPage = () => {
             </g>
             
             {/* Floating particles */}
-            <circle cx="40" cy="40" r="3" fill="#3B82F6" className="particle particle-1"/>
-            <circle cx="160" cy="50" r="2" fill="#10B981" className="particle particle-2"/>
+            <circle cx="40" cy="40" r="3" fill="#207DC0" className="particle particle-1"/>
+            <circle cx="160" cy="50" r="2" fill="#207DC0" className="particle particle-2"/>
             <circle cx="50" cy="150" r="4" fill="#F59E0B" className="particle particle-3"/>
             <circle cx="150" cy="140" r="3" fill="#8B5CF6" className="particle particle-4"/>
           </svg>

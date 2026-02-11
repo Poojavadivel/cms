@@ -42,7 +42,7 @@ const TestConnection = () => {
       // First get a patient
       const patientsResponse = await AuthService.get('/patients');
       const patients = patientsResponse.data || patientsResponse;
-      
+
       if (!patients || patients.length === 0) {
         setResult('ERROR: No patients found. Please create a patient first.');
         setLoading(false);
@@ -50,7 +50,7 @@ const TestConnection = () => {
       }
 
       const patient = patients[0];
-      
+
       // Create appointment
       const appointmentData = {
         patientId: patient._id || patient.id,
@@ -108,7 +108,7 @@ const TestConnection = () => {
           style={{
             width: '100%',
             padding: '10px 16px',
-            backgroundColor: loading ? '#9ca3af' : '#3b82f6',
+            backgroundColor: loading ? '#9ca3af' : '#207DC0',
             color: 'white',
             border: 'none',
             borderRadius: '8px',
@@ -124,7 +124,7 @@ const TestConnection = () => {
           style={{
             width: '100%',
             padding: '10px 16px',
-            backgroundColor: loading ? '#9ca3af' : '#10b981',
+            backgroundColor: loading ? '#9ca3af' : '#207DC0',
             color: 'white',
             border: 'none',
             borderRadius: '8px',

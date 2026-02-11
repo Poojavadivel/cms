@@ -17,10 +17,10 @@ class LoggerService {
     this.maxLogs = 1000; // Maximum logs to keep in memory
     this.sessionId = this.generateSessionId();
     this.startTime = new Date();
-    
+
     // Load existing logs from localStorage
     this.loadLogsFromStorage();
-    
+
     // Log session start
     this.info('SYSTEM', 'Logger initialized', { sessionId: this.sessionId });
   }
@@ -55,12 +55,12 @@ class LoggerService {
    */
   addLog(entry) {
     this.logs.push(entry);
-    
+
     // Keep only last maxLogs entries
     if (this.logs.length > this.maxLogs) {
       this.logs = this.logs.slice(-this.maxLogs);
     }
-    
+
     // Save to localStorage
     this.saveLogsToStorage();
   }
@@ -85,10 +85,10 @@ class LoggerService {
     try {
       const savedLogs = localStorage.getItem('app_logs');
       const savedSession = localStorage.getItem('app_logs_session');
-      
+
       if (savedLogs) {
         const parsedLogs = JSON.parse(savedLogs);
-        
+
         // If it's a new session, prefix old logs
         if (savedSession !== this.sessionId) {
           this.logs = parsedLogs.map(log => ({
@@ -110,11 +110,11 @@ class LoggerService {
   log(level, category, message, data = null, emoji = '📝') {
     const entry = this.formatLogEntry(level, category, message, data);
     this.addLog(entry);
-    
+
     // Console output with color and emoji
     const timestamp = new Date().toLocaleTimeString();
     const logMessage = `${emoji} [${timestamp}] [${level}] [${category}] ${message}`;
-    
+
     switch (level) {
       case 'ERROR':
         console.error(logMessage, data || '');
@@ -123,10 +123,10 @@ class LoggerService {
         console.warn(logMessage, data || '');
         break;
       case 'SUCCESS':
-        console.log(`%c${logMessage}`, 'color: #10b981; font-weight: bold', data || '');
+        console.log(`%c${logMessage}`, 'color: #207DC0; font-weight: bold', data || '');
         break;
       case 'API':
-        console.log(`%c${logMessage}`, 'color: #3b82f6; font-weight: bold', data || '');
+        console.log(`%c${logMessage}`, 'color: #207DC0; font-weight: bold', data || '');
         break;
       default:
         console.log(logMessage, data || '');
@@ -282,12 +282,12 @@ class LoggerService {
       log.message,
       log.data ? JSON.stringify(log.data) : '',
     ]);
-    
+
     const csv = [
       headers.join(','),
       ...rows.map(row => row.map(cell => `"${cell}"`).join(',')),
     ].join('\n');
-    
+
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -303,11 +303,11 @@ class LoggerService {
    */
   printLogs(filter = null) {
     const logsToPrint = filter
-      ? this.logs.filter(log => 
-          log.level === filter || log.category === filter
-        )
+      ? this.logs.filter(log =>
+        log.level === filter || log.category === filter
+      )
       : this.logs;
-    
+
     console.table(logsToPrint);
   }
 
@@ -323,13 +323,13 @@ class LoggerService {
       byLevel: {},
       byCategory: {},
     };
-    
+
     // Count by level
     this.logs.forEach(log => {
       stats.byLevel[log.level] = (stats.byLevel[log.level] || 0) + 1;
       stats.byCategory[log.category] = (stats.byCategory[log.category] || 0) + 1;
     });
-    
+
     return stats;
   }
 

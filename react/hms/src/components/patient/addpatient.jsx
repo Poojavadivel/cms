@@ -1,20 +1,24 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
-    MdClose,
     MdPerson,
-    MdPhone,
     MdMedicalServices,
-    MdFavorite,
     MdCheck,
-    MdArrowBack,
     MdArrowForward,
-    MdSave,
-    MdHome,
-    MdLocationCity,
-    MdLocalHospital
+    MdArrowBack,
+    MdLocationOn,
+    MdPhone,
+    MdEmail,
+    MdCalendarToday,
+    MdWarning,
+    MdHeight,
+    MdMonitorWeight,
+    MdOpacity,
+    MdUploadFile,
+    MdDelete
 } from 'react-icons/md';
 import {
-    FiUser, FiPhone, FiHeart, FiActivity, FiCheck, FiX, FiAlertCircle, FiArrowRight
+    FiUser, FiPhone, FiHeart, FiActivity, FiShield, FiFileText, FiLoader, FiX
 } from 'react-icons/fi';
 import patientsService from '../../services/patientsService';
 import doctorService from '../../services/doctorService';
@@ -22,22 +26,71 @@ import scannerService from '../../services/scannerService';
 import appointmentsService from '../../services/appointmentsService';
 import './addpatient.css';
 
-// Move InputGroup OUTSIDE the component to prevent recreation on every render
-const InputGroup = ({ label, error, required, children, className = '' }) => (
-    <div className={`group relative ${className}`}>
-        <div className={`
-            border rounded-xl transition-all duration-200 bg-white
-            ${error ? 'border-red-500 ring-2 ring-red-100' : 'border-slate-200 group-focus-within:border-blue-400 group-focus-within:ring-2 group-focus-within:ring-blue-100'}
-        `}>
-            <label className="absolute top-2 left-3 text-[10px] uppercase tracking-wider font-bold text-slate-400 pointer-events-none">
-                {label} {required && <span className="text-red-500">*</span>}
-            </label>
-            <div className="pt-6 pb-2 px-3">
-                {children}
+// --- Reusable Components ---
+
+const StepIndicator = ({ step, currentStep, icon, label, description, isLast }) => {
+    const isActive = currentStep === step;
+    const isCompleted = currentStep > step;
+
+    return (
+        <div className="relative group">
+            {/* Connector Line */}
+            {!isLast && (
+                <div className={`absolute left-5 top-10 bottom-[-48px] w-0.5 transition-all duration-500 delay-100 ${isCompleted ? 'bg-[#207DC0]' : 'bg-white/10'}`} />
+            )}
+
+            <div className="flex items-center gap-5 relative z-10">
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center border-2 transition-all duration-500 ${isActive ? 'bg-white text-[#207DC0] border-white shadow-xl scale-110' : isCompleted ? 'bg-[#207DC0] border-[#207DC0] text-white' : 'bg-white/5 border-white/10 text-white/30'}`}>
+                    {isCompleted ? <MdCheck size={16} /> : React.cloneElement(icon, { size: 16 })}
+                </div>
+                <div className="flex flex-col">
+                    <span className={`text-[9px] font-black uppercase tracking-widest ${isActive ? 'text-white' : 'text-white/40'}`}>Step 0{step + 1}</span>
+                    <span className={`text-[13px] font-bold ${isActive ? 'text-white' : 'text-white/60'}`}>{label}</span>
+                </div>
             </div>
         </div>
+    );
+};
+
+const PremiumInput = ({ label, error, required, children, className = '', icon }) => (
+    <div className={`group relative ${className}`}>
+        <label className={`block text-xs font-extrabold uppercase tracking-wider mb-2 ml-1 transition-colors
+            ${error ? 'text-red-500' : 'text-slate-500 group-focus-within:text-[#207DC0]'}`}>
+            {label} {required && <span className="text-red-400">*</span>}
+        </label>
+        <div className={`
+            relative flex items-center bg-white border rounded-xl overflow-hidden transition-all duration-300 shadow-sm
+            ${error
+                ? 'border-red-300 ring-2 ring-red-50'
+                : 'border-slate-200 hover:border-slate-300 group-focus-within:border-[#207DC0] group-focus-within:ring-4 group-focus-within:ring-[#207DC0]/10'
+            }
+        `}>
+            {icon && (
+                <div className={`pl-3 pr-1.5 text-base transition-colors ${error ? 'text-red-400' : 'text-slate-400 group-focus-within:text-[#207DC0]'}`}>
+                    {icon}
+                </div>
+            )}
+            <div className={`flex-1 ${icon ? '' : 'pl-4'} pr-4 py-2`}>
+                {children}
+            </div>
+            {error && (
+                <div className="pr-4 text-red-500 animate-pulse">
+                    <MdWarning />
+                </div>
+            )}
+        </div>
+        {error && (
+            <motion.p
+                initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }}
+                className="text-red-500 text-[10px] sm:text-xs mt-1.5 ml-1 font-medium flex items-center gap-1"
+            >
+                <MdWarning size={12} /> {typeof error === 'string' ? error : 'This field is required'}
+            </motion.p>
+        )}
     </div>
 );
+
+// --- Main Component ---
 
 const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
     // --- State ---
@@ -45,439 +98,128 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
     const [loading, setLoading] = useState(false);
     const [fetchingData, setFetchingData] = useState(false);
     const [errors, setErrors] = useState({});
-    const [fieldErrors, setFieldErrors] = useState({});
-
-    // NEW: Doctor dropdown state
     const [doctors, setDoctors] = useState([]);
-    const [loadingDoctors, setLoadingDoctors] = useState(false);
 
-    // NEW: File upload and scanner state
+    // File Upload State
     const [uploadedFiles, setUploadedFiles] = useState([]);
     const [uploading, setUploading] = useState(false);
     const [scannerError, setScannerError] = useState(null);
-    const [scannedData, setScannedData] = useState(null);
 
-    // Generate temp patient ID for linking documents during creation
-    const [tempPatientId] = useState(`temp-${Math.floor(Math.random() * 999999)}`);
-
+    // Form State
     const [formData, setFormData] = useState({
-        // Step 1: Personal
-        firstName: '',
-        lastName: '',
-        dateOfBirth: '', // NEW: Date of birth
-        age: '',
-        gender: '', // 'Male', 'Female', 'Other'
-        bloodGroup: '',
-
-        // Step 2: Contact
-        phone: '',
-        email: '',
-        emergencyContactName: '',
-        emergencyContactPhone: '',
-        houseNo: '',
-        street: '',
-        city: '',
-        state: '',
-        pincode: '', // NEW: Pincode/Zipcode
-        country: 'India', // NEW: Country field
-
-        // Step 3: Medical
-        assignedDoctor: '', // NEW: Doctor assignment
-        knownConditions: '',
-        allergies: '',
-        currentMedications: '',
-        pastSurgeries: '',
-        notes: '',
-        lastVisit: '', // NEW: Last visit date
-
-        // Step 4: Vitals
-        height: '',
-        weight: '',
-        bmi: '',
-        bp: '',
-        pulse: '',
-        spo2: '',
-
-        // Step 5: Insurance (NEW)
-        insuranceNumber: '',
-        insuranceProvider: '',
-        insuranceExpiry: '',
-        patientCode: '',
-
-        // Step 6: Appointment (Optional)
-        appointmentDate: '',
-        appointmentTime: '',
-        appointmentReason: ''
+        firstName: '', lastName: '', dateOfBirth: '', age: '', gender: '', bloodGroup: '',
+        phone: '', email: '', emergencyContactName: '', emergencyContactPhone: '',
+        houseNo: '', street: '', city: '', state: '', pincode: '', country: 'India',
+        assignedDoctor: '', knownConditions: '', allergies: '', currentMedications: '',
+        pastSurgeries: '', notes: '', lastVisit: '',
+        height: '', weight: '', bmi: '', bp: '', pulse: '', spo2: '',
+        insuranceNumber: '', insuranceProvider: '', insuranceExpiry: '',
+        appointmentDate: '', appointmentTime: '', appointmentReason: '', patientCode: ''
     });
 
-    // Reset form when modal opens
+    // Reset & Load Data
     useEffect(() => {
         if (isOpen) {
             setCurrentStep(0);
-            setLoading(false);
-            setFetchingData(false);
             setErrors({});
-            setFieldErrors({});
             setUploadedFiles([]);
             setScannerError(null);
-            setScannedData(null);
-
-            const initialData = {
-                firstName: '', lastName: '', dateOfBirth: '', age: '', gender: '', bloodGroup: '',
-                phone: '', email: '', emergencyContactName: '', emergencyContactPhone: '',
-                houseNo: '', street: '', city: '', state: '', pincode: '', country: 'India',
-                assignedDoctor: '', knownConditions: '', allergies: '', currentMedications: '',
-                pastSurgeries: '', notes: '', lastVisit: '',
-                height: '', weight: '', bmi: '', bp: '', pulse: '', spo2: '',
-                insuranceNumber: '', insuranceProvider: '', insuranceExpiry: '',
-                appointmentDate: '', appointmentTime: '', appointmentReason: ''
-            };
+            fetchDoctors();
 
             if (patientId) {
-                // Edit Mode: Fetch and Fill
                 setFetchingData(true);
                 patientsService.fetchPatientById(patientId).then(patient => {
                     setFormData({
                         firstName: patient.firstName || (patient.name ? patient.name.split(' ')[0] : ''),
                         lastName: patient.lastName || (patient.name ? patient.name.split(' ').slice(1).join(' ') : ''),
-                        dateOfBirth: patient.dateOfBirth || patient.dob || '',
-                        age: patient.age?.toString() || '',
-                        gender: patient.gender || '',
-                        bloodGroup: patient.bloodGroup || '',
-                        phone: patient.phone || '',
-                        email: patient.email || '',
-                        emergencyContactName: patient.emergencyContactName || patient.metadata?.emergencyContactName || '',
-                        emergencyContactPhone: patient.emergencyContactPhone || patient.metadata?.emergencyContactPhone || '',
-                        houseNo: patient.address?.houseNo || patient.houseNo || '',
-                        street: patient.address?.street || patient.street || '',
-                        city: patient.address?.city || patient.city || '',
-                        state: patient.address?.state || patient.state || '',
-                        pincode: patient.address?.pincode || patient.pincode || '',
-                        country: patient.address?.country || patient.country || 'India',
-                        assignedDoctor: patient.assignedDoctor || patient.doctorId || '',
+                        dateOfBirth: patient.dateOfBirth ? new Date(patient.dateOfBirth).toISOString().split('T')[0] : '',
+                        age: patient.age || '',
+                        gender: patient.gender || '', bloodGroup: patient.bloodGroup || '',
+                        phone: patient.phone || '', email: patient.email || '',
+                        emergencyContactName: patient.emergencyContactName || '', emergencyContactPhone: patient.emergencyContactPhone || '',
+                        houseNo: patient.houseNo || '', street: patient.street || '',
+                        city: patient.city || '', state: patient.state || '',
+                        pincode: patient.pincode || '', country: patient.country || 'India',
+                        assignedDoctor: patient.doctorId || '',
                         knownConditions: Array.isArray(patient.medicalHistory) ? patient.medicalHistory.join(', ') : (patient.medicalHistory || ''),
                         allergies: Array.isArray(patient.allergies) ? patient.allergies.join(', ') : (patient.allergies || ''),
-                        currentMedications: patient.currentMedications || patient.metadata?.prescriptions || '',
-                        pastSurgeries: patient.pastSurgeries || '',
-                        notes: patient.notes || '',
-                        lastVisit: patient.lastVisit || '',
-                        height: patient.vitals?.heightCm || patient.height || '',
-                        weight: patient.vitals?.weightKg || patient.weight || '',
-                        bmi: patient.vitals?.bmi || patient.bmi || '',
-                        bp: patient.vitals?.bp || patient.bp || '',
-                        pulse: patient.vitals?.pulse || patient.pulse || '',
-                        spo2: patient.vitals?.spo2 || patient.oxygen || '',
-                        insuranceNumber: patient.insuranceNumber || patient.metadata?.insuranceNumber || '',
-                        insuranceProvider: patient.insuranceProvider || patient.metadata?.insuranceProvider || '',
-                        insuranceExpiry: patient.insuranceExpiry || patient.metadata?.insuranceExpiry || '',
-                        patientCode: patient.patientCode || patient.metadata?.patientCode || ''
+                        currentMedications: patient.currentMedications || '',
+                        height: patient.height || '', weight: patient.weight || '',
+                        bmi: patient.bmi || '', bp: patient.bp || '',
+                        pulse: patient.pulse || '', spo2: patient.oxygen || '',
+                        insuranceNumber: patient.insuranceNumber || '',
+                        insuranceProvider: patient.insuranceProvider || '',
+                        insuranceExpiry: patient.expiryDate || '',
+                        patientCode: patient.patientCode || ''
                     });
-                    setFetchingData(false);
-                }).catch(error => {
-                    console.error('Failed to fetch patient details for edit:', error);
-                    alert('Failed to load patient details');
-                    setFetchingData(false);
-                    onClose();
-                });
+                }).catch(console.error).finally(() => setFetchingData(false));
             } else {
-                // Add Mode: Reset
-                setFormData(initialData);
+                // Reset for new patient
+                setFormData({
+                    firstName: '', lastName: '', dateOfBirth: '', age: '', gender: '', bloodGroup: '',
+                    phone: '', email: '', emergencyContactName: '', emergencyContactPhone: '',
+                    houseNo: '', street: '', city: '', state: '', pincode: '', country: 'India',
+                    assignedDoctor: '', knownConditions: '', allergies: '', currentMedications: '',
+                    pastSurgeries: '', notes: '', lastVisit: '',
+                    height: '', weight: '', bmi: '', bp: '', pulse: '', spo2: '',
+                    insuranceNumber: '', insuranceProvider: '', insuranceExpiry: '',
+                    appointmentDate: '', appointmentTime: '', appointmentReason: '', patientCode: ''
+                });
             }
-
-            // Fetch doctors list
-            fetchDoctors();
         }
-    }, [isOpen, patientId, onClose]);
+    }, [isOpen, patientId]);
 
-    // ESC key handler for closing modal
+    // Close on Escape
     useEffect(() => {
-        const handleEscape = (e) => {
-            if (e.key === 'Escape' && isOpen && !loading) {
-                onClose();
-            }
+        const handleLimit = (e) => {
+            if (e.key === 'Escape' && isOpen && !loading) onClose();
         };
-
-        document.addEventListener('keydown', handleEscape);
-        return () => document.removeEventListener('keydown', handleEscape);
+        window.addEventListener('keydown', handleLimit);
+        return () => window.removeEventListener('keydown', handleLimit);
     }, [isOpen, loading, onClose]);
 
-    // Fetch doctors for dropdown
-    const fetchDoctors = useCallback(async () => {
-        setLoadingDoctors(true);
+    const fetchDoctors = async () => {
         try {
-            console.log('🔍 [DOCTOR DROPDOWN] Fetching doctors from API...');
-
-            // Call real doctor service
-            const doctors = await doctorService.fetchAllDoctors();
-
-            console.log(`✅ [DOCTOR DROPDOWN] Received ${doctors.length} doctors:`, doctors);
-
-            setDoctors(doctors);
-        } catch (error) {
-            console.error('❌ [DOCTOR DROPDOWN] Failed to fetch doctors:', error);
-
-            // Fallback to mock data if API fails (for development)
-            console.warn('⚠️ [DOCTOR DROPDOWN] Using mock data as fallback');
+            const list = await doctorService.fetchAllDoctors();
+            setDoctors(list);
+        } catch (e) {
+            console.warn('Using mock doctors');
             setDoctors([
-                { id: 'doc1', name: 'Dr. Sharma', specialization: 'General Medicine' },
-                { id: 'doc2', name: 'Dr. Patel', specialization: 'Cardiology' },
-                { id: 'doc3', name: 'Dr. Kumar', specialization: 'Pediatrics' }
+                { id: 'doc1', name: 'Dr. Sharma', specialization: 'General' },
+                { id: 'doc2', name: 'Dr. Patel', specialization: 'Cardiology' }
             ]);
-        } finally {
-            setLoadingDoctors(false);
         }
-    }, []);
+    };
 
-    // Validation helper functions
-    const validateEmail = useCallback((email) => {
-        if (!email) return true; // optional field
-        const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return re.test(email);
-    }, []);
-
-    const validatePhone = useCallback((phone) => {
-        if (!phone) return false; // required field
-        const cleaned = phone.replace(/\D/g, '');
-        return cleaned.length >= 10;
-    }, []);
-
-    const validateBP = useCallback((bp) => {
-        if (!bp) return true; // optional field
-        const re = /^\d{2,3}\/\d{2,3}$/;
-        return re.test(bp);
-    }, []);
-
-    // Calculate age from date of birth
+    // Calculate Age
     const calculateAge = useCallback((dob) => {
         if (!dob) return '';
-        const birthDate = new Date(dob);
-        const today = new Date();
-        let age = today.getFullYear() - birthDate.getFullYear();
-        const monthDiff = today.getMonth() - birthDate.getMonth();
-
-        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-            age--;
-        }
-
-        return age.toString();
+        const diff = Date.now() - new Date(dob).getTime();
+        return Math.floor(diff / (1000 * 60 * 60 * 24 * 365.25)).toString();
     }, []);
 
-    // --- Logic ---
-
-    const handleInputChange = useCallback((e) => {
+    // Handlers
+    const handleInputChange = (e) => {
         const { name, value } = e.target;
-
-        // Clear field error when user starts typing
-        if (fieldErrors[name]) {
-            setFieldErrors(prev => {
-                const updated = { ...prev };
-                delete updated[name];
-                return updated;
-            });
-        }
-
         setFormData(prev => {
-            const newData = { ...prev, [name]: value };
+            const next = { ...prev, [name]: value };
 
-            // Auto-calculate age from DOB
-            if (name === 'dateOfBirth') {
-                newData.age = calculateAge(value);
-            }
-
-            // Auto-calculate BMI if height/weight change with validation
-            if (name === 'height' || name === 'weight') {
+            // Auto-logic
+            if (name === 'dateOfBirth') next.age = calculateAge(value);
+            if ((name === 'height' || name === 'weight')) {
                 const h = name === 'height' ? value : prev.height;
                 const w = name === 'weight' ? value : prev.weight;
-
-                // Only calculate if both values are positive numbers
                 if (h && w && parseFloat(h) > 0 && parseFloat(w) > 0) {
                     const heightM = parseFloat(h) / 100;
-                    const bmi = (parseFloat(w) / (heightM * heightM)).toFixed(1);
-                    newData.bmi = bmi;
-                } else {
-                    newData.bmi = '';
+                    next.bmi = (parseFloat(w) / (heightM * heightM)).toFixed(1);
                 }
             }
-
-            return newData;
+            return next;
         });
-    }, [calculateAge, fieldErrors]);
-
-    const handleSelectGender = useCallback((gender) => {
-        setFormData(prev => ({ ...prev, gender }));
-
-        // Clear error
-        if (fieldErrors.gender) {
-            setFieldErrors(prev => {
-                const updated = { ...prev };
-                delete updated.gender;
-                return updated;
-            });
-        }
-    }, [fieldErrors]);
-
-    const validateStep = () => {
-        const newErrors = {};
-
-        // Step 1: Personal Info
-        if (currentStep === 0) {
-            if (!formData.firstName?.trim()) newErrors.firstName = true;
-            if (!formData.lastName?.trim()) newErrors.lastName = true;
-            if (!formData.age) newErrors.age = true;
-            if (!formData.gender) newErrors.gender = true;
-        }
-
-        // Step 2: Contact
-        if (currentStep === 1) {
-            if (!formData.phone?.trim()) newErrors.phone = true;
-            if (!formData.city?.trim()) newErrors.city = true;
-        }
-
-        setErrors(newErrors);
-        return Object.keys(newErrors).length === 0;
+        if (errors[name]) setErrors(prev => ({ ...prev, [name]: null }));
     };
 
-    const handleNext = () => {
-        if (validateStep()) {
-            setErrors({}); // Clear errors on successful validation
-            setCurrentStep(prev => prev + 1);
-        }
-    };
-
-    const handleBack = () => {
-        setErrors({});
-        setCurrentStep(prev => prev - 1);
-    };
-
-    const handleSubmit = async () => {
-        // Validate before submit
-        if (!validateStep()) {
-            return;
-        }
-
-        setLoading(true);
-        try {
-            // Basic validation strict check
-            if (!formData.firstName || !formData.phone) {
-                throw new Error('First Name and Phone Number are required.');
-            }
-
-            const safeInt = (val) => (val && !isNaN(parseInt(val)) ? parseInt(val) : null);
-            const safeFloat = (val) => (val && !isNaN(parseFloat(val)) ? parseFloat(val) : null);
-
-            // Payload construction aligned with PatientDetails.toJSON()
-            const payload = {
-                firstName: formData.firstName,
-                lastName: formData.lastName || '',
-                // Combine for name if backend needs it (toJSON uses name property)
-                name: `${formData.firstName} ${formData.lastName || ''}`.trim(),
-                dateOfBirth: formData.dateOfBirth || null,
-                age: safeInt(formData.age),
-                gender: formData.gender || null,
-                bloodGroup: formData.bloodGroup || null,
-                phone: formData.phone,
-                email: formData.email || null,
-
-                address: {
-                    houseNo: formData.houseNo || '',
-                    street: formData.street || '',
-                    city: formData.city || '',
-                    state: formData.state || '',
-                    pincode: formData.pincode || '',
-                    country: formData.country || 'India',
-                    line1: `${formData.houseNo || ''} ${formData.street || ''} ${formData.city || ''}`.trim()
-                },
-
-                doctorId: formData.assignedDoctor || null,
-                lastVisit: formData.lastVisit || null,
-
-                // Root level fields that match PatientDetails
-                allergies: formData.allergies ? formData.allergies.split(',').map(s => s.trim()) : [],
-                notes: `${formData.notes || ''}\nPast Surgeries: ${formData.pastSurgeries || 'None'}`.trim(),
-
-                // Metadata strictly for fields that live there in toJSON
-                metadata: {
-                    emergencyContactName: formData.emergencyContactName,
-                    emergencyContactPhone: formData.emergencyContactPhone,
-                    medicalHistory: formData.knownConditions ? formData.knownConditions.split(',').map(s => s.trim()) : [],
-                    prescriptions: formData.currentMedications ? formData.currentMedications.split(',').map(s => s.trim()) : [],
-                    insuranceNumber: formData.insuranceNumber || null,
-                    insuranceProvider: formData.insuranceProvider || null,
-                    insuranceExpiry: formData.insuranceExpiry || null,
-                },
-
-                // Vitals Object - Simplified to match PatientDetails.toJSON ('vitals' keys)
-                vitals: {
-                    // Use simple keys as per toJSON
-                    bp: formData.bp || null,
-                    heartRate: safeInt(formData.pulse), // Backend might map this or pulse
-                    pulse: safeInt(formData.pulse),
-                    temperature: null,
-                    spo2: safeFloat(formData.spo2),
-                    oxygen: safeFloat(formData.spo2), // Alias
-                    weightKg: safeFloat(formData.weight),
-                    heightCm: safeFloat(formData.height),
-                    bmi: safeFloat(formData.bmi)
-                }
-            };
-
-            console.log('Sending Payload:', payload);
-
-            if (patientId) {
-                await patientsService.updatePatient(patientId, payload);
-                if (onSuccess) onSuccess();
-            } else {
-                const newPatient = await patientsService.createPatient(payload);
-                let appointmentCreated = false;
-
-                // Create optional initial appointment
-                if (formData.appointmentDate) {
-                    try {
-                        const apptDateStr = formData.appointmentDate;
-                        const apptTimeStr = formData.appointmentTime || '09:00';
-                        // Handle date time construction properly
-                        const apptDateTime = new Date(`${apptDateStr}T${apptTimeStr}`);
-
-                        const apptPayload = {
-                            patientId: newPatient.id || newPatient._id,
-                            clientName: newPatient.name || `${newPatient.firstName} ${newPatient.lastName || ''}`.trim(),
-                            date: apptDateTime,
-                            time: apptTimeStr,
-                            appointmentType: 'Consultation',
-                            mode: 'In-clinic',
-                            chiefComplaint: formData.appointmentReason || 'Initial Visit',
-                            reason: formData.appointmentReason || 'Initial Visit',
-                            notes: 'Scheduled during patient registration',
-                            status: 'Scheduled',
-                            startAt: apptDateTime.toISOString()
-                        };
-
-                        console.log('📅 Creating initial appointment:', apptPayload);
-                        await appointmentsService.createAppointment(apptPayload);
-                        appointmentCreated = true;
-                    } catch (apptError) {
-                        console.error('Failed to create initial appointment:', apptError);
-                        alert('Patient created successfully, but failed to schedule appointment: ' + (apptError.message || 'Unknown error'));
-                    }
-                }
-
-                if (onSuccess) onSuccess(newPatient, appointmentCreated);
-            }
-
-            // Close and Refresh
-            setLoading(false);
-            onClose();
-        } catch (error) {
-            console.error('Submission error:', error);
-            // Detailed error logging
-            const backendMsg = error.response?.data?.message || error.message || 'Unknown error';
-            const backendDetails = error.response?.data?.error || '';
-            alert(`Failed to save: ${backendMsg} \n ${backendDetails}`);
-            setLoading(false);
-        }
-    };
-
-    // File upload handlers
+    // File Upload Handler
     const handleFileUpload = async (event) => {
         const files = event.target.files;
         if (!files || files.length === 0) return;
@@ -487,49 +229,23 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
 
         try {
             const file = files[0];
-            console.log('📤 Uploading file:', file.name);
-
-            // Use temp patient ID for new patients, real ID for editing
-            const patientIdForUpload = patientId || tempPatientId;
-
-            // Scan and extract data
-            const scannedResult = await scannerService.scanAndExtractMedicalData(file, patientIdForUpload);
-
-            console.log('✅ File scanned successfully:', scannedResult);
-
-            // Store scanned data
-            setScannedData(scannedResult);
+            // Use temp ID if new patient
+            const pid = patientId || `temp-${Date.now()}`;
+            const scannedResult = await scannerService.scanAndExtractMedicalData(file, pid);
 
             // Auto-fill form fields if data was extracted
-            if (scannedResult.medicalHistory) {
-                const current = formData.knownConditions;
+            if (scannedResult) {
                 setFormData(prev => ({
                     ...prev,
-                    knownConditions: current ? `${current}, ${scannedResult.medicalHistory}` : scannedResult.medicalHistory
+                    knownConditions: prev.knownConditions ? `${prev.knownConditions}, ${scannedResult.medicalHistory || ''}` : (scannedResult.medicalHistory || ''),
+                    allergies: prev.allergies ? `${prev.allergies}, ${scannedResult.allergies || ''}` : (scannedResult.allergies || ''),
+                    currentMedications: prev.currentMedications ? `${prev.currentMedications}, ${scannedResult.medications || ''}` : (scannedResult.medications || '')
                 }));
             }
 
-            if (scannedResult.allergies) {
-                const current = formData.allergies;
-                setFormData(prev => ({
-                    ...prev,
-                    allergies: current ? `${current}, ${scannedResult.allergies}` : scannedResult.allergies
-                }));
-            }
-
-            if (scannedResult.medications) {
-                const current = formData.currentMedications;
-                setFormData(prev => ({
-                    ...prev,
-                    currentMedications: current ? `${current}, ${scannedResult.medications}` : scannedResult.medications
-                }));
-            }
-
-            // Add to uploaded files list
             setUploadedFiles(prev => [...prev, { file, name: file.name, scannedResult }]);
-
         } catch (error) {
-            console.error('❌ File upload error:', error);
+            console.error('File upload error:', error);
             setScannerError(error.message || 'Failed to process document');
         } finally {
             setUploading(false);
@@ -538,707 +254,538 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
 
     const removeUploadedFile = (index) => {
         setUploadedFiles(prev => prev.filter((_, i) => i !== index));
+    };
 
-        // Clear scanned data if all files are removed
-        if (uploadedFiles.length === 1) {
-            setScannedData(null);
+    const validateStep = () => {
+        const newErrors = {};
+        if (currentStep === 0) {
+            if (!formData.firstName.trim()) newErrors.firstName = true;
+            if (!formData.lastName.trim()) newErrors.lastName = true;
+            if (!formData.gender) newErrors.gender = true;
+            // Either age or DOB is fine, but usually at least one
+            if (!formData.age && !formData.dateOfBirth) newErrors.age = true;
+        }
+        if (currentStep === 1) {
+            if (!formData.phone.trim() || formData.phone.length < 10) newErrors.phone = 'Valid phone number required';
+        }
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
+
+    const handleNext = () => {
+        if (validateStep()) setCurrentStep(p => p + 1);
+    };
+
+    const handleSubmit = async () => {
+        if (!validateStep()) return;
+        setLoading(true);
+        try {
+            const payload = {
+                firstName: formData.firstName,
+                lastName: formData.lastName,
+                name: `${formData.firstName} ${formData.lastName}`.trim(),
+                dateOfBirth: formData.dateOfBirth || null,
+                age: formData.age ? parseInt(formData.age) : null,
+                gender: formData.gender,
+                bloodGroup: formData.bloodGroup,
+                phone: formData.phone,
+                email: formData.email,
+                address: {
+                    houseNo: formData.houseNo, street: formData.street,
+                    city: formData.city, state: formData.state,
+                    pincode: formData.pincode, country: formData.country,
+                    line1: `${formData.houseNo} ${formData.street} ${formData.city}`.trim()
+                },
+                doctorId: formData.assignedDoctor || null,
+                metadata: {
+                    emergencyContactName: formData.emergencyContactName,
+                    emergencyContactPhone: formData.emergencyContactPhone,
+                    medicalHistory: formData.knownConditions ? formData.knownConditions.split(',').map(s => s.trim()) : [],
+                    prescriptions: formData.currentMedications ? formData.currentMedications.split(',').map(s => s.trim()) : [],
+                    allergies: formData.allergies ? formData.allergies.split(',').map(s => s.trim()) : [],
+                    insuranceNumber: formData.insuranceNumber,
+                    insuranceProvider: formData.insuranceProvider
+                },
+                // Flattened fields for some backward compatibility if needed
+                medicalHistory: formData.knownConditions ? formData.knownConditions.split(',').map(s => s.trim()) : [],
+                allergies: formData.allergies ? formData.allergies.split(',').map(s => s.trim()) : [],
+                currentMedications: formData.currentMedications,
+
+                vitals: {
+                    heightCm: formData.height ? parseFloat(formData.height) : null,
+                    weightKg: formData.weight ? parseFloat(formData.weight) : null,
+                    bmi: formData.bmi ? parseFloat(formData.bmi) : null,
+                    bp: formData.bp,
+                    pulse: formData.pulse,
+                    spo2: formData.spo2
+                }
+            };
+
+            let resultPatient;
+            let appointmentCreated = false;
+
+            if (patientId) {
+                resultPatient = await patientsService.updatePatient(patientId, payload);
+            } else {
+                resultPatient = await patientsService.createPatient(payload);
+                if (formData.appointmentDate) {
+                    await appointmentsService.createAppointment({
+                        patientId: resultPatient.id || resultPatient._id,
+                        clientName: resultPatient.name,
+                        date: new Date(`${formData.appointmentDate}T${formData.appointmentTime || '09:00'}`),
+                        time: formData.appointmentTime || '09:00',
+                        appointmentType: 'Consultation',
+                        status: 'Scheduled',
+                        reason: formData.appointmentReason || 'Initial Visit',
+                        notes: 'Created during registration',
+                        startAt: new Date(`${formData.appointmentDate}T${formData.appointmentTime || '09:00'}`).toISOString()
+                    });
+                    appointmentCreated = true;
+                }
+            }
+            if (onSuccess) onSuccess(resultPatient, appointmentCreated);
+            onClose();
+        } catch (error) {
+            console.error('Save failed', error);
+            alert('Error saving patient: ' + (error.response?.data?.message || error.message));
+        } finally {
+            setLoading(false);
         }
     };
 
-
-    // --- Render Steps ---
-
-    const stepsConfig = [
-        { id: 1, name: 'Personal Info', desc: 'Basic demographics', icon: <FiUser /> },
-        { id: 2, name: 'Contact', desc: 'Address & emergency', icon: <FiPhone /> },
-        { id: 3, name: 'Medical History', desc: 'Conditions & doctor', icon: <FiHeart /> },
-        { id: 4, name: 'Vitals', desc: 'Height, weight, BP', icon: <FiActivity /> },
-        { id: 5, name: 'Insurance', desc: 'Insurance details', icon: <FiCheck /> },
-        { id: 6, name: 'Appointment', desc: 'Schedule visit', icon: <MdMedicalServices /> }
+    const steps = [
+        { icon: <FiUser />, label: 'Details', desc: 'Personal Info' },
+        { icon: <FiPhone />, label: 'Contact', desc: 'Address & Phone' },
+        { icon: <FiHeart />, label: 'Medical', desc: 'History & Vitals' },
+        { icon: <FiFileText />, label: 'Finish', desc: 'Insurance & Appt' },
     ];
 
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-[100] animate-in fade-in duration-200">
-            <style>
-                {`
-                    .no-scrollbar::-webkit-scrollbar { display: none; }
-                    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-                `}
-            </style>
-            <div className="w-full max-w-6xl h-[85vh] bg-slate-50 rounded-3xl border border-white shadow-2xl flex overflow-hidden relative">
+        <AnimatePresence>
+            {isOpen && (
+                <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 sm:p-6 font-primary">
+                    {/* Backdrop */}
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+                        onClick={onClose}
+                    />
 
-                {/* LEFT SIDEBAR - TIMELINE */}
-                <div className="w-80 bg-white border-r border-slate-200 flex flex-col hidden md:flex">
-                    <div className="p-8 border-b border-slate-100">
-                        <h2 className="text-xl font-bold text-slate-900 tracking-tight">Patient Editor</h2>
-                        <p className="text-xs text-slate-500 mt-1 font-mono uppercase tracking-wider flex items-center gap-2">
-                            {formData.patientCode ? (
-                                <>
-                                    <span className="bg-blue-50 text-blue-600 px-2 py-0.5 rounded border border-blue-100 font-bold">
-                                        ID: {formData.patientCode}
-                                    </span>
-                                </>
-                            ) : patientId ? (
-                                <span className="opacity-50">ID: {patientId.slice(0, 8)}...</span>
-                            ) : (
-                                'New Entry'
-                            )}
-                        </p>
-                    </div>
+                    {/* Modal Container */}
+                    <motion.div
+                        initial={{ scale: 0.95, opacity: 0, y: 20 }}
+                        animate={{ scale: 1, opacity: 1, y: 0 }}
+                        exit={{ scale: 0.95, opacity: 0, y: 20 }}
+                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                        className="relative w-[85%] max-w-[1280px] h-[85vh] bg-white rounded-[24px] shadow-2xl flex overflow-hidden ring-1 ring-white/20 z-10"
+                    >
 
-                    <div className="flex-1 p-6 space-y-6 overflow-y-auto no-scrollbar">
-                        {stepsConfig.map((step) => {
-                            const isActive = currentStep === (step.id - 1);
-                            const isComplete = currentStep > (step.id - 1);
+                        {/* Sidebar - Modern Deep Blue */}
+                        <div className="hidden md:flex flex-col w-[280px] bg-gradient-to-br from-[#207DC0] to-[#165a8a] relative overflow-hidden shrink-0">
+                            {/* Decorative Background Elements */}
+                            <div className="absolute top-0 left-0 right-0 h-32 bg-white/5" />
+                            <div className="absolute bottom-0 left-0 right-0 h-48 bg-black/5" />
 
-                            return (
-                                <div key={step.id} className="relative pl-6 group cursor-default">
-                                    {/* Timeline Line */}
-                                    <div className={`absolute left-[3px] top-2 bottom-[-24px] w-[2px] bg-slate-100 ${step.id === 4 ? 'hidden' : ''}`} />
-
-                                    {/* Dot */}
-                                    <div className={`
-                                        absolute left-0 top-1.5 w-2 h-2 rounded-full ring-4 ring-white transition-colors duration-300
-                                        ${isActive ? 'bg-blue-600 shadow-md' : isComplete ? 'bg-emerald-500' : 'bg-slate-300'}
-                                    `} />
-
-                                    <div className={`${isActive ? 'opacity-100' : 'opacity-60'} transition-opacity`}>
-                                        <span className={`text-xs font-bold uppercase tracking-widest block mb-0.5 ${isActive ? 'text-blue-600' : 'text-slate-400'}`}>
-                                            Step {step.id}
-                                        </span>
-                                        <h3 className="text-sm font-semibold text-slate-800">{step.name}</h3>
-                                        <p className="text-[11px] text-slate-500">{step.desc}</p>
+                            <div className="p-10 relative z-10">
+                                <div className="flex items-center gap-3 mb-8">
+                                    <div className="bg-white/20 backdrop-blur-md p-2.5 rounded-xl border border-white/30 shadow-xl">
+                                        <FiUser className="text-white text-xl" />
                                     </div>
+                                    <h2 className="text-xl font-black text-white tracking-tight uppercase leading-none">MOVI HOSPITAL</h2>
                                 </div>
-                            );
-                        })}
-                    </div>
+                            </div>
 
-                    <div className="p-6 border-t border-slate-100">
-                        <button onClick={onClose} className="w-full py-3 px-4 rounded-lg border border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-50 text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-2">
-                            <FiX size={14} /> Cancel
-                        </button>
-                    </div>
-                </div>
+                            <div className="flex-1 px-10 py-6 relative z-10 overflow-y-auto no-scrollbar">
+                                <div className="space-y-12 h-full">
+                                    {steps.map((step, idx) => (
+                                        <StepIndicator
+                                            key={idx} step={idx} currentStep={currentStep}
+                                            icon={step.icon} label={step.label} description={step.desc}
+                                            isLast={idx === steps.length - 1}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
 
-                {/* RIGHT CONTENT - FORM FOCUS */}
-                <div className="flex-1 flex flex-col relative bg-slate-50">
-
-                    {/* Loading Overlay */}
-                    {fetchingData && (
-                        <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center z-50">
-                            <div className="text-center">
-                                <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                                <p className="text-slate-700 font-medium">Loading patient data...</p>
+                            <div className="p-10 relative z-10">
+                                <button
+                                    onClick={onClose}
+                                    className="w-full flex items-center gap-3 text-white/40 hover:text-white transition-all group"
+                                >
+                                    <div className="w-10 h-10 rounded-xl bg-white/5 group-hover:bg-red-500/20 group-hover:text-red-500 flex items-center justify-center transition-all border border-white/10">
+                                        <FiX size={18} />
+                                    </div>
+                                    <span className="text-[10px] font-black uppercase tracking-widest">Discard Entry</span>
+                                </button>
                             </div>
                         </div>
-                    )}
 
-                    {/* Context Header (Mobile/Compact) */}
-                    <div className="md:hidden p-4 border-b border-slate-200 bg-white flex justify-between items-center">
-                        <span className="text-slate-800 font-bold">Step {currentStep + 1}/5</span>
-                        <button onClick={onClose} className="p-2 text-slate-500"><FiX /></button>
-                    </div>
-
-                    {/* Scrollable Form Area */}
-                    <div className="flex-1 overflow-y-auto p-8 md:p-12 no-scrollbar">
-                        <form
-                            onSubmit={(e) => {
-                                e.preventDefault();
-                                // Prevent auto-submit - user must click the button
-                            }}
-                            className="max-w-2xl mx-auto space-y-8"
-                        >
-                            {/* STEP 1: Personal Info */}
-                            {currentStep === 0 && (
-                                <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-300 fade-in">
-                                    <div>
-                                        <h2 className="text-2xl font-bold text-slate-900">Personal Information</h2>
-                                        <p className="text-slate-500">Basic demographics and identification</p>
+                        {/* --- Right Content Area --- */}
+                        <div className="flex-1 flex flex-col bg-white relative min-w-0">
+                            {/* Mobile Header */}
+                            <div className="md:hidden p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                                <div className="flex items-center gap-2">
+                                    <div className="bg-[#207DC0] text-white p-1.5 rounded-md">
+                                        <MdPerson />
                                     </div>
-
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <InputGroup label="First Name" error={fieldErrors.firstName} required className="col-span-1">
-                                            <input
-                                                name="firstName"
-                                                value={formData.firstName}
-                                                onChange={handleInputChange}
-                                                className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300 font-medium"
-                                                placeholder="e.g. John"
-                                            />
-                                            {fieldErrors.firstName && <span className="text-red-500 text-xs mt-1">{fieldErrors.firstName}</span>}
-                                        </InputGroup>
-
-                                        <InputGroup label="Last Name" error={fieldErrors.lastName} required className="col-span-1">
-                                            <input
-                                                name="lastName"
-                                                value={formData.lastName}
-                                                onChange={handleInputChange}
-                                                className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300"
-                                                placeholder="e.g. Doe"
-                                            />
-                                            {fieldErrors.lastName && <span className="text-red-500 text-xs mt-1">{fieldErrors.lastName}</span>}
-                                        </InputGroup>
-
-                                        <InputGroup label="Date of Birth" error={fieldErrors.dateOfBirth} required>
-                                            <input
-                                                type="date"
-                                                name="dateOfBirth"
-                                                value={formData.dateOfBirth}
-                                                onChange={handleInputChange}
-                                                className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300"
-                                                max={new Date().toISOString().split('T')[0]}
-                                            />
-                                            {fieldErrors.dateOfBirth && <span className="text-red-500 text-xs mt-1">{fieldErrors.dateOfBirth}</span>}
-                                        </InputGroup>
-
-                                        <InputGroup label="Age" error={fieldErrors.age}>
-                                            <input
-                                                type="number"
-                                                name="age"
-                                                value={formData.age}
-                                                onChange={handleInputChange}
-                                                className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300"
-                                                placeholder="Auto-calculated from DOB"
-                                                min="1"
-                                                max="120"
-                                                readOnly={formData.dateOfBirth !== ''}
-                                            />
-                                            {fieldErrors.age && <span className="text-red-500 text-xs mt-1">{fieldErrors.age}</span>}
-                                            {formData.dateOfBirth && <span className="text-blue-500 text-xs mt-1">Auto-calculated from DOB</span>}
-                                        </InputGroup>
-
-                                        <InputGroup label="Blood Group">
-                                            <select name="bloodGroup" value={formData.bloodGroup} onChange={handleInputChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0">
-                                                <option value="">Select...</option>
-                                                <option value="A+">A+</option>
-                                                <option value="A-">A-</option>
-                                                <option value="B+">B+</option>
-                                                <option value="B-">B-</option>
-                                                <option value="O+">O+</option>
-                                                <option value="O-">O-</option>
-                                                <option value="AB+">AB+</option>
-                                                <option value="AB-">AB-</option>
-                                            </select>
-                                        </InputGroup>
-
-                                        <InputGroup label="Gender" error={fieldErrors.gender} required className="col-span-2">
-                                            <div className="flex gap-2">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleSelectGender('Male')}
-                                                    className={`flex-1 py-2 px-4 rounded-lg border-2 font-medium transition-all ${formData.gender === 'Male'
-                                                        ? 'border-blue-500 bg-blue-50 text-blue-700'
-                                                        : 'border-slate-200 hover:border-slate-300'
-                                                        }`}
-                                                >
-                                                    Male
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleSelectGender('Female')}
-                                                    className={`flex-1 py-2 px-4 rounded-lg border-2 font-medium transition-all ${formData.gender === 'Female'
-                                                        ? 'border-blue-500 bg-blue-50 text-blue-700'
-                                                        : 'border-slate-200 hover:border-slate-300'
-                                                        }`}
-                                                >
-                                                    Female
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleSelectGender('Other')}
-                                                    className={`flex-1 py-2 px-4 rounded-lg border-2 font-medium transition-all ${formData.gender === 'Other'
-                                                        ? 'border-blue-500 bg-blue-50 text-blue-700'
-                                                        : 'border-slate-200 hover:border-slate-300'
-                                                        }`}
-                                                >
-                                                    Other
-                                                </button>
-                                            </div>
-                                        </InputGroup>
-                                    </div>
+                                    <span className="font-bold text-slate-800">Step {currentStep + 1} of {steps.length}</span>
                                 </div>
-                            )}
+                                <button onClick={onClose} className="p-2 text-slate-400 hover:text-red-500"><FiX size={24} /></button>
+                            </div>
 
-                            {/* STEP 2: Contact */}
-                            {currentStep === 1 && (
-                                <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-300 fade-in">
-                                    <div>
-                                        <h2 className="text-2xl font-bold text-slate-900">Contact Details</h2>
-                                        <p className="text-slate-500">Address and emergency contact information</p>
-                                    </div>
+                            {/* Window Controls (Floating) */}
+                            <button
+                                onClick={onClose}
+                                className="absolute top-6 right-6 z-50 p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-all"
+                            >
+                                <FiX size={24} />
+                            </button>
 
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <InputGroup label="Phone Number" error={fieldErrors.phone} required className="col-span-1">
-                                            <input
-                                                type="tel"
-                                                name="phone"
-                                                value={formData.phone}
-                                                onChange={handleInputChange}
-                                                className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300"
-                                                placeholder="+1 555 000 0000"
-                                            />
-                                            {fieldErrors.phone && <span className="text-red-500 text-xs mt-1">{fieldErrors.phone}</span>}
-                                        </InputGroup>
-
-                                        <InputGroup label="Email Address" error={fieldErrors.email} className="col-span-1">
-                                            <input
-                                                type="email"
-                                                name="email"
-                                                value={formData.email}
-                                                onChange={handleInputChange}
-                                                className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300"
-                                                placeholder="patient@email.com"
-                                            />
-                                            {fieldErrors.email && <span className="text-red-500 text-xs mt-1">{fieldErrors.email}</span>}
-                                        </InputGroup>
-
-                                        <InputGroup label="House No." className="col-span-1">
-                                            <input name="houseNo" value={formData.houseNo} onChange={handleInputChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" placeholder="123" />
-                                        </InputGroup>
-
-                                        <InputGroup label="Street" className="col-span-1">
-                                            <input name="street" value={formData.street} onChange={handleInputChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" placeholder="Main Street" />
-                                        </InputGroup>
-
-                                        <InputGroup label="City" error={fieldErrors.city} required className="col-span-1">
-                                            <input name="city" value={formData.city} onChange={handleInputChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" placeholder="City Name" />
-                                            {fieldErrors.city && <span className="text-red-500 text-xs mt-1">{fieldErrors.city}</span>}
-                                        </InputGroup>
-
-                                        <InputGroup label="State" className="col-span-1">
-                                            <input name="state" value={formData.state} onChange={handleInputChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" placeholder="State" />
-                                        </InputGroup>
-
-                                        <InputGroup label="Pincode/Zipcode" error={fieldErrors.pincode} required className="col-span-1">
-                                            <input
-                                                type="text"
-                                                name="pincode"
-                                                value={formData.pincode}
-                                                onChange={handleInputChange}
-                                                className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300"
-                                                placeholder="e.g. 560001"
-                                                maxLength="6"
-                                                pattern="[0-9]{6}"
-                                            />
-                                            {fieldErrors.pincode && <span className="text-red-500 text-xs mt-1">{fieldErrors.pincode}</span>}
-                                        </InputGroup>
-
-                                        <InputGroup label="Country" error={fieldErrors.country} required className="col-span-1">
-                                            <select
-                                                name="country"
-                                                value={formData.country}
-                                                onChange={handleInputChange}
-                                                className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0"
-                                            >
-                                                <option value="India">India</option>
-                                                <option value="USA">USA</option>
-                                                <option value="UK">UK</option>
-                                                <option value="Canada">Canada</option>
-                                                <option value="Australia">Australia</option>
-                                                <option value="UAE">UAE</option>
-                                                <option value="Singapore">Singapore</option>
-                                            </select>
-                                            {fieldErrors.country && <span className="text-red-500 text-xs mt-1">{fieldErrors.country}</span>}
-                                        </InputGroup>
-
-                                        <InputGroup label="Emergency Contact Name" className="col-span-1">
-                                            <input name="emergencyContactName" value={formData.emergencyContactName} onChange={handleInputChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" placeholder="Contact Person" />
-                                        </InputGroup>
-
-                                        <InputGroup label="Emergency Phone" className="col-span-1">
-                                            <input name="emergencyContactPhone" value={formData.emergencyContactPhone} onChange={handleInputChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" placeholder="+1 555 000 0000" />
-                                        </InputGroup>
-                                    </div>
+                            {/* Static Header */}
+                            <div className="px-8 py-5 md:px-10 md:py-6 border-b border-slate-100 bg-white z-20">
+                                <div className="max-w-4xl mx-auto">
+                                    <motion.div
+                                        key={`header-${currentStep}`}
+                                        initial={{ opacity: 0, x: -20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        className="relative"
+                                    >
+                                        <h1 className="text-2xl font-black text-slate-800 mb-0.5 tracking-tight">
+                                            {steps[currentStep].label} <span className="text-[#207DC0]">Module</span>
+                                        </h1>
+                                        <p className="text-slate-400 font-bold text-[9px] uppercase tracking-widest">
+                                            {currentStep === 0 && "Biometric and Demographic Identification Phase"}
+                                            {currentStep === 1 && "Secure Communication and Residency Records"}
+                                            {currentStep === 2 && "Clinical Vitals and AI-Powered Document Analysis"}
+                                            {currentStep === 3 && "Finalization, Coverage and Scheduling"}
+                                            — Phase {currentStep + 1} of 4
+                                        </p>
+                                    </motion.div>
                                 </div>
-                            )}
+                            </div>
 
-                            {/* STEP 3: Medical History */}
-                            {currentStep === 2 && (
-                                <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-300 fade-in">
-                                    <div>
-                                        <h2 className="text-2xl font-bold text-slate-900">Medical History</h2>
-                                        <p className="text-slate-500">Known conditions, doctor assignment, and medical records</p>
+                            {/* Form Content Scrollable */}
+                            <div className="flex-1 overflow-y-auto p-6 md:p-10 md:pt-8 no-scrollbar bg-slate-50/30">
+                                {fetchingData ? (
+                                    <div className="flex flex-col items-center justify-center h-full text-slate-400 pb-20">
+                                        <div className="w-12 h-12 border-4 border-[#207DC0] border-t-transparent rounded-full animate-spin mb-4" />
+                                        <p>Loading patient record...</p>
                                     </div>
+                                ) : (
+                                    <div className="max-w-4xl mx-auto space-y-10 pb-20">
 
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <InputGroup label="Assign Doctor" error={fieldErrors.assignedDoctor} required className="col-span-2">
-                                            <select
-                                                name="assignedDoctor"
-                                                value={formData.assignedDoctor}
-                                                onChange={handleInputChange}
-                                                className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0"
-                                                disabled={loadingDoctors}
+                                        <AnimatePresence mode='wait'>
+                                            <motion.div
+                                                key={currentStep}
+                                                initial={{ opacity: 0, y: 10 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                exit={{ opacity: 0, y: -10 }}
+                                                transition={{ duration: 0.3 }}
                                             >
-                                                <option value="">-- Select Doctor --</option>
-                                                {doctors.map(doctor => (
-                                                    <option key={doctor.id} value={doctor.id}>
-                                                        Dr. {doctor.name} - {doctor.specialization}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                            {loadingDoctors && <span className="text-blue-500 text-xs mt-1">Loading doctors...</span>}
-                                            {fieldErrors.assignedDoctor && <span className="text-red-500 text-xs mt-1">{fieldErrors.assignedDoctor}</span>}
-                                        </InputGroup>
+                                                {/* Step 0: Personal Info */}
+                                                {currentStep === 0 && (
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                        <PremiumInput label="First Name" error={errors.firstName} required icon={<FiUser />}>
+                                                            <input name="firstName" value={formData.firstName} onChange={handleInputChange}
+                                                                className="w-full outline-none text-[#0f3e61] placeholder-slate-300 font-semibold bg-transparent" placeholder="e.g. John" autoFocus />
+                                                        </PremiumInput>
+                                                        <PremiumInput label="Last Name" error={errors.lastName} required>
+                                                            <input name="lastName" value={formData.lastName} onChange={handleInputChange}
+                                                                className="w-full outline-none text-[#0f3e61] placeholder-slate-300 font-semibold bg-transparent" placeholder="e.g. Doe" />
+                                                        </PremiumInput>
 
-                                        <InputGroup label="Last Visit Date" error={fieldErrors.lastVisit} className="col-span-2">
-                                            <input
-                                                type="date"
-                                                name="lastVisit"
-                                                value={formData.lastVisit}
-                                                onChange={handleInputChange}
-                                                className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300"
-                                                max={new Date().toISOString().split('T')[0]}
-                                            />
-                                            {fieldErrors.lastVisit && <span className="text-red-500 text-xs mt-1">{fieldErrors.lastVisit}</span>}
-                                        </InputGroup>
+                                                        <PremiumInput label="Date of Birth" error={errors.age} required icon={<MdCalendarToday />}>
+                                                            <input type="date" name="dateOfBirth" value={formData.dateOfBirth} onChange={handleInputChange}
+                                                                max={new Date().toISOString().split('T')[0]}
+                                                                className="w-full outline-none text-slate-800 bg-transparent min-h-[1.5rem]" />
+                                                        </PremiumInput>
+                                                        <PremiumInput label="Age">
+                                                            <input type="number" name="age" value={formData.age} onChange={handleInputChange}
+                                                                placeholder="Auto-calc" readOnly={!!formData.dateOfBirth}
+                                                                className="w-full outline-none text-[#0f3e61] placeholder-slate-300 font-semibold bg-transparent" />
+                                                        </PremiumInput>
 
-                                        <InputGroup label="Known Conditions" className="col-span-2">
-                                            <input name="knownConditions" value={formData.knownConditions} onChange={handleInputChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" placeholder="e.g. Diabetes, Hypertension" />
-                                        </InputGroup>
-
-                                        <InputGroup label="Allergies" className="col-span-2">
-                                            <input name="allergies" value={formData.allergies} onChange={handleInputChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" placeholder="e.g. Peanuts, Penicillin" />
-                                        </InputGroup>
-
-                                        <InputGroup label="Current Medications" className="col-span-1">
-                                            <input name="currentMedications" value={formData.currentMedications} onChange={handleInputChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" placeholder="List current medications" />
-                                        </InputGroup>
-
-                                        <InputGroup label="Past Surgeries" className="col-span-1">
-                                            <input name="pastSurgeries" value={formData.pastSurgeries} onChange={handleInputChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" placeholder="Any past surgeries" />
-                                        </InputGroup>
-
-                                        <InputGroup label="Additional Notes" className="col-span-2">
-                                            <textarea name="notes" value={formData.notes} onChange={handleInputChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300 min-h-[80px] resize-none" placeholder="Any additional medical notes..."></textarea>
-                                        </InputGroup>
-
-                                        {/* Medical Report Upload Section */}
-                                        <div className="col-span-2 mt-6 p-6 bg-blue-50 border-2 border-blue-200 rounded-xl">
-                                            <div className="flex items-center gap-3 mb-4">
-                                                <FiActivity className="text-blue-600" size={24} />
-                                                <div>
-                                                    <h3 className="text-lg font-bold text-slate-900">Upload Medical Reports</h3>
-                                                    <p className="text-sm text-slate-600">Upload lab reports or medical history documents (auto-scanned with OCR)</p>
-                                                </div>
-                                            </div>
-
-                                            {/* Upload Button */}
-                                            <div className="flex gap-3 mb-4">
-                                                <label className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg cursor-pointer transition-colors flex items-center gap-2">
-                                                    <FiArrowRight size={18} />
-                                                    Choose File (Image/PDF)
-                                                    <input
-                                                        type="file"
-                                                        accept="image/*,.pdf"
-                                                        onChange={handleFileUpload}
-                                                        className="hidden"
-                                                        disabled={uploading}
-                                                    />
-                                                </label>
-                                            </div>
-
-                                            {/* Processing Indicator */}
-                                            {uploading && (
-                                                <div className="flex items-center gap-3 p-4 bg-white rounded-lg border border-blue-300">
-                                                    <div className="w-5 h-5 border-3 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                                                    <span className="text-sm text-slate-700 font-medium">Processing document with scanner...</span>
-                                                </div>
-                                            )}
-
-                                            {/* Error Display */}
-                                            {scannerError && (
-                                                <div className="flex items-center gap-3 p-4 bg-red-50 rounded-lg border border-red-300">
-                                                    <FiAlertCircle className="text-red-600" size={20} />
-                                                    <span className="text-sm text-red-700">{scannerError}</span>
-                                                </div>
-                                            )}
-
-                                            {/* Uploaded Files List */}
-                                            {uploadedFiles.length > 0 && (
-                                                <div className="mt-4">
-                                                    <p className="text-sm font-semibold text-slate-800 mb-2">Uploaded Documents ({uploadedFiles.length})</p>
-                                                    <div className="flex flex-wrap gap-2">
-                                                        {uploadedFiles.map((item, index) => (
-                                                            <div key={index} className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg border border-slate-300">
-                                                                <span className="text-sm text-slate-700">{item.name}</span>
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => removeUploadedFile(index)}
-                                                                    className="text-red-600 hover:text-red-800"
-                                                                >
-                                                                    <FiX size={16} />
-                                                                </button>
+                                                        <div className="md:col-span-2 space-y-2">
+                                                            <label className="text-xs font-bold uppercase text-slate-500 ml-1">Gender *</label>
+                                                            <div className="flex gap-4">
+                                                                {['Male', 'Female', 'Other'].map(g => (
+                                                                    <label key={g} className="flex-1 relative cursor-pointer group">
+                                                                        <input type="radio" name="gender" value={g} checked={formData.gender === g} onChange={handleInputChange} className="peer sr-only" />
+                                                                        <div className={`
+                                                                            p-4 rounded-xl border-2 text-center transition-all duration-200
+                                                                            ${formData.gender === g
+                                                                                ? 'border-[#207DC0] bg-blue-50 text-[#207DC0] shadow-md transform scale-[1.02]'
+                                                                                : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:bg-slate-50'}
+                                                                        `}>
+                                                                            <span className={`text-sm ${formData.gender === g ? 'font-extrabold' : 'font-semibold'}`}>{g}</span>
+                                                                        </div>
+                                                                        {formData.gender === g && (
+                                                                            <motion.div
+                                                                                initial={{ scale: 0 }} animate={{ scale: 1 }}
+                                                                                className="absolute top-[-8px] right-[-8px] bg-[#207DC0] text-white rounded-full p-1 shadow-lg"
+                                                                            >
+                                                                                <MdCheck size={12} />
+                                                                            </motion.div>
+                                                                        )}
+                                                                    </label>
+                                                                ))}
                                                             </div>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {/* Scanned Data Display */}
-                                            {scannedData && (
-                                                <div className="mt-4 p-4 bg-green-50 rounded-lg border border-green-300">
-                                                    <div className="flex items-center justify-between mb-3">
-                                                        <div className="flex items-center gap-2">
-                                                            <FiCheck className="text-green-600" size={20} />
-                                                            <h4 className="text-sm font-bold text-green-800">Scanned Data Extracted</h4>
+                                                            {errors.gender && <p className="text-red-500 text-xs ml-1">Please select gender</p>}
                                                         </div>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => setScannedData(null)}
-                                                            className="text-slate-500 hover:text-slate-700"
-                                                        >
-                                                            <FiX size={16} />
-                                                        </button>
                                                     </div>
-                                                    <div className="space-y-2 text-sm">
-                                                        {scannedData.medicalHistory && (
-                                                            <div>
-                                                                <span className="font-semibold text-slate-700">Medical History: </span>
-                                                                <span className="text-slate-600">{scannedData.medicalHistory}</span>
+                                                )}
+
+                                                {/* Step 1: Contact Info */}
+                                                {currentStep === 1 && (
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                        <PremiumInput label="Phone Number" error={errors.phone} required icon={<MdPhone />} className="md:col-span-2">
+                                                            <input name="phone" value={formData.phone} onChange={handleInputChange}
+                                                                className="w-full outline-none text-[#0f3e61] placeholder-slate-300 font-bold text-lg bg-transparent" placeholder="+91 99999 00000" />
+                                                        </PremiumInput>
+
+                                                        <PremiumInput label="Email Address" icon={<MdEmail />} className="md:col-span-2">
+                                                            <input name="email" value={formData.email} onChange={handleInputChange} type="email"
+                                                                className="w-full outline-none text-[#0f3e61] placeholder-slate-300 font-semibold bg-transparent" placeholder="john.doe@example.com" />
+                                                        </PremiumInput>
+
+                                                        <div className="md:col-span-2 pt-4 pb-2 border-t border-slate-100 mt-2">
+                                                            <h3 className="text-sm font-extrabold uppercase text-slate-400 flex items-center gap-2">
+                                                                <FiPhone /> Emergency Contact
+                                                            </h3>
+                                                        </div>
+
+                                                        <PremiumInput label="Contact Name">
+                                                            <input name="emergencyContactName" value={formData.emergencyContactName} onChange={handleInputChange} className="w-full outline-none text-[#0f3e61] font-semibold bg-transparent" placeholder="e.g. Jane Doe (Wife)" />
+                                                        </PremiumInput>
+
+                                                        <PremiumInput label="Emergency Phone">
+                                                            <input name="emergencyContactPhone" value={formData.emergencyContactPhone} onChange={handleInputChange} className="w-full outline-none text-[#0f3e61] font-semibold bg-transparent" placeholder="+91 ..." />
+                                                        </PremiumInput>
+
+                                                        <div className="md:col-span-2 pt-4 pb-2 border-t border-slate-100 mt-2">
+                                                            <h3 className="text-sm font-extrabold uppercase text-slate-400 flex items-center gap-2">
+                                                                <MdLocationOn /> Address Details
+                                                            </h3>
+                                                        </div>
+
+                                                        <PremiumInput label="House / Flat No.">
+                                                            <input name="houseNo" value={formData.houseNo} onChange={handleInputChange} className="w-full outline-none text-[#0f3e61] font-semibold bg-transparent" placeholder="A-101" />
+                                                        </PremiumInput>
+                                                        <PremiumInput label="Street / Colony">
+                                                            <input name="street" value={formData.street} onChange={handleInputChange} className="w-full outline-none text-[#0f3e61] font-semibold bg-transparent" placeholder="Main Street" />
+                                                        </PremiumInput>
+
+                                                        <PremiumInput label="City">
+                                                            <input name="city" value={formData.city} onChange={handleInputChange} className="w-full outline-none text-[#0f3e61] font-semibold bg-transparent" placeholder="City" />
+                                                        </PremiumInput>
+                                                        <PremiumInput label="State">
+                                                            <input name="state" value={formData.state} onChange={handleInputChange} className="w-full outline-none text-[#0f3e61] font-semibold bg-transparent" placeholder="State" />
+                                                        </PremiumInput>
+
+                                                        <PremiumInput label="Pincode">
+                                                            <input name="pincode" value={formData.pincode} onChange={handleInputChange} className="w-full outline-none text-[#0f3e61] font-semibold bg-transparent" placeholder="000000" />
+                                                        </PremiumInput>
+                                                        <PremiumInput label="Country">
+                                                            <input name="country" value={formData.country} onChange={handleInputChange} className="w-full outline-none text-[#0f3e61] font-semibold bg-transparent" />
+                                                        </PremiumInput>
+                                                    </div>
+                                                )}
+
+                                                {/* Step 2: Medical & Vitals */}
+                                                {currentStep === 2 && (
+                                                    <div className="space-y-8">
+
+                                                        {/* Scanner Section */}
+                                                        <div className="bg-[#ecf6ff] border-2 border-dashed border-[#207DC0]/30 rounded-xl p-6 text-center hover:bg-[#207DC0]/10 transition-colors cursor-pointer relative group">
+                                                            <input
+                                                                type="file"
+                                                                onChange={handleFileUpload}
+                                                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                                                                accept="image/*,.pdf"
+                                                                disabled={uploading}
+                                                            />
+                                                            {uploading ? (
+                                                                <div className="flex flex-col items-center">
+                                                                    <FiLoader className="animate-spin text-[#207DC0] text-3xl mb-2" />
+                                                                    <p className="text-[#165a8a] font-medium">Scanning document with AI...</p>
+                                                                </div>
+                                                            ) : (
+                                                                <>
+                                                                    <div className="w-12 h-12 bg-white text-[#207DC0] rounded-full flex items-center justify-center mx-auto mb-3 shadow-md group-hover:scale-110 transition-transform">
+                                                                        <MdUploadFile size={24} />
+                                                                    </div>
+                                                                    <h4 className="text-[#0f3e61] font-bold mb-1">Scan Medical Records</h4>
+                                                                    <p className="text-[#165a8a]/70 text-xs">Upload prescriptions or reports to auto-fill details</p>
+                                                                </>
+                                                            )}
+                                                        </div>
+
+                                                        {uploadedFiles.length > 0 && (
+                                                            <div className="space-y-2">
+                                                                <p className="text-xs font-bold uppercase text-slate-400">Uploaded Documents</p>
+                                                                {uploadedFiles.map((file, idx) => (
+                                                                    <div key={idx} className="flex items-center justify-between bg-white border border-slate-100 p-3 rounded-lg text-sm shadow-sm">
+                                                                        <span className="truncate flex-1 font-bold text-[#0f3e61]">{file.name}</span>
+                                                                        <button onClick={() => removeUploadedFile(idx)} className="text-red-400 hover:text-red-600 p-1"><MdDelete /></button>
+                                                                    </div>
+                                                                ))}
                                                             </div>
                                                         )}
-                                                        {scannedData.allergies && (
-                                                            <div>
-                                                                <span className="font-semibold text-slate-700">Allergies: </span>
-                                                                <span className="text-slate-600">{scannedData.allergies}</span>
+
+                                                        {scannerError && (
+                                                            <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm border border-red-100 flex items-center gap-2">
+                                                                <MdWarning /> {scannerError}
                                                             </div>
                                                         )}
-                                                        {scannedData.medications && (
-                                                            <div>
-                                                                <span className="font-semibold text-slate-700">Medications: </span>
-                                                                <span className="text-slate-600">{scannedData.medications}</span>
+
+                                                        <div className="bg-[#ecf6ff] rounded-2xl p-6 border border-blue-100/50">
+                                                            <h3 className="text-[#0f3e61] font-extrabold mb-4 flex items-center gap-2 text-lg tracking-tight">
+                                                                <FiActivity className="text-xl text-[#207DC0]" /> Critical Vitals
+                                                            </h3>
+                                                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                                                                <PremiumInput label="Height (cm)" icon={<MdHeight className="rotate-90" />}>
+                                                                    <input type="text" name="height" value={formData.height} onChange={handleInputChange} className="w-full outline-none bg-transparent font-bold text-[#0f3e61]" placeholder="0" />
+                                                                </PremiumInput>
+                                                                <PremiumInput label="Weight (kg)" icon={<MdMonitorWeight />}>
+                                                                    <input type="text" name="weight" value={formData.weight} onChange={handleInputChange} className="w-full outline-none bg-transparent font-bold text-[#0f3e61]" placeholder="0" />
+                                                                </PremiumInput>
+                                                                <PremiumInput label="BP (mmHg)" icon={<FiHeart />}>
+                                                                    <input name="bp" value={formData.bp} onChange={handleInputChange} className="w-full outline-none bg-transparent font-bold text-[#0f3e61]" placeholder="120/80" />
+                                                                </PremiumInput>
+                                                                <PremiumInput label="BMI" className={formData.bmi > 25 ? 'bg-orange-50' : ''}>
+                                                                    <input name="bmi" value={formData.bmi} readOnly className="w-full outline-none bg-transparent font-bold text-[#0f3e61]" placeholder="-" />
+                                                                </PremiumInput>
                                                             </div>
-                                                        )}
-                                                        {scannedData.warning && (
-                                                            <div className="mt-2 p-2 bg-yellow-100 rounded border border-yellow-300">
-                                                                <FiAlertCircle className="inline mr-2 text-yellow-700" size={14} />
-                                                                <span className="text-xs text-yellow-800">{scannedData.warning}</span>
+                                                        </div>
+
+                                                        <div className="grid grid-cols-1 gap-6">
+                                                            <PremiumInput label="Blood Group" icon={<MdOpacity />}>
+                                                                <select name="bloodGroup" value={formData.bloodGroup} onChange={handleInputChange} className="w-full outline-none bg-transparent text-[#0f3e61] font-bold cursor-pointer appearance-none">
+                                                                    <option value="">Select...</option>
+                                                                    {['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'].map(bg => <option key={bg} value={bg}>{bg}</option>)}
+                                                                </select>
+                                                            </PremiumInput>
+
+                                                            <PremiumInput label="Known Conditions / History">
+                                                                <textarea name="knownConditions" value={formData.knownConditions} onChange={handleInputChange} rows={2}
+                                                                    className="w-full outline-none bg-transparent resize-none text-[#0f3e61] font-semibold" placeholder="e.g. Diabetes, Hypertension..." />
+                                                            </PremiumInput>
+
+                                                            <PremiumInput label="Current Medications">
+                                                                <textarea name="currentMedications" value={formData.currentMedications} onChange={handleInputChange} rows={2}
+                                                                    className="w-full outline-none bg-transparent resize-none text-[#0f3e61] font-semibold" placeholder="e.g. Metformin 500mg..." />
+                                                            </PremiumInput>
+
+                                                            <PremiumInput label="Assigned Doctor" icon={<MdPerson />}>
+                                                                <select name="assignedDoctor" value={formData.assignedDoctor} onChange={handleInputChange} className="w-full outline-none bg-transparent text-[#0f3e61] font-bold cursor-pointer appearance-none">
+                                                                    <option value="">Select Primary Doctor...</option>
+                                                                    {doctors.map(d => <option key={d.id} value={d.id}>Dr. {d.name} ({d.specialization})</option>)}
+                                                                </select>
+                                                            </PremiumInput>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* Step 3: Final Details */}
+                                                {currentStep === 3 && (
+                                                    <div className="space-y-6">
+
+                                                        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6">
+                                                            <h3 className="font-extrabold text-[#0f3e61] mb-4 flex items-center gap-2 text-lg tracking-tight">
+                                                                <FiShield className="text-[#207DC0]" /> Insurance Details (Optional)
+                                                            </h3>
+                                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                                <PremiumInput label="Provider Name">
+                                                                    <input name="insuranceProvider" value={formData.insuranceProvider} onChange={handleInputChange} className="w-full outline-none bg-transparent text-[#0f3e61] font-semibold" placeholder="e.g. Star Health" />
+                                                                </PremiumInput>
+                                                                <PremiumInput label="Policy Number">
+                                                                    <input name="insuranceNumber" value={formData.insuranceNumber} onChange={handleInputChange} className="w-full outline-none bg-transparent text-[#0f3e61] font-semibold" placeholder="Top-up ID" />
+                                                                </PremiumInput>
+                                                            </div>
+                                                        </div>
+
+                                                        {!patientId && (
+                                                            <div className="bg-[#207DC0]/5 border border-[#207DC0]/20 rounded-2xl p-6">
+                                                                <h3 className="font-extrabold text-[#165a8a] mb-4 flex items-center gap-2 text-lg tracking-tight">
+                                                                    <MdCalendarToday /> Schedule First Appointment
+                                                                </h3>
+                                                                <p className="text-xs text-[#207DC0] mb-4">Leave empty if you just want to register the patient without booking.</p>
+
+                                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                                    <PremiumInput label="Appointment Date" className="bg-white">
+                                                                        <input type="date" name="appointmentDate" value={formData.appointmentDate} onChange={handleInputChange} className="w-full outline-none bg-transparent min-h-[1.5rem] text-[#0f3e61] font-semibold" min={new Date().toISOString().split('T')[0]} />
+                                                                    </PremiumInput>
+                                                                    <PremiumInput label="Time" className="bg-white">
+                                                                        <input type="time" name="appointmentTime" value={formData.appointmentTime} onChange={handleInputChange} className="w-full outline-none bg-transparent min-h-[1.5rem] text-[#0f3e61] font-semibold" />
+                                                                    </PremiumInput>
+                                                                    <PremiumInput label="Reason for Visit" className="md:col-span-2 bg-white">
+                                                                        <input name="appointmentReason" value={formData.appointmentReason} onChange={handleInputChange} className="w-full outline-none bg-transparent text-[#0f3e61] font-semibold" placeholder="e.g. Fever, Consultation" />
+                                                                    </PremiumInput>
+                                                                </div>
                                                             </div>
                                                         )}
                                                     </div>
-                                                </div>
-                                            )}
-                                        </div>
+                                                )}
+                                            </motion.div>
+                                        </AnimatePresence>
+
                                     </div>
-                                </div>
-                            )}
+                                )}
+                            </div>
 
-                            {/* STEP 4: Vitals */}
-                            {currentStep === 3 && (
-                                <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-300 fade-in">
-                                    <div>
-                                        <h2 className="text-2xl font-bold text-slate-900">Vital Signs</h2>
-                                        <p className="text-slate-500">Record patient measurements and vital statistics</p>
-                                    </div>
-
-                                    <div className="grid grid-cols-3 gap-4">
-                                        <InputGroup label="Height (cm)">
-                                            <input type="number" name="height" value={formData.height} onChange={handleInputChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" placeholder="170" />
-                                        </InputGroup>
-
-                                        <InputGroup label="Weight (kg)">
-                                            <input type="number" name="weight" value={formData.weight} onChange={handleInputChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" placeholder="70" />
-                                        </InputGroup>
-
-                                        <InputGroup label="BMI">
-                                            <input name="bmi" value={formData.bmi} readOnly className="w-full bg-slate-50 border-none p-0 text-slate-500 focus:ring-0 font-mono" placeholder="Auto" />
-                                        </InputGroup>
-
-                                        <InputGroup label="Blood Pressure" error={fieldErrors.bp}>
-                                            <input
-                                                type="text"
-                                                name="bp"
-                                                value={formData.bp}
-                                                onChange={handleInputChange}
-                                                className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300 font-mono"
-                                                placeholder="120/80"
-                                                pattern="[0-9]{2,3}/[0-9]{2,3}"
-                                            />
-                                            {fieldErrors.bp && <span className="text-red-500 text-xs mt-1">{fieldErrors.bp}</span>}
-                                            <span className="text-slate-400 text-xs mt-1">Format: systolic/diastolic (e.g., 120/80)</span>
-                                        </InputGroup>
-
-                                        <InputGroup label="Pulse (bpm)">
-                                            <input type="number" name="pulse" value={formData.pulse} onChange={handleInputChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" placeholder="72" />
-                                        </InputGroup>
-
-                                        <InputGroup label="SpO2 (%)">
-                                            <input type="number" name="spo2" value={formData.spo2} onChange={handleInputChange} className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300" placeholder="98" />
-                                        </InputGroup>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* STEP 5: Insurance Details */}
-                            {currentStep === 4 && (
-                                <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-300 fade-in">
-                                    <div>
-                                        <h2 className="text-2xl font-bold text-slate-900">Insurance Details</h2>
-                                        <p className="text-slate-500">Insurance and billing information (Optional)</p>
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <InputGroup label="Insurance Number" error={fieldErrors.insuranceNumber} className="col-span-2">
-                                            <input
-                                                type="text"
-                                                name="insuranceNumber"
-                                                value={formData.insuranceNumber}
-                                                onChange={handleInputChange}
-                                                className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300"
-                                                placeholder="e.g. INS-123456789"
-                                            />
-                                            {fieldErrors.insuranceNumber && <span className="text-red-500 text-xs mt-1">{fieldErrors.insuranceNumber}</span>}
-                                        </InputGroup>
-
-                                        <InputGroup label="Insurance Provider" error={fieldErrors.insuranceProvider}>
-                                            <input
-                                                type="text"
-                                                name="insuranceProvider"
-                                                value={formData.insuranceProvider}
-                                                onChange={handleInputChange}
-                                                className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300"
-                                                placeholder="e.g. HDFC ERGO, Star Health"
-                                            />
-                                            {fieldErrors.insuranceProvider && <span className="text-red-500 text-xs mt-1">{fieldErrors.insuranceProvider}</span>}
-                                        </InputGroup>
-
-                                        <InputGroup label="Insurance Expiry Date" error={fieldErrors.insuranceExpiry}>
-                                            <input
-                                                type="date"
-                                                name="insuranceExpiry"
-                                                value={formData.insuranceExpiry}
-                                                onChange={handleInputChange}
-                                                className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300"
-                                                min={new Date().toISOString().split('T')[0]}
-                                            />
-                                            {fieldErrors.insuranceExpiry && <span className="text-red-500 text-xs mt-1">{fieldErrors.insuranceExpiry}</span>}
-                                        </InputGroup>
-                                    </div>
-
-                                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                                        <p className="text-sm text-blue-800">
-                                            <strong>Note:</strong> Insurance information is optional but recommended for billing and claims processing.
-                                        </p>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* STEP 6: Appointment (Optional) */}
-                            {currentStep === 5 && (
-                                <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-300 fade-in">
-                                    <div>
-                                        <h2 className="text-2xl font-bold text-slate-900">Schedule Appointment</h2>
-                                        <p className="text-slate-500">Create an initial appointment for this patient (Optional)</p>
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <InputGroup label="Appointment Date" className="col-span-1">
-                                            <input
-                                                type="date"
-                                                name="appointmentDate"
-                                                value={formData.appointmentDate}
-                                                onChange={handleInputChange}
-                                                className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300"
-                                                min={new Date().toISOString().split('T')[0]}
-                                            />
-                                        </InputGroup>
-
-                                        <InputGroup label="Appointment Time" className="col-span-1">
-                                            <input
-                                                type="time"
-                                                name="appointmentTime"
-                                                value={formData.appointmentTime}
-                                                onChange={handleInputChange}
-                                                className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300"
-                                            />
-                                        </InputGroup>
-
-                                        <InputGroup label="Reason for Visit" className="col-span-2">
-                                            <input
-                                                name="appointmentReason"
-                                                value={formData.appointmentReason}
-                                                onChange={handleInputChange}
-                                                className="w-full bg-transparent border-none p-0 text-slate-900 focus:ring-0 placeholder-slate-300"
-                                                placeholder="e.g. Initial Consultation, Fever, etc."
-                                            />
-                                        </InputGroup>
-                                    </div>
-
-                                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                                        <p className="text-sm text-green-800">
-                                            <strong>Tip:</strong> If you set these details, an appointment will be automatically created with the new patient record.
-                                        </p>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* ACTION BUTTONS */}
-                            <div className="flex items-center justify-between pt-8 border-t border-slate-200">
-                                <div>
-                                    {currentStep > 0 && (
-                                        <button
-                                            type="button"
-                                            onClick={handleBack}
-                                            className="px-6 py-3 text-slate-600 hover:text-slate-900 font-medium transition-colors flex items-center gap-2"
-                                        >
-                                            <FiArrowRight className="rotate-180" size={16} />
-                                            Previous
-                                        </button>
-                                    )}
-                                </div>
+                            {/* Footer Actions */}
+                            <div className="p-6 bg-white border-t border-slate-100 flex justify-between items-center z-50 shrink-0 shadow-[0_-5px_25px_rgba(0,0,0,0.03)]">
+                                {currentStep > 0 ? (
+                                    <button
+                                        onClick={() => setCurrentStep(p => p - 1)}
+                                        className="px-6 py-3 rounded-[20px] font-black text-slate-400 hover:text-[#0f3e61] transition-all flex items-center gap-2 group text-[11px] uppercase tracking-wider"
+                                    >
+                                        <MdArrowBack className="group-hover:-translate-x-1 transition-transform" /> Back
+                                    </button>
+                                ) : <div />}
 
                                 <div className="flex gap-3">
-                                    {currentStep < 5 ? (
-                                        <>
-                                            <button
-                                                type="button"
-                                                onClick={() => setCurrentStep(currentStep + 1)}
-                                                className="px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 font-medium rounded-xl transition-all flex items-center gap-2"
-                                            >
-                                                Skip
-                                                <FiArrowRight size={16} />
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={handleNext}
-                                                className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all shadow-lg shadow-blue-600/20 hover:shadow-xl hover:shadow-blue-600/30 flex items-center gap-2"
-                                            >
-                                                Continue
-                                                <FiArrowRight size={16} />
-                                            </button>
-                                        </>
+                                    <button
+                                        onClick={onClose}
+                                        className="px-6 py-3 rounded-[20px] font-black text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all font-primary uppercase tracking-widest text-[9px]"
+                                    >
+                                        Dismiss
+                                    </button>
+
+                                    {currentStep < steps.length - 1 ? (
+                                        <button
+                                            onClick={handleNext}
+                                            className="px-10 py-3 rounded-[20px] font-black bg-gradient-to-r from-[#207DC0] to-[#165a8a] text-white shadow-xl shadow-blue-500/10 hover:shadow-blue-500/30 hover:-translate-y-0.5 transition-all flex items-center gap-2 uppercase tracking-widest text-[9px]"
+                                        >
+                                            Next Phase <MdArrowForward />
+                                        </button>
                                     ) : (
                                         <button
-                                            type="button"
                                             onClick={handleSubmit}
                                             disabled={loading}
-                                            className="px-8 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-all shadow-lg shadow-emerald-600/20 hover:shadow-xl hover:shadow-emerald-600/30 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                            className="px-10 py-3 rounded-[20px] font-black bg-gradient-to-r from-[#207DC0] to-[#165a8a] text-white shadow-xl shadow-blue-500/10 hover:shadow-blue-500/30 hover:-translate-y-0.5 transition-all flex items-center gap-2 disabled:opacity-50 uppercase tracking-widest text-[9px]"
                                         >
-                                            {loading ? (
-                                                <>
-                                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                                    Saving...
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <FiCheck size={16} />
-                                                    {patientId ? 'Update Patient' : 'Save Patient'}
-                                                </>
-                                            )}
+                                            {loading ? 'Syncing...' : (patientId ? 'Update Record' : 'Finalize Record')} <MdCheck />
                                         </button>
                                     )}
                                 </div>
                             </div>
+                        </div>
+                    </motion.div>
 
-                        </form>
-                    </div>
+                    <style>
+                        {`
+                            .no-scrollbar::-webkit-scrollbar { display: none; }
+                            .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+                        `}
+                    </style>
                 </div>
-
-            </div>
-        </div>
+            )}
+        </AnimatePresence>
     );
 };
 

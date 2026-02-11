@@ -2,10 +2,10 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 :root {
-  --path-primary: #8B5CF6;
+  --path-primary: #207DC0;
   /* Purple/Violet for Pathologist */
-  --path-primary-hover: #7C3AED;
-  --path-secondary: #28C76F;
+  --path-primary-hover: #0F7D7E;
+  --path-secondary: #207DC0;
   --path-bg-page: #F8FAFC;
   --path-bg-card: #FFFFFF;
   --path-bg-input: #F1F3F7;
@@ -30,7 +30,7 @@
 .main-title {
   font-size: 24px;
   font-weight: 700;
-  color: var(--path-text-title);
+  color: #0F172A;
   margin-bottom: 4px;
 }
 
@@ -156,7 +156,7 @@
 
 .gender-male {
   background: #DBEAFE;
-  color: #1E40AF;
+  color: #165a8a;
 }
 
 .gender-female {

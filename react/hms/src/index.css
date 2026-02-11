@@ -2,6 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --blue-primary: #207DC0;
+  --blue-dark: #165a8a;
+  --teal-accent: #207DC0;
+  --teal-dark: #165a8a;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
