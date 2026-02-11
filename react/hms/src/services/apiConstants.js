@@ -5,10 +5,10 @@
  * This is the React equivalent of Flutter's api_constants.dart
  */
 
-const API_BASE_URL =
-  (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
-    ? (process.env.REACT_APP_API_URL || 'http://localhost:5000/api')
-    : 'https://hms-dev-2.onrender.com/api';
+const API_BASE_URL = process.env.REACT_APP_API_URL ||
+  ((typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
+    ? 'http://localhost:5000/api'
+    : 'https://hms-dev.onrender.com/api');
 
 /**
  * Authentication endpoints
