@@ -15,7 +15,7 @@ import { useApp } from '../../../provider';
 import axios from 'axios';
 import './Settings.css';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://hms-dev.onrender.com/api';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://hms-dev-2.onrender.com/api';
 
 const Settings = () => {
   const navigate = useNavigate();
@@ -49,12 +49,12 @@ const Settings = () => {
 
   const handleFilesChange = async (event) => {
     const files = Array.from(event.target.files || []);
-    
+
     if (files.length === 0) return;
-    
+
     // Limit to 10 files
     const selectedFiles = files.slice(0, 10);
-    
+
     // Validate file types
     const validFiles = selectedFiles.filter(file => {
       const ext = file.name.split('.').pop().toLowerCase();
@@ -67,7 +67,7 @@ const Settings = () => {
     }
 
     await uploadFiles(validFiles);
-    
+
     // Reset input
     event.target.value = '';
   };
@@ -89,7 +89,7 @@ const Settings = () => {
 
       // Get token
       const token = localStorage.getItem('authToken');
-      
+
       // Send to backend
       const response = await axios.post(
         `${API_BASE_URL}/scanner/bulk-upload`,
@@ -142,7 +142,7 @@ const Settings = () => {
   const openPdf = async (pdfId, suggestedName) => {
     try {
       const token = localStorage.getItem('authToken');
-      
+
       const response = await axios.get(
         `${API_BASE_URL}/scanner/pdf/${pdfId}`,
         {
@@ -185,7 +185,7 @@ const Settings = () => {
       {/* Header */}
       <div className="scanner-header">
         <h1 className="scanner-title">Scan Upload</h1>
-        <button 
+        <button
           className="logout-btn"
           onClick={handleLogout}
           disabled={busy}
