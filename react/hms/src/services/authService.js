@@ -12,15 +12,10 @@ import { Pathologist } from '../models/Pathologist';
 import apiLogger from '../utils/apiLogger';
 import logger from './loggerService';
 
-const API_BASE_URL = (() => {
-  if (typeof window !== 'undefined') {
-    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    return isLocalhost
-      ? (process.env.REACT_APP_API_URL || 'http://localhost:5000/api')
-      : 'https://hms-dev-2.onrender.com/api';
-  }
-  return process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
-})();
+const API_BASE_URL = process.env.REACT_APP_API_URL ||
+  ((typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
+    ? 'http://localhost:5000/api'
+    : 'https://hms-dev.onrender.com/api');
 
 if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
   if (API_BASE_URL.includes('onrender.com')) {

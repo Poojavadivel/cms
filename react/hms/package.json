@@ -30,7 +30,7 @@
     "eject": "react-scripts eject",
     "test-backend": "node test-backend.js",
     "dev": "react-scripts start",
-    "prod-build": "REACT_APP_API_URL=https://hms-dev-2.onrender.com/api npm run build",
+    "prod-build": "REACT_APP_API_URL=https://hms-dev.onrender.com/api npm run build",
     "serve": "node server.js",
     "prod": "npm run build && npm run serve"
   },

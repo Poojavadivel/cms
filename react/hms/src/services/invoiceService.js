@@ -11,7 +11,7 @@ const getAuthToken = () => {
 };
 
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'https://hms-dev-2.onrender.com/api',
+  baseURL: process.env.REACT_APP_API_URL || 'https://hms-dev.onrender.com/api',
   headers: {
     'Content-Type': 'application/json',
   },

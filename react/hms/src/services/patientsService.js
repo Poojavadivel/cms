@@ -24,7 +24,7 @@ const getAuthToken = () => {
 const createAxiosInstance = () => {
   const token = getAuthToken();
   return axios.create({
-    baseURL: process.env.REACT_APP_API_URL || 'https://hms-dev-2.onrender.com/api',
+    baseURL: process.env.REACT_APP_API_URL || 'https://hms-dev.onrender.com/api',
     headers: {
       'Content-Type': 'application/json',
       ...(token && { 'x-auth-token': token })

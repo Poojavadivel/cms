@@ -9,7 +9,7 @@ import logger from './loggerService';
 const getAuthToken = () => localStorage.getItem('auth_token') || localStorage.getItem('x-auth-token') || localStorage.getItem('authToken');
 
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'https://hms-dev-2.onrender.com/api',
+  baseURL: process.env.REACT_APP_API_URL || 'https://hms-dev.onrender.com/api',
   headers: { 'Content-Type': 'application/json' },
 });
 
