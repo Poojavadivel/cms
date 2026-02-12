@@ -191,11 +191,26 @@ async function createAppointment(chatId, telegramUserId, patientData) {
       return `PAT-TG-${timestamp}-${random}`;
     };
     
-    // Create or update patient with full details
-    let patient = await Patient.findOne({ telegramUserId: telegramUserId.toString() });
+    let patient;
     
-    if (!patient) {
-      // Create new patient with full details
+    if (patientData.isExisting && patientData.patientId) {
+      // Use existing patient
+      patient = await Patient.findById(patientData.patientId);
+      
+      if (!patient) {
+        return { success: false, error: 'Patient record not found' };
+      }
+      
+      // Update telegram info if not set
+      if (!patient.telegramUserId) {
+        patient.telegramUserId = telegramUserId.toString();
+        patient.telegramUsername = conversationState.get(chatId)?.username;
+        await patient.save();
+      }
+      
+      console.log(`✅ Using existing patient: ${patient.firstName} ${patient.lastName}`);
+    } else {
+      // Create new patient
       const nameParts = patientData.fullName.trim().split(' ');
       const firstName = nameParts[0];
       const lastName = nameParts.slice(1).join(' ') || 'User';
@@ -204,19 +219,24 @@ async function createAppointment(chatId, telegramUserId, patientData) {
         patientCode: generatePatientCode(),
         firstName,
         lastName,
-        age: patientData.age,
-        gender: patientData.gender,
+        age: 0, // Will be updated later if needed
+        gender: 'Other', // Default
         phone: patientData.phone,
-        email: patientData.email,
+        email: `telegram_${telegramUserId}@telegram.user`, // Default email
         bloodGroup: patientData.bloodGroup || 'Unknown',
         address: {
-          line1: 'Telegram User',         // Backward compatibility
-          houseNo: 'Telegram',             // New schema field
-          street: 'User - Via Bot',        // New schema field
+          line1: patientData.address || 'Telegram User',
+          houseNo: '',
+          street: '',
           city: '',
           state: '',
           pincode: '',
-          country: 'India'                 // Default country
+          country: 'India'
+        },
+        emergencyContact: {
+          name: patientData.emergencyContactName || '',
+          phone: patientData.emergencyPhone || '',
+          relationship: 'Emergency Contact'
         },
         telegramUserId: telegramUserId.toString(),
         telegramUsername: conversationState.get(chatId)?.username,
@@ -227,18 +247,6 @@ async function createAppointment(chatId, telegramUserId, patientData) {
       });
       await patient.save();
       console.log(`✅ Created new patient: ${patientData.fullName}`);
-    } else {
-      // Update existing patient with new details
-      const nameParts = patientData.fullName.trim().split(' ');
-      patient.firstName = nameParts[0];
-      patient.lastName = nameParts.slice(1).join(' ') || 'User';
-      patient.age = patientData.age;
-      patient.gender = patientData.gender;
-      patient.phone = patientData.phone;
-      patient.email = patientData.email;
-      patient.bloodGroup = patientData.bloodGroup || patient.bloodGroup || 'Unknown';
-      await patient.save();
-      console.log(`✅ Updated patient: ${patientData.fullName}`);
     }
 
     // Check for duplicates
@@ -257,7 +265,7 @@ async function createAppointment(chatId, telegramUserId, patientData) {
       appointmentType: 'Consultation',
       startAt: patientData.dateTime,
       endAt: new Date(patientData.dateTime.getTime() + 30 * 60000), // 30 minutes duration
-      location: 'Karur Gastro Foundation',
+      location: 'Movi Innovations',
       status: 'Scheduled',
       notes: `Reason: ${patientData.reason}\nBooked via Telegram Bot`,
       telegramUserId: telegramUserId.toString(),
@@ -286,7 +294,7 @@ bot.onText(/\/start/, async (msg) => {
   resetState(chatId);
 
   await bot.sendMessage(chatId,
-    `🏥 *Welcome to Karur Gastro Foundation HMS*\n\n` +
+    `🏥 *Welcome to Movi Innovations HMS*\n\n` +
     `I'm your virtual healthcare assistant. Here's what I can help you with:\n\n` +
     `📅 */book* - Book a new appointment\n` +
     `📋 */reports* - View your medical reports (after appointments)\n` +
@@ -437,14 +445,22 @@ bot.onText(/\/book/, async (msg) => {
   // Store user info
   state.username = msg.from.username;
   state.firstName = msg.from.first_name;
-  state.step = 'waiting_full_name';
+  state.step = 'waiting_patient_type';
   state.lastActivity = Date.now();
 
   await bot.sendMessage(chatId,
-    `👋 Welcome to Karur Gastro Foundation!\n\n` +
-    `Let's book your appointment. I'll need a few details from you.\n\n` +
-    `First, please provide your *full name*:`,
-    { parse_mode: 'Markdown' }
+    `👋 Welcome to Movi Innovations!\n\n` +
+    `Let's book your appointment.\n\n` +
+    `Are you a new patient or an existing patient?`,
+    {
+      parse_mode: 'Markdown',
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: '🆕 New Patient', callback_data: 'patient_type_new' }],
+          [{ text: '👤 Existing Patient', callback_data: 'patient_type_existing' }]
+        ]
+      }
+    }
   );
 });
 
@@ -473,37 +489,68 @@ bot.on('message', async (msg) => {
         );
         break;
 
-      case 'waiting_full_name':
-        state.data.fullName = userMessage.trim();
-        state.step = 'waiting_age';
-        state.lastActivity = Date.now();
+      case 'waiting_patient_id':
+        // For existing patients, verify their patient ID or phone number
+        const patientIdentifier = userMessage.trim();
         
-        await bot.sendMessage(chatId, `Thanks, ${state.data.fullName}!\n\nNow, please provide your *age*:`, { parse_mode: 'Markdown' });
-        break;
-
-      case 'waiting_age':
-        const age = parseInt(userMessage.trim());
-        if (isNaN(age) || age < 1 || age > 120) {
-          await bot.sendMessage(chatId, `❌ Please enter a valid age (1-120):`);
+        await bot.sendMessage(chatId, '🔍 Searching for your record...');
+        
+        // Try to find patient by phone number or ID
+        let patient = await Patient.findOne({
+          $or: [
+            { phone: patientIdentifier },
+            { _id: patientIdentifier.match(/^[0-9a-fA-F]{24}$/) ? patientIdentifier : null }
+          ]
+        });
+        
+        if (!patient) {
+          await bot.sendMessage(chatId,
+            `❌ Patient record not found.\n\n` +
+            `Please check your phone number or patient ID and try again.\n\n` +
+            `Or use /book to register as a new patient.`
+          );
           break;
         }
-        state.data.age = age;
-        state.step = 'waiting_gender';
+        
+        // Store patient data temporarily
+        state.data.patientId = patient._id;
+        state.data.age = patient.age;
+        state.data.gender = patient.gender;
+        state.data.phone = patient.phone;
+        state.data.email = patient.email;
+        state.data.bloodGroup = patient.bloodGroup;
+        state.data.isExisting = true;
+        state.step = 'waiting_patient_name';
         state.lastActivity = Date.now();
         
-        await bot.sendMessage(chatId, 
-          `Great! Now, please select your *gender*:`,
-          {
-            parse_mode: 'Markdown',
-            reply_markup: {
-              inline_keyboard: [
-                [{ text: '👨 Male', callback_data: 'gender_male' }],
-                [{ text: '👩 Female', callback_data: 'gender_female' }],
-                [{ text: '⚧ Other', callback_data: 'gender_other' }]
-              ]
-            }
-          }
+        await bot.sendMessage(chatId,
+          `✅ *Patient Record Found!*\n\n` +
+          `📱 *Phone:* ${state.data.phone}\n\n` +
+          `Please confirm your *full name*:`,
+          { parse_mode: 'Markdown' }
         );
+        break;
+
+      case 'waiting_patient_name':
+        state.data.fullName = userMessage.trim();
+        state.step = 'waiting_reason';
+        state.lastActivity = Date.now();
+        
+        await bot.sendMessage(chatId,
+          `Thanks, ${state.data.fullName}!\n\n` +
+          `What is the *reason for your visit*?\n\n` +
+          `(e.g., "Regular checkup", "Stomach pain", "Follow-up consultation", etc.)`,
+          { parse_mode: 'Markdown' }
+        );
+        break;
+
+      case 'waiting_full_name':
+        state.data.fullName = userMessage.trim();
+        state.data.isExisting = false;
+        state.step = 'waiting_phone';
+        state.lastActivity = Date.now();
+        
+        await bot.sendMessage(chatId, `Thanks, ${state.data.fullName}!\n\nNow, please provide your *phone number*:`, { parse_mode: 'Markdown' });
         break;
 
       case 'waiting_phone':
@@ -513,32 +560,11 @@ bot.on('message', async (msg) => {
           break;
         }
         state.data.phone = phone;
-        state.step = 'waiting_email';
-        state.lastActivity = Date.now();
-        
-        await bot.sendMessage(chatId, 
-          `Perfect! Now, please provide your *email address*:\n\n` +
-          `(Or type "skip" if you don't have one)`,
-          { parse_mode: 'Markdown' }
-        );
-        break;
-
-      case 'waiting_email':
-        if (userMessage.toLowerCase() === 'skip') {
-          state.data.email = `telegram_${msg.from.id}@telegram.user`;
-        } else {
-          const email = userMessage.trim();
-          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-            await bot.sendMessage(chatId, `❌ Please enter a valid email address (or type "skip"):`);
-            break;
-          }
-          state.data.email = email;
-        }
         state.step = 'waiting_blood_group';
         state.lastActivity = Date.now();
         
         await bot.sendMessage(chatId, 
-          `Excellent! What is your *blood group*?`,
+          `Perfect! What is your *blood group*?`,
           {
             parse_mode: 'Markdown',
             reply_markup: {
@@ -561,6 +587,45 @@ bot.on('message', async (msg) => {
               ]
             }
           }
+        );
+        break;
+
+      case 'waiting_address':
+        state.data.address = userMessage.trim();
+        state.step = 'waiting_emergency_name';
+        state.lastActivity = Date.now();
+        
+        await bot.sendMessage(chatId, 
+          `Great! Now, please provide your *emergency contact name*:`,
+          { parse_mode: 'Markdown' }
+        );
+        break;
+
+      case 'waiting_emergency_name':
+        state.data.emergencyContactName = userMessage.trim();
+        state.step = 'waiting_emergency_phone';
+        state.lastActivity = Date.now();
+        
+        await bot.sendMessage(chatId, 
+          `Thanks! Now, please provide the *emergency contact phone number*:`,
+          { parse_mode: 'Markdown' }
+        );
+        break;
+
+      case 'waiting_emergency_phone':
+        const emergencyPhone = userMessage.trim();
+        if (emergencyPhone.length < 10 || !/^\+?[\d\s-()]+$/.test(emergencyPhone)) {
+          await bot.sendMessage(chatId, `❌ Please enter a valid emergency contact phone number (at least 10 digits):`);
+          break;
+        }
+        state.data.emergencyPhone = emergencyPhone;
+        state.step = 'waiting_reason';
+        state.lastActivity = Date.now();
+        
+        await bot.sendMessage(chatId, 
+          `Excellent! What is the *reason for your visit*?\n\n` +
+          `(e.g., "Regular checkup", "Stomach pain", "Follow-up consultation", etc.)`,
+          { parse_mode: 'Markdown' }
         );
         break;
 
@@ -617,20 +682,26 @@ bot.on('message', async (msg) => {
         // Get doctor info
         const doctor = await getDefaultDoctor();
 
-        await bot.sendMessage(chatId,
-          `✅ *Perfect! Please review your appointment details:*\n\n` +
+        // Build confirmation message based on patient type
+        let confirmationMsg = `✅ *Perfect! Please review your appointment details:*\n\n` +
           `👤 *Name:* ${state.data.fullName}\n` +
-          `🎂 *Age:* ${state.data.age}\n` +
-          `⚧ *Gender:* ${state.data.gender}\n` +
-          `📱 *Phone:* ${state.data.phone}\n` +
-          `📧 *Email:* ${state.data.email}\n` +
-          `🩸 *Blood Group:* ${state.data.bloodGroup || 'N/A'}\n` +
-          `📝 *Reason:* ${state.data.reason}\n\n` +
+          `📱 *Phone:* ${state.data.phone}\n`;
+        
+        // Add additional fields for new patients
+        if (!state.data.isExisting) {
+          confirmationMsg += `🩸 *Blood Group:* ${state.data.bloodGroup || 'N/A'}\n` +
+            `📍 *Address:* ${state.data.address}\n` +
+            `🚨 *Emergency Contact:* ${state.data.emergencyContactName} (${state.data.emergencyPhone})\n`;
+        }
+        
+        confirmationMsg += `📝 *Reason:* ${state.data.reason}\n\n` +
           `📅 *Date:* ${state.data.dateStr}\n` +
           `🕐 *Time:* ${state.data.timeStr}\n` +
           `👨‍⚕️ *Doctor:* Dr. ${doctor.firstName} ${doctor.lastName || ''}`.trim() + `\n` +
-          `📍 *Location:* Karur Gastro Foundation\n\n` +
-          `Is everything correct?`,
+          `🏥 *Location:* Movi Innovations\n\n` +
+          `Is everything correct?`;
+
+        await bot.sendMessage(chatId, confirmationMsg,
           {
             parse_mode: 'Markdown',
             reply_markup: {
@@ -664,7 +735,7 @@ bot.on('message', async (msg) => {
               `📅 *Date:* ${state.data.dateStr}\n` +
               `🕐 *Time:* ${state.data.timeStr}\n` +
               `👨‍⚕️ *Doctor:* Dr. ${result.doctorName}\n` +
-              `📍 *Location:* Karur Gastro Foundation\n\n` +
+              `📍 *Location:* Movi Innovations\n\n` +
               `Please save your appointment code for reference.\n` +
               `We'll see you at your appointment!\n\n` +
               `Use /book to schedule another appointment.`,
@@ -810,29 +881,47 @@ bot.on('callback_query', async (query) => {
       return; // Exit early for download handler
     }
     
-    // Gender selection
-    if (data.startsWith('gender_')) {
-      const gender = data.replace('gender_', '');
-      state.data.gender = gender.charAt(0).toUpperCase() + gender.slice(1);
-      state.step = 'waiting_phone';
-      state.lastActivity = Date.now();
+    // Patient type selection
+    if (data.startsWith('patient_type_')) {
+      const patientType = data.replace('patient_type_', '');
       
       await bot.answerCallbackQuery(query.id);
-      await bot.editMessageText(
-        `✅ Gender: ${state.data.gender}`,
+      await bot.editMessageReplyMarkup(
+        { inline_keyboard: [] },
         {
           chat_id: chatId,
           message_id: query.message.message_id
         }
       );
-      await bot.sendMessage(chatId, `Great! Now, please provide your *phone number*:`, { parse_mode: 'Markdown' });
+      
+      if (patientType === 'new') {
+        // New patient - ask for full name
+        state.step = 'waiting_full_name';
+        state.lastActivity = Date.now();
+        
+        await bot.sendMessage(chatId,
+          `✅ *New Patient Registration*\n\n` +
+          `Please provide your *full name*:`,
+          { parse_mode: 'Markdown' }
+        );
+      } else {
+        // Existing patient - ask for patient ID or phone
+        state.step = 'waiting_patient_id';
+        state.lastActivity = Date.now();
+        
+        await bot.sendMessage(chatId,
+          `✅ *Existing Patient*\n\n` +
+          `Please provide your *phone number* or *patient ID* to look up your record:`,
+          { parse_mode: 'Markdown' }
+        );
+      }
     }
     
-    // Blood group selection
+    // Blood group selection (for new patients)
     else if (data.startsWith('blood_')) {
       const bloodGroup = data.replace('blood_', '');
       state.data.bloodGroup = bloodGroup === 'unknown' ? 'Unknown' : bloodGroup;
-      state.step = 'waiting_reason';
+      state.step = 'waiting_address';
       state.lastActivity = Date.now();
       
       await bot.answerCallbackQuery(query.id);
@@ -844,8 +933,7 @@ bot.on('callback_query', async (query) => {
         }
       );
       await bot.sendMessage(chatId, 
-        `Perfect! What is the *reason for your visit*?\n\n` +
-        `(e.g., "Regular checkup", "Stomach pain", "Follow-up consultation", etc.)`,
+        `Great! Now, please provide your *address*:`,
         { parse_mode: 'Markdown' }
       );
     }
@@ -877,8 +965,8 @@ bot.on('callback_query', async (query) => {
           `📅 *Date:* ${state.data.dateStr}\n` +
           `🕐 *Time:* ${state.data.timeStr}\n` +
           `👨‍⚕️ *Doctor:* Dr. ${result.doctorName}\n` +
-          `📍 *Location:* Karur Gastro Foundation\n\n` +
-          `💡 Please save your appointment code for reference.\n` +
+          `📍 *Location:* Movi Innovations\n\n` +
+          `💡 Please save your appointment code for reference.\n`+
           `We'll see you at your appointment!\n\n` +
           `Use /book to schedule another appointment.`,
           { parse_mode: 'Markdown' }

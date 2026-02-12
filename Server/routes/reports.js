@@ -43,7 +43,7 @@ router.get('/patient/:patientId', auth, async (req, res) => {
         Title: `Patient Report - ${patient.firstName} ${patient.lastName || ''}`,
         Author: 'MoviLabs HMS',
         Subject: 'Patient Medical Report',
-        Creator: 'Karur Gastro Foundation'
+        Creator: 'Movi Innovations'
       }
     });
 
@@ -316,7 +316,7 @@ router.get('/doctor/:doctorId', auth, async (req, res) => {
         Title: `Doctor Report - ${doctor.name}`,
         Author: 'MoviLabs HMS',
         Subject: 'Doctor Performance Report',
-        Creator: 'Karur Gastro Foundation'
+        Creator: 'Movi Innovations'
       }
     });
 

@@ -262,7 +262,7 @@ bot.onText(/\/start/, (msg) => {
   resetConversation(chatId);
 
   const welcomeMessage = `
-🏥 *Welcome to Karur Gastro Foundation HMS*
+🏥 *Welcome to Movi Innovations HMS*
 
 I'm your AI-powered healthcare assistant. I can help you with:
 
@@ -280,7 +280,7 @@ I'm your AI-powered healthcare assistant. I can help you with:
 
 *Contact Us:*
 📞 +91-XXXXX-XXXXX
-📧 info@karurgastro.com
+📧 info@moviinnovations.com
 
 Type */book* to get started!
 `;
@@ -628,7 +628,7 @@ Status: ${appointment.status}
 
 You will receive a confirmation via phone/email shortly.
 
-Thank you for choosing Karur Gastro Foundation!
+Thank you for choosing Movi Innovations!
 
 Type /start to return to menu.
 `;

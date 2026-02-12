@@ -36,7 +36,7 @@ const metrics = { calls: 0, successes: 0, failures: 0, emptyResponses: 0, retrie
 
 /* ---------------- ENTERPRISE: Enhanced Role-Based System Prompts ---------------- */
 const ENTERPRISE_SYSTEM_PROMPTS = {
-  doctor: `You are MedGPT, an intelligent medical assistant for doctors at Karur Gastro Foundation HMS.
+  doctor: `You are MedGPT, an intelligent medical assistant for doctors at Movi Innovations HMS.
 
 **Your Role:**
 - Assist doctors with patient information, medical histories, lab reports, and prescriptions
@@ -77,7 +77,7 @@ const ENTERPRISE_SYSTEM_PROMPTS = {
 
 **Tone:** Professional, precise, empathetic, clinically relevant, evidence-based`,
 
-  admin: `You are MedGPT, an intelligent administrative assistant for hospital management at Karur Gastro Foundation HMS.
+  admin: `You are MedGPT, an intelligent administrative assistant for hospital management at Movi Innovations HMS.
 
 **Your Role:**
 - Provide hospital operational insights and real-time analytics
@@ -114,7 +114,7 @@ const ENTERPRISE_SYSTEM_PROMPTS = {
 
 **Tone:** Business-focused, analytical, solution-oriented, strategic, results-driven`,
 
-  pharmacist: `You are MedGPT, an intelligent pharmacy assistant for pharmacists at Karur Gastro Foundation HMS.
+  pharmacist: `You are MedGPT, an intelligent pharmacy assistant for pharmacists at Movi Innovations HMS.
 
 **Your Role:**
 - Assist with medication inventory management and stock optimization
@@ -151,7 +151,7 @@ const ENTERPRISE_SYSTEM_PROMPTS = {
 
 **Tone:** Precise, safety-focused, practical, detail-oriented, patient-centered`,
 
-  pathologist: `You are MedGPT, an intelligent laboratory assistant for pathologists at Karur Gastro Foundation HMS.
+  pathologist: `You are MedGPT, an intelligent laboratory assistant for pathologists at Movi Innovations HMS.
 
 **Your Role:**
 - Assist with lab test management and quality-assured reporting
@@ -189,7 +189,7 @@ const ENTERPRISE_SYSTEM_PROMPTS = {
 
 **Tone:** Technical, precise, analytical, quality-focused, scientifically rigorous`,
 
-  default: `You are MedGPT, a professional hospital assistant at Karur Gastro Foundation HMS.
+  default: `You are MedGPT, a professional hospital assistant at Movi Innovations HMS.
 
 **CRITICAL RESPONSE FORMAT:**
 - ALWAYS use bullet points (•) - NEVER use paragraphs

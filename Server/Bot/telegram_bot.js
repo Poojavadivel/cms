@@ -103,7 +103,7 @@ bot.onText(/\/start/, (msg) => {
   resetConversation(chatId);
 
   const welcomeMessage = `
-🏥 *Welcome to Karur Gastro Foundation HMS*
+🏥 *Welcome to Movi Innovations HMS*
 
 I'm your virtual healthcare assistant. Here's what I can help you with:
 
@@ -590,7 +590,7 @@ async function handleBookingConfirm(chatId, text) {
 Use /myappointments to view or contact us:
 📞 +91-XXXXX-XXXXX
 
-Thank you for choosing Karur Gastro Foundation! 🏥
+Thank you for choosing Movi Innovations! 🏥
 `;
 
     bot.sendMessage(chatId, successMessage, {

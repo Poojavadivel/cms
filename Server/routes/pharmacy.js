@@ -1419,7 +1419,7 @@ router.get('/prescriptions/:intakeId/pdf', auth, async (req, res) => {
     doc.moveDown(0.5);
 
     doc.fontSize(10).fillColor('#6b7280').font('Helvetica')
-      .text('Karur Gastro Hospital', { align: 'center' });
+      .text('Movi Innovations', { align: 'center' });
     doc.moveDown(1.5);
 
     // Divider
