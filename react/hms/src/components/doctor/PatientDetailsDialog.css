@@ -1,0 +1,994 @@
+/* PatientDetailsDialog_FLUTTER.css */
+/* Flutter-styled patient details dialog */
+/* Matches exact design from Flutter DoctorAppointmentPreview */
+
+/* ============================================
+   DIALOG STRUCTURE
+   ============================================ */
+
+.patient-modal-overlay-flutter {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(8px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.patient-modal-content-flutter {
+  width: 95%;
+  max-width: 95vw;
+  height: 95vh;
+  background: #F9FAFB;
+  border-radius: 16px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+  position: relative;
+  animation: scaleUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Floating Close Button (Outside Dialog) */
+.btn-close-floating-flutter {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: white;
+  border: 1px solid #E5E7EB;
+  color: #6B7280;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 100;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s;
+  padding: 8px;
+}
+
+.btn-close-floating-flutter:hover {
+  background: #FEE2E2;
+  color: #EF4444;
+  transform: scale(1.05);
+}
+
+/* Main Content Wrapper */
+.pd-flutter-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 12px;
+}
+
+/* ============================================
+   HEADER CARD
+   ============================================ */
+
+.pd-header-card-flutter {
+  padding: 16px;
+  margin-bottom: 12px;
+  background: white;
+  border-radius: 16px;
+  border: 1px solid #F3F4F6;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.04);
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+/* Avatar */
+.pd-avatar-flutter {
+  width: 128px;
+  height: 128px;
+  border-radius: 14px;
+  border: 1px solid #F3F4F6;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.025);
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.pd-avatar-fallback-flutter {
+  width: 128px;
+  height: 128px;
+  border-radius: 14px;
+  border: 1px solid #F3F4F6;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.025);
+  background: #F9FAFB;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48px;
+  flex-shrink: 0;
+}
+
+/* Identity Block */
+.pd-identity-flutter {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.pd-name-flutter {
+  font-family: 'Lexend', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 24px;
+  font-weight: 800;
+  color: #111827;
+  line-height: 1.05;
+  margin: 0;
+}
+
+/* Patient Code Badge */
+.pd-code-badge-flutter {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(239, 68, 68, 0.05));
+  border: 1.5px solid rgba(239, 68, 68, 0.3);
+  border-radius: 12px;
+  width: fit-content;
+}
+
+.pd-code-badge-flutter .icon {
+  width: 16px;
+  height: 16px;
+  color: #EF4444;
+}
+
+.pd-code-badge-flutter .text {
+  font-family: 'Lexend', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 14px;
+  font-weight: 800;
+  color: #EF4444;
+  letter-spacing: 0.5px;
+}
+
+/* Info Pills */
+.pd-pills-flutter {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.pd-pill-flutter {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 20px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid;
+}
+
+.pd-pill-flutter.blood {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #EF4444;
+}
+
+.pd-pill-flutter.female {
+  background: rgba(236, 72, 153, 0.1);
+  border-color: rgba(236, 72, 153, 0.3);
+  color: #EC4899;
+}
+
+.pd-pill-flutter.male {
+  background: rgba(32, 125, 192, 0.1);
+  border-color: rgba(32, 125, 192, 0.3);
+  color: #207DC0;
+}
+
+.pd-pill-flutter.age {
+  background: rgba(32, 125, 192, 0.1);
+  border-color: rgba(32, 125, 192, 0.3);
+  color: #207DC0;
+}
+
+.pd-pill-flutter .icon {
+  width: 14px;
+  height: 14px;
+}
+
+/* ============================================
+   VITALS GRID
+   ============================================ */
+
+.pd-vitals-grid-flutter {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  min-width: 0;
+}
+
+.pd-vital-card-flutter {
+  background: white;
+  border: 1px solid #F3F4F6;
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.pd-vital-card-flutter:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.05);
+}
+
+.pd-vital-icon-flutter {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+}
+
+.pd-vital-icon-flutter.height {
+  background: #DBEAFE;
+  color: #207DC0;
+}
+
+.pd-vital-icon-flutter.weight {
+  background: #FEF3C7;
+  color: #D97706;
+}
+
+.pd-vital-icon-flutter.bmi {
+  background: #D1FAE5;
+  color: #165a8a;
+}
+
+.pd-vital-icon-flutter.spo2 {
+  background: #FCE7F3;
+  color: #DB2777;
+}
+
+.pd-vital-value-flutter {
+  font-size: 18px;
+  font-weight: 700;
+  color: #0F172A;
+  text-align: center;
+}
+
+.pd-vital-label-flutter {
+  font-size: 11px;
+  font-weight: 600;
+  color: #94A3B8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  text-align: center;
+}
+
+/* ============================================
+   TABS SECTION
+   ============================================ */
+
+.pd-tabs-container-flutter {
+  background: white;
+  border-radius: 16px;
+  border: 1px solid #E5E7EB;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.05);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* Tab Bar */
+.pd-tabs-flutter {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid #E5E7EB;
+  padding: 0 8px;
+  overflow-x: auto;
+  flex-shrink: 0;
+}
+
+.pd-tab-flutter {
+  padding: 12px 24px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+  color: #6B7280;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  transition: all 0.2s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.pd-tab-flutter:hover {
+  color: #374151;
+}
+
+.pd-tab-flutter.active {
+  font-family: 'Lexend', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-weight: 600;
+  color: #EF4444;
+  border-bottom-color: #EF4444;
+}
+
+/* Tab Content */
+.pd-tab-content-flutter {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  min-height: 0;
+}
+
+.pd-tab-inner {
+  padding: 0;
+}
+
+.pd-section-title-flutter {
+  font-size: 18px;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0 0 24px 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* ============================================
+   PROFILE TAB CONTENT
+   ============================================ */
+
+.pd-info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 24px;
+}
+
+.pd-info-card {
+  background: white;
+  border-radius: 16px;
+  border: 1px solid #F1F5F9;
+  padding: 24px;
+}
+
+.pd-card-header-with-action {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.pd-card-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1E293B;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.pv-btn-outline-small {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border: 1px solid #E2E8F0;
+  background: white;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #64748B;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.pv-btn-outline-small:hover {
+  background: #F8FAFC;
+  border-color: #CBD5E1;
+  color: #1E293B;
+}
+
+.pd-field-group-flutter {
+  margin-bottom: 16px;
+}
+
+.pd-field-group-flutter:last-child {
+  margin-bottom: 0;
+}
+
+.pd-label-flutter {
+  display: block;
+  font-size: 12px;
+  color: #94A3B8;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.pd-value-flutter {
+  font-size: 15px;
+  color: #334155;
+  font-weight: 500;
+}
+
+.pd-notes {
+  font-size: 14px;
+  color: #64748B;
+  line-height: 1.6;
+  margin: 8px 0 0 0;
+}
+
+.allergy-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  background: #FEE2E2;
+  color: #DC2626;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid #FECACA;
+}
+
+/* ============================================
+   MEDICAL HISTORY
+   ============================================ */
+
+.pd-history-item-flutter {
+  display: flex;
+  padding: 16px;
+  background: #F8FAFC;
+  border-radius: 12px;
+  margin-bottom: 12px;
+  border-left: 4px solid #EF4444;
+  font-weight: 500;
+  color: #334155;
+  font-size: 14px;
+}
+
+/* ============================================
+   EMPTY STATE
+   ============================================ */
+
+.empty-state-flutter {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+}
+
+.empty-icon {
+  width: 64px;
+  height: 64px;
+  background: #F8FAFC;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  margin-bottom: 16px;
+  color: #CBD5E1;
+}
+
+.empty-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #64748B;
+  margin: 0 0 4px 0;
+}
+
+.empty-subtitle {
+  font-size: 14px;
+  color: #94A3B8;
+  margin: 0;
+  max-width: 400px;
+}
+
+/* ============================================
+   ANIMATIONS
+   ============================================ */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scaleUp {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ============================================
+   RESPONSIVE DESIGN
+   ============================================ */
+
+@media (max-width: 980px) {
+  .pd-header-card-flutter {
+    flex-direction: column;
+  }
+
+  .pd-vitals-grid-flutter {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .pd-info-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .patient-modal-content-flutter {
+    width: 100%;
+    height: 100vh;
+    border-radius: 0;
+  }
+
+  .btn-close-floating-flutter {
+    top: 8px;
+    right: 8px;
+  }
+
+  .pd-vitals-grid-flutter {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .pd-tabs-flutter {
+    padding: 0 4px;
+  }
+
+  .pd-tab-flutter {
+    padding: 12px 16px;
+    font-size: 12px;
+  }
+}
+
+/* ============================================
+   MODERN PROFILE HEADER (from PatientView)
+   ============================================ */
+
+.pv-summary-header {
+  background-color: white;
+  padding: 16px 24px;
+  border-bottom: 1px solid #E2E8F0;
+  flex-shrink: 0;
+}
+
+.pv-header-content {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+/* Avatar Section */
+.pv-avatar-section {
+  flex-shrink: 0;
+}
+
+.pv-avatar-container {
+  position: relative;
+  width: 140px;
+  height: 140px;
+}
+
+.pv-avatar-image {
+  width: 100%;
+  height: 100%;
+  border-radius: 12px;
+  object-fit: cover;
+  border: 1px solid #E2E8F0;
+  background: #FFFFFF;
+}
+
+/* Lifestyle Badges */
+.pv-lifestyle-indicators {
+  position: absolute;
+  bottom: -6px;
+  left: -6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pv-lifestyle-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  border: 2px solid #EF4444;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  color: #EF4444;
+  padding: 2px;
+  position: relative;
+}
+
+.pv-lifestyle-badge::before {
+  content: '';
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #EF4444;
+}
+
+.pv-lifestyle-badge::after {
+  content: '✕';
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: white;
+  font-size: 10px;
+  font-weight: bold;
+  line-height: 12px;
+}
+
+.pv-lifestyle-badge.no-alcohol,
+.pv-lifestyle-badge.no-smoker {
+  border-color: #EF4444;
+  color: #EF4444;
+}
+
+.pv-lifestyle-label {
+  font-size: 7px;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-top: auto;
+}
+
+/* Info Section */
+.pv-info-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  justify-content: center;
+}
+
+.pv-name-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pv-name-main {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.pv-contact-icons {
+  display: flex;
+  gap: 6px;
+}
+
+.pv-contact-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: #F1F5F9;
+  border: 1px solid #E2E8F0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748B;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.pv-contact-btn:hover {
+  background: #E2E8F0;
+  color: #1E293B;
+}
+
+.pv-name-id-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pv-patient-code-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #EFF6FF;
+  border: 1px solid #DBEAFE;
+  color: #165a8a;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  width: fit-content;
+  transition: all 0.2s;
+}
+
+.pv-patient-code-badge:hover {
+  background: #DBEAFE;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.pv-code-prefix {
+  opacity: 0.7;
+  font-size: 10px;
+}
+
+.pv-code-copy-icon {
+  opacity: 0.5;
+}
+
+.pv-patient-code-badge:hover .pv-code-copy-icon {
+  opacity: 1;
+}
+
+/* Pills */
+.pv-info-pills {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.pv-pill {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #64748B;
+  background: #F1F5F9;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.pv-pill svg {
+  color: #94A3B8;
+  width: 12px;
+  height: 12px;
+}
+
+/* Health Metrics */
+.pv-metrics-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 2px;
+}
+
+.pv-metric-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
+  padding: 8px 12px;
+  min-width: 80px;
+  display: flex;
+  flex-direction: column;
+}
+
+.pv-metric-val {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.pv-metric-val small {
+  font-size: 10px;
+  font-weight: 500;
+  color: #64748B;
+  margin-left: 2px;
+}
+
+.pv-metric-lbl {
+  font-size: 10px;
+  color: #64748B;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+/* Right Section - Blood Group Badge */
+.pv-header-right {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-end;
+  flex-shrink: 0;
+  min-width: 120px;
+}
+
+.pv-blood-group-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+  min-width: 100px;
+}
+
+.pv-blood-group-badge svg {
+  color: white;
+  margin-bottom: 4px;
+}
+
+.pv-blood-text {
+  font-size: 18px;
+  font-weight: 700;
+  color: white;
+  letter-spacing: 0.5px;
+}
+
+/* Timeline and Data Grid Styles */
+.pd-timeline-flutter {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.pd-history-item-flutter {
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid #e2e8f0;
+}
+
+.pd-history-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.pd-history-date {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.pd-history-tag {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: #e2e8f0;
+  color: #475569;
+  padding: 2px 8px;
+  border-radius: 100px;
+}
+
+.pd-history-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 6px 0;
+}
+
+.pd-history-notes {
+  font-size: 13px;
+  color: #475569;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.pd-view-pdf-btn {
+  margin-left: auto;
+  background: #fee2e2;
+  color: #ef4444;
+  border: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.pd-view-pdf-btn:hover {
+  background: #fecaca;
+  transform: scale(1.05);
+}
+
+.pd-grid-flutter {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.pd-card-header-flex {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.pd-date-tag {
+  display: inline-block;
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 12px;
+}
+
+.pd-status-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: #dcfce7;
+  color: #166534;
+}
+
+.pd-notes-small {
+  font-size: 12px;
+  color: #64748b;
+  font-style: italic;
+  margin-top: 8px;
+}
+
+.empty-state-flutter {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+  background: #f8fafc;
+  border-radius: 16px;
+  border: 2px dashed #e2e8f0;
+  margin-top: 20px;
+}
+
+.empty-icon {
+  font-size: 40px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.empty-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #475569;
+  margin-bottom: 8px;
+}
+
+.empty-subtitle {
+  font-size: 14px;
+  color: #94a3b8;
+  max-width: 300px;
+}

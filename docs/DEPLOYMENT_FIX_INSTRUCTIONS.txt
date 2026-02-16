@@ -1,0 +1,31 @@
+CRITICAL DEPLOYMENT INSTRUCTIONS
+================================
+
+1. WHAT IS HAPPENING?
+   You are seeing a 404 error because your web browser is still running the OLD version of the website.
+   It is trying to connect to 'hms-dev.onrender.com' instead of the new domain 'hms-dev-2.onrender.com'.
+
+2. HOW TO FIX IT (IMMEDIATELY):
+   A. WAIT FOR DEPLOYMENT TO FINISH
+      - Go to your Render Dashboard.
+      - Ensure the latest deployment (triggered ~5 minutes ago) says "Live".
+
+   B. FORCE REFRESH YOUR BROWSER
+      - Open your website: https://hms-dev-2.onrender.com
+      - Press Ctrl + F5 (Windows) or Cmd + Shift + R (Mac).
+      - This forces the browser to download the NEW code.
+
+   C. VERIFY THE FIX
+      - Open the "Prescriptions" page again.
+      - It should now load correctly.
+      - If you open the Console (F12), you should see requests going to '/api/...' (relative path) or 'https://hms-dev-2.onrender.com/api/...'.
+      - You should NOT see 'hms-dev.onrender.com' anymore.
+
+3. WHY THIS HAPPENED:
+   - Your frontend code had the old URL hardcoded.
+   - We updated the code to automatically detect the current domain.
+   - The old code was still cached in your browser.
+
+4. IF IT STILL FAILS:
+   - Check your Render Dashboard > Environment Variables.
+   - Ensure you do NOT have "REACT_APP_API_URL" set to the old domain. If you do, delete it or update it to the new domain.

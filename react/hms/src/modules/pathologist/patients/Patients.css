@@ -1,0 +1,219 @@
+/* Pathologist Patients CSS - Customized for Pathologist Theme */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  --path-primary: #207DC0;
+  /* Purple/Violet for Pathologist */
+  --path-primary-hover: #0F7D7E;
+  --path-secondary: #207DC0;
+  --path-bg-page: #F8FAFC;
+  --path-bg-card: #FFFFFF;
+  --path-bg-input: #F1F3F7;
+  --path-text-title: #1E293B;
+  --path-text-body: #334155;
+  --path-text-muted: #64748B;
+  --path-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.pathologist-patients-page {
+  padding: 24px;
+  background-color: var(--path-bg-page);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.patients-header {
+  margin-bottom: 24px;
+}
+
+.main-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #0F172A;
+  margin-bottom: 4px;
+}
+
+.main-subtitle {
+  font-size: 14px;
+  color: var(--path-text-muted);
+}
+
+.filter-bar-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: white;
+  padding: 16px 20px;
+  border-radius: 12px;
+  box-shadow: var(--path-shadow);
+  margin-bottom: 24px;
+}
+
+.search-wrapper {
+  position: relative;
+  flex: 1;
+  max-width: 500px;
+  display: flex;
+  align-items: center;
+}
+
+.search-icon {
+  position: absolute;
+  left: 12px;
+  color: #94A3B8;
+}
+
+.search-input {
+  width: 100%;
+  padding: 10px 16px 10px 40px;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.search-input:focus {
+  border-color: var(--path-primary);
+}
+
+.table-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: var(--path-shadow);
+  overflow: hidden;
+  flex: 1;
+}
+
+.modern-table-wrapper {
+  overflow-x: auto;
+}
+
+.modern-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.modern-table th {
+  text-align: left;
+  padding: 16px 20px;
+  background-color: #F8FAFC;
+  color: #64748B;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  border-bottom: 1px solid #E2E8F0;
+}
+
+.modern-table td {
+  padding: 16px 20px;
+  border-bottom: 1px solid #F1F5F9;
+  vertical-align: middle;
+}
+
+.patient-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.patient-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #E2E8F0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748B;
+}
+
+.name-stack {
+  display: flex;
+  flex-direction: column;
+}
+
+.patient-name {
+  font-weight: 600;
+  color: var(--path-text-title);
+  font-size: 14px;
+}
+
+.patient-id {
+  font-size: 12px;
+  color: var(--path-text-muted);
+}
+
+.gender-badge {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.gender-male {
+  background: #DBEAFE;
+  color: #165a8a;
+}
+
+.gender-female {
+  background: #FCE7F3;
+  color: #9D174D;
+}
+
+.action-btn {
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #E2E8F0;
+  background: white;
+  color: var(--path-text-title);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+
+.action-btn:hover {
+  background: var(--path-primary);
+  color: white;
+  border-color: var(--path-primary);
+}
+
+.pagination-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background: #F8FAFC;
+  border-top: 1px solid #E2E8F0;
+}
+
+.page-controls {
+  display: flex;
+  gap: 8px;
+}
+
+.page-btn {
+  padding: 6px;
+  border: 1px solid #E2E8F0;
+  border-radius: 4px;
+  background: white;
+  cursor: pointer;
+}
+
+.page-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.empty-state {
+  padding: 60px;
+  text-align: center;
+  color: var(--path-text-muted);
+}

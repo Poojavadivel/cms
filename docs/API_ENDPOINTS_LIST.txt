@@ -1,0 +1,105 @@
+# API Endpoints List - Karur HMS
+
+## Base URL
+$_base = http://localhost:5000/api
+
+## Authentication
+POST   $_base/auth/login
+POST   $_base/auth/refresh
+POST   $_base/auth/validate-token
+POST   $_base/auth/signout
+
+## Patients
+POST   $_base/patients
+GET    $_base/patients
+GET    $_base/patients/:id
+PUT    $_base/patients/:id
+PATCH  $_base/patients/:id
+DELETE $_base/patients/:id
+
+## Doctors
+GET    $_base/doctors
+GET    $_base/doctors/patients/my
+
+## Appointments
+POST   $_base/appointments
+GET    $_base/appointments
+GET    $_base/appointments/:id
+PUT    $_base/appointments/:id
+PATCH  $_base/appointments/:id/status
+DELETE $_base/appointments/:id
+POST   $_base/appointments/:id/follow-up
+GET    $_base/appointments/patient/:patientId/follow-ups
+GET    $_base/appointments/:id/follow-up-chain
+
+## Intake Forms
+POST   $_base/patients/:id/intake
+GET    $_base/patients/:id/intake
+GET    $_base/patients/:id/intake/:intakeId
+
+## Pharmacy
+POST   $_base/pharmacy/medicines
+GET    $_base/pharmacy/medicines
+GET    $_base/pharmacy/medicines/:id
+PUT    $_base/pharmacy/medicines/:id
+DELETE $_base/pharmacy/medicines/:id
+POST   $_base/pharmacy/batches
+GET    $_base/pharmacy/batches
+PUT    $_base/pharmacy/batches/:id
+DELETE $_base/pharmacy/batches/:id
+POST   $_base/pharmacy/records/dispense
+GET    $_base/pharmacy/records
+GET    $_base/pharmacy/records/:id
+GET    $_base/pharmacy/pending-prescriptions
+POST   $_base/pharmacy/prescriptions/create-from-intake
+POST   $_base/pharmacy/prescriptions/:intakeId/dispense
+GET    $_base/pharmacy/admin/analytics
+GET    $_base/pharmacy/admin/low-stock
+GET    $_base/pharmacy/admin/expiring-batches
+POST   $_base/pharmacy/admin/bulk-import
+GET    $_base/pharmacy/admin/inventory-report
+
+## Pathology
+GET    $_base/pathology/pending-tests
+POST   $_base/pathology/lab-reports
+GET    $_base/pathology/lab-reports
+GET    $_base/pathology/lab-reports/:id
+PUT    $_base/pathology/lab-reports/:id
+DELETE $_base/pathology/lab-reports/:id
+POST   $_base/pathology/lab-reports/:id/upload
+
+## Staff
+POST   $_base/staff
+GET    $_base/staff
+GET    $_base/staff/:id
+PUT    $_base/staff/:id
+PATCH  $_base/staff/:id/status
+DELETE $_base/staff/:id
+
+## Payroll
+POST   $_base/payroll
+GET    $_base/payroll
+GET    $_base/payroll/:id
+PUT    $_base/payroll/:id
+PATCH  $_base/payroll/:id/status
+DELETE $_base/payroll/:id
+POST   $_base/payroll/:id/approve
+POST   $_base/payroll/:id/reject
+POST   $_base/payroll/:id/process-payment
+
+## Reports
+GET    $_base/reports/patient/:patientId
+GET    $_base/reports/doctor/:doctorId
+
+## Bot/AI Assistant
+POST   $_base/bot/chat
+GET    $_base/bot/conversations
+GET    $_base/bot/conversations/:conversationId
+DELETE $_base/bot/conversations/:conversationId
+POST   $_base/bot/conversations/:conversationId/clear
+
+## Additional Routes
+GET    $_base/enterprise-reports
+GET    $_base/scanner-enterprise
+GET    $_base/telegram
+GET    $_base/card

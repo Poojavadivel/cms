@@ -1,0 +1,1302 @@
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+
+// Import our new generic table
+// Adjust these imports to your project
+import '../../Models/Staff.dart';
+import '../../Utils/Colors.dart';
+import 'Widgets/generic_data_table.dart';
+
+// ---------------------------------------------------------------------
+
+// --- Data Models ---
+class PathologyReport {
+  final String reportId;
+  final String patientName;
+  final String testName;
+  final String collectionDate;
+  final String status;
+  final String doctorName;
+
+  PathologyReport({
+    required this.reportId,
+    required this.patientName,
+    required this.testName,
+    required this.collectionDate,
+    required this.status,
+    required this.doctorName,
+  });
+
+  factory PathologyReport.fromMap(Map<String, dynamic> map) {
+    return PathologyReport(
+      reportId: map['reportId'],
+      patientName: map['patientName'],
+      testName: map['testName'],
+      collectionDate: map['collectionDate'],
+      status: map['status'],
+      doctorName: map['doctorName'],
+    );
+  }
+}
+
+// --- Simulated API Data ---
+const List<Map<String, dynamic>> _pathologyApiData = [
+  {'reportId': 'LAB-001', 'patientName': 'Arthur', 'testName': 'Complete Blood Count (CBC)', 'collectionDate': '2025-08-14', 'status': 'Completed', 'doctorName': 'Dr. Alan'},
+  {'reportId': 'LAB-002', 'patientName': 'John Philips', 'testName': 'Lipid Profile', 'collectionDate': '2025-08-14', 'status': 'Completed', 'doctorName': 'Dr. Sarah'},
+  {'reportId': 'LAB-003', 'patientName': 'Regina', 'testName': 'Thyroid Function Test', 'collectionDate': '2025-08-15', 'status': 'Pending', 'doctorName': 'Dr. Emily'},
+  {'reportId': 'LAB-004', 'patientName': 'David', 'testName': 'Urinalysis', 'collectionDate': '2025-08-15', 'status': 'In Progress', 'doctorName': 'Dr. Alan'},
+  {'reportId': 'LAB-005', 'patientName': 'Joseph', 'testName': 'Liver Function Test', 'collectionDate': '2025-08-16', 'status': 'Pending', 'doctorName': 'Dr. Sarah'},
+  {'reportId': 'LAB-006', 'patientName': 'Lokesh', 'testName': 'Glucose Tolerance Test', 'collectionDate': '2025-08-16', 'status': 'Completed', 'doctorName': 'Dr. Alan'},
+  {'reportId': 'LAB-007', 'patientName': 'Sophia Miller', 'testName': 'Biopsy Analysis', 'collectionDate': '2025-08-17', 'status': 'Pending', 'doctorName': 'Dr. Emily'},
+  {'reportId': 'LAB-008', 'patientName': 'James Wilson', 'testName': 'Kidney Function Test', 'collectionDate': '2025-08-17', 'status': 'Completed', 'doctorName': 'Dr. Alan'},
+  {'reportId': 'LAB-009', 'patientName': 'Olivia Garcia', 'testName': 'D-Dimer Test', 'collectionDate': '2025-08-18', 'status': 'Pending', 'doctorName': 'Dr. Sarah'},
+  {'reportId': 'LAB-010', 'patientName': 'Liam Martinez', 'testName': 'Coagulation Profile', 'collectionDate': '2025-08-18', 'status': 'In Progress', 'doctorName': 'Dr. Alan'},
+  {'reportId': 'LAB-011', 'patientName': 'Emma Anderson', 'testName': 'Vitamin D Test', 'collectionDate': '2025-08-19', 'status': 'Completed', 'doctorName': 'Dr. Emily'},
+  {'reportId': 'LAB-012', 'patientName': 'Noah Taylor', 'testName': 'Electrolyte Panel', 'collectionDate': '2025-08-19', 'status': 'Pending', 'doctorName': 'Dr. Sarah'},
+  {'reportId': 'LAB-013', 'patientName': 'Ava Thomas', 'testName': 'Hormone Panel', 'collectionDate': '2025-08-20', 'status': 'Completed', 'doctorName': 'Dr. Alan'},
+  {'reportId': 'LAB-014', 'patientName': 'Isabella White', 'testName': 'Tumor Markers', 'collectionDate': '2025-08-20', 'status': 'Pending', 'doctorName': 'Dr. Sarah'},
+  {'reportId': 'LAB-015', 'patientName': 'Mason Harris', 'testName': 'Allergy Test', 'collectionDate': '2025-08-21', 'status': 'Completed', 'doctorName': 'Dr. Emily'},
+  {'reportId': 'LAB-016', 'patientName': 'Mia Clark', 'testName': 'C-Reactive Protein (CRP)', 'collectionDate': '2025-08-21', 'status': 'In Progress', 'doctorName': 'Dr. Alan'},
+  {'reportId': 'LAB-017', 'patientName': 'Ethan Lewis', 'testName': 'Blood Typing', 'collectionDate': '2025-08-22', 'status': 'Pending', 'doctorName': 'Dr. Sarah'},
+  {'reportId': 'LAB-018', 'patientName': 'Abigail Robinson', 'testName': 'Microbiology Culture', 'collectionDate': '2025-08-22', 'status': 'Completed', 'doctorName': 'Dr. Alan'},
+  {'reportId': 'LAB-019', 'patientName': 'Michael Walker', 'testName': 'Genetic Testing', 'collectionDate': '2025-08-23', 'status': 'Pending', 'doctorName': 'Dr. Emily'},
+  {'reportId': 'LAB-020', 'patientName': 'Emily Hall', 'testName': 'Toxicology Screen', 'collectionDate': '2025-08-23', 'status': 'Completed', 'doctorName': 'Dr. Alan'},
+  {'reportId': 'LAB-021', 'patientName': 'Daniel Lee', 'testName': 'X-ray', 'collectionDate': '2025-08-24', 'status': 'In Progress', 'doctorName': 'Dr. Sarah'},
+  {'reportId': 'LAB-022', 'patientName': 'Chloe King', 'testName': 'MRI Scan', 'collectionDate': '2025-08-24', 'status': 'Pending', 'doctorName': 'Dr. Alan'},
+  {'reportId': 'LAB-023', 'patientName': 'Samuel Green', 'testName': 'CT Scan', 'collectionDate': '2025-08-25', 'status': 'Completed', 'doctorName': 'Dr. Emily'},
+  {'reportId': 'LAB-024', 'patientName': 'Zoe Scott', 'testName': 'Ultrasound', 'collectionDate': '2025-08-25', 'status': 'In Progress', 'doctorName': 'Dr. Sarah'},
+  {'reportId': 'LAB-025', 'patientName': 'Matthew Adams', 'testName': 'Electrocardiogram (ECG)', 'collectionDate': '2025-08-26', 'status': 'Completed', 'doctorName': 'Dr. Alan'},
+];
+
+class PathologyScreen extends StatefulWidget {
+  const PathologyScreen({super.key});
+
+  @override
+  State<PathologyScreen> createState() => _PathologyScreenState();
+}
+
+class _PathologyScreenState extends State<PathologyScreen> {
+  List<PathologyReport> _allReports = [];
+  bool _isLoading = true;
+  String _searchQuery = '';
+  int _currentPage = 0;
+  String _doctorFilter = 'All';
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchReports();
+  }
+
+  Future<void> _fetchReports() async {
+    setState(() {
+      _isLoading = true;
+    });
+    await Future.delayed(const Duration(milliseconds: 700));
+    final fetchedData = _pathologyApiData.map((m) => PathologyReport.fromMap(m)).toList();
+    setState(() {
+      _allReports = fetchedData;
+      _isLoading = false;
+    });
+  }
+
+  Future<void> _onAddPressed() async {
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => _EnterpriseAddReportDialog(),
+    );
+
+    if (result != null) {
+      // Add the new report to the list
+      setState(() {
+        _allReports.add(PathologyReport.fromMap(result));
+      });
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.white, size: 20),
+                const SizedBox(width: 12),
+                Expanded(child: Text('Report ${result['reportId']} created successfully', style: GoogleFonts.inter(fontWeight: FontWeight.w500))),
+              ],
+            ),
+            backgroundColor: const Color(0xFF10B981),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            elevation: 6,
+            margin: const EdgeInsets.all(16),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
+
+  void _onSearchChanged(String q) {
+    setState(() {
+      _searchQuery = q;
+      _currentPage = 0;
+    });
+  }
+
+  void _nextPage() => setState(() => _currentPage++);
+  void _prevPage() { if (_currentPage > 0) setState(() => _currentPage--); }
+
+  void _onView(int index, List<PathologyReport> list) {
+    final report = list[index];
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Showing raw test view for report ID: ${report.reportId}")),
+    );
+  }
+  Future<void> _onEdit(int index, List<PathologyReport> list) async {
+    final report = list[index];
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => _EnterpriseEditReportDialog(report: report),
+    );
+
+    if (result != null && mounted) {
+      // Update the report in the list
+      setState(() {
+        final globalIndex = _allReports.indexWhere((r) => r.reportId == report.reportId);
+        if (globalIndex != -1) {
+          _allReports[globalIndex] = PathologyReport.fromMap(result);
+        }
+      });
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle, color: Colors.white, size: 20),
+              const SizedBox(width: 12),
+              Expanded(child: Text('Report ${result['reportId']} updated successfully', style: GoogleFonts.inter(fontWeight: FontWeight.w500))),
+            ],
+          ),
+          backgroundColor: const Color(0xFF10B981),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          elevation: 6,
+          margin: const EdgeInsets.all(16),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+  void _onDelete(int index, List<PathologyReport> list) {
+    final report = list[index];
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Showing raw test view for report ID: ${report.reportId}")),
+    );
+  }
+
+  // Method to get the filtered list of reports
+  List<PathologyReport> _getFilteredReports() {
+    return _allReports.where((r) {
+      final q = _searchQuery.trim().toLowerCase();
+      final matchesSearch = r.patientName.toLowerCase().contains(q) || r.reportId.toLowerCase().contains(q) || r.testName.toLowerCase().contains(q);
+      final matchesFilter = _doctorFilter == 'All' || r.doctorName == _doctorFilter;
+      return matchesSearch && matchesFilter;
+    }).toList();
+  }
+
+  Widget _statusChip(String status) {
+    Color bg;
+    Color fg;
+
+    switch (status) {
+      case 'Completed':
+        bg = Colors.green.withOpacity(0.12);
+        fg = Colors.green;
+        break;
+      case 'Pending':
+        bg = Colors.orange.withOpacity(0.12);
+        fg = Colors.orange;
+        break;
+      case 'In Progress':
+        bg = Colors.blue.withOpacity(0.12);
+        fg = Colors.blue;
+        break;
+      default:
+        bg = Colors.grey.withOpacity(0.12);
+        fg = Colors.grey;
+        break;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        status,
+        style: GoogleFonts.inter(
+          fontWeight: FontWeight.w600,
+          fontSize: 13,
+          color: fg,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDoctorFilter() {
+    final doctors = {'All', ..._pathologyApiData.map((s) => s['doctorName'] as String).toSet()};
+    return PopupMenuButton<String>(
+      icon: const Icon(Icons.filter_list),
+      onSelected: (String newValue) {
+        setState(() {
+          _doctorFilter = newValue;
+          _currentPage = 0;
+        });
+      },
+      itemBuilder: (BuildContext context) {
+        return doctors.map((String value) {
+          return PopupMenuItem<String>(
+            value: value,
+            child: Text(value, style: GoogleFonts.inter()),
+          );
+        }).toList();
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final filtered = _getFilteredReports();
+
+    final startIndex = _currentPage * 10;
+    final endIndex = (startIndex + 10).clamp(0, filtered.length);
+    final paginatedReports = startIndex >= filtered.length
+        ? <PathologyReport>[]
+        : filtered.sublist(startIndex, endIndex);
+
+    // Prepare headers and rows for the generic table
+    final headers = const ['REPORT ID', 'PATIENT NAME', 'DOCTOR', 'TEST NAME', 'DATE', 'STATUS'];
+    final rows = paginatedReports.map((p) {
+      return [
+        Text(p.reportId, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: const Color(0xFF1E293B))),
+        Text(p.patientName, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: const Color(0xFF1E293B))),
+        Text(p.doctorName, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: const Color(0xFF1E293B))),
+        Text(p.testName, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: const Color(0xFF1E293B))),
+        Text(p.collectionDate, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: const Color(0xFF1E293B))),
+        _statusChip(p.status),
+      ];
+    }).toList();
+
+    return Scaffold(
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
+          child: GenericDataTable(
+            title: "Pathology Reports",
+            headers: headers,
+            rows: rows,
+            searchQuery: _searchQuery,
+            onSearchChanged: _onSearchChanged,
+            currentPage: _currentPage,
+            totalItems: filtered.length,
+            itemsPerPage: 10,
+            onPreviousPage: _prevPage,
+            onNextPage: _nextPage,
+            isLoading: _isLoading,
+            onAddPressed: _onAddPressed,
+            filters: [_buildDoctorFilter()],
+            hideHorizontalScrollbar: true,
+            onView: (i) => _onView(i, paginatedReports),
+            onEdit: (i) => _onEdit(i, paginatedReports),
+            onDelete: (i) => _onDelete(i, paginatedReports),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ================================================================
+// ENTERPRISE-GRADE ADD REPORT DIALOG
+// Designed with 20+ years of UI/UX expertise
+// ================================================================
+class _EnterpriseAddReportDialog extends StatefulWidget {
+  @override
+  State<_EnterpriseAddReportDialog> createState() => _EnterpriseAddReportDialogState();
+}
+
+class _EnterpriseAddReportDialogState extends State<_EnterpriseAddReportDialog> with SingleTickerProviderStateMixin {
+  final _formKey = GlobalKey<FormState>();
+  late AnimationController _animController;
+  late Animation<double> _scaleAnim;
+  late Animation<double> _fadeAnim;
+  
+  final _reportIdCtrl = TextEditingController();
+  final _patientNameCtrl = TextEditingController();
+  final _testNameCtrl = TextEditingController();
+  final _doctorNameCtrl = TextEditingController();
+  
+  DateTime _selectedDate = DateTime.now();
+  String _status = 'Pending';
+  bool _isSaving = false;
+
+  final List<String> _statusOptions = ['Pending', 'In Progress', 'Completed'];
+  final List<String> _commonTests = [
+    'Complete Blood Count (CBC)',
+    'Lipid Profile',
+    'Thyroid Function Test',
+    'Urinalysis',
+    'Liver Function Test',
+    'Glucose Tolerance Test',
+    'Kidney Function Test',
+    'X-ray',
+    'MRI Scan',
+    'CT Scan',
+    'Ultrasound',
+    'ECG'
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+    _scaleAnim = CurvedAnimation(parent: _animController, curve: Curves.easeOutBack);
+    _fadeAnim = CurvedAnimation(parent: _animController, curve: Curves.easeIn);
+    _animController.forward();
+  }
+
+  @override
+  void dispose() {
+    _animController.dispose();
+    _reportIdCtrl.dispose();
+    _patientNameCtrl.dispose();
+    _testNameCtrl.dispose();
+    _doctorNameCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _selectDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: const Color(0xFF0891B2),
+              onPrimary: Colors.white,
+              surface: Colors.white,
+              onSurface: const Color(0xFF1E293B),
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null) setState(() => _selectedDate = picked);
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isSaving = true);
+    await Future.delayed(const Duration(milliseconds: 800)); // Simulate API call
+
+    final result = {
+      'reportId': _reportIdCtrl.text.trim(),
+      'patientName': _patientNameCtrl.text.trim(),
+      'testName': _testNameCtrl.text.trim(),
+      'collectionDate': '${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}',
+      'status': _status,
+      'doctorName': _doctorNameCtrl.text.trim(),
+    };
+
+    if (mounted) Navigator.of(context).pop(result);
+  }
+
+  InputDecoration _buildInputDecoration({
+    required String label,
+    required IconData icon,
+    String? hint,
+    Widget? suffix,
+  }) {
+    return InputDecoration(
+      labelText: label,
+      hintText: hint,
+      suffixIcon: suffix,
+      prefixIcon: Container(
+        margin: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Color(0xFF0891B2).withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(icon, color: const Color(0xFF0891B2), size: 20),
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+      filled: true,
+      fillColor: const Color(0xFFF8FAFC),
+      labelStyle: GoogleFonts.inter(
+        fontSize: 14,
+        fontWeight: FontWeight.w600,
+        color: const Color(0xFF64748B),
+        letterSpacing: 0.2,
+      ),
+      hintStyle: GoogleFonts.inter(
+        fontSize: 13,
+        color: const Color(0xFF94A3B8),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 2),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: const Color(0xFF0891B2), width: 2.5),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: Color(0xFFEF4444), width: 2),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: Color(0xFFEF4444), width: 2.5),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ScaleTransition(
+      scale: _scaleAnim,
+      child: FadeTransition(
+        opacity: _fadeAnim,
+        child: Dialog(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+          child: Container(
+            width: 680,
+            constraints: const BoxConstraints(maxHeight: 760),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(32),
+              boxShadow: [
+                BoxShadow(
+                  color: Color(0xFF0891B2).withOpacity(0.15),
+                  blurRadius: 40,
+                  offset: const Offset(0, 20),
+                  spreadRadius: -5,
+                ),
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 60,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                // Premium Header with gradient and glassmorphism effect
+                Container(
+                  padding: const EdgeInsets.all(32),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [
+                        Color(0xFF0891B2),
+                        Color(0xFF0E7490),
+                        Color(0xFF155E75),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(32),
+                      topRight: Radius.circular(32),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Color(0xFF0891B2).withOpacity(0.3),
+                        blurRadius: 20,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.25),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: Colors.white.withOpacity(0.3), width: 2),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 15,
+                              offset: const Offset(0, 5),
+                            ),
+                          ],
+                        ),
+                        child: const Icon(Icons.add_circle_outline, color: Colors.white, size: 32),
+                      ),
+                      const SizedBox(width: 20),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'New Pathology Report',
+                              style: GoogleFonts.inter(
+                                fontSize: 26,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                                letterSpacing: -0.5,
+                                height: 1.2,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Fill in the details below to create a new lab report',
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.white.withOpacity(0.95),
+                                letterSpacing: 0.1,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Material(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(14),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(14),
+                          onTap: () => Navigator.pop(context),
+                          child: Container(
+                            padding: const EdgeInsets.all(10),
+                            child: const Icon(Icons.close_rounded, color: Colors.white, size: 24),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                
+                // Form Body with Premium Styling
+                Expanded(
+                  child: Form(
+                    key: _formKey,
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(32),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Section Header
+                          Row(
+                            children: [
+                              Container(
+                                width: 4,
+                                height: 24,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF0891B2),
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                'Report Information',
+                                style: GoogleFonts.inter(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w700,
+                                  color: const Color(0xFF1E293B),
+                                  letterSpacing: -0.3,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 24),
+                          
+                          // Report ID Field
+                          TextFormField(
+                            controller: _reportIdCtrl,
+                            decoration: _buildInputDecoration(
+                              label: 'Report ID',
+                              icon: Icons.assignment_outlined,
+                              hint: 'e.g., LAB-001',
+                            ),
+                            validator: (v) => (v == null || v.trim().isEmpty) ? 'Report ID is required' : null,
+                          ),
+                          const SizedBox(height: 20),
+                          
+                          // Patient Name Field
+                          TextFormField(
+                            controller: _patientNameCtrl,
+                            decoration: _buildInputDecoration(
+                              label: 'Patient Name',
+                              icon: Icons.person_outline_rounded,
+                              hint: 'Enter full name',
+                            ),
+                            validator: (v) => (v == null || v.trim().isEmpty) ? 'Patient name is required' : null,
+                          ),
+                          const SizedBox(height: 20),
+                          
+                          // Test Name Dropdown
+                          DropdownButtonFormField<String>(
+                            value: null,
+                            decoration: _buildInputDecoration(
+                              label: 'Test/Procedure Name',
+                              icon: Icons.science_outlined,
+                              hint: 'Select or type test name',
+                            ),
+                            items: _commonTests.map((test) => DropdownMenuItem(
+                              value: test,
+                              child: Text(test, style: GoogleFonts.inter(fontSize: 14)),
+                            )).toList(),
+                            onChanged: (v) => _testNameCtrl.text = v ?? '',
+                            validator: (v) {
+                              if (_testNameCtrl.text.trim().isEmpty) {
+                                return 'Test name is required';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 8),
+                          TextFormField(
+                            controller: _testNameCtrl,
+                            decoration: _buildInputDecoration(
+                              label: 'Or Enter Custom Test Name',
+                              icon: Icons.edit_outlined,
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          
+                          // Doctor Name Field
+                          TextFormField(
+                            controller: _doctorNameCtrl,
+                            decoration: _buildInputDecoration(
+                              label: 'Doctor Name',
+                              icon: Icons.medical_services_outlined,
+                              hint: 'e.g., Dr. Smith',
+                            ),
+                            validator: (v) => (v == null || v.trim().isEmpty) ? 'Doctor name is required' : null,
+                          ),
+                          const SizedBox(height: 20),
+                          
+                          // Date Picker
+                          InkWell(
+                            onTap: _selectDate,
+                            borderRadius: BorderRadius.circular(16),
+                            child: InputDecorator(
+                              decoration: _buildInputDecoration(
+                                label: 'Collection Date',
+                                icon: Icons.calendar_today_outlined,
+                                suffix: Icon(Icons.arrow_drop_down, color: const Color(0xFF0891B2)),
+                              ),
+                              child: Text(
+                                '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
+                                style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          
+                          // Status Dropdown
+                          DropdownButtonFormField<String>(
+                            value: _status,
+                            decoration: _buildInputDecoration(
+                              label: 'Report Status',
+                              icon: Icons.flag_outlined,
+                            ),
+                            items: _statusOptions.map((s) => DropdownMenuItem(
+                              value: s,
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 8,
+                                    height: 8,
+                                    decoration: BoxDecoration(
+                                      color: s == 'Completed' ? Colors.green :
+                                             s == 'In Progress' ? Colors.blue : Colors.orange,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Text(s, style: GoogleFonts.inter(fontSize: 14)),
+                                ],
+                              ),
+                            )).toList(),
+                            onChanged: (v) => setState(() => _status = v ?? _status),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                
+                // Premium Footer with Actions
+                Container(
+                  padding: const EdgeInsets.all(28),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFAFAFA),
+                    borderRadius: const BorderRadius.only(
+                      bottomLeft: Radius.circular(32),
+                      bottomRight: Radius.circular(32),
+                    ),
+                    border: Border(top: BorderSide(color: const Color(0xFFE2E8F0), width: 1.5)),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      // Cancel Button
+                      Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(14),
+                          onTap: _isSaving ? null : () => Navigator.pop(context),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
+                            child: Text(
+                              'Cancel',
+                              style: GoogleFonts.inter(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFF64748B),
+                                letterSpacing: 0.2,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      
+                      // Create Button
+                      Material(
+                        color: _isSaving ? Color(0xFF0891B2).withOpacity(0.7) : const Color(0xFF0891B2),
+                        borderRadius: BorderRadius.circular(14),
+                        elevation: _isSaving ? 0 : 4,
+                        shadowColor: Color(0xFF0891B2).withOpacity(0.4),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(14),
+                          onTap: _isSaving ? null : _submit,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                            child: _isSaving
+                                ? SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2.5,
+                                    ),
+                                  )
+                                : Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.check_circle_outline, color: Colors.white, size: 20),
+                                      const SizedBox(width: 10),
+                                      Text(
+                                        'Create Report',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.white,
+                                          letterSpacing: 0.3,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ================================================================
+// ENTERPRISE-GRADE EDIT REPORT DIALOG
+// Designed with 20+ years of UI/UX expertise
+// ================================================================
+class _EnterpriseEditReportDialog extends StatefulWidget {
+  final PathologyReport report;
+
+  const _EnterpriseEditReportDialog({required this.report});
+
+  @override
+  State<_EnterpriseEditReportDialog> createState() => _EnterpriseEditReportDialogState();
+}
+
+class _EnterpriseEditReportDialogState extends State<_EnterpriseEditReportDialog> with SingleTickerProviderStateMixin {
+  final _formKey = GlobalKey<FormState>();
+  late AnimationController _animController;
+  late Animation<double> _scaleAnim;
+  late Animation<double> _fadeAnim;
+  
+  late final TextEditingController _patientNameCtrl;
+  late final TextEditingController _testNameCtrl;
+  late final TextEditingController _doctorNameCtrl;
+  
+  late DateTime _selectedDate;
+  late String _status;
+  bool _isSaving = false;
+
+  final List<String> _statusOptions = ['Pending', 'In Progress', 'Completed'];
+
+  @override
+  void initState() {
+    super.initState();
+    _patientNameCtrl = TextEditingController(text: widget.report.patientName);
+    _testNameCtrl = TextEditingController(text: widget.report.testName);
+    _doctorNameCtrl = TextEditingController(text: widget.report.doctorName);
+    _status = widget.report.status;
+    
+    // Parse date
+    try {
+      final parts = widget.report.collectionDate.split('-');
+      _selectedDate = DateTime(int.parse(parts[0]), int.parse(parts[1]), int.parse(parts[2]));
+    } catch (e) {
+      _selectedDate = DateTime.now();
+    }
+    
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+    _scaleAnim = CurvedAnimation(parent: _animController, curve: Curves.easeOutBack);
+    _fadeAnim = CurvedAnimation(parent: _animController, curve: Curves.easeIn);
+    _animController.forward();
+  }
+
+  @override
+  void dispose() {
+    _animController.dispose();
+    _patientNameCtrl.dispose();
+    _testNameCtrl.dispose();
+    _doctorNameCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _selectDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: const Color(0xFF0891B2),
+              onPrimary: Colors.white,
+              surface: Colors.white,
+              onSurface: const Color(0xFF1E293B),
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null) setState(() => _selectedDate = picked);
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isSaving = true);
+    await Future.delayed(const Duration(milliseconds: 800)); // Simulate API call
+
+    final result = {
+      'reportId': widget.report.reportId,
+      'patientName': _patientNameCtrl.text.trim(),
+      'testName': _testNameCtrl.text.trim(),
+      'collectionDate': '${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}',
+      'status': _status,
+      'doctorName': _doctorNameCtrl.text.trim(),
+    };
+
+    if (mounted) Navigator.of(context).pop(result);
+  }
+
+  InputDecoration _buildInputDecoration({
+    required String label,
+    required IconData icon,
+    String? hint,
+    Widget? suffix,
+  }) {
+    return InputDecoration(
+      labelText: label,
+      hintText: hint,
+      suffixIcon: suffix,
+      prefixIcon: Container(
+        margin: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Color(0xFF0891B2).withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(icon, color: const Color(0xFF0891B2), size: 20),
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+      filled: true,
+      fillColor: const Color(0xFFF8FAFC),
+      labelStyle: GoogleFonts.inter(
+        fontSize: 14,
+        fontWeight: FontWeight.w600,
+        color: const Color(0xFF64748B),
+        letterSpacing: 0.2,
+      ),
+      hintStyle: GoogleFonts.inter(
+        fontSize: 13,
+        color: const Color(0xFF94A3B8),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 2),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: const Color(0xFF0891B2), width: 2.5),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: Color(0xFFEF4444), width: 2),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: Color(0xFFEF4444), width: 2.5),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ScaleTransition(
+      scale: _scaleAnim,
+      child: FadeTransition(
+        opacity: _fadeAnim,
+        child: Dialog(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+          child: Container(
+            width: 680,
+            constraints: const BoxConstraints(maxHeight: 760),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(32),
+              boxShadow: [
+                BoxShadow(
+                  color: Color(0xFF0891B2).withOpacity(0.15),
+                  blurRadius: 40,
+                  offset: const Offset(0, 20),
+                  spreadRadius: -5,
+                ),
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 60,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                // Premium Header
+                Container(
+                  padding: const EdgeInsets.all(32),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        const Color(0xFF0EA5E9),
+                        const Color(0xFF0284C7),
+                        const Color(0xFF0369A1),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(32),
+                      topRight: Radius.circular(32),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF0EA5E9).withOpacity(0.3),
+                        blurRadius: 20,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.25),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: Colors.white.withOpacity(0.3), width: 2),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 15,
+                              offset: const Offset(0, 5),
+                            ),
+                          ],
+                        ),
+                        child: const Icon(Icons.edit_outlined, color: Colors.white, size: 32),
+                      ),
+                      const SizedBox(width: 20),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Edit Pathology Report',
+                              style: GoogleFonts.inter(
+                                fontSize: 26,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                                letterSpacing: -0.5,
+                                height: 1.2,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Report ID: ${widget.report.reportId}',
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.white.withOpacity(0.95),
+                                letterSpacing: 0.1,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Material(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(14),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(14),
+                          onTap: () => Navigator.pop(context),
+                          child: Container(
+                            padding: const EdgeInsets.all(10),
+                            child: const Icon(Icons.close_rounded, color: Colors.white, size: 24),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                
+                // Form Body
+                Expanded(
+                  child: Form(
+                    key: _formKey,
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(32),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                width: 4,
+                                height: 24,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF0EA5E9),
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                'Update Report Details',
+                                style: GoogleFonts.inter(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w700,
+                                  color: const Color(0xFF1E293B),
+                                  letterSpacing: -0.3,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 24),
+                          
+                          TextFormField(
+                            controller: _patientNameCtrl,
+                            decoration: _buildInputDecoration(
+                              label: 'Patient Name',
+                              icon: Icons.person_outline_rounded,
+                            ),
+                            validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+                          ),
+                          const SizedBox(height: 20),
+                          
+                          TextFormField(
+                            controller: _testNameCtrl,
+                            decoration: _buildInputDecoration(
+                              label: 'Test/Procedure Name',
+                              icon: Icons.science_outlined,
+                            ),
+                            validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+                          ),
+                          const SizedBox(height: 20),
+                          
+                          TextFormField(
+                            controller: _doctorNameCtrl,
+                            decoration: _buildInputDecoration(
+                              label: 'Doctor Name',
+                              icon: Icons.medical_services_outlined,
+                            ),
+                            validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+                          ),
+                          const SizedBox(height: 20),
+                          
+                          InkWell(
+                            onTap: _selectDate,
+                            borderRadius: BorderRadius.circular(16),
+                            child: InputDecorator(
+                              decoration: _buildInputDecoration(
+                                label: 'Collection Date',
+                                icon: Icons.calendar_today_outlined,
+                                suffix: Icon(Icons.arrow_drop_down, color: const Color(0xFF0891B2)),
+                              ),
+                              child: Text(
+                                '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
+                                style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          
+                          DropdownButtonFormField<String>(
+                            value: _status,
+                            decoration: _buildInputDecoration(
+                              label: 'Report Status',
+                              icon: Icons.flag_outlined,
+                            ),
+                            items: _statusOptions.map((s) => DropdownMenuItem(
+                              value: s,
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 8,
+                                    height: 8,
+                                    decoration: BoxDecoration(
+                                      color: s == 'Completed' ? Colors.green :
+                                             s == 'In Progress' ? Colors.blue : Colors.orange,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Text(s, style: GoogleFonts.inter(fontSize: 14)),
+                                ],
+                              ),
+                            )).toList(),
+                            onChanged: (v) => setState(() => _status = v ?? _status),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                
+                // Footer
+                Container(
+                  padding: const EdgeInsets.all(28),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFAFAFA),
+                    borderRadius: const BorderRadius.only(
+                      bottomLeft: Radius.circular(32),
+                      bottomRight: Radius.circular(32),
+                    ),
+                    border: Border(top: BorderSide(color: const Color(0xFFE2E8F0), width: 1.5)),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(14),
+                          onTap: _isSaving ? null : () => Navigator.pop(context),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
+                            child: Text(
+                              'Cancel',
+                              style: GoogleFonts.inter(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFF64748B),
+                                letterSpacing: 0.2,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      
+                      Material(
+                        color: _isSaving ? const Color(0xFF0EA5E9).withOpacity(0.7) : const Color(0xFF0EA5E9),
+                        borderRadius: BorderRadius.circular(14),
+                        elevation: _isSaving ? 0 : 4,
+                        shadowColor: const Color(0xFF0EA5E9).withOpacity(0.4),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(14),
+                          onTap: _isSaving ? null : _submit,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                            child: _isSaving
+                                ? SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2.5,
+                                    ),
+                                  )
+                                : Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.save_outlined, color: Colors.white, size: 20),
+                                      const SizedBox(width: 10),
+                                      Text(
+                                        'Update Report',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.white,
+                                          letterSpacing: 0.3,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+

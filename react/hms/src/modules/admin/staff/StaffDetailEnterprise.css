@@ -1,0 +1,414 @@
+/* Neo-Pro Enterprise Design System 2025 - Light Medical Theme */
+
+:root {
+  /* Core Palette - Clean Medical/Enterprise */
+  --neo-bg: #ffffff;
+  --neo-glass: rgba(255, 255, 255, 0.95);
+  --neo-surface: #f8fafc;
+  /* Slate 50 */
+  --neo-surface-highlight: #f1f5f9;
+  /* Slate 100 */
+  --neo-border: #e2e8f0;
+  /* Slate 200 */
+  --neo-border-hover: #cbd5e1;
+  /* Slate 300 */
+
+  /* Text */
+  --neo-text-primary: #0f172a;
+  /* Slate 900 */
+  --neo-text-secondary: #475569;
+  /* Slate 600 */
+  --neo-text-tertiary: #94a3b8;
+  /* Slate 400 */
+
+  /* Accents */
+  --neo-accent: #207DC0;
+  /* Updated Primary Blue */
+  --neo-accent-glow: rgba(32, 125, 192, 0.15);
+  --neo-success: #207DC0;
+  /* Emerald 500 */
+  --neo-warning: #f59e0b;
+  /* Amber 500 */
+
+  /* Shadows */
+  --neo-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --neo-shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+}
+
+/* Base Modal Reset */
+.enterprise-modal * {
+  box-sizing: border-box;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  letter-spacing: -0.01em;
+}
+
+/* HIDE ALL SCROLLBARS */
+.enterprise-modal ::-webkit-scrollbar,
+.enterprise-content ::-webkit-scrollbar,
+.right-content ::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.enterprise-modal *,
+.enterprise-content * {
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
+}
+
+/* Overlay */
+.enterprise-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.2);
+  /* Lighter overlay for light theme */
+  backdrop-filter: blur(8px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: modalEnter 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes modalEnter {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+/* The Main 'Interface' Container */
+.enterprise-content {
+  width: 90vw;
+  max-width: 1200px;
+  height: 85vh;
+  background: var(--neo-bg);
+  border-radius: 20px;
+  border: 1px solid var(--neo-border);
+  box-shadow: var(--neo-shadow-lg);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  animation: contentSlide 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes contentSlide {
+  from {
+    transform: scale(0.98) translateY(10px);
+    opacity: 0;
+  }
+
+  to {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Close Button */
+.floating-close {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  width: 36px;
+  height: 36px;
+  background: white;
+  border: 1px solid var(--neo-border);
+  color: var(--neo-text-secondary);
+  cursor: pointer;
+  z-index: 50;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  box-shadow: var(--neo-shadow-sm);
+}
+
+.floating-close:hover {
+  background: var(--neo-surface);
+  color: #ef4444;
+  border-color: #fee2e2;
+  transform: rotate(90deg);
+}
+
+/* =========================================
+   HEADER SECTION
+   ========================================= */
+.enterprise-header {
+  position: relative;
+  height: auto;
+  min-height: 200px;
+  flex-shrink: 0;
+  padding: 40px;
+  background: linear-gradient(to bottom, #ffffff, #f8fafc);
+  display: flex;
+  align-items: flex-end;
+  border-bottom: 1px solid var(--neo-border);
+}
+
+/* Avatar - Big & Bold */
+.avatar-container {
+  margin-right: 32px;
+  position: relative;
+}
+
+.avatar-large,
+.avatar-placeholder {
+  width: 120px;
+  height: 120px;
+  border-radius: 30px;
+  object-fit: cover;
+  border: 4px solid white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  background: var(--neo-surface);
+}
+
+.avatar-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40px;
+  font-weight: 700;
+  color: var(--neo-accent);
+  background: #eff6ff;
+}
+
+.status-dot {
+  position: absolute;
+  bottom: 6px;
+  right: -6px;
+  width: 24px;
+  height: 24px;
+  background: var(--neo-success);
+  border: 4px solid white;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* Header Text */
+.header-info {
+  flex: 1;
+  padding-bottom: 4px;
+}
+
+.staff-name {
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--neo-text-primary);
+  letter-spacing: -0.8px;
+  margin: 0 0 8px 0;
+  line-height: 1.1;
+}
+
+.staff-subtitle {
+  font-size: 15px;
+  color: var(--neo-text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 500;
+}
+
+.id-badge {
+  font-family: monospace;
+  font-size: 13px;
+  background: var(--neo-surface-highlight);
+  padding: 4px 8px;
+  border-radius: 6px;
+  color: var(--neo-text-primary);
+  border: 1px solid var(--neo-border);
+  font-weight: 600;
+}
+
+/* Header Actions */
+.primary-actions {
+  display: flex;
+  gap: 12px;
+  padding-bottom: 8px;
+}
+
+.btn-action-glass {
+  background: white;
+  border: 1px solid var(--neo-border);
+  color: var(--neo-text-secondary);
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: var(--neo-shadow-sm);
+}
+
+.btn-action-glass:hover {
+  background: var(--neo-surface);
+  color: var(--neo-text-primary);
+  border-color: var(--neo-border-hover);
+  transform: translateY(-1px);
+}
+
+.btn-primary-glow {
+  background: var(--neo-accent);
+  color: white;
+  border: none;
+  box-shadow: 0 4px 6px -1px rgba(32, 125, 192, 0.15);
+}
+
+.btn-primary-glow:hover {
+  background: #165a8a;
+  color: white;
+  box-shadow: 0 6px 12px -1px rgba(32, 125, 192, 0.25);
+}
+
+/* =========================================
+   BODY / GRID SECTION
+   ========================================= */
+.enterprise-body {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  background: #fdfdfd;
+}
+
+/* Navigation Rail */
+.left-sidebar {
+  width: 240px;
+  padding: 32px 24px;
+  border-right: 1px solid var(--neo-border);
+  background: white;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  color: var(--neo-text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.nav-item:hover {
+  background: var(--neo-surface-highlight);
+  color: var(--neo-text-primary);
+}
+
+.nav-item.active {
+  background: #eff6ff;
+  color: var(--neo-accent);
+}
+
+/* Content Area */
+.right-content {
+  flex: 1;
+  padding: 40px;
+  overflow-y: auto;
+}
+
+.content-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 24px;
+  padding-bottom: 40px;
+}
+
+/* Data Cards */
+.data-card {
+  background: white;
+  border: 1px solid var(--neo-border);
+  border-radius: 12px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.data-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--neo-shadow-lg);
+  border-color: var(--neo-border-hover);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.card-icon {
+  color: var(--neo-text-tertiary);
+}
+
+.card-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--neo-text-tertiary);
+}
+
+/* Data Rows */
+.data-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.data-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--neo-text-tertiary);
+}
+
+.data-value {
+  font-size: 14px;
+  color: var(--neo-text-primary);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  line-height: 1.5;
+}
+
+/* Special Elements */
+.chip {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--neo-surface);
+  color: var(--neo-text-secondary);
+  border: 1px solid var(--neo-border);
+}
+
+.chip-blue {
+  background: #eff6ff;
+  color: var(--neo-accent);
+  border-color: #dbeafe;
+}
+
+/* Loading spinner animation */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

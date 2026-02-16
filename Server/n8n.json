@@ -1,0 +1,350 @@
+{
+  "name": "Explain Images (HF + DuckDuckGo + TTS) - Local Upload",
+  "nodes": [
+    {
+      "parameters": {
+        "filePath": "/home/n8n/uploads/sample.jpg"
+      },
+      "name": "Upload Image (Local File)",
+      "type": "n8n-nodes-base.readBinaryFile",
+      "typeVersion": 1,
+      "position": [
+        100,
+        250
+      ],
+      "id": "upload-local-file-0001"
+    },
+    {
+      "parameters": {
+        "filePath": "/tmp/input.jpg",
+        "binaryPropertyName": "data",
+        "options": {}
+      },
+      "name": "Write Image to /tmp",
+      "type": "n8n-nodes-base.writeBinaryFile",
+      "typeVersion": 1,
+      "position": [
+        340,
+        250
+      ],
+      "id": "write-binary-0002"
+    },
+    {
+      "parameters": {
+        "values": {
+          "boolean": [],
+          "number": [],
+          "string": [
+            {
+              "name": "runId",
+              "value": "={{$now}}"
+            },
+            {
+              "name": "lang",
+              "value": "en"
+            }
+          ],
+          "options": []
+        },
+        "options": {}
+      },
+      "name": "Set Metadata",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [
+        560,
+        250
+      ],
+      "id": "set-metadata-0003"
+    },
+    {
+      "parameters": {
+        "batchSize": 1
+      },
+      "name": "SplitInBatches",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 1,
+      "position": [
+        790,
+        250
+      ],
+      "id": "split-batches-0004"
+    },
+    {
+      "parameters": {
+        "command": "tesseract /tmp/input.jpg stdout -l eng+tam",
+        "options": {}
+      },
+      "name": "Tesseract OCR (Exec)",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        1020,
+        180
+      ],
+      "id": "tesseract-exec-0005"
+    },
+    {
+      "parameters": {
+        "url": "=https://api-inference.huggingface.co/models/Salesforce/blip-image-captioning-base",
+        "method": "POST",
+        "authentication": "headerAuth",
+        "headerParametersUi": {
+          "parameter": [
+            {
+              "name": "Authorization",
+              "value": "Bearer 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"
+            }
+          ]
+        },
+        "options": {
+          "bodyContentType": "multipart-form-data"
+        },
+        "bodyParametersUi": {
+          "parameter": [
+            {
+              "name": "image",
+              "value": "=BinaryData"
+            }
+          ]
+        }
+      },
+      "name": "Image Caption (HuggingFace)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        1020,
+        320
+      ],
+      "id": "image-caption-hf-0006"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Normalize OCR + caption into a single object\nconst filename = $binary ? Object.keys($binary)[0] : (item.filename || 'image');\nconst ocr = $json[\"stdout\"] || $json.ocr || '';\nlet caption = '';\n\ntry {\n  const hf = $json[\"body\"] || $json;\n  if(typeof hf === 'string') caption = hf;\n  else if(hf && hf[0] && hf[0].generated_text) caption = hf[0].generated_text;\n  else if(hf && hf.caption) caption = hf.caption;\n} catch (e) { caption = ''; }\n\nreturn [{ json: { filename, ocr, caption } }];"
+      },
+      "name": "Normalize",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1250,
+        250
+      ],
+      "id": "normalize-0007"
+    },
+    {
+      "parameters": {
+        "mode": "passThrough"
+      },
+      "name": "Merge",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 1,
+      "position": [
+        1480,
+        250
+      ],
+      "id": "merge-0008"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Build prompt JSON for HF text model\nconst data = items[0].json || {};\nconst images = data.images || items.map(i=>i.json).slice(0,10);\nconst lang = data.lang || 'en';\nconst ocrTexts = images.map((it,i)=>`Image ${i+1} - filename: ${it.filename || ''}\\nCaption: ${it.caption || 'N/A'}\\nOCR: ${it.ocr || 'N/A'}`).join('\\n\\n');\n\nconst prompt = `You are an advanced AI tutor and educational content creator for engineering students.\\n\\nAnalyze the following extracted content from up to 10 images.\\n\\n${ocrTexts}\\n\\nRespond ONLY in valid JSON with keys: topic_title, core_explanation, easy_example, visual_aid, summary_points, quiz_questions, keywords, sources. Use ${lang === 'ta' ? 'Tamil' : 'English'}.\\n\\nIf uncertain about a fact, prefix that line with ⚠️.`;\n\nreturn [{ json: { prompt, lang } }];"
+      },
+      "name": "Build Prompt",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1720,
+        250
+      ],
+      "id": "build-prompt-0009"
+    },
+    {
+      "parameters": {
+        "url": "=https://api-inference.huggingface.co/models/google/flan-t5-large",
+        "method": "POST",
+        "authentication": "headerAuth",
+        "headerParametersUi": {
+          "parameter": [
+            {
+              "name": "Authorization",
+              "value": "Bearer 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"
+            }
+          ]
+        },
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": {
+          "text": "={{$json.prompt}}",
+          "max_new_tokens": 800
+        }
+      },
+      "name": "Text Generation (HuggingFace)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        1980,
+        250
+      ],
+      "id": "text-generation-hf-0010"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Try to parse model text into JSON\nlet body = $json.body || $json;\nlet text = '';\nif(typeof body === 'string') text = body;\nelse if(body.generated_text) text = body.generated_text;\nelse if(body[0] && body[0].generated_text) text = body[0].generated_text;\nelse if(body.data && body.data[0] && body.data[0].text) text = body.data[0].text;\n\n// attempt to find JSON inside text\nconst start = text.indexOf('{');\nconst end = text.lastIndexOf('}');\nif(start !== -1 && end !== -1) {\n  const jsonStr = text.slice(start, end+1);\n  try {\n    const parsed = JSON.parse(jsonStr);\n    return [{ json: parsed }];\n  } catch(e) {\n    return [{ json: { error: 'failed_parse', raw: text } }];\n  }\n}\nreturn [{ json: { error: 'no_json', raw: text } }];"
+      },
+      "name": "Parse Model Output",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        2220,
+        250
+      ],
+      "id": "parse-output-0011"
+    },
+    {
+      "parameters": {
+        "path": "response",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "name": "Respond (Local Test)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        2460,
+        250
+      ],
+      "id": "respond-local-0012"
+    }
+  ],
+  "connections": {
+    "upload-local-file-0001": {
+      "main": [
+        [
+          {
+            "node": "write-binary-0002",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "write-binary-0002": {
+      "main": [
+        [
+          {
+            "node": "set-metadata-0003",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "set-metadata-0003": {
+      "main": [
+        [
+          {
+            "node": "split-batches-0004",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "split-batches-0004": {
+      "main": [
+        [
+          {
+            "node": "tesseract-exec-0005",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "image-caption-hf-0006",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "tesseract-exec-0005": {
+      "main": [
+        [
+          {
+            "node": "normalize-0007",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "image-caption-hf-0006": {
+      "main": [
+        [
+          {
+            "node": "normalize-0007",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "normalize-0007": {
+      "main": [
+        [
+          {
+            "node": "merge-0008",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "merge-0008": {
+      "main": [
+        [
+          {
+            "node": "build-prompt-0009",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "build-prompt-0009": {
+      "main": [
+        [
+          {
+            "node": "text-generation-hf-0010",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "text-generation-hf-0010": {
+      "main": [
+        [
+          {
+            "node": "parse-output-0011",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "parse-output-0011": {
+      "main": [
+        [
+          {
+            "node": "respond-local-0012",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {},
+  "versionId": "local-upload-v1",
+  "id": "workflow-explain-images-local-0001"
+}

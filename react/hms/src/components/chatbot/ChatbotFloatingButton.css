@@ -1,0 +1,53 @@
+/* ChatbotFloatingButton.css - Simple Clean Design (Flutter Style) */
+
+.chatbot-floating-btn {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 60px;
+  height: 60px;
+  background: #ffffff;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 9997;
+  transition: all 0.2s ease;
+  padding: 0;
+  overflow: hidden;
+}
+
+.chatbot-image {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.chatbot-floating-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+.chatbot-floating-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Remove all animations */
+.chatbot-pulse {
+  display: none;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .chatbot-floating-btn {
+    bottom: 16px;
+    right: 16px;
+    width: 56px;
+    height: 56px;
+  }
+}

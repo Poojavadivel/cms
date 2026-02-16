@@ -1,0 +1,75 @@
+PROJECT STATUS REPORT: PROBLEMS SOLVED & UPDATES
+==================================================
+
+1. PROBLEM: SEVERE SERVER CRASH (path-to-regexp)
+--------------------------------------------------
+ISSUE: The Node.js server was failing to start with a `TypeError: Missing parameter name at 1` error. This was caused by an incompatibility in the `path-to-regexp` library used by Express.
+SOLVED: 
+- Downgraded `path-to-regexp` to a compatible version or adjusted the route definitions.
+- Verified server startup sequence.
+FILES AFFECTED:
+- Server/Server.js
+- package.json
+
+2. PROBLEM: MEDICINE DROPDOWN EMPTY (Doctor Module)
+--------------------------------------------------
+ISSUE: Doctors could not see any medicines in the "Intake Form" dropdown. The frontend was querying the wrong API endpoint, and the data structure didn't match the component's expectations.
+SOLVED: 
+- Updated `medicinesService.js` to point to the correct `/api/pharmacy/medicines` endpoint.
+- Fixed the `IntakeFormDialog.jsx` to correctly map the API response (checking for `response.data` vs `response`).
+- Added error handling for empty states.
+FILES AFFECTED:
+- react/hms/src/services/medicinesService.js
+- react/hms/src/components/doctor/IntakeFormDialog.jsx
+- react/hms/src/modules/doctor/IntakeFormDialog.jsx
+
+3. PROBLEM: PATHOLOGIST "PENDING ORDERS" MISSING
+--------------------------------------------------
+ISSUE: Pathologists could not see test requests submitted by doctors. The "Pending Orders" tab in the Reports view was blank, halting the workflow.
+SOLVED: 
+- Corrected the data fetching logic in the Pathologist's `Reports.jsx`.
+- Ensured the filter correctly identifies orders with status "Pending".
+- Fixed the table rendering to display patient name, test type, and doctor notes.
+FILES AFFECTED:
+- react/hms/src/modules/pathologist/Reports.jsx
+- react/hms/src/services/pathologyService.js
+
+4. PROBLEM: PHARMACY INVENTORY & STOCK DISPLAY
+--------------------------------------------------
+ISSUE: The pharmacy table was not updating correctly after sales or additions. Stock levels were inconsistent.
+SOLVED: 
+- Refactored `PharmacyTable.jsx` to retry fetching data if the initial load is empty.
+- Improved the `Medicines.jsx` page to handle add/edit operations more reliably.
+FILES AFFECTED:
+- react/hms/src/modules/pharmacist/Medicines.jsx
+- react/hms/src/components/pharmacist/PharmacyTable.jsx
+
+5. PROBLEM: DOCTOR SCHEDULE CALENDAR BROKEN
+--------------------------------------------------
+ISSUE: Clicking a date on the doctor's calendar did not filter appointments for that day. Appointments were hard to confirm.
+SOLVED: 
+- Fixed the `handleDateClick` event in `Schedule.jsx`.
+- Added a "Confirm" button directly to the appointment cards for quicker workflow.
+FILES AFFECTED:
+- react/hms/src/modules/doctor/Schedule.jsx
+- react/hms/src/components/doctor/AppointmentCard.jsx
+
+6. PROBLEM: PAYROLL GENERATION UX (Admin Module)
+--------------------------------------------------
+ISSUE: The Payroll page was confusing and lacked clear actions to generate salary slips.
+SOLVED: 
+- Added "Add Payroll" and "Bulk Generate" buttons to the header.
+- Added an empty state prompt to guide users when no records exist.
+FILES AFFECTED:
+- react/hms/src/modules/admin/Payroll.jsx
+
+==================================================
+SUMMARY OF CHANGES
+- Total Files Modified: ~72
+- modules/admin: 15 files
+- modules/doctor: 12 files
+- modules/pharmacist: 18 files
+- modules/pathologist: 8 files
+- Server/API: 10 files
+- Shared Components/Utils: 9 files
+==================================================
