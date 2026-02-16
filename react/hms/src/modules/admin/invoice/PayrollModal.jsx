@@ -25,25 +25,25 @@ const PayrollModal = ({ isOpen, onClose, onSubmit, staffList = [], mode = 'creat
     staffName: '',
     department: '',
     designation: '',
-    
+
     // Pay Period
     payPeriodMonth: new Date().getMonth() + 1,
     payPeriodYear: new Date().getFullYear(),
     paymentDate: new Date().toISOString().split('T')[0],
-    
+
     // Earnings
     basicSalary: '',
     bonus: '0',
     incentives: '0',
     overtimePay: '0',
     arrears: '0',
-    
+
     // Deductions
     employeePF: '0',
     employeeESI: '0',
     professionalTax: '0',
     tdsDeducted: '0',
-    
+
     // Payment Info
     paymentMode: 'bank_transfer',
     bankName: '',
@@ -79,22 +79,23 @@ const PayrollModal = ({ isOpen, onClose, onSubmit, staffList = [], mode = 'creat
     try {
       setIsSubmitting(true);
       const token = localStorage.getItem('auth_token') || localStorage.getItem('x-auth-token') || localStorage.getItem('authToken');
-      
+
       if (!token) {
         alert('Authentication token not found. Please login again.');
         return;
       }
 
-      const response = await fetch(`http://localhost:3000/api/payroll/staff/${formData.staffId}`, {
+      const apiUrl = process.env.REACT_APP_API_URL || 'https://hms-dev.onrender.com/api';
+      const response = await fetch(`${apiUrl}/payroll/staff/${formData.staffId}`, {
         headers: {
           'x-auth-token': token
         }
       });
-      
+
       if (!response.ok) throw new Error('Failed to fetch payroll history');
-      
+
       const payrolls = await response.json();
-      
+
       if (!payrolls || payrolls.length === 0) {
         alert('No previous payroll records found for this staff member');
         return;
@@ -172,7 +173,7 @@ const PayrollModal = ({ isOpen, onClose, onSubmit, staffList = [], mode = 'creat
     if (selectedDepartment && staff.department !== selectedDepartment) {
       return false;
     }
-    
+
     // Search filter
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
@@ -200,16 +201,16 @@ const PayrollModal = ({ isOpen, onClose, onSubmit, staffList = [], mode = 'creat
     switch (e.key) {
       case 'ArrowDown':
         e.preventDefault();
-        setHighlightedIndex(prev => 
+        setHighlightedIndex(prev =>
           prev < filteredStaffList.length - 1 ? prev + 1 : prev
         );
         break;
-      
+
       case 'ArrowUp':
         e.preventDefault();
         setHighlightedIndex(prev => prev > 0 ? prev - 1 : 0);
         break;
-      
+
       case 'Enter':
         e.preventDefault();
         if (highlightedIndex >= 0 && highlightedIndex < filteredStaffList.length) {
@@ -220,12 +221,12 @@ const PayrollModal = ({ isOpen, onClose, onSubmit, staffList = [], mode = 'creat
           setHighlightedIndex(-1);
         }
         break;
-      
+
       case 'Escape':
         setShowDropdown(false);
         setHighlightedIndex(-1);
         break;
-      
+
       default:
         break;
     }
@@ -245,7 +246,7 @@ const PayrollModal = ({ isOpen, onClose, onSubmit, staffList = [], mode = 'creat
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (
-        dropdownRef.current && 
+        dropdownRef.current &&
         !dropdownRef.current.contains(event.target) &&
         searchInputRef.current &&
         !searchInputRef.current.contains(event.target)
@@ -253,7 +254,7 @@ const PayrollModal = ({ isOpen, onClose, onSubmit, staffList = [], mode = 'creat
         setShowDropdown(false);
         setHighlightedIndex(-1);
       }
-      
+
       if (
         departmentFilterRef.current &&
         !departmentFilterRef.current.contains(event.target)
@@ -269,16 +270,16 @@ const PayrollModal = ({ isOpen, onClose, onSubmit, staffList = [], mode = 'creat
   // Calculate totals
   useEffect(() => {
     const parse = (val) => parseFloat(val) || 0;
-    
-    const earnings = parse(formData.basicSalary) + parse(formData.bonus) + 
-                    parse(formData.incentives) + parse(formData.overtimePay) + 
-                    parse(formData.arrears);
-    
-    const deductions = parse(formData.employeePF) + parse(formData.employeeESI) + 
-                      parse(formData.professionalTax) + parse(formData.tdsDeducted);
-    
+
+    const earnings = parse(formData.basicSalary) + parse(formData.bonus) +
+      parse(formData.incentives) + parse(formData.overtimePay) +
+      parse(formData.arrears);
+
+    const deductions = parse(formData.employeePF) + parse(formData.employeeESI) +
+      parse(formData.professionalTax) + parse(formData.tdsDeducted);
+
     const net = earnings - deductions;
-    
+
     setCalculations({
       totalEarnings: earnings,
       totalDeductions: deductions,
@@ -311,17 +312,17 @@ const PayrollModal = ({ isOpen, onClose, onSubmit, staffList = [], mode = 'creat
 
   const validateStep = (step) => {
     const newErrors = {};
-    
+
     if (step === 1) {
       if (!formData.staffId) newErrors.staffId = 'Please select a staff member';
     }
-    
+
     if (step === 2) {
       if (!formData.basicSalary || parseFloat(formData.basicSalary) <= 0) {
         newErrors.basicSalary = 'Basic salary is required';
       }
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -338,7 +339,7 @@ const PayrollModal = ({ isOpen, onClose, onSubmit, staffList = [], mode = 'creat
 
   const handleSubmit = async () => {
     if (!validateStep(currentStep)) return;
-    
+
     setIsSubmitting(true);
     try {
       const payload = {
@@ -366,7 +367,7 @@ const PayrollModal = ({ isOpen, onClose, onSubmit, staffList = [], mode = 'creat
         totalDeductions: calculations.totalDeductions,
         netSalary: calculations.netSalary
       };
-      
+
       await onSubmit(payload);
       handleClose();
     } catch (error) {
@@ -411,18 +412,18 @@ const PayrollModal = ({ isOpen, onClose, onSubmit, staffList = [], mode = 'creat
   return (
     <div className="modal-overlay" onClick={handleClose}>
       <div className="modal-container" onClick={(e) => e.stopPropagation()}>
-        
+
         {/* Sidebar */}
         <div className="modal-sidebar">
           <div className="modal-sidebar-header">
             <h2>{mode === 'edit' ? 'Edit Payroll' : mode === 'copy' ? 'Copy to New Month' : 'Process Payroll'}</h2>
             <p>Step {currentStep} of {mode === 'edit' ? '2' : '3'}</p>
           </div>
-          
+
           <div className="modal-steps">
             {steps.filter((step, index) => mode === 'edit' ? index > 0 : true).map((step, index) => (
-              <div 
-                key={step.id} 
+              <div
+                key={step.id}
                 className={`modal-step ${currentStep === step.id ? 'active' : ''} ${currentStep > step.id ? 'completed' : ''}`}
               >
                 <div className="step-icon">
@@ -435,7 +436,7 @@ const PayrollModal = ({ isOpen, onClose, onSubmit, staffList = [], mode = 'creat
               </div>
             ))}
           </div>
-          
+
           <button className="modal-cancel-btn" onClick={handleClose}>
             <FiX size={16} />
             Cancel
@@ -449,17 +450,17 @@ const PayrollModal = ({ isOpen, onClose, onSubmit, staffList = [], mode = 'creat
           </button>
 
           <div className="modal-body">
-            
+
             {/* Step 1: Staff Selection */}
             {currentStep === 1 && (
               <div className="step-content-wrapper">
                 <h2>Select Staff Member</h2>
                 <p className="step-description">Choose the employee for payroll processing</p>
-                
+
                 <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end', marginBottom: '8px' }}>
                   <div className="form-group" style={{ position: 'relative', flex: 1, marginBottom: 0 }}>
                     <label>Search Staff</label>
-                    <input 
+                    <input
                       ref={searchInputRef}
                       type="text"
                       value={searchQuery}
@@ -475,7 +476,7 @@ const PayrollModal = ({ isOpen, onClose, onSubmit, staffList = [], mode = 'creat
                       autoComplete="off"
                     />
                   </div>
-                  
+
                   <div style={{ position: 'relative' }} ref={departmentFilterRef}>
                     <button
                       type="button"
@@ -499,8 +500,8 @@ const PayrollModal = ({ isOpen, onClose, onSubmit, staffList = [], mode = 'creat
                       <FiFilter size={16} />
                       {selectedDepartment || 'All Departments'}
                       {selectedDepartment && (
-                        <FiX 
-                          size={14} 
+                        <FiX
+                          size={14}
                           onClick={(e) => {
                             e.stopPropagation();
                             setSelectedDepartment('');
@@ -509,7 +510,7 @@ const PayrollModal = ({ isOpen, onClose, onSubmit, staffList = [], mode = 'creat
                         />
                       )}
                     </button>
-                    
+
                     {showDepartmentFilter && (
                       <div
                         style={{
@@ -575,11 +576,11 @@ const PayrollModal = ({ isOpen, onClose, onSubmit, staffList = [], mode = 'creat
                     )}
                   </div>
                 </div>
-                
+
                 {selectedDepartment && (
-                  <div style={{ 
-                    fontSize: '13px', 
-                    color: '#6b7280', 
+                  <div style={{
+                    fontSize: '13px',
+                    color: '#6b7280',
                     marginBottom: '8px',
                     display: 'flex',
                     alignItems: 'center',
@@ -603,11 +604,11 @@ const PayrollModal = ({ isOpen, onClose, onSubmit, staffList = [], mode = 'creat
                     </button>
                   </div>
                 )}
-                
+
                 <div style={{ position: 'relative' }}>
-                  
+
                   {showDropdown && filteredStaffList.length > 0 && (
-                    <div 
+                    <div
                       ref={dropdownRef}
                       style={{
                         position: 'absolute',
@@ -652,9 +653,9 @@ const PayrollModal = ({ isOpen, onClose, onSubmit, staffList = [], mode = 'creat
                       ))}
                     </div>
                   )}
-                  
+
                   {showDropdown && filteredStaffList.length === 0 && searchQuery && (
-                    <div 
+                    <div
                       style={{
                         position: 'absolute',
                         top: '100%',
@@ -696,13 +697,13 @@ const PayrollModal = ({ isOpen, onClose, onSubmit, staffList = [], mode = 'creat
                       ))}
                     </select>
                   </div>
-                  
+
                   <div className="form-group">
                     <label>Pay Period Year *</label>
-                    <input 
-                      type="number" 
-                      name="payPeriodYear" 
-                      value={formData.payPeriodYear} 
+                    <input
+                      type="number"
+                      name="payPeriodYear"
+                      value={formData.payPeriodYear}
                       onChange={handleChange}
                       min="2020"
                       max="2100"
@@ -745,35 +746,35 @@ const PayrollModal = ({ isOpen, onClose, onSubmit, staffList = [], mode = 'creat
                     </button>
                   )}
                 </div>
-                
+
                 <div className="salary-section">
                   <h3>Earnings</h3>
                   <div className="form-row">
                     <div className="form-group">
                       <label>Basic Salary *</label>
-                      <input 
-                        type="number" 
-                        name="basicSalary" 
-                        value={formData.basicSalary} 
+                      <input
+                        type="number"
+                        name="basicSalary"
+                        value={formData.basicSalary}
                         onChange={handleChange}
                         placeholder="0.00"
                         className={errors.basicSalary ? 'error' : ''}
                       />
                       {errors.basicSalary && <span className="error-text">{errors.basicSalary}</span>}
                     </div>
-                    
+
                     <div className="form-group">
                       <label>Bonus</label>
                       <input type="number" name="bonus" value={formData.bonus} onChange={handleChange} placeholder="0.00" />
                     </div>
                   </div>
-                  
+
                   <div className="form-row">
                     <div className="form-group">
                       <label>Incentives</label>
                       <input type="number" name="incentives" value={formData.incentives} onChange={handleChange} placeholder="0.00" />
                     </div>
-                    
+
                     <div className="form-group">
                       <label>Overtime Pay</label>
                       <input type="number" name="overtimePay" value={formData.overtimePay} onChange={handleChange} placeholder="0.00" />
@@ -788,19 +789,19 @@ const PayrollModal = ({ isOpen, onClose, onSubmit, staffList = [], mode = 'creat
                       <label>PF (Employee)</label>
                       <input type="number" name="employeePF" value={formData.employeePF} onChange={handleChange} placeholder="0.00" />
                     </div>
-                    
+
                     <div className="form-group">
                       <label>ESI</label>
                       <input type="number" name="employeeESI" value={formData.employeeESI} onChange={handleChange} placeholder="0.00" />
                     </div>
                   </div>
-                  
+
                   <div className="form-row">
                     <div className="form-group">
                       <label>Professional Tax</label>
                       <input type="number" name="professionalTax" value={formData.professionalTax} onChange={handleChange} placeholder="0.00" />
                     </div>
-                    
+
                     <div className="form-group">
                       <label>TDS</label>
                       <input type="number" name="tdsDeducted" value={formData.tdsDeducted} onChange={handleChange} placeholder="0.00" />
@@ -830,7 +831,7 @@ const PayrollModal = ({ isOpen, onClose, onSubmit, staffList = [], mode = 'creat
               <div className="step-content-wrapper">
                 <h2>Review & Confirm</h2>
                 <p className="step-description">Review the payroll details before submission</p>
-                
+
                 <div className="review-section">
                   <h3>Staff Information</h3>
                   <div className="review-grid">
@@ -863,7 +864,7 @@ const PayrollModal = ({ isOpen, onClose, onSubmit, staffList = [], mode = 'creat
                         <strong>₹{calculations.totalEarnings.toFixed(2)}</strong>
                       </div>
                     </div>
-                    
+
                     <div className="breakdown-section">
                       <h4>Deductions</h4>
                       <div className="breakdown-item">
@@ -888,7 +889,7 @@ const PayrollModal = ({ isOpen, onClose, onSubmit, staffList = [], mode = 'creat
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="net-salary-display">
                     <span>Net Salary</span>
                     <strong>₹{calculations.netSalary.toFixed(2)}</strong>
@@ -898,9 +899,9 @@ const PayrollModal = ({ isOpen, onClose, onSubmit, staffList = [], mode = 'creat
                 <div className="form-row">
                   <div className="form-group">
                     <label>Payment Status *</label>
-                    <select 
-                      name="status" 
-                      value={formData.status} 
+                    <select
+                      name="status"
+                      value={formData.status}
                       onChange={handleChange}
                     >
                       <option value="pending">Pending</option>
@@ -913,10 +914,10 @@ const PayrollModal = ({ isOpen, onClose, onSubmit, staffList = [], mode = 'creat
 
                   <div className="form-group">
                     <label>Payment Date</label>
-                    <input 
-                      type="date" 
-                      name="paymentDate" 
-                      value={formData.paymentDate} 
+                    <input
+                      type="date"
+                      name="paymentDate"
+                      value={formData.paymentDate}
                       onChange={handleChange}
                     />
                   </div>
@@ -924,9 +925,9 @@ const PayrollModal = ({ isOpen, onClose, onSubmit, staffList = [], mode = 'creat
 
                 <div className="form-group">
                   <label>Notes (Optional)</label>
-                  <textarea 
-                    name="notes" 
-                    value={formData.notes} 
+                  <textarea
+                    name="notes"
+                    value={formData.notes}
                     onChange={handleChange}
                     rows="3"
                     placeholder="Any additional notes..."
@@ -938,17 +939,17 @@ const PayrollModal = ({ isOpen, onClose, onSubmit, staffList = [], mode = 'creat
 
           {/* Footer Actions */}
           <div className="modal-footer">
-            <button 
-              type="button" 
+            <button
+              type="button"
               onClick={currentStep === 1 ? handleClose : handlePrevious}
               className="btn-secondary"
               disabled={isSubmitting}
             >
               {currentStep === 1 ? 'Cancel' : 'Back'}
             </button>
-            
-            <button 
-              type="button" 
+
+            <button
+              type="button"
               onClick={currentStep === 3 ? handleSubmit : handleNext}
               className="btn-primary"
               disabled={isSubmitting}

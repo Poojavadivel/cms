@@ -57,22 +57,23 @@ const NextMonthPayrollModal = ({ isOpen, onClose, onSubmit, previousPayroll }) =
     try {
       setIsSubmitting(true);
       const token = localStorage.getItem('auth_token') || localStorage.getItem('x-auth-token') || localStorage.getItem('authToken');
-      
+
       if (!token) {
         alert('Authentication token not found. Please login again.');
         return;
       }
 
-      const response = await fetch(`http://localhost:3000/api/payroll/staff/${formData.staffId}`, {
+      const apiUrl = process.env.REACT_APP_API_URL || 'https://hms-dev.onrender.com/api';
+      const response = await fetch(`${apiUrl}/payroll/staff/${formData.staffId}`, {
         headers: {
           'x-auth-token': token
         }
       });
-      
+
       if (!response.ok) throw new Error('Failed to fetch payroll history');
-      
+
       const payrolls = await response.json();
-      
+
       if (!payrolls || payrolls.length === 0) {
         alert('No previous payroll records found');
         return;
@@ -115,9 +116,13 @@ const NextMonthPayrollModal = ({ isOpen, onClose, onSubmit, previousPayroll }) =
   // Initialize with previous payroll data
   useEffect(() => {
     if (previousPayroll && isOpen) {
-      const nextMonth = previousPayroll.payPeriodMonth === 12 ? 1 : previousPayroll.payPeriodMonth + 1;
-      const nextYear = previousPayroll.payPeriodMonth === 12 ? previousPayroll.payPeriodYear + 1 : previousPayroll.payPeriodYear;
-      
+      // Handle both data shapes (raw API data vs mapped invoiceService data)
+      const prevMonth = previousPayroll.payPeriodMonth || previousPayroll.month || new Date().getMonth() + 1;
+      const prevYear = previousPayroll.payPeriodYear || previousPayroll.year || new Date().getFullYear();
+
+      const nextMonth = prevMonth === 12 ? 1 : prevMonth + 1;
+      const nextYear = prevMonth === 12 ? prevYear + 1 : prevYear;
+
       setFormData({
         staffId: previousPayroll.staffId || '',
         staffName: previousPayroll.staffName || '',
@@ -126,7 +131,7 @@ const NextMonthPayrollModal = ({ isOpen, onClose, onSubmit, previousPayroll }) =
         payPeriodMonth: nextMonth,
         payPeriodYear: nextYear,
         paymentDate: new Date().toISOString().split('T')[0],
-        basicSalary: previousPayroll.basicSalary?.toString() || '',
+        basicSalary: previousPayroll.basicSalary?.toString() || previousPayroll.amount?.toString() || '',
         bonus: previousPayroll.bonus?.toString() || '0',
         incentives: previousPayroll.incentives?.toString() || '0',
         overtimePay: previousPayroll.overtimePay?.toString() || '0',
@@ -135,11 +140,11 @@ const NextMonthPayrollModal = ({ isOpen, onClose, onSubmit, previousPayroll }) =
         employeeESI: previousPayroll.statutory?.employeeESI?.toString() || '0',
         professionalTax: previousPayroll.statutory?.professionalTax?.toString() || '0',
         tdsDeducted: previousPayroll.statutory?.tdsDeducted?.toString() || '0',
-        paymentMode: previousPayroll.paymentMode || 'bank_transfer',
+        paymentMode: previousPayroll.paymentMode || previousPayroll.paymentMethod || 'bank_transfer',
         bankName: previousPayroll.bankName || '',
         accountNumber: previousPayroll.accountNumber || '',
         status: 'approved',
-        notes: `Copied from ${months[(previousPayroll.payPeriodMonth || 1) - 1]} ${previousPayroll.payPeriodYear}`
+        notes: `Copied from ${months[prevMonth - 1]} ${prevYear}`
       });
     }
   }, [previousPayroll, isOpen]);
@@ -147,16 +152,16 @@ const NextMonthPayrollModal = ({ isOpen, onClose, onSubmit, previousPayroll }) =
   // Calculate totals
   useEffect(() => {
     const parse = (val) => parseFloat(val) || 0;
-    
-    const earnings = parse(formData.basicSalary) + parse(formData.bonus) + 
-                    parse(formData.incentives) + parse(formData.overtimePay) + 
-                    parse(formData.arrears);
-    
-    const deductions = parse(formData.employeePF) + parse(formData.employeeESI) + 
-                      parse(formData.professionalTax) + parse(formData.tdsDeducted);
-    
+
+    const earnings = parse(formData.basicSalary) + parse(formData.bonus) +
+      parse(formData.incentives) + parse(formData.overtimePay) +
+      parse(formData.arrears);
+
+    const deductions = parse(formData.employeePF) + parse(formData.employeeESI) +
+      parse(formData.professionalTax) + parse(formData.tdsDeducted);
+
     const net = earnings - deductions;
-    
+
     setCalculations({
       totalEarnings: earnings,
       totalDeductions: deductions,
@@ -174,18 +179,18 @@ const NextMonthPayrollModal = ({ isOpen, onClose, onSubmit, previousPayroll }) =
 
   const validateForm = () => {
     const newErrors = {};
-    
+
     if (!formData.basicSalary || parseFloat(formData.basicSalary) <= 0) {
       newErrors.basicSalary = 'Basic salary is required';
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async () => {
     if (!validateForm()) return;
-    
+
     setIsSubmitting(true);
     try {
       const payload = {
@@ -213,7 +218,7 @@ const NextMonthPayrollModal = ({ isOpen, onClose, onSubmit, previousPayroll }) =
         totalDeductions: calculations.totalDeductions,
         netSalary: calculations.netSalary
       };
-      
+
       await onSubmit(payload);
       handleClose();
     } catch (error) {
@@ -257,14 +262,14 @@ const NextMonthPayrollModal = ({ isOpen, onClose, onSubmit, previousPayroll }) =
   return (
     <div className="modal-overlay" onClick={handleClose}>
       <div className="modal-container" onClick={(e) => e.stopPropagation()}>
-        
+
         {/* Sidebar */}
         <div className="modal-sidebar">
           <div className="modal-sidebar-header">
             <h2>Next Month Payroll</h2>
             <p>Quick Copy</p>
           </div>
-          
+
           <div className="modal-steps">
             <div className="modal-step active">
               <div className="step-icon">
@@ -300,7 +305,7 @@ const NextMonthPayrollModal = ({ isOpen, onClose, onSubmit, previousPayroll }) =
               </div>
             </div>
           </div>
-          
+
           <button className="modal-cancel-btn" onClick={handleClose}>
             <FiX size={16} />
             Cancel
@@ -343,7 +348,7 @@ const NextMonthPayrollModal = ({ isOpen, onClose, onSubmit, previousPayroll }) =
                   {isSubmitting ? 'Loading...' : 'Reload Last Month'}
                 </button>
               </div>
-              
+
               {/* Staff Information - READ ONLY */}
               <div className="selected-staff-info">
                 <h3>Staff Information (Read-Only)</h3>
@@ -361,29 +366,29 @@ const NextMonthPayrollModal = ({ isOpen, onClose, onSubmit, previousPayroll }) =
                 <div className="form-row">
                   <div className="form-group">
                     <label>Basic Salary *</label>
-                    <input 
-                      type="number" 
-                      name="basicSalary" 
-                      value={formData.basicSalary} 
+                    <input
+                      type="number"
+                      name="basicSalary"
+                      value={formData.basicSalary}
                       onChange={handleChange}
                       placeholder="0.00"
                       className={errors.basicSalary ? 'error' : ''}
                     />
                     {errors.basicSalary && <span className="error-text">{errors.basicSalary}</span>}
                   </div>
-                  
+
                   <div className="form-group">
                     <label>Bonus</label>
                     <input type="number" name="bonus" value={formData.bonus} onChange={handleChange} placeholder="0.00" />
                   </div>
                 </div>
-                
+
                 <div className="form-row">
                   <div className="form-group">
                     <label>Incentives</label>
                     <input type="number" name="incentives" value={formData.incentives} onChange={handleChange} placeholder="0.00" />
                   </div>
-                  
+
                   <div className="form-group">
                     <label>Overtime Pay</label>
                     <input type="number" name="overtimePay" value={formData.overtimePay} onChange={handleChange} placeholder="0.00" />
@@ -406,19 +411,19 @@ const NextMonthPayrollModal = ({ isOpen, onClose, onSubmit, previousPayroll }) =
                     <label>PF (Employee)</label>
                     <input type="number" name="employeePF" value={formData.employeePF} onChange={handleChange} placeholder="0.00" />
                   </div>
-                  
+
                   <div className="form-group">
                     <label>ESI</label>
                     <input type="number" name="employeeESI" value={formData.employeeESI} onChange={handleChange} placeholder="0.00" />
                   </div>
                 </div>
-                
+
                 <div className="form-row">
                   <div className="form-group">
                     <label>Professional Tax</label>
                     <input type="number" name="professionalTax" value={formData.professionalTax} onChange={handleChange} placeholder="0.00" />
                   </div>
-                  
+
                   <div className="form-group">
                     <label>TDS</label>
                     <input type="number" name="tdsDeducted" value={formData.tdsDeducted} onChange={handleChange} placeholder="0.00" />
@@ -457,10 +462,10 @@ const NextMonthPayrollModal = ({ isOpen, onClose, onSubmit, previousPayroll }) =
 
                 <div className="form-group">
                   <label>Payment Date</label>
-                  <input 
-                    type="date" 
-                    name="paymentDate" 
-                    value={formData.paymentDate} 
+                  <input
+                    type="date"
+                    name="paymentDate"
+                    value={formData.paymentDate}
                     onChange={handleChange}
                   />
                 </div>
@@ -468,9 +473,9 @@ const NextMonthPayrollModal = ({ isOpen, onClose, onSubmit, previousPayroll }) =
 
               <div className="form-group">
                 <label>Notes</label>
-                <textarea 
-                  name="notes" 
-                  value={formData.notes} 
+                <textarea
+                  name="notes"
+                  value={formData.notes}
                   onChange={handleChange}
                   rows="2"
                   placeholder="Additional notes..."
@@ -481,17 +486,17 @@ const NextMonthPayrollModal = ({ isOpen, onClose, onSubmit, previousPayroll }) =
 
           {/* Footer Actions */}
           <div className="modal-footer">
-            <button 
-              type="button" 
+            <button
+              type="button"
               onClick={handleClose}
               className="btn-secondary"
               disabled={isSubmitting}
             >
               Cancel
             </button>
-            
-            <button 
-              type="button" 
+
+            <button
+              type="button"
               onClick={handleSubmit}
               className="btn-primary"
               disabled={isSubmitting}
