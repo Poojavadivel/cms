@@ -4,8 +4,10 @@
  * Professional medical color scheme, real-time stats, patient flow charts
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import Calendar from 'react-calendar';
+import 'react-calendar/dist/Calendar.css';
 import {
   MdPeople,
   MdCalendarToday,
@@ -40,6 +42,9 @@ const DoctorDashboard = () => {
   const [appointments, setAppointments] = useState([]);
   const [patients, setPatients] = useState([]);
   const [selectedPeriod, setSelectedPeriod] = useState('Today');
+  const [selectedDate, setSelectedDate] = useState(null);
+  const [showCalendar, setShowCalendar] = useState(false);
+  const calendarRef = useRef(null);
 
   // Modal State
   const [selectedItem, setSelectedItem] = useState(null);
@@ -47,6 +52,17 @@ const DoctorDashboard = () => {
 
   useEffect(() => {
     loadData();
+  }, []);
+
+  // Close calendar when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (calendarRef.current && !calendarRef.current.contains(event.target)) {
+        setShowCalendar(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const loadData = async () => {
@@ -66,41 +82,68 @@ const DoctorDashboard = () => {
     }
   };
 
-  // Calculate metrics
+  // --- DATE RANGE HELPERS ---
+  const getDateRange = () => {
+    const now = new Date();
+    const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const endOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
+
+    // If a specific date is selected from calendar, use that
+    if (selectedDate) {
+      return { start: startOfDay(selectedDate), end: endOfDay(selectedDate) };
+    }
+
+    switch (selectedPeriod) {
+      case 'Today':
+        return { start: startOfDay(now), end: endOfDay(now) };
+      case 'Week': {
+        const weekStart = new Date(now);
+        weekStart.setDate(now.getDate() - now.getDay()); // Sunday
+        return { start: startOfDay(weekStart), end: endOfDay(now) };
+      }
+      case 'Month': {
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        return { start: startOfDay(monthStart), end: endOfDay(now) };
+      }
+      default:
+        return { start: startOfDay(now), end: endOfDay(now) };
+    }
+  };
+
+  const isInRange = (dateStr) => {
+    try {
+      const d = new Date(dateStr);
+      const { start, end } = getDateRange();
+      return d >= start && d <= end;
+    } catch {
+      return false;
+    }
+  };
+
+  const getApptDate = (a) => a.startAt || a.date || a.appointmentDate;
+
+  // --- FILTERED DATA ---
+  const filteredAppointments = appointments.filter(a => {
+    try {
+      return isInRange(getApptDate(a));
+    } catch {
+      return false;
+    }
+  });
+
+  // Calculate metrics from filtered data
   const totalPatients = patients.length;
 
-  const todayAppointments = appointments.filter(a => {
-    try {
-      const apptDate = new Date(a.startAt || a.date || a.appointmentDate);
-      const today = new Date();
-      return apptDate.toDateString() === today.toDateString();
-    } catch {
-      return false;
-    }
+  const periodAppointments = filteredAppointments.length;
+
+  const waitingNow = filteredAppointments.filter(a => {
+    const isScheduled = (a.status || '').toLowerCase() === 'scheduled';
+    return isScheduled;
   }).length;
 
-  const waitingNow = appointments.filter(a => {
-    try {
-      const apptDate = new Date(a.startAt || a.date || a.appointmentDate);
-      const today = new Date();
-      const isToday = apptDate.toDateString() === today.toDateString();
-      const isScheduled = (a.status || '').toLowerCase() === 'scheduled';
-      return isToday && isScheduled;
-    } catch {
-      return false;
-    }
-  }).length;
-
-  const completedToday = appointments.filter(a => {
-    try {
-      const apptDate = new Date(a.startAt || a.date || a.appointmentDate);
-      const today = new Date();
-      const isToday = apptDate.toDateString() === today.toDateString();
-      const isCompleted = (a.status || '').toLowerCase() === 'completed';
-      return isToday && isCompleted;
-    } catch {
-      return false;
-    }
+  const completedInPeriod = filteredAppointments.filter(a => {
+    const isCompleted = (a.status || '').toLowerCase() === 'completed';
+    return isCompleted;
   }).length;
 
   const getGreeting = () => {
@@ -110,17 +153,18 @@ const DoctorDashboard = () => {
     return 'Good Evening';
   };
 
-  const patientQueue = appointments
+  // Period label for stat cards
+  const getPeriodLabel = () => {
+    if (selectedDate) {
+      return selectedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }
+    return selectedPeriod === 'Today' ? 'Today' : selectedPeriod === 'Week' ? 'This Week' : 'This Month';
+  };
+
+  const patientQueue = filteredAppointments
     .filter(a => {
-      try {
-        const apptDate = new Date(a.startAt || a.date || a.appointmentDate);
-        const today = new Date();
-        const isToday = apptDate.toDateString() === today.toDateString();
-        const isScheduled = (a.status || '').toLowerCase() === 'scheduled';
-        return isToday && isScheduled;
-      } catch {
-        return false;
-      }
+      const isScheduled = (a.status || '').toLowerCase() === 'scheduled';
+      return isScheduled;
     })
     .sort((a, b) => {
       const timeA = a.time || a.appointmentTime || '';
@@ -149,39 +193,121 @@ const DoctorDashboard = () => {
     .slice(0, 4);
 
   const statusCounts = {
-    scheduled: appointments.filter(a => (a.status || '').toLowerCase() === 'scheduled').length,
-    completed: appointments.filter(a => (a.status || '').toLowerCase() === 'completed').length,
-    cancelled: appointments.filter(a => (a.status || '').toLowerCase() === 'cancelled').length,
-    total: appointments.length,
+    scheduled: filteredAppointments.filter(a => (a.status || '').toLowerCase() === 'scheduled').length,
+    completed: filteredAppointments.filter(a => (a.status || '').toLowerCase() === 'completed').length,
+    cancelled: filteredAppointments.filter(a => (a.status || '').toLowerCase() === 'cancelled').length,
+    total: filteredAppointments.length,
   };
 
   const getChartData = () => {
     const days = [];
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      const dateStr = d.toDateString();
-      days.push({
-        date: d.toLocaleDateString('en-US', { weekday: 'short' }),
-        fullDate: dateStr,
-        scheduled: 0,
-        completed: 0,
+
+    if (selectedDate || selectedPeriod === 'Today') {
+      // For a single day, show hourly breakdown
+      const hours = ['6AM', '8AM', '10AM', '12PM', '2PM', '4PM', '6PM', '8PM'];
+      hours.forEach(h => {
+        days.push({ date: h, fullDate: h, scheduled: 0, completed: 0 });
+      });
+
+      filteredAppointments.forEach(a => {
+        try {
+          const apptTime = new Date(getApptDate(a));
+          const hour = apptTime.getHours();
+          let bucket = 0;
+          if (hour < 7) bucket = 0;
+          else if (hour < 9) bucket = 1;
+          else if (hour < 11) bucket = 2;
+          else if (hour < 13) bucket = 3;
+          else if (hour < 15) bucket = 4;
+          else if (hour < 17) bucket = 5;
+          else if (hour < 19) bucket = 6;
+          else bucket = 7;
+
+          const status = (a.status || '').toLowerCase();
+          if (status === 'scheduled') days[bucket].scheduled++;
+          else if (status === 'completed') days[bucket].completed++;
+        } catch (e) {}
+      });
+    } else if (selectedPeriod === 'Week') {
+      // Show days of the week
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        days.push({
+          date: d.toLocaleDateString('en-US', { weekday: 'short' }),
+          fullDate: d.toDateString(),
+          scheduled: 0,
+          completed: 0,
+        });
+      }
+
+      appointments.forEach(a => {
+        try {
+          const apptDate = new Date(getApptDate(a)).toDateString();
+          const dayData = days.find(d => d.fullDate === apptDate);
+          if (dayData) {
+            const status = (a.status || '').toLowerCase();
+            if (status === 'scheduled') dayData.scheduled++;
+            else if (status === 'completed') dayData.completed++;
+          }
+        } catch (e) {}
+      });
+    } else {
+      // Month - show weeks or date ranges
+      const now = new Date();
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      const weeksInMonth = Math.ceil((now.getDate()) / 7);
+
+      for (let w = 0; w < weeksInMonth; w++) {
+        const weekStartDate = new Date(monthStart);
+        weekStartDate.setDate(monthStart.getDate() + (w * 7));
+        const weekEndDate = new Date(weekStartDate);
+        weekEndDate.setDate(weekStartDate.getDate() + 6);
+
+        days.push({
+          date: `${weekStartDate.getDate()}-${Math.min(weekEndDate.getDate(), new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate())}`,
+          weekStart: new Date(weekStartDate),
+          weekEnd: new Date(weekEndDate),
+          scheduled: 0,
+          completed: 0,
+        });
+      }
+
+      appointments.forEach(a => {
+        try {
+          const apptDate = new Date(getApptDate(a));
+          if (apptDate.getMonth() === now.getMonth() && apptDate.getFullYear() === now.getFullYear()) {
+            const dayData = days.find(d => apptDate >= d.weekStart && apptDate <= d.weekEnd);
+            if (dayData) {
+              const status = (a.status || '').toLowerCase();
+              if (status === 'scheduled') dayData.scheduled++;
+              else if (status === 'completed') dayData.completed++;
+            }
+          }
+        } catch (e) {}
       });
     }
 
-    appointments.forEach(a => {
-      try {
-        const apptDate = new Date(a.startAt || a.date || a.appointmentDate).toDateString();
-        const dayData = days.find(d => d.fullDate === apptDate);
-        if (dayData) {
-          const status = (a.status || '').toLowerCase();
-          if (status === 'scheduled') dayData.scheduled++;
-          else if (status === 'completed') dayData.completed++;
-        }
-      } catch (e) { }
-    });
-
     return days;
+  };
+
+  const handlePeriodChange = (period) => {
+    setSelectedPeriod(period);
+    setSelectedDate(null); // Clear specific date when switching period
+    setShowCalendar(false);
+  };
+
+  const handleCalendarChange = (date) => {
+    setSelectedDate(date);
+    setSelectedPeriod(null); // Clear period when picking a specific date
+    setShowCalendar(false);
+  };
+
+  const getDisplayDate = () => {
+    if (selectedDate) {
+      return selectedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+    return new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
   const chartData = getChartData();
@@ -228,16 +354,34 @@ const DoctorDashboard = () => {
             {['Today', 'Week', 'Month'].map(period => (
               <button
                 key={period}
-                className={selectedPeriod === period ? 'active' : ''}
-                onClick={() => setSelectedPeriod(period)}
+                className={selectedPeriod === period && !selectedDate ? 'active' : ''}
+                onClick={() => handlePeriodChange(period)}
               >
                 {period}
               </button>
             ))}
           </div>
-          <div className="current-date">
+          <div className="current-date" onClick={() => setShowCalendar(!showCalendar)} style={{ cursor: 'pointer', position: 'relative' }}>
             <MdCalendarToday />
-            <span>{new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+            <span>{getDisplayDate()}</span>
+            {showCalendar && (
+              <div ref={calendarRef} style={{
+                position: 'absolute',
+                top: '100%',
+                right: 0,
+                marginTop: '8px',
+                zIndex: 1000,
+                boxShadow: '0 10px 25px rgba(0,0,0,0.15)',
+                borderRadius: '10px',
+                overflow: 'hidden'
+              }}>
+                <Calendar
+                  onChange={handleCalendarChange}
+                  value={selectedDate || new Date()}
+                  maxDate={new Date()}
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -277,8 +421,8 @@ const DoctorDashboard = () => {
             />
             <StatCard
               icon={<MdCalendarToday />}
-              label="Today's Appointments"
-              value={todayAppointments}
+              label={`${getPeriodLabel()}'s Appointments`}
+              value={periodAppointments}
               color="#8B5CF6"
               onClick={() => navigate('/doctor/appointments')}
             />
@@ -291,8 +435,8 @@ const DoctorDashboard = () => {
             />
             <StatCard
               icon={<MdCheckCircle />}
-              label="Completed Today"
-              value={completedToday}
+              label={`Completed ${getPeriodLabel()}`}
+              value={completedInPeriod}
               color="#207DC0"
               onClick={() => navigate('/doctor/appointments')}
             />

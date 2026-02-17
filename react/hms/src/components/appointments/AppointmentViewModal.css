@@ -20,7 +20,7 @@
   border-radius: 16px;
   width: 100%;
   height: 100%;
-  max-width: 1200px;
+  max-width: 1050px;
   max-height: 90vh;
   position: relative;
   display: flex;
@@ -33,10 +33,10 @@
 /* Floating Close Button */
 .appointment-close-floating {
   position: absolute;
-  top: 24px;
-  right: 24px;
-  background: rgba(255, 255, 255, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  top: 40px;
+  right: 245px;
+  background: #FFFFFF;
+  border: 2px solid #D1D5DB;
   border-radius: 50%;
   width: 44px;
   height: 44px;
@@ -45,23 +45,26 @@
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s;
-  color: #ffffff;
+  color: #6B7280;
   padding: 0;
   z-index: 11000;
-  backdrop-filter: blur(4px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  font-size: 24px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .appointment-close-floating:hover {
-  background: rgba(255, 255, 255, 0.3);
-  transform: scale(1.1);
-  border-color: #ffffff;
+  background: #FEE2E2;
+  transform: scale(1.08);
+  border-color: #EF4444;
+  color: #EF4444;
+  box-shadow: 0 6px 16px rgba(239, 68, 68, 0.3);
 }
 
 /* Header Section (Restored & Enhanced) */
 .appointment-view-header-new {
   background: #f8fafc;
   padding: 24px 32px;
+  padding-right: 100px;
   flex-shrink: 0;
   border-bottom: 1px solid #e2e8f0;
 }

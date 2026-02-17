@@ -6,6 +6,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import patientsService from '../../../services/patientsService';
 import PatientView from '../../../components/patient/patientview';
+import EditPatientModal from '../../../components/patient/EditPatientModal';
 import FollowUpDialog from '../../../components/doctor/FollowUpDialog';
 import { MdSearch, MdChevronLeft, MdChevronRight } from 'react-icons/md';
 import './Patients.css';
@@ -39,6 +40,8 @@ const DoctorPatients = () => {
   const [showPatientDialog, setShowPatientDialog] = useState(false);
   const [showFollowUpDialog, setShowFollowUpDialog] = useState(false);
   const [selectedFollowUpPatient, setSelectedFollowUpPatient] = useState(null);
+  const [showPatientEditModal, setShowPatientEditModal] = useState(false);
+  const [patientToEdit, setPatientToEdit] = useState(null);
 
   const itemsPerPage = 10;
 
@@ -166,6 +169,33 @@ const DoctorPatients = () => {
   const handleCloseDialog = () => {
     setShowPatientDialog(false);
     setSelectedPatient(null);
+  };
+
+  const handleEditPatient = (patient) => {
+    console.log('✏️ Edit patient clicked:', patient);
+    setPatientToEdit(patient);
+    setShowPatientEditModal(true);
+  };
+
+  const handleClosePatientEditModal = () => {
+    setShowPatientEditModal(false);
+    setPatientToEdit(null);
+  };
+
+  const handlePatientEditSuccess = async () => {
+    console.log('✅ Patient edit successful, refreshing data');
+    handleClosePatientEditModal();
+    // Refresh patient data if dialog is open
+    if (showPatientDialog && selectedPatient) {
+      try {
+        const updatedPatient = await patientsService.fetchPatientById(selectedPatient._id || selectedPatient.id);
+        setSelectedPatient(updatedPatient);
+      } catch (error) {
+        console.error('❌ Error refreshing patient data:', error);
+      }
+    }
+    // Refresh patient list
+    fetchPatients();
   };
 
   const handleFollowUpClick = (patient, event) => {
@@ -358,7 +388,16 @@ const DoctorPatients = () => {
         patient={selectedPatient}
         isOpen={showPatientDialog}
         onClose={handleCloseDialog}
+        onEdit={handleEditPatient}
         showBillingTab={false}
+      />
+
+      {/* Patient Edit Modal */}
+      <EditPatientModal
+        isOpen={showPatientEditModal}
+        onClose={handleClosePatientEditModal}
+        patient={patientToEdit}
+        onSuccess={handlePatientEditSuccess}
       />
 
       {/* Follow-Up Dialog */}

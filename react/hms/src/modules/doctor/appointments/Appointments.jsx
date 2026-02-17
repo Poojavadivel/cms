@@ -9,6 +9,7 @@ import AppointmentViewModal from '../../../components/appointments/AppointmentVi
 import AppointmentEditModal from '../../../components/appointments/AppointmentEditModal';
 import AppointmentIntakeModal from '../../../components/appointments/AppointmentIntakeModal';
 import PatientView from '../../../components/patient/patientview';
+import EditPatientModal from '../../../components/patient/EditPatientModal';
 
 // --- MOCK DATA (KEPT FOR FALLBACK) ---
 const MOCK_APPOINTMENTS = [
@@ -534,6 +535,8 @@ const Appointments = () => {
   // Patient dialog states
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [showPatientDialog, setShowPatientDialog] = useState(false);
+  const [showPatientEditModal, setShowPatientEditModal] = useState(false);
+  const [patientToEdit, setPatientToEdit] = useState(null);
 
   // Fetch appointments from API on mount
   useEffect(() => {
@@ -734,6 +737,31 @@ const Appointments = () => {
   const handleClosePatientDialog = () => {
     setShowPatientDialog(false);
     setSelectedPatient(null);
+  };
+
+  const handleEditPatient = (patient) => {
+    console.log('✏️ Edit patient clicked:', patient);
+    setPatientToEdit(patient);
+    setShowPatientEditModal(true);
+  };
+
+  const handleClosePatientEditModal = () => {
+    setShowPatientEditModal(false);
+    setPatientToEdit(null);
+  };
+
+  const handlePatientEditSuccess = async () => {
+    console.log('✅ Patient edit successful, refreshing data');
+    handleClosePatientEditModal();
+    // Refresh patient data if dialog is open
+    if (showPatientDialog && selectedPatient) {
+      try {
+        const updatedPatient = await patientsService.fetchPatientById(selectedPatient._id);
+        setSelectedPatient(updatedPatient);
+      } catch (error) {
+        console.error('❌ Error refreshing patient data:', error);
+      }
+    }
   };
 
   // Handle quick status toggle from table
@@ -985,7 +1013,16 @@ const Appointments = () => {
         patient={selectedPatient}
         isOpen={showPatientDialog}
         onClose={handleClosePatientDialog}
+        onEdit={handleEditPatient}
         showBillingTab={false}
+      />
+
+      {/* Patient Edit Modal */}
+      <EditPatientModal
+        isOpen={showPatientEditModal}
+        onClose={handleClosePatientEditModal}
+        patient={patientToEdit}
+        onSuccess={handlePatientEditSuccess}
       />
     </div>
   );

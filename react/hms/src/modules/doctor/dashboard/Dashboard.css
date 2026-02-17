@@ -1,12 +1,12 @@
 /* Doctor Dashboard Styles - Enterprise Medical Theme */
 
 .doctor-dashboard {
-  min-height: 100vh;
+  height: auto;
   background: #F8FAFC;
-  padding: 20px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
   overflow: visible;
   box-sizing: border-box;
 }
@@ -36,14 +36,14 @@
 .dashboard-header {
   background: linear-gradient(135deg, #165a8a 0%, #165a8a 100%);
   border-radius: 12px;
-  padding: 20px;
+  padding: 16px;
   display: flex;
   align-items: center;
   gap: 16px;
   box-shadow: 0 4px 16px rgba(14, 74, 75, 0.25);
   color: white;
   flex-shrink: 0;
-  min-height: 88px;
+  max-height: 80px;
   position: relative;
   z-index: 10;
 }
@@ -127,7 +127,7 @@
 /* Quick Actions */
 .quick-actions {
   display: flex;
-  gap: 10px;
+  gap: 16px;
 }
 
 .action-btn {
@@ -135,20 +135,21 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 10px 12px;
+  gap: 8px;
+  padding: 12px 20px;
   background: white;
   border: 1.5px solid;
   border-radius: 10px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  min-width: 160px;
 }
 
 .action-btn svg {
-  font-size: 18px;
+  font-size: 20px;
 }
 
 .action-btn.success {
@@ -190,27 +191,27 @@
 /* Main Content */
 .dashboard-content {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   flex: 1;
-  overflow: hidden;
+  overflow: visible;
   min-height: 0;
 }
 
 .content-left {
-  flex: 65;
+  flex: 50;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  overflow: hidden;
+  gap: 8px;
+  overflow: visible;
   min-height: 0;
 }
 
 .content-right {
-  flex: 35;
+  flex: 50;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  overflow: hidden;
+  gap: 8px;
+  overflow: visible;
   min-height: 0;
 }
 
@@ -232,6 +233,7 @@
   gap: 6px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   border: 1px solid rgba(0, 0, 0, 0.05);
+  max-height: 90px;
 }
 
 .stat-icon {
@@ -270,6 +272,7 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   display: flex;
   flex-direction: column;
+  max-height: 280px;
 }
 
 .chart-content {
@@ -277,7 +280,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 200px;
+  height: 160px;
+  max-height: 160px;
 }
 
 .chart-placeholder {
@@ -293,9 +297,8 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   display: flex;
   flex-direction: column;
-  flex: 1;
   overflow: hidden;
-  min-height: 0;
+  max-height: 220px;
 }
 
 .card-header {
@@ -303,6 +306,7 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 12px;
+  flex-shrink: 0;
 }
 
 .header-title {
@@ -336,9 +340,29 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  flex: 1;
   overflow-y: auto;
-  min-height: 0;
+  overflow-x: hidden;
+  flex: 1;
+  padding-right: 4px;
+}
+
+/* Queue List Scrollbar */
+.queue-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.queue-list::-webkit-scrollbar-track {
+  background: #F1F5F9;
+  border-radius: 10px;
+}
+
+.queue-list::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 10px;
+}
+
+.queue-list::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
 }
 
 .queue-item {
@@ -429,9 +453,8 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   display: flex;
   flex-direction: column;
-  flex: 1;
   overflow: hidden;
-  min-height: 0;
+  max-height: 400px;
 }
 
 .upcoming-badge {
@@ -447,9 +470,29 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  flex: 1;
   overflow-y: auto;
-  min-height: 0;
+  overflow-x: hidden;
+  flex: 1;
+  padding-right: 4px;
+}
+
+/* Upcoming List Scrollbar */
+.upcoming-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.upcoming-list::-webkit-scrollbar-track {
+  background: #F1F5F9;
+  border-radius: 10px;
+}
+
+.upcoming-list::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 10px;
+}
+
+.upcoming-list::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
 }
 
 .upcoming-item {
@@ -516,6 +559,7 @@
   border-radius: 14px;
   padding: 16px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  max-height: 280px;
 }
 
 .status-card .header-title svg {
@@ -804,4 +848,29 @@
 
 .queue-item, .upcoming-item {
   transition: all 0.2s ease;
+}
+
+/* Calendar Popup Styling */
+.react-calendar {
+  border: none !important;
+  font-family: inherit !important;
+  background: white !important;
+}
+
+.react-calendar__tile--active {
+  background: #207DC0 !important;
+  color: white !important;
+}
+
+.react-calendar__tile--now {
+  background: #E0F2FE !important;
+}
+
+.react-calendar__tile:enabled:hover {
+  background: #F0F9FF !important;
+}
+
+.react-calendar__navigation button:enabled:hover,
+.react-calendar__navigation button:enabled:focus {
+  background-color: #E0F2FE !important;
 }
