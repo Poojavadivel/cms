@@ -17,13 +17,15 @@
 .edit-modal-container {
   background: white;
   border-radius: 12px;
-  width: 100%;
-  max-width: 900px;
+  width: 95%;
+  max-width: 1050px;
+  height: 90vh;
   max-height: 90vh;
   display: flex;
   flex-direction: column;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
   animation: slideUp 0.3s ease-out;
+  position: relative;
 }
 
 /* Header */

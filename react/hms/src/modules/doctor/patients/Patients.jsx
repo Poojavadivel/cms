@@ -6,6 +6,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import patientsService from '../../../services/patientsService';
 import PatientView from '../../../components/patient/patientview';
+<<<<<<< HEAD
+=======
+import EditPatientModal from '../../../components/patient/EditPatientModal';
+>>>>>>> 249291b432e7793c91288d90a324e7631e7735b4
 import FollowUpDialog from '../../../components/doctor/FollowUpDialog';
 import { MdSearch, MdChevronLeft, MdChevronRight } from 'react-icons/md';
 import './Patients.css';
@@ -39,6 +43,11 @@ const DoctorPatients = () => {
   const [showPatientDialog, setShowPatientDialog] = useState(false);
   const [showFollowUpDialog, setShowFollowUpDialog] = useState(false);
   const [selectedFollowUpPatient, setSelectedFollowUpPatient] = useState(null);
+<<<<<<< HEAD
+=======
+  const [showPatientEditModal, setShowPatientEditModal] = useState(false);
+  const [patientToEdit, setPatientToEdit] = useState(null);
+>>>>>>> 249291b432e7793c91288d90a324e7631e7735b4
 
   const itemsPerPage = 10;
 
@@ -168,6 +177,36 @@ const DoctorPatients = () => {
     setSelectedPatient(null);
   };
 
+<<<<<<< HEAD
+=======
+  const handleEditPatient = (patient) => {
+    console.log('✏️ Edit patient clicked:', patient);
+    setPatientToEdit(patient);
+    setShowPatientEditModal(true);
+  };
+
+  const handleClosePatientEditModal = () => {
+    setShowPatientEditModal(false);
+    setPatientToEdit(null);
+  };
+
+  const handlePatientEditSuccess = async () => {
+    console.log('✅ Patient edit successful, refreshing data');
+    handleClosePatientEditModal();
+    // Refresh patient data if dialog is open
+    if (showPatientDialog && selectedPatient) {
+      try {
+        const updatedPatient = await patientsService.fetchPatientById(selectedPatient._id || selectedPatient.id);
+        setSelectedPatient(updatedPatient);
+      } catch (error) {
+        console.error('❌ Error refreshing patient data:', error);
+      }
+    }
+    // Refresh patient list
+    fetchPatients();
+  };
+
+>>>>>>> 249291b432e7793c91288d90a324e7631e7735b4
   const handleFollowUpClick = (patient, event) => {
     event.stopPropagation(); // Prevent row click
     setSelectedFollowUpPatient(patient);
@@ -358,9 +397,24 @@ const DoctorPatients = () => {
         patient={selectedPatient}
         isOpen={showPatientDialog}
         onClose={handleCloseDialog}
+<<<<<<< HEAD
         showBillingTab={false}
       />
 
+=======
+        onEdit={handleEditPatient}
+        showBillingTab={false}
+      />
+
+      {/* Patient Edit Modal */}
+      <EditPatientModal
+        isOpen={showPatientEditModal}
+        onClose={handleClosePatientEditModal}
+        patient={patientToEdit}
+        onSuccess={handlePatientEditSuccess}
+      />
+
+>>>>>>> 249291b432e7793c91288d90a324e7631e7735b4
       {/* Follow-Up Dialog */}
       {showFollowUpDialog && selectedFollowUpPatient && (
         <FollowUpDialog

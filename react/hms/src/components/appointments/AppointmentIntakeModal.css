@@ -33,7 +33,7 @@
 .intake-modal-dialog {
   position: relative;
   width: 100%;
-  max-width: 1350px;
+  max-width: 1050px;
   height: 90vh;
   max-height: 90vh;
   background: #FFFFFF;
@@ -59,27 +59,30 @@
 /* Floating Close Button (Top-Right, Outside Dialog) */
 .intake-modal-close-floating {
   position: absolute;
-  top: -8px;
-  right: -8px;
-  width: 40px;
-  height: 40px;
+  top: 1px;
+  right: 1px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   background: #FFFFFF;
-  border: 1px solid #E5E7EB;
+  border: 2px solid #D1D5DB;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  z-index: 10;
+  z-index: 10001;
   transition: all 0.2s ease;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  color: #6B7280;
+  font-size: 24px;
 }
 
 .intake-modal-close-floating:hover:not(:disabled) {
-  background: #EEF2FF;
-  border-color: #6366F1;
-  color: #6366F1;
-  transform: scale(1.05);
+  background: #FEE2E2;
+  border-color: #EF4444;
+  color: #EF4444;
+  transform: scale(1.08);
+  box-shadow: 0 6px 16px rgba(239, 68, 68, 0.3);
 }
 
 .intake-modal-close-floating:disabled {

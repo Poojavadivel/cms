@@ -4,15 +4,17 @@ import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import './Appointments.css';
 import appointmentsService from '../../../services/appointmentsService';
-// import patientsService from '../../../services/patientsService'; // Reserved for future use
-// import staffService from '../../../services/staffService'; // Reserved for future use
+import staffService from '../../../services/staffService';
+import patientsService from '../../../services/patientsService';
 import AppointmentViewModal from '../../../components/appointments/AppointmentViewModal';
 import AppointmentEditModal from '../../../components/appointments/AppointmentEditModal';
 import PatientView from '../../../components/patient/patientview';
+import EditPatientModal from '../../../components/patient/EditPatientModal';
 
 import NewAppointmentForm from './components/NewAppointmentForm';
 import EditAppointmentForm from './components/EditAppointmentForm';
 import StaffDetailEnterprise from '../staff/StaffDetailEnterprise';
+import AddStaffDialog from '../staff/components/AddStaffDialog';
 
 // Import doctor icons
 import doctorFemaleIcon from '../../../assets/doctor-femaleicon.png';
@@ -350,7 +352,11 @@ const FilterBar = ({
           <span className="search-icon-lg"><Icons.Search /></span>
           <input
             type="text"
+<<<<<<< HEAD
             placeholder="Search by patient name, doctor, or status..."
+=======
+            placeholder="Search by patient name or doctor"
+>>>>>>> 249291b432e7793c91288d90a324e7631e7735b4
             className="search-input-lg"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
@@ -626,6 +632,13 @@ const Appointments = () => {
   // Doctor/Staff dialog states
   const [selectedDoctor, setSelectedDoctor] = useState(null);
   const [showDoctorDialog, setShowDoctorDialog] = useState(false);
+<<<<<<< HEAD
+=======
+  const [showDoctorEditForm, setShowDoctorEditForm] = useState(false);
+
+  // Patient edit form state
+  const [showPatientEditForm, setShowPatientEditForm] = useState(false);
+>>>>>>> 249291b432e7793c91288d90a324e7631e7735b4
 
   // Handle new patient navigation for immediate booking
   useEffect(() => {
@@ -870,9 +883,68 @@ const Appointments = () => {
 
   const handleCloseDoctorDialog = () => {
     setShowDoctorDialog(false);
+<<<<<<< HEAD
     setSelectedDoctor(null);
   };
 
+=======
+    setShowDoctorEditForm(false);
+    setSelectedDoctor(null);
+  };
+
+  const handleEditDoctor = (doctorData) => {
+    // Close detail dialog and open edit form
+    setShowDoctorDialog(false);
+    setShowDoctorEditForm(true);
+  };
+
+  const handleDoctorFormSubmit = async (formData) => {
+    try {
+      // Update staff via API
+      await staffService.updateStaff(formData);
+      
+      // Close edit form and refresh appointments
+      setShowDoctorEditForm(false);
+      setSelectedDoctor(null);
+      await refreshAppointments();
+      showNotification('Doctor profile updated successfully', 'success');
+    } catch (error) {
+      console.error('Failed to update doctor profile:', error);
+      showNotification('Failed to update doctor profile: ' + error.message, 'error');
+    }
+  };
+
+  const handleDoctorFormCancel = () => {
+    setShowDoctorEditForm(false);
+    setSelectedDoctor(null);
+  };
+
+  // Patient edit handlers
+  const handleEditPatient = (patientData) => {
+    // Close patient view dialog and open edit form
+    setShowPatientDialog(false);
+    setShowPatientEditForm(true);
+  };
+
+  const handlePatientFormSubmit = async () => {
+    try {
+      // Close edit form and refresh appointments
+      setShowPatientEditForm(false);
+      setSelectedPatient(null);
+      await refreshAppointments();
+      showNotification('Patient profile updated successfully', 'success');
+    } catch (error) {
+      console.error('Failed to update patient profile:', error);
+      showNotification('Failed to update patient profile: ' + error.message, 'error');
+    }
+  };
+
+  const handlePatientFormCancel = () => {
+    setShowPatientEditForm(false);
+    setSelectedPatient(null);
+  };
+
+>>>>>>> 249291b432e7793c91288d90a324e7631e7735b4
   // Handle quick status toggle from table
   const handleStatusToggle = async (appointment) => {
     // Only cycle through statuses that match the main page tabs and form options
@@ -1049,7 +1121,17 @@ const Appointments = () => {
                         />
                         <div className="info-group">
                           <span className="primary font-semibold">{apt.doctor}</span>
+<<<<<<< HEAD
                           <span className="secondary opacity-60 text-xs text-blue-primary">(MD)</span>
+=======
+                          <span 
+                            className="secondary opacity-60 text-xs text-blue-primary" 
+                            title="Medical Doctor"
+                            style={{ cursor: 'help' }}
+                          >
+                            (MD)
+                          </span>
+>>>>>>> 249291b432e7793c91288d90a324e7631e7735b4
                         </div>
                       </div>
                     </td>
@@ -1180,6 +1262,10 @@ const Appointments = () => {
         patientId={selectedPatient?._id || selectedPatient?.id}
         isOpen={showPatientDialog}
         onClose={handleClosePatientDialog}
+<<<<<<< HEAD
+=======
+        onEdit={handleEditPatient}
+>>>>>>> 249291b432e7793c91288d90a324e7631e7735b4
       />
 
       {/* Staff Detail Dialog - Show doctor/staff details */}
@@ -1188,10 +1274,33 @@ const Appointments = () => {
           staffId={selectedDoctor.id || selectedDoctor._id}
           initial={selectedDoctor}
           onClose={handleCloseDoctorDialog}
+<<<<<<< HEAD
           onUpdate={(updatedStaff) => {
             console.log('Staff updated:', updatedStaff);
             // Optionally refresh appointments if needed
           }}
+=======
+          onUpdate={handleEditDoctor}
+        />
+      )}
+
+      {/* Staff Edit Form - Edit doctor/staff profile */}
+      {showDoctorEditForm && selectedDoctor && (
+        <AddStaffDialog
+          initial={selectedDoctor}
+          onSubmit={handleDoctorFormSubmit}
+          onCancel={handleDoctorFormCancel}
+        />
+      )}
+
+      {/* Patient Edit Form - Edit patient profile */}
+      {showPatientEditForm && selectedPatient && (
+        <EditPatientModal
+          patient={selectedPatient}
+          isOpen={showPatientEditForm}
+          onClose={handlePatientFormCancel}
+          onSuccess={handlePatientFormSubmit}
+>>>>>>> 249291b432e7793c91288d90a324e7631e7735b4
         />
       )}
     </div>

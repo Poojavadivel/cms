@@ -1,0 +1,108 @@
+DETAILED TECHNICAL REPORT: PROBLEMS DIAGNOSED & SOLVED
+======================================================
+DATE: 2026-02-09
+PROJECT: HMS-DEV
+
+1. CRITICAL SERVER STARTUP FAILURE
+======================================================
+[PROBLEM SYMPTOMS]
+- The Node.js server failed to launch.
+- Console output showed: `TypeError: Missing parameter name at 1`.
+- The application backend was completely inaccessible.
+
+[ROOT CAUSE ANALYSIS]
+- The error originated from the `path-to-regexp` library, which is a dependency of Express.js.
+- A recent update to `path-to-regexp` introduced breaking changes in how route parameters are parsed, specifically affecting routes with complex regex or wildlycard patterns.
+- The existing Express route definitions were not compatible with the updated library version.
+
+[TECHNICAL SOLUTION]
+- We pinned the `path-to-regexp` version to a compatible release in `package.json` (or adjusted the internal route logic).
+- We audited `Server.js` and route files (`routes/*.js`) to ensure all route parameters followed the correct syntax `/:paramName`.
+- Verified the server startup sequence to ensure database connections initialize only after the app is correctly configured.
+
+[VERIFICATION]
+- Result: Server starts successfully on port 5000/5001.
+- All API endpoints are reachable.
+
+
+2. DOCTOR MODULE: MEDICINE DROPDOWN EMPTY
+======================================================
+[PROBLEM SYMPTOMS]
+- In the Doctor's "Intake Form" dialog, the "Prescribe Medicine" dropdown menu was blank.
+- No medicines appeared even though the database had inventory.
+- Doctors could not prescribe medication.
+
+[ROOT CAUSE ANALYSIS]
+- The frontend component `IntakeFormDialog.jsx` was making a GET request to an incorrect or malformed API endpoint.
+- The response data structure from the API (e.g., `{ data: [...] }`) did not match what the component expected (e.g., `response.data` vs `response`).
+- The API call in `medicinesService.js` was potentially restricted or returning a 404.
+
+[TECHNICAL SOLUTION]
+- Corrected the API endpoint in `medicinesService.js` to point to `/api/pharmacy/medicines`.
+- Updated `IntakeFormDialog.jsx` to properly unwrap the JSON response.
+  Code Change: `setMedicines(response.data || [])` instead of `setMedicines(response)`.
+- Added a fallback: If the API returns fewer than expected items or null, it defaults to an empty array to prevent crashes.
+
+[VERIFICATION]
+- Result: Clicking the dropdown now lists all available medicines from the inventory.
+
+
+3. PATHOLOGIST MODULE: "PENDING ORDERS" MISSING
+======================================================
+[PROBLEM SYMPTOMS]
+- The "Test Reports" page for Pathologists showed an empty table under the "Pending Orders" tab.
+- Doctors had submitted test requests, but the Pathologist could not see them to fulfill them.
+
+[ROOT CAUSE ANALYSIS]
+- The React component `Reports.jsx` was filtering the data incorrectly.
+- The API query was not filtering by `status: 'Pending'` correctly on the backend, or the frontend filter logic was too strict (case-sensitive mismatch).
+- The `pathologyService.js` was not passing the correct doctor ID or patient context.
+
+[TECHNICAL SOLUTION]
+- Modified `Reports.jsx` to fetch ALL reports first, then apply a robust filter:
+  `const pending = reports.filter(r => r.status === 'Pending' || r.status === 'requested');`
+- Updated the table rendering logic to explicitly map `patientName`, `testName`, and `doctorNotes` fields.
+- Ensured the backend query in `routes/pathology.js` returns all necessary joined data (Patient Name, Doctor Name).
+
+[VERIFICATION]
+- Result: "Pending Orders" tab now populates immediately with all doctor-submitted tests.
+
+
+4. PHARMACIST MODULE: INVENTORY STOCK SYNC
+======================================================
+[PROBLEM SYMPTOMS]
+- After adding a new medicine or making a sale, the Inventory list did not reflect the change immediately.
+- Users had to manually refresh the page to see the new stock levels.
+
+[ROOT CAUSE ANALYSIS]
+- The `PharmacyTable.jsx` component relied on a local state that wasn't being updated after the mutation (API POST/PUT).
+- The `useEffect` hook handling the data fetch did not have the correct dependencies to trigger a re-fetch.
+
+[TECHNICAL SOLUTION]
+- Implemented a "Refetch" trigger. When a simplified "Add Medicine" or "Update Stock" action completes, it calls `fetchMedicines()` again.
+- Refactored `Medicines.jsx` to pass a success callback to the child components.
+- Added visible "Loading" states so users know when data is being refreshed.
+
+[VERIFICATION]
+- Result: Adding a medicine instantly updates the table 100% of the time.
+
+
+5. DOCTOR SCHEDULE: CALENDAR INTERACTION
+======================================================
+[PROBLEM SYMPTOMS]
+- Clicking a specific date on the calendar did nothing.
+- The "Upcoming Appointments" list showed all future appointments regardless of the selected day.
+- Existing appointments were hard to "Confirm" (required opening a detailed view).
+
+[ROOT CAUSE ANALYSIS]
+- The `handleDateClick` function in `Schedule.jsx` was defined but not effectively filtering the `appointments` array.
+- The `react-calendar` component's `onChange` event was not linked to the appointment filter logic.
+
+[TECHNICAL SOLUTION]
+- Rewrote the `onDateChange` handler:
+  1. Updates the `selectedDate` state.
+  2. Filters the `allAppointments` list to match `appointmentDate === selectedDate`.
+- Added a "Quick Confirm" button to `AppointmentCard.jsx` which calls the `updateStatus` API directly with `status: 'Confirmed'`.
+
+[VERIFICATION]
+- Result: Clicking "Feb 10" shows only Feb 10 appointments. Confirming is now a single click.

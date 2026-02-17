@@ -1,0 +1,32 @@
+# How to Select Medicine in the Doctor Intake Form
+
+1. **Open Intake Form**
+   - Click on the "View Intake" (eye icon) button on any patient appointment in your schedule.
+
+2. **Navigate to Pharmacy**
+   - Scroll down to the **Pharmacy** section. It should be expanded by default.
+
+3. **Add a Row**
+   - Click the **+ Add Medication** button at the bottom of the table. A new empty row will appear.
+
+4. **Select Medicine**
+   - Locate the **Medicine** column (the first column).
+   - Click the dropdown box that says **"Select Medicine..."**.
+   - A list will appear showing all available medicines (Name - Strength - Price).
+   - Click on the medicine you want to prescribe.
+   - *Tip*: On desktops, you can type the first letter of the medicine name to jump to it.
+
+5. **Review Auto-Filled Details**
+   - The **Dosage** (e.g., 500mg) will automatically populate if available from the inventory.
+   - You can edit this field if you need a different dosage.
+
+6. **Complete the Prescription**
+   - **Days**: Enter the duration (e.g., 5).
+   - **Frequency**: Select the schedule (e.g., 1-0-1).
+   - **Qty**: This is automatically calculated (Days × Frequency). You can manually change it if needed.
+   - **Notes**: Add instructions like "After food" or "Before sleep".
+
+7. **Save**
+   - Click **Save Intake Form** at the bottom to send the prescription to the Pharmacy.
+
+**Note**: If the dropdown is empty, it means no medicines have been added to the Pharmacy Inventory yet.
