@@ -8,25 +8,13 @@ import {
   MdChevronRight,
   MdDelete,
   MdCheck,
-<<<<<<< HEAD
-=======
-  MdLocalHospital,
->>>>>>> 249291b432e7793c91288d90a324e7631e7735b4
 } from 'react-icons/md';
 import appointmentsService from '../../../services/appointmentsService';
 import patientsService from '../../../services/patientsService';
 import { PatientProfileView, IntakeFormDialog } from '../../../components/doctor';
-<<<<<<< HEAD
 import './Schedule.css';
 
 const DoctorSchedule = () => {
-=======
-import { useApp } from '../../../provider';
-import './Schedule.css';
-
-const DoctorSchedule = () => {
-  const { user } = useApp();
->>>>>>> 249291b432e7793c91288d90a324e7631e7735b4
   const [loading, setLoading] = useState(true);
   const [appointments, setAppointments] = useState([]);
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -260,23 +248,6 @@ const DoctorSchedule = () => {
 
   return (
     <div className="doctor-schedule">
-<<<<<<< HEAD
-=======
-      {/* Header */}
-      <div className="schedule-header">
-        <div className="header-content">
-          <h1>My Schedule</h1>
-          <p>Manage your appointments and calendar</p>
-        </div>
-        <div className="header-controls">
-          <div className="current-date">
-            <MdCalendarToday />
-            <span>{new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-          </div>
-        </div>
-      </div>
-
->>>>>>> 249291b432e7793c91288d90a324e7631e7735b4
       <div className="schedule-content">
         {/* Calendar Section */}
         <div className="calendar-section">

@@ -1,0 +1,12 @@
+.pathology-modal-container {
+  max-width: 1050px !important;
+  max-height: 90vh !important;
+  width: 90vw;
+  height: 90vh;
+  border-radius: 20px !important;
+  background: #fff;
+  overflow: hidden;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+}

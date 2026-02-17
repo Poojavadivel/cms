@@ -75,6 +75,19 @@
   align-items: center;
 }
 
+/* Standardized Pathology View Modal Size */
+.pathology-detail-modal-container {
+  width: 90vw;
+  max-width: 1050px;
+  height: 90vh;
+  max-height: 90vh;
+  border-radius: 20px;
+  background: #ffffff;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
 
 .pathology-page.dashboard-container {
   width: 100%;

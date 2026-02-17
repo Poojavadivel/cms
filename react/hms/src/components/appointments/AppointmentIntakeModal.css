@@ -24,6 +24,7 @@
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -32,7 +33,7 @@
 /* Dialog Container */
 .intake-modal-dialog {
   position: relative;
-  width: 100%;
+  width: 90vw;
   max-width: 1050px;
   height: 90vh;
   max-height: 90vh;
@@ -50,39 +51,38 @@
     opacity: 0;
     transform: scale(0.95) translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: scale(1) translateY(0);
   }
 }
 
-/* Floating Close Button (Top-Right, Outside Dialog) */
+/* Floating Close Button (Top-Right, Fixed to Screen) */
 .intake-modal-close-floating {
-  position: absolute;
-  top: 1px;
-  right: 1px;
+  position: fixed;
+  top: 24px;
+  right: 24px;
   width: 44px;
   height: 44px;
   border-radius: 50%;
   background: #FFFFFF;
-  border: 2px solid #D1D5DB;
+  border: 2px solid #E5E7EB;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  z-index: 10001;
+  z-index: 11000;
   transition: all 0.2s ease;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  color: #6B7280;
-  font-size: 24px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.25);
 }
 
 .intake-modal-close-floating:hover:not(:disabled) {
   background: #FEE2E2;
-  border-color: #EF4444;
-  color: #EF4444;
-  transform: scale(1.08);
-  box-shadow: 0 6px 16px rgba(239, 68, 68, 0.3);
+  border-color: #DC2626;
+  color: #DC2626;
+  transform: scale(1.1);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
 }
 
 .intake-modal-close-floating:disabled {

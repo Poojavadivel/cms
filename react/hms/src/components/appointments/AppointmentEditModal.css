@@ -23,6 +23,7 @@
   border-radius: 20px;
   width: 95%;
   max-width: 1050px;
+  height: 95vh;
   max-height: 90vh;
   position: relative;
   display: flex;

@@ -1,3 +1,19 @@
+/* Actions Detail Modal - Match Appointments Modal Size */
+.actions-detail-modal {
+    background: #fff;
+    border-radius: 20px;
+    width: 95%;
+    max-width: 1050px;
+    height: 95vh;
+    max-height: 90vh;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 25px 70px rgba(0, 0, 0, 0.25), 0 10px 25px rgba(0, 0, 0, 0.15);
+    animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
 /* PatientView.css - Compact Fixed Layout */
 
 /* Overlay */
@@ -20,45 +36,35 @@
 /* Floating Close Button */
 .patient-close-floating {
     position: absolute;
-    top: 85px;
-    right: 248px;
-    background: white;
-    border: 2px solid #D1D5DB;
-    color: #6B7280;
+    top: 16px;
+    right: 24px;
+    background: transparent;
+    border: none;
+    color: white;
     cursor: pointer;
     z-index: 1010;
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    transition: all 0.2s;
-    font-size: 24px;
+    transition: transform 0.2s;
 }
 
 .patient-close-floating:hover {
-    transform: scale(1.08);
-    background: #FEE2E2;
-    color: #EF4444;
-    border-color: #EF4444;
-    box-shadow: 0 6px 16px rgba(239, 68, 68, 0.3);
+    transform: scale(1.1);
 }
 
 /* Container */
 .patient-view-container {
     background-color: #F8FAFC;
-    width: 100%;
+    width: 90vw;
     max-width: 1050px;
+    height: 90vh;
+    /* Fixed Height */
     max-height: 90vh;
+    /* Cap max height to avoid being too tall on huge screens but also too small */
     border-radius: 12px;
     display: flex;
     flex-direction: column;
     overflow: hidden;
     /* No scroll on container */
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-    position: relative;
 }
 
 /* Loading & Error States */
@@ -93,7 +99,7 @@
 .pv-header-content {
     display: flex;
     gap: 20px;
-    align-items: flex-start;
+    align-items: center;
 }
 
 /* Avatar Section */
@@ -189,8 +195,6 @@
     gap: 8px;
     /* Reduced gap */
     min-width: 0;
-    justify-content: center;
-    /* Center vertically if space allows */
 }
 
 .pv-name-row {
@@ -344,7 +348,6 @@
     align-items: flex-end;
     flex-shrink: 0;
     min-width: 160px;
-    margin-right: 30px;
 }
 
 .pv-edit-btn {

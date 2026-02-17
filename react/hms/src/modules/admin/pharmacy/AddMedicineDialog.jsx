@@ -124,7 +124,7 @@ const AddMedicineDialog = ({ isOpen, onClose, medicine, onSuccess }) => {
         initial={{ opacity: 0, scale: 0.95, y: 30 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 30 }}
-        className="w-[85%] max-w-[1100px] h-[80vh] bg-white rounded-[24px] shadow-2xl overflow-hidden flex border border-white/20"
+        className="w-[90vw] max-w-[1050px] h-[90vh] bg-white rounded-[20px] shadow-2xl overflow-hidden flex border border-white/20"
       >
         {/* Sidebar - Premium Blue Gradient */}
         <div className="hidden md:flex flex-col w-[280px] bg-gradient-to-br from-[#207DC0] to-[#165a8a] relative overflow-hidden shrink-0">

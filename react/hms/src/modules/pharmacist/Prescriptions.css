@@ -765,11 +765,12 @@
 
 .modal-content {
   background-color: white;
-  border-radius: 16px;
-  max-width: 900px;
-  width: 100%;
+  border-radius: 20px;
+  width: 90vw;
+  max-width: 1050px;
+  height: 90vh;
   max-height: 90vh;
-  overflow-y: auto;
+  overflow: hidden;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
 }
 
@@ -806,6 +807,7 @@
 
 .modal-body {
   padding: 24px;
+  overflow-y: auto;
 }
 
 .detail-section {

@@ -7,6 +7,7 @@ import {
 } from 'react-icons/fi';
 import { MdOutlineScience, MdOutlineNoteAlt } from 'react-icons/md';
 import pathologyService from '../../../../services/pathologyService';
+import './PathologyDialog.css';
 
 const PathologyViewDialog = ({ isOpen, onClose, report }) => {
     const [reportData, setReportData] = useState(report || null);
@@ -48,7 +49,7 @@ const PathologyViewDialog = ({ isOpen, onClose, report }) => {
             <motion.div
                 initial={{ opacity: 0, scale: 0.95, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
-                className="w-[85%] max-w-[1280px] h-[85vh] bg-white rounded-[24px] shadow-2xl overflow-hidden flex"
+                className="pathology-modal-container shadow-2xl"
             >
                 {/* Sidebar Summary - Premium Blue */}
                 <div className="w-[280px] bg-gradient-to-br from-[#207DC0] to-[#165a8a] border-r border-[#207DC0]/20 p-8 flex flex-col relative overflow-hidden">

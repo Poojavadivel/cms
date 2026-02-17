@@ -795,19 +795,8 @@ const MedicalHistoryTab = ({ patientId }) => {
                     onClick={handleCloseDetailModal}
                 >
                     <div
+                        className="actions-detail-modal"
                         onClick={(e) => e.stopPropagation()}
-                        style={{
-                            backgroundColor: 'white',
-                            borderRadius: '16px',
-                            width: '90%',
-                            maxWidth: '700px',
-                            maxHeight: '85vh',
-                            overflow: 'hidden',
-                            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            animation: 'slideUp 0.3s ease-out'
-                        }}
                     >
                         {/* Modal Header */}
                         <div style={{

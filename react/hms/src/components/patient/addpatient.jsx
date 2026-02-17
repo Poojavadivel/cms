@@ -381,7 +381,7 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                         animate={{ scale: 1, opacity: 1, y: 0 }}
                         exit={{ scale: 0.95, opacity: 0, y: 20 }}
                         transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                        className="relative w-[85%] max-w-[1280px] h-[85vh] bg-white rounded-[24px] shadow-2xl flex overflow-hidden ring-1 ring-white/20 z-10"
+                        className="add-patient-modal-container relative w-full flex overflow-hidden ring-1 ring-white/20 z-10"
                     >
 
                         {/* Sidebar - Modern Deep Blue */}
@@ -447,7 +447,7 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
 
                             {/* Static Header */}
                             <div className="px-8 py-5 md:px-10 md:py-6 border-b border-slate-100 bg-white z-20">
-                                <div className="max-w-4xl mx-auto">
+                                <div className="mx-auto">
                                     <motion.div
                                         key={`header-${currentStep}`}
                                         initial={{ opacity: 0, x: -20 }}
@@ -476,7 +476,7 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                                         <p>Loading patient record...</p>
                                     </div>
                                 ) : (
-                                    <div className="max-w-4xl mx-auto space-y-10 pb-20">
+                                    <div className="mx-auto space-y-10 pb-20">
 
                                         <AnimatePresence mode='wait'>
                                             <motion.div

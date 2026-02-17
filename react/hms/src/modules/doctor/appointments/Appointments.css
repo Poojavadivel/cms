@@ -61,13 +61,13 @@ body {
 
 .dashboard-container {
   max-width: 100%;
-  padding: 12px 20px;
+  padding: 16px 24px;
   /* Reduced padding */
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
-  overflow: hidden;
+  overflow-y: auto;
   /* CRITICAL: Container handles frame */
 }
 
@@ -150,10 +150,10 @@ body {
   justify-content: space-between;
   align-items: center;
   /* Center align for compactness */
-  margin-bottom: 6px;
+  margin-bottom: var(--space-3);
   flex-shrink: 0;
   /* Don't shrink header */
-  min-height: 44px;
+  min-height: 60px;
   position: relative;
   z-index: 5;
   padding: 0 !important;
@@ -162,7 +162,7 @@ body {
 }
 
 .main-title {
-  font-size: 20px;
+  font-size: 22px;
   /* Smaller title */
   font-weight: 700;
   color: #0F172A !important;
@@ -171,13 +171,13 @@ body {
 }
 
 .main-subtitle {
-  font-size: 12px;
+  font-size: 13px;
   color: #9CA3AF !important;
-  margin: 1px 0 0 0;
+  margin: 2px 0 0 0;
 }
 
 .btn-new-appointment {
-  height: 34px;
+  height: 36px;
   /* Compact Button */
   padding: 0 16px;
   background-color: var(--primary);
@@ -245,7 +245,7 @@ body {
   /* Added gap between search and filters */
   margin-bottom: var(--space-3);
   flex-shrink: 0;
-  min-height: 50px;
+  min-height: 60px;
   /* Increased height */
 }
 
@@ -600,7 +600,7 @@ body {
 }
 
 .modern-table tbody td {
-  padding: 12px 20px;
+  padding: 0 20px;
   vertical-align: middle;
   font-size: 13px;
   /* Smaller text */
@@ -774,6 +774,8 @@ body {
 .action-buttons-group {
   display: flex;
   gap: 6px;
+  align-items: center;
+  justify-content: flex-start;
 }
 
 .btn-action {
@@ -788,6 +790,9 @@ body {
   justify-content: center;
   color: var(--text-muted);
   transition: all 0.2s;
+  padding: 0;
+  margin: 0;
+  flex-shrink: 0;
 }
 
 .btn-action:hover {

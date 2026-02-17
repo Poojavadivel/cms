@@ -1,27 +1,28 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import appointmentsService from '../../../../services/appointmentsService';
-import { AppointmentDraft } from '../../../../models/AppointmentDraft';
 import AvailabilityChecker from '../../../../components/appointments/AvailabilityChecker';
+import './EditAppointmentForm.css';
 import {
   MdClose,
   MdPerson,
   MdEvent,
+  MdAccessTime,
   MdNotes,
   MdDelete,
-  MdCheckCircle,
+  MdSave,
   MdMale,
-  MdFemale
+  MdFemale,
+  MdLocalHospital,
+  MdBadge,
+  MdPhone
 } from 'react-icons/md';
 
 const EditAppointmentForm = ({ appointmentId, onClose, onUpdate, onDelete }) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [doctors, setDoctors] = useState([]);
-
-  // Availability checking state
   const [isAvailable, setIsAvailable] = useState(true);
 
-  // Simplified form state matching New Appointment flow
   const [formData, setFormData] = useState({
     patientName: '',
     patientId: '',
@@ -30,10 +31,11 @@ const EditAppointmentForm = ({ appointmentId, onClose, onUpdate, onDelete }) => 
     date: '',
     time: '',
     notes: '',
-    chiefComplaint: '', // Reason
+    chiefComplaint: '',
     status: 'Scheduled',
     gender: 'Male',
-    patientCode: ''
+    patientCode: '',
+    phone: ''
   });
 
   // Calculate startAt for availability checking
@@ -46,25 +48,17 @@ const EditAppointmentForm = ({ appointmentId, onClose, onUpdate, onDelete }) => 
     try {
       const data = await appointmentsService.fetchAppointmentById(appointmentId);
 
-      // Parse date and time robustly
+      // Parse date and time
       let date = '';
       let time = '';
-
       if (data.startAt) {
         const startAt = new Date(data.startAt);
         date = startAt.toISOString().split('T')[0];
-        time = startAt.toTimeString().substring(0, 5); // HH:mm
+        time = startAt.toTimeString().substring(0, 5);
       } else {
-        // Handle date
         if (data.date) {
-          if (data.date.includes('T')) {
-            date = data.date.split('T')[0];
-          } else {
-            date = data.date;
-          }
+          date = data.date.includes('T') ? data.date.split('T')[0] : data.date;
         }
-
-        // Handle time
         if (data.time) {
           time = data.time;
           const lowerTime = time.toLowerCase();
@@ -83,13 +77,14 @@ const EditAppointmentForm = ({ appointmentId, onClose, onUpdate, onDelete }) => 
       let patientId = '';
       let gender = 'Male';
       let patientCode = '';
-
+      let phone = '';
       if (data.patientId && typeof data.patientId === 'object') {
         const p = data.patientId;
         patientName = `${p.firstName || ''} ${p.lastName || ''}`.trim();
         patientId = p._id || '';
         patientCode = p.metadata?.patientCode || p._id || '';
         gender = p.gender || 'Male';
+        phone = p.phone?.number || p.phone || '';
       } else if (data.patientId) {
         patientId = data.patientId;
         patientName = data.clientName || '';
@@ -113,16 +108,17 @@ const EditAppointmentForm = ({ appointmentId, onClose, onUpdate, onDelete }) => 
 
       setFormData({
         patientName: data.clientName || patientName,
-        patientId: patientId,
-        doctorId: doctorId,
-        doctorName: doctorName,
+        patientId,
+        doctorId,
+        doctorName,
         date,
         time,
         notes: data.notes || '',
         chiefComplaint: data.chiefComplaint || data.reason || '',
         status: data.status || 'Scheduled',
-        gender: gender,
-        patientCode: patientCode
+        gender,
+        patientCode,
+        phone
       });
     } catch (error) {
       console.error('Failed to load appointment:', error);
@@ -149,8 +145,6 @@ const EditAppointmentForm = ({ appointmentId, onClose, onUpdate, onDelete }) => 
       alert('Doctor is required');
       return;
     }
-
-    // Check availability before submitting
     if (!isAvailable) {
       alert('The selected time slot is not available. Please choose a different time.');
       return;
@@ -158,7 +152,6 @@ const EditAppointmentForm = ({ appointmentId, onClose, onUpdate, onDelete }) => 
 
     setSaving(true);
     try {
-      // Build simple payload for update
       const payload = {
         doctorId: formData.doctorId,
         doctorName: formData.doctorName,
@@ -196,140 +189,191 @@ const EditAppointmentForm = ({ appointmentId, onClose, onUpdate, onDelete }) => 
     }
   };
 
+  // Determine avatar based on gender
+  const getAvatar = () => {
+    const g = (formData.gender || '').toLowerCase().trim();
+    if (g.includes('female') || g.startsWith('f')) return '/girlicon.png';
+    return '/boyicon.png';
+  };
+
+  // Format time for display
+  const formatTimeDisplay = (timeStr) => {
+    if (!timeStr) return 'Not set';
+    try {
+      const [h, m] = timeStr.split(':');
+      let hr = parseInt(h);
+      const ampm = hr >= 12 ? 'PM' : 'AM';
+      if (hr > 12) hr -= 12;
+      if (hr === 0) hr = 12;
+      return `${hr}:${m} ${ampm}`;
+    } catch {
+      return timeStr;
+    }
+  };
+
+  // Format date for display
+  const formatDateDisplay = (dateStr) => {
+    if (!dateStr) return 'Not set';
+    try {
+      const [year, month, day] = dateStr.split('-').map(Number);
+      const date = new Date(year, month - 1, day);
+      return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+    } catch {
+      return dateStr;
+    }
+  };
+
+  // Loading State
   if (loading) {
     return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-2xl p-8 flex flex-col items-center">
-          <div className="w-8 h-8 border-4 border-[#207DC0] border-t-transparent rounded-full animate-spin mb-4"></div>
-          <p className="text-gray-600 font-medium">Loading details...</p>
+      <div className="edit-appt-overlay">
+        <div className="edit-loading-container">
+          <div className="edit-loading-inner">
+            <div className="edit-loading-spinner"></div>
+            <p className="edit-loading-text">Loading appointment...</p>
+          </div>
         </div>
       </div>
     );
   }
 
-  // Helper Components
-  const FormSection = ({ icon: Icon, title, children }) => (
-    <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm mb-4">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="p-2 bg-[#207DC0]/10 text-[#207DC0] rounded-lg">
-          <Icon size={20} />
-        </div>
-        <h3 className="text-[15px] font-bold text-[#0f172a] uppercase tracking-wider">{title}</h3>
-      </div>
-      {children}
-    </div>
-  );
-
-  const InputField = ({ label, value, onChange, type = 'text', required = false, placeholder = '', disabled = false, fullWidth = false }) => (
-    <div className={`flex flex-col ${fullWidth ? 'col-span-full' : ''}`}>
-      <label className="text-[13px] font-bold text-[#334155] mb-2 tracking-tight">
-        {label} {required && <span className="text-red-500">*</span>}
-      </label>
-      <input
-        type={type}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        disabled={disabled}
-        placeholder={placeholder}
-        className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-[14px] font-medium text-[#0f172a] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#207DC0] focus:border-transparent transition-all disabled:bg-gray-50 disabled:text-gray-500 tracking-tight"
-      />
-    </div>
-  );
-
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 font-sans">
-      <div className="bg-[#f8fafc] w-[96%] h-[92vh] max-w-[1600px] rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+    <div className="edit-appt-overlay">
+      <button className="edit-close-floating" onClick={onClose} title="Close">
+        <MdClose size={22} />
+      </button>
 
-        {/* HEADER */}
-        <div className="bg-[#165a8a] text-white px-8 py-6 flex justify-between items-center shrink-0">
-          <div>
-            <h2 className="text-2xl font-extrabold flex items-center gap-3 tracking-tight">
-              <MdCheckCircle size={24} className="text-[#207DC0]" />
-              Edit Appointment
-            </h2>
-            <p className="text-white/80 mt-1 text-[13px] font-medium tracking-tight opacity-90">Update details for {formData.patientName}</p>
+      <div className="edit-appt-modal">
+        {/* ===== LEFT PANEL: Patient Info ===== */}
+        <div className="edit-left-panel">
+          <div className="edit-patient-header">
+            <div className="edit-patient-header-label">Patient</div>
+            <h3 className="edit-patient-header-title">Details</h3>
           </div>
-          <button onClick={onClose} className="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors text-white">
-            <MdClose size={24} />
-          </button>
-        </div>
 
-        {/* CONTENT */}
-        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
-          <div className="space-y-6">
-
-            {/* Patient Info (Read Only) */}
-            <FormSection icon={MdPerson} title="Patient Information">
-              <div className="grid grid-cols-2 gap-6">
-                <InputField label="Patient Name" value={formData.patientName} onChange={() => { }} disabled />
-                <InputField label="Patient ID" value={formData.patientCode} onChange={() => { }} disabled />
+          <div className="edit-patient-card">
+            <div className="edit-patient-avatar-wrapper">
+              <img
+                src={getAvatar()}
+                alt={formData.gender}
+                className="edit-patient-avatar"
+                onError={(e) => { e.target.style.display = 'none'; }}
+              />
+              <div className={`edit-patient-gender-badge ${formData.gender?.toLowerCase() === 'female' ? 'female' : 'male'}`}>
+                {formData.gender?.toLowerCase() === 'female' ? <MdFemale size={16} /> : <MdMale size={16} />}
               </div>
-            </FormSection>
+            </div>
 
-            {/* Doctor Selection */}
-            <FormSection icon={MdPerson} title="Assigned Doctor">
-              <div className="flex flex-col">
-                <label className="text-sm font-semibold text-gray-700 mb-2">
-                  Doctor <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={formData.doctorId}
-                  onChange={(e) => {
-                    const doctor = doctors.find(d => d.id === e.target.value);
-                    handleChange('doctorId', e.target.value);
-                    handleChange('doctorName', doctor ? doctor.name : '');
-                  }}
-                  className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#207DC0] focus:border-transparent transition-all"
-                >
-                  <option value="">Select a doctor</option>
-                  {doctors.map(doc => (
-                    <option key={doc.id} value={doc.id}>
-                      {doc.name} - {doc.department || doc.specialization || 'General'}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </FormSection>
+            <div className="edit-patient-info-center">
+              <div className="edit-patient-name">{formData.patientName || 'Unknown'}</div>
+              <div className="edit-patient-code">{formData.patientCode || formData.patientId}</div>
 
-            {/* Schedule & Details */}
-            <FormSection icon={MdEvent} title="Appointment Details">
-              <div className="grid grid-cols-2 gap-6">
-                <InputField label="Date" type="date" value={formData.date} onChange={(val) => handleChange('date', val)} required />
-                <InputField label="Time" type="time" value={formData.time} onChange={(val) => handleChange('time', val)} required />
+              <div className="edit-patient-details">
+                <div className="edit-patient-detail-item">
+                  <div className="edit-patient-detail-icon"><MdBadge size={18} /></div>
+                  <div className="edit-patient-detail-text">
+                    <div className="edit-patient-detail-label">Gender</div>
+                    <div className="edit-patient-detail-value">{formData.gender || 'N/A'}</div>
+                  </div>
+                </div>
 
-                <InputField
-                  label="Reason / Chief Complaint"
-                  value={formData.chiefComplaint}
-                  onChange={(val) => handleChange('chiefComplaint', val)}
-                  fullWidth
-                  required
-                  placeholder="Reason for visit"
-                />
+                {formData.phone && (
+                  <div className="edit-patient-detail-item">
+                    <div className="edit-patient-detail-icon"><MdPhone size={18} /></div>
+                    <div className="edit-patient-detail-text">
+                      <div className="edit-patient-detail-label">Phone</div>
+                      <div className="edit-patient-detail-value">{formData.phone}</div>
+                    </div>
+                  </div>
+                )}
 
-                <div className="flex flex-col col-span-full">
-                  <label className="text-sm font-semibold text-gray-700 mb-2">Status</label>
-                  <div className="grid grid-cols-4 gap-3">
-                    {['Scheduled', 'Confirmed', 'Pending', 'Cancelled'].map(s => (
-                      <button
-                        key={s}
-                        type="button"
-                        onClick={() => handleChange('status', s)}
-                        className={`py-3 px-2 rounded-lg border font-bold text-sm transition-all ${formData.status === s
-                          ? 'bg-[#207DC0] text-white border-[#207DC0] shadow-md transform scale-105'
-                          : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
-                          }`}
-                      >
-                        {s}
-                      </button>
-                    ))}
+                <div className="edit-patient-detail-item">
+                  <div className="edit-patient-detail-icon"><MdEvent size={18} /></div>
+                  <div className="edit-patient-detail-text">
+                    <div className="edit-patient-detail-label">Appointment</div>
+                    <div className="edit-patient-detail-value">{formatDateDisplay(formData.date)}</div>
+                  </div>
+                </div>
+
+                <div className="edit-patient-detail-item">
+                  <div className="edit-patient-detail-icon"><MdAccessTime size={18} /></div>
+                  <div className="edit-patient-detail-text">
+                    <div className="edit-patient-detail-label">Time Slot</div>
+                    <div className="edit-patient-detail-value">{formatTimeDisplay(formData.time)}</div>
                   </div>
                 </div>
               </div>
-            </FormSection>
+            </div>
+          </div>
+        </div>
+
+        {/* ===== RIGHT PANEL: Editable Form ===== */}
+        <div className="edit-right-panel">
+          {/* Header */}
+          <div className="edit-rp-header">
+            <div className="edit-icon-badge">✏️</div>
+            <div>
+              <h2 className="edit-rp-title">Edit Appointment</h2>
+              <p className="edit-rp-subtitle">Update details for {formData.patientName}</p>
+            </div>
+          </div>
+
+          {/* Scrollable Content */}
+          <div className="edit-panel-content">
+            {/* Doctor Selection */}
+            <h3 className="edit-section-title">
+              <MdLocalHospital size={18} />
+              Assigned Doctor
+            </h3>
+            <div className="edit-form-group">
+              <label>Doctor <span className="required">*</span></label>
+              <select
+                className="edit-input"
+                value={formData.doctorId}
+                onChange={(e) => {
+                  const doctor = doctors.find(d => d.id === e.target.value);
+                  handleChange('doctorId', e.target.value);
+                  handleChange('doctorName', doctor ? doctor.name : '');
+                }}
+              >
+                <option value="">Choose a doctor</option>
+                {doctors.map(doc => (
+                  <option key={doc.id} value={doc.id}>
+                    Dr. {doc.name} {doc.department ? `• ${doc.department}` : doc.specialization ? `• ${doc.specialization}` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Schedule */}
+            <h3 className="edit-section-title">
+              <MdEvent size={18} />
+              Schedule
+            </h3>
+            <div className="edit-form-row">
+              <div className="edit-form-group half">
+                <label>Date <span className="required">*</span></label>
+                <input
+                  type="date"
+                  className="edit-input"
+                  value={formData.date}
+                  onChange={(e) => handleChange('date', e.target.value)}
+                />
+              </div>
+              <div className="edit-form-group half">
+                <label>Time <span className="required">*</span></label>
+                <input
+                  type="time"
+                  className="edit-input"
+                  value={formData.time}
+                  onChange={(e) => handleChange('time', e.target.value)}
+                />
+              </div>
+            </div>
 
             {/* Availability Checker */}
             {formData.doctorId && formData.patientId && formData.date && formData.time && (
-              <div style={{ marginTop: '20px', marginBottom: '20px' }}>
+              <div className="edit-availability-wrapper">
                 <AvailabilityChecker
                   doctorId={formData.doctorId}
                   patientId={formData.patientId}
@@ -345,53 +389,73 @@ const EditAppointmentForm = ({ appointmentId, onClose, onUpdate, onDelete }) => 
               </div>
             )}
 
-            {/* Notes */}
-            <FormSection icon={MdNotes} title="Clinical Notes">
-              <div className="flex flex-col">
-                <label className="text-sm font-semibold text-gray-700 mb-2">Private Notes (Optional)</label>
-                <textarea
-                  value={formData.notes}
-                  onChange={(e) => handleChange('notes', e.target.value)}
-                  rows={3}
-                  className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#207DC0] transition-all resize-none"
-                  placeholder="Add any private notes here..."
-                />
-              </div>
-            </FormSection>
+            {/* Appointment Details */}
+            <h3 className="edit-section-title">
+              <MdNotes size={18} />
+              Appointment Details
+            </h3>
+            <div className="edit-form-group">
+              <label>Reason / Chief Complaint <span className="required">*</span></label>
+              <input
+                type="text"
+                className="edit-input"
+                value={formData.chiefComplaint}
+                onChange={(e) => handleChange('chiefComplaint', e.target.value)}
+                placeholder="E.g., Routine check-up, Follow-up consultation..."
+              />
+            </div>
+            <div className="edit-form-group">
+              <label>Clinical Notes (Optional)</label>
+              <textarea
+                className="edit-input"
+                rows={3}
+                value={formData.notes}
+                onChange={(e) => handleChange('notes', e.target.value)}
+                placeholder="Additional private notes or observations..."
+              />
+            </div>
 
+            {/* Status */}
+            <h3 className="edit-section-title">
+              <MdPerson size={18} />
+              Status
+            </h3>
+            <div className="edit-status-grid">
+              {['Scheduled', 'Confirmed', 'Pending', 'Cancelled'].map(s => (
+                <button
+                  key={s}
+                  type="button"
+                  className={`edit-status-btn ${formData.status === s ? 'active ' + s.toLowerCase() : ''}`}
+                  onClick={() => handleChange('status', s)}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="edit-rp-footer">
+            <div className="edit-footer-left">
+              <button className="edit-btn-delete" onClick={handleDelete} disabled={saving}>
+                <MdDelete size={18} /> Delete
+              </button>
+            </div>
+            <div className="edit-footer-right">
+              <button className="edit-btn-cancel" onClick={onClose} disabled={saving}>
+                Cancel
+              </button>
+              <button
+                className="edit-btn-save"
+                onClick={handleSubmit}
+                disabled={saving || !isAvailable}
+              >
+                <MdSave size={18} />
+                {saving ? 'Saving...' : isAvailable ? 'Save Changes' : 'Slot Unavailable'}
+              </button>
+            </div>
           </div>
         </div>
-
-        {/* FOOTER */}
-        <div className="bg-white border-t border-gray-200 p-6 flex justify-between items-center shrink-0">
-          <button
-            onClick={handleDelete}
-            className="px-6 py-2.5 rounded-xl border border-red-200 text-red-600 font-bold hover:bg-red-50 transition-colors flex items-center gap-2"
-          >
-            <MdDelete size={18} /> Delete
-          </button>
-
-          <div className="flex gap-4">
-            <button
-              onClick={onClose}
-              className="px-6 py-2.5 rounded-xl border border-gray-200 text-gray-600 font-bold hover:bg-gray-50 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSubmit}
-              disabled={saving || !isAvailable}
-              className="px-8 py-3 rounded-xl bg-[#207DC0] text-white font-bold hover:bg-[#165a8a] transition-colors shadow-lg shadow-[#207DC0]/20 flex items-center gap-2 disabled:opacity-70"
-              style={{
-                opacity: !isAvailable ? 0.5 : 1,
-                cursor: !isAvailable ? 'not-allowed' : 'pointer'
-              }}
-            >
-              {saving ? 'Saving...' : isAvailable ? 'Save Changes' : 'Time Slot Not Available'}
-            </button>
-          </div>
-        </div>
-
       </div>
     </div>
   );

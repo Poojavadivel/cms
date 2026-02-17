@@ -346,6 +346,11 @@
   align-items: center;
   justify-content: center;
   transition: all 0.2s;
+  line-height: 0;
+}
+
+.btn-action svg {
+  display: block;
 }
 
 .btn-action.view svg {

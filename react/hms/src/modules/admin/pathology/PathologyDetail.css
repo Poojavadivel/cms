@@ -18,11 +18,11 @@
 
 .pathology-detail-modal {
   background: white;
-  border-radius: 16px;
-  width: 95%;
-  max-width: 1200px;
+  border-radius: 20px;
+  width: 90vw;
+  max-width: 1050px;
   height: 90vh;
-  max-height: 850px;
+  max-height: 90vh;
   display: flex;
   flex-direction: column;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);

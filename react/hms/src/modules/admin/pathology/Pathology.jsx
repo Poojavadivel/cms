@@ -455,7 +455,7 @@ const Pathology = () => {
 
       {showDetail && selectedReport && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl animate-in fade-in zoom-in duration-200">
+          <div className="pathology-detail-modal-container shadow-2xl animate-in fade-in zoom-in duration-200">
             <div className="p-6 border-b flex justify-between items-center bg-blue-primary text-white">
               <h2 className="text-xl font-bold">Report Details</h2>
               <button onClick={handleCloseDetail} className="p-2 hover:bg-white/10 rounded-full transition-colors">

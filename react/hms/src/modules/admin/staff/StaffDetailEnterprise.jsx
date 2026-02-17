@@ -129,7 +129,6 @@ const StaffDetailEnterprise = ({ staffId, initial, onClose, onUpdate }) => {
           </div>
 
           <div className="primary-actions">
-<<<<<<< HEAD
             {initial.email && (
               <button
                 className="btn-action-glass"
@@ -143,15 +142,6 @@ const StaffDetailEnterprise = ({ staffId, initial, onClose, onUpdate }) => {
             <button
               className="btn-action-glass btn-primary-glow"
               onClick={() => onUpdate && onUpdate(initial)}
-=======
-            <button
-              className="btn-action-glass btn-primary-glow"
-              onClick={() => {
-                if (onUpdate) {
-                  onUpdate(initial);
-                }
-              }}
->>>>>>> 249291b432e7793c91288d90a324e7631e7735b4
             >
               <FiEdit2 size={18} />
               <span>Edit Profile</span>

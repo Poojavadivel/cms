@@ -80,7 +80,7 @@ const AddMedicineModal = ({ isOpen, onClose, onSave, medicine = null, isSaving =
 
   return (
     <div className="dashboard-modal-overlay">
-      <div className="dashboard-modal-content" style={{ maxWidth: '600px' }}>
+      <div className="dashboard-modal-content">
         <div className="modal-header">
           <h3>{medicine ? 'Edit Medicine' : 'Add New Medicine'}</h3>
           <button className="close-btn" onClick={onClose}>&times;</button>
@@ -318,26 +318,33 @@ const ManageBatchesModal = ({ isOpen, onClose, medicine, onBatchUpdate }) => {
 
   return (
     <div className="dashboard-modal-overlay">
-      <div className="dashboard-modal-content" style={{ maxWidth: '900px', width: '95%' }}>
-        <div className="modal-header" style={{ background: '#F8FAFC' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <div className="batch-section-icon"><MdInventory size={20} /></div>
-            <div>
-              <h3 style={{ margin: 0 }}>Stock Management</h3>
-              <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginTop: '4px' }}>
-                <span style={{ fontSize: '13px', color: '#64748B' }}>{medicine.name} ({medicine.sku})</span>
-                <span className={`stock-badge stock-${medicine.availableQty <= 10 ? 'low' : 'in'}`} style={{ fontSize: '11px', padding: '2px 8px' }}>
-                  Total Avail: {medicine.availableQty} {medicine.unit || 'units'}
-                </span>
-              </div>
-            </div>
-          </div>
+      <div className="dashboard-modal-content">
+        <div className="modal-header">
+          <h3>Manage Stock (Batches)</h3>
           <button className="close-btn" onClick={onClose}><MdClose /></button>
         </div>
 
-        <div className="modal-body" style={{ padding: '0px' }}>
+        <div className="modal-body">
+          {/* Medicine Info Section */}
+          <div style={{ marginBottom: '24px', padding: '16px', background: '#F8FAFC', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+            <div style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
+              <div className="batch-section-icon"><MdInventory size={20} /></div>
+              <div style={{ flex: 1 }}>
+                <div className="detail-row" style={{ marginBottom: '4px' }}>
+                  <span className="detail-value" style={{ fontSize: '16px', color: '#207DC0', fontWeight: '600' }}>{medicine.name}</span>
+                </div>
+                <div style={{ display: 'flex', gap: '16px', fontSize: '13px', color: '#64748B' }}>
+                  <span>SKU: {medicine.sku}</span>
+                  <span className={`stock-badge stock-${medicine.availableQty <= 10 ? 'low' : 'in'}`} style={{ fontSize: '11px' }}>
+                    Total: {medicine.availableQty} {medicine.unit || 'units'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {showAddForm ? (
-            <div className="batch-form-container" style={{ background: '#FFFBFB', borderBottom: '1px solid #FFE4E4', animation: 'fadeIn 0.3s ease' }}>
+            <div style={{ background: '#FFFBFB', border: '1px solid #FFE4E4', borderRadius: '12px', padding: '24px', marginBottom: '24px' }}>
               <div className="batch-section-title">
                 <div className="batch-section-icon"><MdAddCircle /></div>
                 <span>{editingBatchId ? 'EDIT BATCH' : 'NEW BATCH ENTRY'}</span>
@@ -401,16 +408,16 @@ const ManageBatchesModal = ({ isOpen, onClose, medicine, onBatchUpdate }) => {
 
               <div style={{ marginTop: '20px', display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
                 <button className="secondary-btn" onClick={resetForm}>Cancel</button>
-                <button className="primary-btn" onClick={handleSaveBatch} style={{ background: 'var(--primary)' }}>
-                  <MdSave /> {editingBatchId ? 'Update Batch' : 'Confirm Release Stock'}
+                <button className="primary-btn" onClick={handleSaveBatch}>
+                  <MdSave /> {editingBatchId ? 'Update Batch' : 'Save Batch'}
                 </button>
               </div>
             </div>
           ) : (
-            <div style={{ padding: '20px 32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <span style={{ fontSize: '14px', fontWeight: '600', color: '#1E293B' }}>Existing Batches</span>
-                <p style={{ margin: 0, fontSize: '12px', color: '#64748B' }}>Listing all physical stock units for this drug.</p>
+                <p style={{ margin: 0, fontSize: '12px', color: '#64748B' }}>Listing all physical stock units for this medicine.</p>
               </div>
               <button className="add-btn" onClick={() => setShowAddForm(true)}>
                 <MdAddCircle size={20} /> Add New Batch
@@ -418,7 +425,7 @@ const ManageBatchesModal = ({ isOpen, onClose, medicine, onBatchUpdate }) => {
             </div>
           )}
 
-          <div className="modern-table-wrapper" style={{ maxHeight: '400px', borderTop: '1px solid #F1F5F9' }}>
+          <div className="modern-table-wrapper" style={{ maxHeight: '400px', border: '1px solid #F1F5F9', borderRadius: '12px' }}>
             <table className="modern-table">
               <thead>
                 <tr>
@@ -467,7 +474,7 @@ const ManageBatchesModal = ({ isOpen, onClose, medicine, onBatchUpdate }) => {
           </div>
         </div>
 
-        <div className="modal-footer" style={{ borderTop: '1px solid #F1F5F9' }}>
+        <div className="modal-footer">
           <button className="secondary-btn" onClick={onClose}>Close</button>
         </div>
       </div>
@@ -481,7 +488,7 @@ const ViewMedicineModal = ({ isOpen, onClose, medicine }) => {
 
   return (
     <div className="dashboard-modal-overlay">
-      <div className="dashboard-modal-content" style={{ maxWidth: '500px' }}>
+      <div className="dashboard-modal-content">
         <div className="modal-header">
           <h3>Medicine Details</h3>
           <button className="close-btn" onClick={onClose}><MdClose /></button>

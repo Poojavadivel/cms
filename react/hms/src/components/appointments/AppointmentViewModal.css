@@ -18,8 +18,8 @@
 .appointment-view-container {
   background: #FFFFFF;
   border-radius: 16px;
-  width: 100%;
-  height: 100%;
+  width: 90vw;
+  height: 90vh;
   max-width: 1050px;
   max-height: 90vh;
   position: relative;
@@ -33,10 +33,10 @@
 /* Floating Close Button */
 .appointment-close-floating {
   position: absolute;
-  top: 40px;
-  right: 245px;
-  background: #FFFFFF;
-  border: 2px solid #D1D5DB;
+  top: 24px;
+  right: 24px;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: 50%;
   width: 44px;
   height: 44px;
@@ -45,26 +45,23 @@
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s;
-  color: #6B7280;
+  color: #ffffff;
   padding: 0;
   z-index: 11000;
-  font-size: 24px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(4px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .appointment-close-floating:hover {
-  background: #FEE2E2;
-  transform: scale(1.08);
-  border-color: #EF4444;
-  color: #EF4444;
-  box-shadow: 0 6px 16px rgba(239, 68, 68, 0.3);
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.1);
+  border-color: #ffffff;
 }
 
 /* Header Section (Restored & Enhanced) */
 .appointment-view-header-new {
   background: #f8fafc;
   padding: 24px 32px;
-  padding-right: 100px;
   flex-shrink: 0;
   border-bottom: 1px solid #e2e8f0;
 }
@@ -260,6 +257,79 @@
   font-weight: 500;
   text-transform: capitalize;
 }
+
+/* Right Actions Section */
+.pv-header-right {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: flex-end;
+  min-width: 250px;
+}
+
+.pv-edit-btn {
+  background: #207DC0;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+
+.pv-edit-btn:hover {
+  background: #165a8a;
+  transform: translateY(-1px);
+}
+
+.pv-diagnosis-section,
+.pv-barriers-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.pv-sec-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.pv-tags-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.pv-tag {
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.pv-tag.diag {
+  background: #FEF3C7;
+  color: #92400E;
+  border: 1px solid #FDE68A;
+}
+
+.pv-tag.barrier {
+  background: #FEE2E2;
+  color: #991B1B;
+  border: 1px solid #FECACA;
+}
+
 
 /* Tabs Section */
 .appointment-tabs-section {

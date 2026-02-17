@@ -1,0 +1,794 @@
+/* EditAppointmentForm.css – Polished Healthcare Edit Form */
+
+/* ===== OVERLAY ===== */
+.edit-appt-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(15, 23, 42, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    padding: 16px;
+    backdrop-filter: blur(6px);
+    animation: editFadeIn 0.2s ease-out;
+}
+
+/* ===== MODAL ===== */
+.edit-appt-modal {
+    background: #ffffff;
+    border-radius: 20px;
+    width: 94vw;
+    max-width: 1050px;
+    height: 90vh;
+    max-height: 90vh;
+    position: relative;
+    display: flex;
+    overflow: hidden;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.28), 0 0 0 1px rgba(255, 255, 255, 0.05);
+    animation: editSlideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ===== CLOSE BUTTON ===== */
+.edit-close-floating {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    background: rgba(255, 255, 255, 0.92);
+    border: none;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: #64748b;
+    padding: 0;
+    z-index: 11000;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.edit-close-floating:hover {
+    background: #ef4444;
+    color: white;
+    transform: rotate(90deg);
+    box-shadow: 0 4px 16px rgba(239, 68, 68, 0.3);
+}
+
+/* ===== LEFT PANEL ===== */
+.edit-left-panel {
+    width: 260px;
+    min-width: 260px;
+    background: linear-gradient(160deg, #207DC0 0%, #14527a 100%);
+    display: flex;
+    flex-direction: column;
+    color: white;
+    flex-shrink: 0;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    position: relative;
+    overflow: hidden;
+    overflow-y: auto;
+}
+
+/* Decorative circles */
+.edit-left-panel::before {
+    content: '';
+    position: absolute;
+    top: -50px;
+    right: -50px;
+    width: 180px;
+    height: 180px;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.edit-left-panel::after {
+    content: '';
+    position: absolute;
+    bottom: -60px;
+    left: -30px;
+    width: 200px;
+    height: 200px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.edit-left-panel::-webkit-scrollbar {
+    width: 0;
+}
+
+/* Patient Header */
+.edit-patient-header {
+    padding: 24px 22px 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.04);
+    position: relative;
+    z-index: 1;
+}
+
+.edit-patient-header-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: rgba(255, 255, 255, 0.55);
+    margin-bottom: 4px;
+}
+
+.edit-patient-header-title {
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+    margin: 0;
+}
+
+/* Patient Card */
+.edit-patient-card {
+    padding: 24px 22px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    flex: 1;
+    position: relative;
+    z-index: 1;
+}
+
+.edit-patient-avatar-wrapper {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.edit-patient-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid rgba(255, 255, 255, 0.25);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.edit-patient-gender-badge {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+    font-size: 14px;
+}
+
+.edit-patient-gender-badge.male {
+    color: #207DC0;
+}
+
+.edit-patient-gender-badge.female {
+    color: #DB2777;
+}
+
+.edit-patient-info-center {
+    text-align: center;
+    width: 100%;
+}
+
+.edit-patient-name {
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin-bottom: 2px;
+    word-break: break-word;
+    line-height: 1.3;
+}
+
+.edit-patient-code {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.6);
+    font-weight: 500;
+    margin-bottom: 16px;
+    font-family: 'SF Mono', 'Cascadia Code', monospace;
+}
+
+/* Patient Detail Items */
+.edit-patient-details {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.edit-patient-detail-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: rgba(255, 255, 255, 0.07);
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    transition: background 0.15s;
+}
+
+.edit-patient-detail-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.edit-patient-detail-icon {
+    width: 32px;
+    height: 32px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 15px;
+}
+
+.edit-patient-detail-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.edit-patient-detail-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(255, 255, 255, 0.45);
+    margin-bottom: 1px;
+}
+
+.edit-patient-detail-value {
+    font-size: 13px;
+    font-weight: 600;
+    color: white;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ===== RIGHT PANEL ===== */
+.edit-right-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: #f8fafc;
+    overflow: hidden;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    min-width: 0;
+}
+
+/* Header */
+.edit-rp-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 20px 28px;
+    border-bottom: 1px solid #e2e8f0;
+    background: white;
+    flex-shrink: 0;
+}
+
+.edit-icon-badge {
+    width: 42px;
+    height: 42px;
+    background: linear-gradient(135deg, #207DC0, #165a8a);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    box-shadow: 0 4px 10px rgba(32, 125, 192, 0.3);
+    flex-shrink: 0;
+}
+
+.edit-rp-title {
+    margin: 0 0 1px 0;
+    font-size: 20px;
+    font-weight: 800;
+    color: #0f172a;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+}
+
+.edit-rp-subtitle {
+    margin: 0;
+    font-size: 11px;
+    color: #94a3b8;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+/* Scrollable content */
+.edit-panel-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px 28px 100px;
+}
+
+.edit-panel-content::-webkit-scrollbar {
+    width: 5px;
+}
+
+.edit-panel-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.edit-panel-content::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 10px;
+}
+
+.edit-panel-content::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+}
+
+/* Section titles */
+.edit-section-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #475569;
+    margin: 24px 0 12px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+}
+
+.edit-section-title svg {
+    color: #207DC0;
+    flex-shrink: 0;
+}
+
+.edit-section-title:first-of-type {
+    margin-top: 0;
+}
+
+/* Form layout */
+.edit-form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 14px;
+}
+
+.edit-form-group {
+    margin-bottom: 16px;
+}
+
+.edit-form-group.half {
+    margin-bottom: 0;
+}
+
+.edit-form-group label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: #475569;
+    margin-bottom: 6px;
+    letter-spacing: 0.01em;
+}
+
+.edit-form-group label .required {
+    color: #ef4444;
+    margin-left: 2px;
+}
+
+/* Inputs */
+.edit-input {
+    width: 100%;
+    padding: 10px 14px;
+    background: white;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 13.5px;
+    font-weight: 500;
+    color: #1e293b;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    box-sizing: border-box;
+}
+
+.edit-input:hover:not(:disabled) {
+    border-color: #cbd5e1;
+}
+
+.edit-input:focus {
+    border-color: #207DC0;
+    box-shadow: 0 0 0 3px rgba(32, 125, 192, 0.1);
+}
+
+.edit-input:disabled {
+    background: #f1f5f9;
+    color: #94a3b8;
+    cursor: not-allowed;
+}
+
+.edit-input::placeholder {
+    color: #94a3b8;
+    font-weight: 400;
+}
+
+textarea.edit-input {
+    resize: vertical;
+    min-height: 72px;
+    line-height: 1.5;
+}
+
+select.edit-input {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%2364748b' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 36px;
+    cursor: pointer;
+}
+
+/* Status grid */
+.edit-status-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+}
+
+.edit-status-btn {
+    padding: 10px 8px;
+    background: white;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+    font-family: inherit;
+}
+
+.edit-status-btn:hover {
+    border-color: #207DC0;
+    color: #207DC0;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(32, 125, 192, 0.1);
+}
+
+.edit-status-btn.active {
+    color: white;
+    border-color: transparent;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12);
+}
+
+.edit-status-btn.active.scheduled {
+    background: linear-gradient(135deg, #207DC0, #165a8a);
+}
+
+.edit-status-btn.active.confirmed {
+    background: linear-gradient(135deg, #10b981, #059669);
+}
+
+.edit-status-btn.active.pending {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+
+.edit-status-btn.active.cancelled {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+}
+
+/* ===== FOOTER ===== */
+.edit-rp-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 28px;
+    background: white;
+    border-top: 1px solid #e2e8f0;
+    flex-shrink: 0;
+    gap: 10px;
+}
+
+.edit-footer-left {
+    display: flex;
+    gap: 8px;
+}
+
+.edit-footer-right {
+    display: flex;
+    gap: 8px;
+}
+
+/* Buttons */
+.edit-btn-delete {
+    padding: 9px 16px;
+    background: white;
+    border: 1.5px solid rgba(239, 68, 68, 0.2);
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #dc2626;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-family: inherit;
+}
+
+.edit-btn-delete:hover:not(:disabled) {
+    background: #fef2f2;
+    border-color: #dc2626;
+    box-shadow: 0 2px 8px rgba(220, 38, 38, 0.1);
+}
+
+.edit-btn-delete:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.edit-btn-cancel {
+    padding: 9px 20px;
+    background: white;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: inherit;
+}
+
+.edit-btn-cancel:hover:not(:disabled) {
+    border-color: #94a3b8;
+    color: #334155;
+    background: #f8fafc;
+}
+
+.edit-btn-cancel:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.edit-btn-save {
+    padding: 9px 22px;
+    background: linear-gradient(135deg, #207DC0, #165a8a);
+    border: none;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    color: white;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 3px 10px rgba(32, 125, 192, 0.3);
+    font-family: inherit;
+}
+
+.edit-btn-save:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(32, 125, 192, 0.4);
+}
+
+.edit-btn-save:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+    background: #94a3b8;
+}
+
+/* ===== LOADING ===== */
+.edit-loading-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    width: 100%;
+}
+
+.edit-loading-inner {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+}
+
+.edit-loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #e2e8f0;
+    border-top-color: #207DC0;
+    border-radius: 50%;
+    animation: editSpin 0.7s linear infinite;
+}
+
+.edit-loading-text {
+    color: #64748b;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+/* ===== ERROR ===== */
+.edit-error-banner {
+    padding: 10px 14px;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 10px;
+    color: #991b1b;
+    margin-bottom: 16px;
+    font-size: 13px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.edit-error-banner::before {
+    content: '⚠️';
+    font-size: 14px;
+}
+
+/* ===== AVAILABILITY ===== */
+.edit-availability-wrapper {
+    margin: 12px 0;
+    padding: 14px;
+    background: white;
+    border-radius: 10px;
+    border: 1.5px solid #e2e8f0;
+}
+
+/* ===== ANIMATIONS ===== */
+@keyframes editFadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes editSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.98);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes editSpin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ===== RESPONSIVE — only stack below 640px ===== */
+@media (max-width: 640px) {
+    .edit-appt-modal {
+        flex-direction: column;
+        width: 100%;
+        height: 100vh;
+        max-height: 100vh;
+        border-radius: 0;
+    }
+
+    .edit-left-panel {
+        width: 100%;
+        min-width: 100%;
+        flex-direction: row;
+        max-height: 100px;
+        overflow: hidden;
+    }
+
+    .edit-patient-header {
+        padding: 14px 16px;
+        border-bottom: none;
+        border-right: 1px solid rgba(255, 255, 255, 0.1);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        min-width: 110px;
+    }
+
+    .edit-patient-card {
+        flex-direction: row;
+        padding: 12px 16px;
+        gap: 12px;
+        overflow: hidden;
+    }
+
+    .edit-patient-avatar {
+        width: 48px;
+        height: 48px;
+    }
+
+    .edit-patient-gender-badge {
+        width: 20px;
+        height: 20px;
+    }
+
+    .edit-patient-info-center {
+        text-align: left;
+    }
+
+    .edit-patient-name {
+        font-size: 14px;
+    }
+
+    .edit-patient-code {
+        margin-bottom: 0;
+        font-size: 11px;
+    }
+
+    .edit-patient-details {
+        display: none;
+    }
+
+    .edit-rp-header {
+        padding: 14px 16px;
+    }
+
+    .edit-rp-title {
+        font-size: 17px;
+    }
+
+    .edit-icon-badge {
+        width: 36px;
+        height: 36px;
+        font-size: 15px;
+    }
+
+    .edit-panel-content {
+        padding: 16px 16px 80px;
+    }
+
+    .edit-form-row {
+        grid-template-columns: 1fr;
+    }
+
+    .edit-status-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .edit-rp-footer {
+        padding: 10px 16px;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .edit-footer-left,
+    .edit-footer-right {
+        flex: 1;
+    }
+
+    .edit-btn-delete,
+    .edit-btn-cancel,
+    .edit-btn-save {
+        flex: 1;
+        justify-content: center;
+        padding: 8px 12px;
+        font-size: 12px;
+    }
+}
