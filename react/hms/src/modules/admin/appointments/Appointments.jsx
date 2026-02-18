@@ -1191,6 +1191,7 @@ const Appointments = () => {
             console.log('Staff updated:', updatedStaff);
             // Optionally refresh appointments if needed
           }}
+          showUpdate={false}
         />
       )}
     </div>
