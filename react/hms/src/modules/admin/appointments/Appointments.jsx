@@ -710,8 +710,7 @@ const Appointments = () => {
       );
     }
 
-    // Sort alphabetically by patient name
-    result.sort((a, b) => a.patientName.localeCompare(b.patientName));
+    // result.sort((a, b) => a.patientName.localeCompare(b.patientName));
 
     setFilteredAppointments(result);
     setCurrentPage(1);
