@@ -453,66 +453,11 @@ const Pathology = () => {
         </div>
       </div>
 
-      {showDetail && selectedReport && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="pathology-detail-modal-container shadow-2xl animate-in fade-in zoom-in duration-200">
-            <div className="p-6 border-b flex justify-between items-center bg-blue-primary text-white">
-              <h2 className="text-xl font-bold">Report Details</h2>
-              <button onClick={handleCloseDetail} className="p-2 hover:bg-white/10 rounded-full transition-colors">
-                <Icons.X />
-              </button>
-            </div>
-            <div className="p-8 overflow-y-auto flex-1 dark-scrollbar">
-              <div className="grid grid-cols-2 gap-8">
-                <div>
-                  <label className="text-xs uppercase font-bold text-slate-400 tracking-wider">Patient Name</label>
-                  <p className="text-lg font-semibold text-slate-800 mt-1">{selectedReport.patientName}</p>
-                </div>
-                <div>
-                  <label className="text-xs uppercase font-bold text-slate-400 tracking-wider">Patient Code</label>
-                  <p className="text-lg font-semibold text-slate-800 mt-1">{selectedReport.patientCode || selectedReport.reportId}</p>
-                </div>
-                <div>
-                  <label className="text-xs uppercase font-bold text-slate-400 tracking-wider">Test Name</label>
-                  <p className="text-lg font-semibold text-slate-800 mt-1">{selectedReport.testName}</p>
-                </div>
-                <div>
-                  <label className="text-xs uppercase font-bold text-slate-400 tracking-wider">Test Type</label>
-                  <p className="text-lg font-semibold text-slate-800 mt-1">{selectedReport.testType || 'General'}</p>
-                </div>
-                <div>
-                  <label className="text-xs uppercase font-bold text-slate-400 tracking-wider">Report Date</label>
-                  <p className="text-lg font-semibold text-slate-800 mt-1">{formatDate(selectedReport.reportDate)}</p>
-                </div>
-                <div>
-                  <label className="text-xs uppercase font-bold text-slate-400 tracking-wider">Technician</label>
-                  <p className="text-lg font-semibold text-slate-800 mt-1">{selectedReport.technician}</p>
-                </div>
-                <div className="col-span-2">
-                  <label className="text-xs uppercase font-bold text-slate-400 tracking-wider">Status</label>
-                  <div className="mt-2 text-lg">
-                    <StatusBadge status={selectedReport.status} />
-                  </div>
-                </div>
-                <div className="col-span-2">
-                  <label className="text-xs uppercase font-bold text-slate-400 tracking-wider">Notes / Summary</label>
-                  <div className="mt-2 p-4 bg-slate-50 rounded-xl border border-slate-100 italic text-slate-600">
-                    {selectedReport.notes || 'No notes provided for this report.'}
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="p-6 border-t bg-slate-50 flex justify-end">
-              <button
-                onClick={handleCloseDetail}
-                className="px-6 py-2.5 bg-slate-800 text-white rounded-xl font-bold hover:bg-slate-900 transition-all shadow-lg active:scale-95"
-              >
-                Close View
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <PathologyViewDialog
+        isOpen={showDetail}
+        onClose={handleCloseDetail}
+        report={selectedReport}
+      />
     </div>
   );
 };
