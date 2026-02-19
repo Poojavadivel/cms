@@ -247,8 +247,8 @@
 }
 
 .intake-input:focus {
-  border-color: #6366F1;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+  border-color: #139D9E;
+  box-shadow: 0 0 0 3px rgba(19, 157, 158, 0.1);
 }
 
 .intake-input:read-only {
@@ -276,8 +276,8 @@
 }
 
 .intake-textarea:focus {
-  border-color: #6366F1;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+  border-color: #139D9E;
+  box-shadow: 0 0 0 3px rgba(19, 157, 158, 0.1);
 }
 
 .intake-textarea::placeholder {
@@ -355,7 +355,7 @@
   align-items: center;
   gap: 8px;
   padding: 12px 28px;
-  background: linear-gradient(135deg, #6366F1 0%, #4F46E5 100%);
+  background: linear-gradient(135deg, #139D9E 0%, #0d7a7b 100%);
   color: #FFFFFF;
   border: none;
   border-radius: 10px;
@@ -364,12 +364,12 @@
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.2);
+  box-shadow: 0 2px 8px rgba(19, 157, 158, 0.2);
 }
 
 .btn-intake-save:hover:not(:disabled) {
-  background: linear-gradient(135deg, #4F46E5 0%, #4338CA 100%);
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+  background: linear-gradient(135deg, #0d7a7b 0%, #086061 100%);
+  box-shadow: 0 4px 12px rgba(19, 157, 158, 0.3);
   transform: translateY(-1px);
 }
 

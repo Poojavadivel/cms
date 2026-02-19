@@ -50,16 +50,16 @@
 }
 
 .pharmacy-table thead {
-  background: linear-gradient(135deg, #FEE2E2 0%, #FECACA 100%);
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
 }
 
 .pharmacy-table thead th {
   padding: 12px;
   font-size: 13px;
   font-weight: 700;
-  color: #991B1B;
+  color: #1e40af;
   text-align: left;
-  border-bottom: 2px solid #FCA5A5;
+  border-bottom: 2px solid #bfdbfe;
 }
 
 .pharmacy-table tbody tr {
@@ -274,8 +274,8 @@
 }
 
 .pharmacy-input:focus {
-  border-color: #EF4444;
-  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+  border-color: #207DC0;
+  box-shadow: 0 0 0 3px rgba(32, 125, 192, 0.1);
 }
 
 .pharmacy-input::placeholder {
@@ -299,8 +299,8 @@
 }
 
 .pharmacy-select:focus {
-  border-color: #EF4444;
-  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+  border-color: #207DC0;
+  box-shadow: 0 0 0 3px rgba(32, 125, 192, 0.1);
 }
 
 .pharmacy-input-number {
@@ -373,7 +373,7 @@
   align-items: center;
   gap: 8px;
   padding: 12px 24px;
-  background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+  background: linear-gradient(135deg, #207DC0 0%, #165a8a 100%);
   color: #FFFFFF;
   border: none;
   border-radius: 10px;
@@ -382,12 +382,12 @@
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.2);
+  box-shadow: 0 2px 8px rgba(32, 125, 192, 0.2);
 }
 
 .pharmacy-add-btn:hover {
-  background: linear-gradient(135deg, #DC2626 0%, #B91C1C 100%);
-  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+  background: linear-gradient(135deg, #165a8a 0%, #0f3e61 100%);
+  box-shadow: 0 4px 12px rgba(32, 125, 192, 0.3);
   transform: translateY(-1px);
 }
 
@@ -420,12 +420,12 @@
   .pharmacy-table {
     font-size: 12px;
   }
-  
+
   .pharmacy-table thead th,
   .pharmacy-table tbody td {
     padding: 8px;
   }
-  
+
   .pharmacy-input,
   .pharmacy-select,
   .pharmacy-input-number {
@@ -438,16 +438,16 @@
   .pharmacy-table-wrapper {
     overflow-x: auto;
   }
-  
+
   .pharmacy-table {
     min-width: 900px;
   }
-  
+
   .pharmacy-footer {
     flex-direction: column;
     gap: 12px;
   }
-  
+
   .pharmacy-add-btn,
   .pharmacy-grand-total {
     width: 100%;
