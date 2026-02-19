@@ -154,12 +154,16 @@ router.get('/tests', auth, async (req, res) => {
  * ------------------
  */
 
-// CREATE Lab Report with file upload
-router.post('/reports', auth, upload.single('file'), async (req, res) => {
+// CREATE Lab Report with dual file upload (image & pdf)
+router.post('/reports', auth, upload.fields([
+  { name: 'file', maxCount: 1 },  // Backward compatibility
+  { name: 'pdf', maxCount: 1 },
+  { name: 'image', maxCount: 1 }
+]), async (req, res) => {
   try {
     if (!requireAdminOrPathologist(req, res)) return;
 
-    console.log('📩 [LAB REPORT CREATE] payload:', req.body, 'file:', req.file, 'by user:', req.user?.id);
+    console.log('📩 [LAB REPORT CREATE] payload:', req.body, 'files:', req.files, 'by user:', req.user?.id);
 
     if (!LabReport) {
       return res.status(500).json({ success: false, message: 'LabReport model not available', errorCode: 7005 });
@@ -171,31 +175,29 @@ router.post('/reports', auth, upload.single('file'), async (req, res) => {
       return res.status(400).json({ success: false, message: 'patientId is required', errorCode: 7006 });
     }
 
-    // Verify patient exists
-    if (Patient) {
-      const patient = await Patient.findById(data.patientId);
-      if (!patient) {
-        return res.status(404).json({ success: false, message: 'Patient not found', errorCode: 7007 });
-      }
-    }
-
-    // Handle file upload to Database (PatientPDF)
-    let fileId = null;
-    if (req.file) {
-      if (!PatientPDF) {
-        return res.status(500).json({ success: false, message: 'PatientPDF model not available', errorCode: 7005 });
-      }
-
+    // Helper to save file to Database (PatientPDF)
+    const saveToDB = async (fileObj, titleSuffix = '') => {
+      if (!fileObj || !PatientPDF) return null;
       const pdfDoc = await PatientPDF.create({
         patientId: data.patientId,
-        title: data.testName || 'Lab Report',
-        fileName: req.file.originalname,
-        mimeType: req.file.mimetype,
-        data: req.file.buffer,
-        size: req.file.size
+        title: `${data.testName || 'Lab Report'} ${titleSuffix}`.trim(),
+        fileName: fileObj.originalname,
+        mimeType: fileObj.mimetype,
+        data: fileObj.buffer,
+        size: fileObj.size
       });
-      fileId = pdfDoc._id;
-      console.log('📄 [LAB REPORT CREATE] Saved file to Database:', fileId);
+      return pdfDoc._id;
+    };
+
+    // Handle multiple file uploads
+    let pdfId = null;
+    let imageId = null;
+    let fallbackFileId = null;
+
+    if (req.files) {
+      if (req.files['pdf']) pdfId = await saveToDB(req.files['pdf'][0], '(PDF)');
+      if (req.files['image']) imageId = await saveToDB(req.files['image'][0], '(Image)');
+      if (req.files['file']) fallbackFileId = await saveToDB(req.files['file'][0], '(File)');
     }
 
     const reportData = {
@@ -213,14 +215,17 @@ router.post('/reports', auth, upload.single('file'), async (req, res) => {
       technician: data.technician || '',
       remarks: data.remarks || data.notes || '',
       results: typeof data.results === 'string' ? JSON.parse(data.results) : (data.results || {}),
-      fileRef: fileId,
+      fileRef: fallbackFileId || pdfId || imageId, // Fallback for old system
+      pdfRef: pdfId,
+      imageRef: imageId,
+      status: (pdfId || imageId || fallbackFileId) ? 'Completed' : (data.status || 'Pending'),
       uploadedBy: req.user?.id || '',
       rawText: data.rawText || '',
       enhancedText: data.enhancedText || '',
       metadata: {
-        originalFilename: req.file ? req.file.originalname : null,
-        fileSize: req.file ? req.file.size : null,
-        storageSource: fileId ? 'database' : 'none',
+        hasImage: !!imageId,
+        hasPdf: !!pdfId,
+        storageSource: 'database',
         ...(typeof data.metadata === 'string' ? JSON.parse(data.metadata) : (data.metadata || {}))
       }
     };
@@ -236,7 +241,7 @@ router.post('/reports', auth, upload.single('file'), async (req, res) => {
             medicalReports: {
               reportId: labReport._id,
               reportType: 'LAB_REPORT',
-              imagePath: fileId ? String(fileId) : 'LAB_REPORT_ENTRY',
+              imagePath: String(imageId || pdfId || fallbackFileId || 'LAB_REPORT_ENTRY'),
               uploadDate: new Date(),
               uploadedBy: req.user?.id || '',
               extractedData: labReport.results || {},
@@ -244,7 +249,6 @@ router.post('/reports', auth, upload.single('file'), async (req, res) => {
             }
           }
         });
-        console.log('✅ [LAB REPORT CREATE] Reflected in Patient medical history');
       } catch (pErr) {
         console.warn('⚠️ [LAB REPORT CREATE] Could not update patient history:', pErr.message);
       }
@@ -258,7 +262,6 @@ router.post('/reports', auth, upload.single('file'), async (req, res) => {
         intake.meta.labReportIds = intake.meta.labReportIds || [];
         intake.meta.labReportIds.push(String(labReport._id));
 
-        // Also update the status in pathologyItems if found
         if (Array.isArray(intake.meta.pathologyItems)) {
           const idx = intake.meta.pathologyItems.findIndex(t => t.testName === labReport.testName);
           if (idx !== -1) {
@@ -269,7 +272,6 @@ router.post('/reports', auth, upload.single('file'), async (req, res) => {
         }
 
         await intake.save();
-        console.log('✅ [LAB REPORT CREATE] Updated intake with lab report ID');
       }
     }
     return res.status(201).json({ success: true, report: labReport });
@@ -482,7 +484,11 @@ router.get('/reports/:id', auth, async (req, res) => {
 });
 
 // UPDATE Lab Report
-router.put('/reports/:id', auth, upload.single('file'), async (req, res) => {
+router.put('/reports/:id', auth, upload.fields([
+  { name: 'file', maxCount: 1 },
+  { name: 'pdf', maxCount: 1 },
+  { name: 'image', maxCount: 1 }
+]), async (req, res) => {
   try {
     if (!requireAdminOrPathologist(req, res)) return;
 
@@ -496,18 +502,12 @@ router.put('/reports/:id', auth, upload.single('file'), async (req, res) => {
     const update = { updatedAt: Date.now() };
 
     // Standard fields from Form
-    if (data.patientId) update.patientId = data.patientId;
-    if (data.patientName) update.patientName = data.patientName;
-    if (data.testName) update.testName = data.testName;
-    if (data.testType) update.testType = data.testType;
-    if (data.testCategory !== undefined) update.testCategory = data.testCategory;
-    if (data.collectionDate) update.collectionDate = data.collectionDate;
-    if (data.reportDate) update.reportDate = data.reportDate;
-    if (data.status) update.status = data.status;
-    if (data.priority) update.priority = data.priority;
-    if (data.doctorName) update.doctorName = data.doctorName;
-    if (data.technician) update.technician = data.technician;
-    if (data.notes !== undefined) update.remarks = data.notes; // Map notes to remarks in schema
+    const fields = ['patientId', 'patientName', 'testName', 'testType', 'testCategory', 'collectionDate', 'reportDate', 'status', 'priority', 'doctorName', 'technician'];
+    fields.forEach(f => {
+      if (data[f] !== undefined) update[f] = data[f];
+    });
+
+    if (data.notes !== undefined) update.remarks = data.notes;
 
     // Metadata and specialized fields
     try {
@@ -520,25 +520,37 @@ router.put('/reports/:id', auth, upload.single('file'), async (req, res) => {
     if (data.rawText !== undefined) update.rawText = data.rawText;
     if (data.enhancedText !== undefined) update.enhancedText = data.enhancedText;
 
-    if (req.file) {
-      if (!PatientPDF) {
-        return res.status(500).json({ success: false, message: 'PatientPDF model not available', errorCode: 7005 });
+    // Handle multiple file uploads
+    if (req.files) {
+      const saveToDB = async (fileObj, titleSuffix = '') => {
+        if (!fileObj || !PatientPDF) return null;
+        const pdfDoc = await PatientPDF.create({
+          patientId: data.patientId || (await LabReport.findById(req.params.id))?.patientId,
+          title: `${data.testName || 'Lab Report'} ${titleSuffix}`.trim(),
+          fileName: fileObj.originalname,
+          mimeType: fileObj.mimetype,
+          data: fileObj.buffer,
+          size: fileObj.size
+        });
+        return pdfDoc._id;
+      };
+
+      if (req.files['pdf']) {
+        const pdfId = await saveToDB(req.files['pdf'][0], '(PDF)');
+        update.pdfRef = pdfId;
+        update.fileRef = pdfId; // Primary PDF
+      }
+      if (req.files['image']) {
+        const imageId = await saveToDB(req.files['image'][0], '(Image)');
+        update.imageRef = imageId;
+        if (!update.fileRef) update.fileRef = imageId; // Fallback
+      }
+      if (req.files['file']) {
+        update.fileRef = await saveToDB(req.files['file'][0], '(File)');
       }
 
-      // Create new PDF record in DB
-      const pdfDoc = await PatientPDF.create({
-        patientId: data.patientId || (await LabReport.findById(req.params.id))?.patientId,
-        title: data.testName || 'Updated Lab Report',
-        fileName: req.file.originalname,
-        mimeType: req.file.mimetype,
-        data: req.file.buffer,
-        size: req.file.size
-      });
-
-      update.fileRef = pdfDoc._id;
-      update['metadata.originalFilename'] = req.file.originalname;
-      update['metadata.fileSize'] = req.file.size;
-      update['metadata.storageSource'] = 'database';
+      // Auto-set status to Completed if new files are uploaded
+      update.status = 'Completed';
     }
 
     if (data.metadata) {
@@ -551,7 +563,7 @@ router.put('/reports/:id', auth, upload.single('file'), async (req, res) => {
 
     const updated = await LabReport.findByIdAndUpdate(
       req.params.id,
-      update,
+      { $set: update },
       { new: true, runValidators: true }
     );
 
@@ -585,27 +597,30 @@ router.delete('/reports/:id', auth, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Lab report not found', errorCode: 7010 });
     }
 
-    // Delete associated file if exists (from DB or Disk)
-    if (report.fileRef) {
+    // Delete all associated artifacts
+    const artifactRefs = [report.fileRef, report.pdfRef, report.imageRef].filter(id => id && String(id).length > 5);
+
+    for (const fileRef of [...new Set(artifactRefs)]) {
       // 1. Try to delete from Database (PatientPDF)
       if (PatientPDF) {
         try {
-          const deletedFile = await PatientPDF.findByIdAndDelete(report.fileRef);
-          if (deletedFile) {
-            console.log('✅ [LAB REPORT DELETE] Deleted file from Database:', report.fileRef);
-          }
+          await PatientPDF.findByIdAndDelete(fileRef);
+          console.log('✅ [LAB REPORT DELETE] Deleted database artifact:', fileRef);
         } catch (dbErr) {
-          console.warn('⚠️ [LAB REPORT DELETE] DB file delete error:', dbErr.message);
+          // Ignore
         }
       }
 
-      // 2. Try to delete from Disk (Fallback for old reports)
-      const filePath = path.join(__dirname, '../uploads/lab-reports', report.fileRef);
-      try {
-        await fs.unlink(filePath);
-        console.log('✅ [LAB REPORT DELETE] Deleted file from Disk:', filePath);
-      } catch (err) {
-        // Normal if it's a DB file, so we don't spam errors
+      // 2. Try to delete from Disk (Legacy)
+      const diskPaths = [
+        path.join(__dirname, '../uploads/lab-reports', fileRef),
+        path.join(__dirname, '../uploads/medical-reports', fileRef)
+      ];
+      for (const fPath of diskPaths) {
+        try {
+          await fs.unlink(fPath);
+          console.log('✅ [LAB REPORT DELETE] Deleted disk artifact:', fPath);
+        } catch (err) { }
       }
     }
 
@@ -622,16 +637,24 @@ router.delete('/reports/:id', auth, async (req, res) => {
 // Download lab report file
 router.get('/reports/:id/download', auth, async (req, res) => {
   try {
-    console.log('⬇️ [LAB REPORT DOWNLOAD] id:', req.params.id, 'requestedBy:', req.user?.id);
+    const { id } = req.params;
+    const cleanedId = String(id).trim();
+    console.log(`⬇️ [LAB REPORT DOWNLOAD] ID arriving: "${cleanedId}" (len: ${cleanedId.length})`);
+    console.log('⬇️ [LAB REPORT DOWNLOAD] requestedBy:', req.user?.id);
 
     if (!LabReport) {
       return res.status(500).json({ success: false, message: 'LabReport model not available', errorCode: 7005 });
     }
 
-    const report = await LabReport.findById(req.params.id).lean();
+    const report = await LabReport.findById(cleanedId).lean();
     if (!report) {
-      console.warn('⚠️ [LAB REPORT DOWNLOAD] Not found:', req.params.id);
-      return res.status(404).json({ success: false, message: 'Lab report not found', errorCode: 7010 });
+      console.warn('⚠️ [LAB REPORT DOWNLOAD] Not found in DB:', cleanedId);
+      return res.status(404).json({
+        success: false,
+        message: 'Lab report record not found',
+        errorCode: 7010,
+        triedId: cleanedId
+      });
     }
 
     if (!report.fileRef) {

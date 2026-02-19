@@ -11,7 +11,22 @@ const getAuthToken = () => {
 };
 
 const api = axios.create({
-  baseURL: (process.env.REACT_APP_API_URL || 'https://hms-dev.onrender.com/api').replace(/\/$/, '') + '/',
+  baseURL: (() => {
+    // Determine the environment and set baseURL accordingly
+    if (typeof window !== 'undefined') {
+      const hostname = window.location.hostname;
+      const origin = window.location.origin;
+
+      // Handle local development access via various hostnames
+      if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '0.0.0.0' || origin.includes(':3000')) {
+        // If we're on port 3000 (React dev), always point to 5000 (Express)
+        return `http://${hostname}:5000/api/`;
+      }
+    }
+    // Fallback to environment variable or production URL
+    const envUrl = process.env.REACT_APP_API_URL || 'https://hms-dev.onrender.com/api';
+    return envUrl.replace(/\/$/, '') + '/';
+  })(),
   headers: {
     'Content-Type': 'application/json',
   },
@@ -37,6 +52,19 @@ const PathologyEndpoints = {
   uploadReport: `${API_BASE}/reports/upload`,
   properReport: (id) => `reports-proper/pathology/${id}`,
   pendingTests: `${API_BASE}/pending-tests`,
+  file: (id) => `${API_BASE}/reports/${id}/download`,
+};
+
+const getFileBlob = async (id) => {
+  try {
+    const response = await api.get(PathologyEndpoints.file(id), {
+      responseType: 'blob'
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Failed to fetch file blob:', error);
+    throw error;
+  }
 };
 
 const fetchPendingTests = async (params = {}) => {
@@ -95,10 +123,12 @@ const fetchReports = async (params = {}) => {
       testType: report.testType || report.category || 'General',
       collectionDate: report.collectionDate || report.createdAt || '',
       reportDate: report.reportDate || report.updatedAt || '',
-      status: report.status || (report.fileRef ? 'Completed' : 'Pending'),
+      status: report.status || ((report.fileRef || report.pdfRef || report.imageRef) ? 'Completed' : 'Pending'),
       doctorName: report.doctorName || report.doctor?.name || '',
       technician: report.technician || report.uploaderName || '',
-      fileRef: report.fileRef || report.file || null,
+      fileRef: report.fileRef || report.pdfRef || report.imageRef || null,
+      pdfRef: report.pdfRef || null,
+      imageRef: report.imageRef || null,
       patientCode: report.patientCode || 'PAT-00',
       remarks: report.remarks || report.notes || ''
     }));
@@ -293,10 +323,24 @@ const printReport = async (id) => {
 };
 
 const downloadProperReport = async (id, fileName) => {
+  if (!id) {
+    console.error('[PathologyService] Cannot download: ID is missing');
+    throw new Error('Report ID is missing');
+  }
   try {
     const url = PathologyEndpoints.properReport(id);
+    const fullUrl = `${api.defaults.baseURL}${url}`;
+    console.log(`[PathologyService] 🚀 Requesting Professional PDF: ${fullUrl}`);
+
     const response = await api.get(url, { responseType: 'blob' });
-    const urlBlob = window.URL.createObjectURL(new Blob([response.data]));
+
+    if (response.data.type === 'application/json') {
+      const text = await response.data.text();
+      const errorData = JSON.parse(text);
+      throw new Error(errorData.message || 'Report not found');
+    }
+
+    const urlBlob = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
     const link = document.createElement('a');
     link.href = urlBlob;
     link.setAttribute('download', fileName || `Report_${id}.pdf`);
@@ -306,13 +350,7 @@ const downloadProperReport = async (id, fileName) => {
     window.URL.revokeObjectURL(urlBlob);
     return true;
   } catch (error) {
-    if (error.response?.data instanceof Blob && error.response.data.type === 'application/json') {
-      const text = await error.response.data.text();
-      const errorData = JSON.parse(text);
-      console.error('❌ Server error during PDF download:', errorData);
-      throw new Error(errorData.message || errorData.error || 'Failed to download report');
-    }
-    console.error('Failed to download proper report:', error);
+    console.error('[PathologyService] Professional download failed:', error.message);
     throw error;
   }
 };
@@ -415,7 +453,22 @@ const pathologyServiceExport = {
   downloadProperReport,
   printProperReport,
   createReportsFromIntake,
-  fetchPendingTests
+  fetchPendingTests,
+  getFileBlob
+};
+
+export {
+  fetchReports,
+  fetchReportById,
+  createReport,
+  updateReport,
+  deleteReport,
+  downloadReport,
+  printReport,
+  downloadProperReport,
+  createReportsFromIntake,
+  fetchPendingTests,
+  getFileBlob
 };
 
 export default pathologyServiceExport;

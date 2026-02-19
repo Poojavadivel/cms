@@ -756,7 +756,7 @@ const MedicalHistoryTab = ({ patientId }) => {
                                                 onClick={() => reportService.viewPdf(item.pdfId)}
                                                 title="View Document"
                                             >
-                                                <MdPictureAsPdf className="icon-red" />
+                                                <MdVisibility />
                                             </button>
                                         ) : (
                                             <button
@@ -1259,7 +1259,7 @@ const PrescriptionTab = ({ patientId }) => {
                                                 onClick={() => reportService.viewPdf(item.pdfId)}
                                                 title="View Prescription"
                                             >
-                                                <MdPictureAsPdf className="icon-red" />
+                                                <MdVisibility />
                                             </button>
                                         ) : (
                                             <button className="pv-btn-action-circle" title="View Details">
@@ -1416,16 +1416,6 @@ const LabResultTab = ({ patientId }) => {
                                                     style={{ color: '#7c3aed' }}
                                                 >
                                                     <MdVisibility size={18} />
-                                                </button>
-                                            )}
-                                            {(item.fileRef || item._id || item.id) && (
-                                                <button
-                                                    className="pv-btn-action-circle"
-                                                    onClick={() => pathologyService.downloadReport(item._id || item.id, item.testName || 'LabReport')}
-                                                    title="Download Lab Report"
-                                                    style={{ color: '#207DC0' }}
-                                                >
-                                                    <MdPictureAsPdf size={18} />
                                                 </button>
                                             )}
                                             {!(item.pdfId || item.fileRef || item._id || item.id) && (

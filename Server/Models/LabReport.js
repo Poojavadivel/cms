@@ -35,6 +35,8 @@ const LabReportSchema = new Schema({
 
   // IMPORTANT: now references PatientPDF instead of File (backward compatibility)
   fileRef: { type: String, ref: 'PatientPDF', default: null },
+  pdfRef: { type: String, ref: 'PatientPDF', default: null },
+  imageRef: { type: String, ref: 'PatientPDF', default: null },
 
   uploadedBy: { type: String, ref: 'User', default: null },
 

@@ -44,6 +44,40 @@
   font-weight: 500;
 }
 
+/* Code Badge for Verification */
+.code-badge {
+  font-size: 9px;
+  font-weight: 800;
+  color: #1a365d;
+  background: #f1f5f9;
+  padding: 2px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+  border: 1px solid #e2e8f0;
+}
+
+/* Artifact Tags (PDF/IMG) */
+.artifact-tag {
+  font-size: 9px;
+  font-weight: 900;
+  padding: 1px 5px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.artifact-tag.pdf {
+  color: #ef4444;
+  background: #fef2f2;
+  border: 1px solid #fee2e2;
+}
+
+.artifact-tag.img {
+  color: #207DC0;
+  background: #eff6ff;
+  border: 1px solid #dbeafe;
+}
+
 /* Technician Badge - Brand Blue */
 .technician-badge {
   display: flex;

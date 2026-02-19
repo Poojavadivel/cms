@@ -51,18 +51,18 @@ const PathologyDetail = ({ reportId, report, onClose }) => {
 
   const handleDownload = async () => {
     if (!reportData?.id) return;
+    const fileName = `Report_${(reportData.patientName || 'Patient').replace(/\s+/g, '_')}_${(reportData.testName || 'Test').replace(/\s+/g, '_')}.pdf`;
+
     try {
-      // 1. Try to download original file first
-      await pathologyService.downloadReport(reportData.id);
+      console.log(`[Detail] Requesting Professional PDF: ${reportData.id}`);
+      await pathologyService.downloadProperReport(reportData.id, fileName);
     } catch (err) {
-      console.warn('No original file found, using professional generator fallback.');
+      console.warn('[Detail] Professional generator failed, checking fallback...', err.message);
       try {
-        // 2. Fallback to professional generator
-        const fileName = `Report_${(reportData.patientName || 'Patient').replace(/\s+/g, '_')}_${(reportData.testName || 'Test').replace(/\s+/g, '_')}.pdf`;
-        await pathologyService.downloadProperReport(reportData.id, fileName);
-      } catch (genError) {
-        console.error('Download failed:', genError);
-        alert('Failed to download report: ' + genError.message);
+        await pathologyService.downloadReport(reportData.id, fileName);
+      } catch (fallbackErr) {
+        console.error('Download failed:', fallbackErr);
+        alert('Failed to download report: ' + fallbackErr.message);
       }
     }
   };

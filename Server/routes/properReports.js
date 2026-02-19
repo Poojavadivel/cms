@@ -367,33 +367,90 @@ router.get('/payroll/:id', auth, async (req, res) => {
 router.get('/pathology/:id', auth, async (req, res) => {
   try {
     const { id } = req.params;
+    console.log(`[Pathology Report] 📑 Generation request for ID: "${id}" (len: ${id?.length})`);
     const { LabReport, Patient } = require('../Models');
 
     // Fetch lab report
-    console.log(`[Pathology Report] Fetching lab report: ${id}`);
-    const report = await LabReport.findById(id).lean();
+    const cleanedId = String(id).trim();
+    console.log(`[Pathology Report] 📑 Fetching report for PDF generation: "${cleanedId}"`);
+
+    const report = await LabReport.findById(cleanedId).lean();
     if (!report) {
-      console.warn(`[Pathology Report] Lab report not found: ${id}`);
-      return res.status(404).json({ success: false, message: 'Lab report not found' });
+      console.warn(`[Pathology Report] ❌ Lab report NOT found for ID: "${cleanedId}"`);
+      return res.status(404).json({
+        success: false,
+        message: 'Lab report record not found in system',
+        errorCode: 7010,
+        id: cleanedId
+      });
     }
 
     // Fetch patient
-    console.log(`[Pathology Report] Fetching patient: ${report.patientId}`);
-    const patient = await Patient.findById(report.patientId).lean();
+    console.log(`[Pathology Report] Fetching patient details for ID: ${report.patientId}`);
+    let patient = await Patient.findById(report.patientId).lean();
+
+    // Fallback if patient record is missing or deleted
     if (!patient) {
-      console.warn(`[Pathology Report] Patient not found: ${report.patientId}`);
-      return res.status(404).json({ success: false, message: 'Patient not found' });
+      console.warn(`[Pathology Report] ⚠️ Patient doc missing for ID: ${report.patientId}. Using fallback metadata from report.`);
+      patient = {
+        firstName: report.patientName?.split(' ')[0] || 'Unknown',
+        lastName: report.patientName?.split(' ').slice(1).join(' ') || 'Patient',
+        patientCode: report.patientCode || 'PAT-00',
+        age: report.patientAge || report.age || 'N/A',
+        gender: report.patientGender || report.gender || 'N/A',
+        phone: report.patientPhone || 'N/A'
+      };
+    }
+
+    // Force Status to Completed for the PDF if artifacts exist
+    if (report.pdfRef || report.imageRef || report.fileRef) {
+      report.status = 'Completed';
+    }
+
+    // Fetch Image Artifact if exists
+    let imageArtifact = null;
+    const { PatientPDF } = require('../Models');
+
+    // Priority: pdfRef > imageRef > fileRef
+    const artifactRef = report.pdfRef || report.imageRef || report.fileRef;
+    const imageRef = report.imageRef || (report.fileRef && !report.pdfRef ? report.fileRef : null);
+
+    if (imageRef) {
+      try {
+        const imgDoc = await PatientPDF.findById(imageRef).lean();
+        if (imgDoc && imgDoc.data && imgDoc.mimeType.startsWith('image/')) {
+          imageArtifact = `data:${imgDoc.mimeType};base64,${imgDoc.data.toString('base64')}`;
+          console.log(`[Pathology Report] ✅ Image artifact found and converted to base64`);
+        }
+      } catch (imgErr) {
+        console.warn(`[Pathology Report] Failed to fetch image artifact:`, imgErr.message);
+      }
     }
 
     const filename = `Report_${(report.patientName || 'Patient').replace(/\s+/g, '_')}_${(report.testName || 'Test').replace(/\s+/g, '_')}.pdf`;
 
     // Generate PDF
-    console.log(`[Pathology Report] Generating PDF definition...`);
-    const docDefinition = properPdfGen.generatePathologyReport(report, patient);
+    console.log(`[Pathology Report] 🚀 Generating professional PDF for: ${report.testName}`);
+
+    // Enrich patient details for the PDF if missing
+    const enrichedPatient = {
+      ...patient,
+      age: patient.age || report.patientAge || 'N/A',
+      gender: patient.gender || report.patientGender || 'N/A',
+      patientCode: patient.patientCode || report.patientCode || 'PAT-00'
+    };
+
+    const host = req.get('host');
+    const protocol = req.protocol;
+    const publicUrl = artifactRef ? `${protocol}://${host}/api/scanner-enterprise/pdf-public/${artifactRef}` : null;
+
+    const docDefinition = properPdfGen.generatePathologyReport(report, enrichedPatient, imageArtifact, publicUrl);
+
+    const safeFileName = `Report_${(enrichedPatient.patientCode || 'PAT').replace(/\s+/g, '_')}_${(report.testName || 'Test').replace(/\s+/g, '_')}.pdf`;
 
     // Set response headers
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Disposition', `attachment; filename="${safeFileName}"`);
 
     // Stream PDF
     console.log(`[Pathology Report] Creating PDF printer and streaming...`);

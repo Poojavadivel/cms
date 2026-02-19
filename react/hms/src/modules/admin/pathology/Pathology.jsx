@@ -31,13 +31,7 @@ const Icons = {
       <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
     </svg>
   ),
-  Download: () => (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-      <polyline points="7 10 12 15 17 10"></polyline>
-      <line x1="12" y1="15" x2="12" y2="3"></line>
-    </svg>
-  ),
+
   Plus: () => (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -58,6 +52,13 @@ const Icons = {
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <line x1="18" y1="6" x2="6" y2="18"></line>
       <line x1="6" y1="6" x2="18" y2="18"></line>
+    </svg>
+  ),
+  Download: () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+      <polyline points="7 10 12 15 17 10"></polyline>
+      <line x1="12" y1="15" x2="12" y2="3"></line>
     </svg>
   )
 };
@@ -124,10 +125,10 @@ const Pathology = () => {
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(report =>
-        (report.reportId?.toLowerCase() || '').includes(query) ||
         (report.patientName?.toLowerCase() || '').includes(query) ||
         (report.testName?.toLowerCase() || '').includes(query) ||
-        (report.patientId?.toLowerCase() || '').includes(query)
+        (report.patientId?.toLowerCase() || '').includes(query) ||
+        (report.patientCode?.toLowerCase() || '').includes(query)
       );
     }
 
@@ -217,23 +218,38 @@ const Pathology = () => {
     }
   };
 
-  // Handle download report (Original file first, then generated fallback)
+  // Handle download report (Prioritize professional generator with 2-page merged content)
   const handleDownloadReport = async (report) => {
     if (isDownloading) return;
     setIsDownloading(true);
+    console.log('[Pathology] Initiating download for report:', { id: report.id, reportId: report.reportId, testName: report.testName });
+
     try {
-      // 1. Try to download the original attached file/scan
-      await pathologyService.downloadReport(report.id);
-      console.log('✅ Original file downloaded');
-    } catch (error) {
-      console.warn('⚠️ No original file found, using professional generator fallback:', error.message);
+      // 1. Try Professional PDF generation (Merged 2-page doc: details + scan)
+      const patientCode = (report.patientCode || 'PAT').replace(/\s+/g, '_');
+      const testName = (report.testName || 'Report').replace(/\s+/g, '_');
+      const fileName = `Report_${patientCode}_${testName}.pdf`;
+
+      console.log(`[Pathology] Downloading professional PDF: ${fileName} for ID: ${report.id}`);
+      await pathologyService.downloadProperReport(report.id, fileName);
+      console.log('✅ Professional merged report downloaded');
+    } catch (genError) {
+      console.warn('⚠️ Professional generator failed:', genError.message);
+
+      // If it's a 404, tell the user what's missing
+      if (genError.message.includes('not found')) {
+        alert(`Download failed: ${genError.message}`);
+        setIsDownloading(false);
+        return;
+      }
+
       try {
-        // 2. Fallback to Professional PDF generation if file doesn't exist
-        const fileName = `Report_${(report.patientName || 'Patient').replace(/\s+/g, '_')}_${(report.testName || 'Test').replace(/\s+/g, '_')}.pdf`;
-        await pathologyService.downloadProperReport(report.id, fileName);
-      } catch (genError) {
-        console.error('❌ Generator failed:', genError);
-        alert('Failed to download report: ' + genError.message);
+        // 2. Fallback to raw uploaded file
+        console.log('[Pathology] Falling back to raw file download...');
+        await pathologyService.downloadReport(report.id);
+      } catch (error) {
+        console.error('❌ Legacy download failed:', error);
+        alert('Failed to download report: ' + error.message);
       }
     } finally {
       setIsDownloading(false);
@@ -245,25 +261,30 @@ const Pathology = () => {
     const getStatusStyle = (status) => {
       const statusLower = (status || '').toLowerCase();
       if (statusLower === 'completed' || statusLower === 'ready') {
-        return { bg: 'rgba(32, 125, 192, 0.1)', color: '#207DC0' };
+        return { bg: '#dcfce7', color: '#15803d' }; // Professional Green for Completed
       } else if (statusLower === 'pending' || statusLower === 'in progress') {
-        return { bg: 'rgba(251, 146, 60, 0.1)', color: '#FB923C' };
-      } else if (statusLower === 'cancelled') {
-        return { bg: 'rgba(239, 68, 68, 0.1)', color: '#EF4444' };
+        return { bg: '#fff7ed', color: '#9a3412' };
+      } else if (statusLower === 'cancelled' || statusLower === 'critical') {
+        return { bg: '#fef2f2', color: '#991b1b' };
       }
-      return { bg: 'rgba(107, 114, 128, 0.1)', color: '#6B7280' };
+      return { bg: '#f8fafc', color: '#64748b' };
     };
 
     const style = getStatusStyle(status);
     return (
       <span
         style={{
-          padding: '4px 12px',
-          borderRadius: '9999px',
-          fontSize: '12px',
-          fontWeight: '500',
+          padding: '6px 14px',
+          borderRadius: '12px',
+          fontSize: '11px',
+          fontWeight: '900',
+          textTransform: 'uppercase',
+          letterSpacing: '0.05em',
           backgroundColor: style.bg,
           color: style.color,
+          display: 'inline-flex',
+          alignItems: 'center',
+          boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
         }}
       >
         {status || 'Unknown'}
@@ -387,13 +408,17 @@ const Pathology = () => {
                   <td>
                     <div className="info-group">
                       <span className="primary">{report.patientName || 'Unknown'}</span>
-                      <span className="secondary">{report.patientCode || report.reportId || 'N/A'}</span>
+                      <span className="secondary">{report.patientCode || 'PAT-00'}</span>
                     </div>
                   </td>
                   <td>
                     <div className="info-group">
                       <span className="primary">{report.testName || 'N/A'}</span>
-                      <span className="secondary">{report.testType || 'General'}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="secondary">{report.testType || 'General'}</span>
+                        {report.pdfRef && <span className="artifact-tag pdf" title="Searchable PDF Attached">PDF</span>}
+                        {report.imageRef && <span className="artifact-tag img" title="Visual Scan Attached">IMG</span>}
+                      </div>
                     </div>
                   </td>
                   <td>{formatDate(report.reportDate)}</td>
@@ -409,11 +434,11 @@ const Pathology = () => {
                       <button className="btn-action edit" title="Edit" onClick={() => handleEditReport(report)}>
                         <Icons.Edit />
                       </button>
-                      <button className="btn-action delete" title="Delete" onClick={() => handleDeleteReport(report)}>
-                        <Icons.Delete />
-                      </button>
                       <button className="btn-action download" title="Download" onClick={() => handleDownloadReport(report)} disabled={isDownloading}>
                         <Icons.Download />
+                      </button>
+                      <button className="btn-action delete" title="Delete" onClick={() => handleDeleteReport(report)}>
+                        <Icons.Delete />
                       </button>
                     </div>
                   </td>
