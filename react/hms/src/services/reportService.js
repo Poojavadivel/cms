@@ -254,17 +254,35 @@ class ReportService {
   }
 
   /**
-   * View PDF in a new tab
+   * View PDF or Image in a new tab
    * Uses the public PDF endpoint for easy browser viewing
-   * @param {string} pdfId - The PDF ID from database
+   * @param {string} fileId - The file ID from database (pdfRef or imageRef)
    */
-  viewPdf(pdfId) {
-    if (!pdfId) {
-      console.error('No PDF ID provided');
+  viewPdf(fileId) {
+    if (!fileId) {
+      console.error('No file ID provided');
+      alert('No file available to view');
       return;
     }
     const baseUrl = process.env.REACT_APP_API_URL || 'https://hms-dev.onrender.com/api';
-    const url = `${baseUrl}/scanner-enterprise/pdf-public/${pdfId}`;
+    const url = `${baseUrl}/scanner-enterprise/pdf-public/${fileId}`;
+    console.log('📄 Opening file in new tab:', url);
+    window.open(url, '_blank');
+  }
+
+  /**
+   * View image in a modal or new tab
+   * @param {string} imageId - The image ID from database
+   */
+  viewImage(imageId) {
+    if (!imageId) {
+      console.error('No image ID provided');
+      alert('No image available to view');
+      return;
+    }
+    const baseUrl = process.env.REACT_APP_API_URL || 'https://hms-dev.onrender.com/api';
+    const url = `${baseUrl}/scanner-enterprise/pdf-public/${imageId}`;
+    console.log('🖼️ Opening image in new tab:', url);
     window.open(url, '_blank');
   }
 

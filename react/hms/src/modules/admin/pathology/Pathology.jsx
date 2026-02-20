@@ -77,13 +77,13 @@ const Header = ({ onAdd }) => (
   </div>
 );
 
-const Pathology = () => {
+const Pathology = ({ initialSearchQuery = '' }) => {
   // State management
   const [reports, setReports] = useState([]);
   const [filteredReports, setFilteredReports] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDownloading, setIsDownloading] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
   const [currentPage, setCurrentPage] = useState(0);
   const [statusFilter, setStatusFilter] = useState('All');
   const [testTypeFilter, setTestTypeFilter] = useState('All');
@@ -94,6 +94,14 @@ const Pathology = () => {
   const [selectedReport, setSelectedReport] = useState(null);
 
   const itemsPerPage = 10;
+
+  // Update search query when initialSearchQuery prop changes
+  useEffect(() => {
+    if (initialSearchQuery) {
+      setSearchQuery(initialSearchQuery);
+      console.log('🔍 Applied initial search filter:', initialSearchQuery);
+    }
+  }, [initialSearchQuery]);
 
   // Fetch reports from API
   const fetchReports = useCallback(async () => {

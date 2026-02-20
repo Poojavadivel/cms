@@ -25,9 +25,10 @@ const PathologyViewDialog = ({ isOpen, onClose, report }) => {
     const handleViewImage = () => {
         const fileId = reportData.imageRef || reportData.fileRef || reportData.pdfRef;
         if (!fileId) {
-            alert('No visual artifact (X-Ray/Scan) found for this report.');
+            alert('⚠️ No uploaded image/scan found for this report.\n\nPlease upload a test report image first.');
             return;
         }
+        console.log('🖼️ Viewing uploaded test report image/scan:', fileId);
         reportService.viewPdf(fileId);
     };
 
@@ -108,6 +109,17 @@ const PathologyViewDialog = ({ isOpen, onClose, report }) => {
 
                         <div className="space-y-3">
                             <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest mb-2 px-1">Quick Actions</p>
+                            
+                            {(reportData.imageRef || reportData.fileRef || reportData.pdfRef) && (
+                                <button 
+                                    onClick={handleViewImage} 
+                                    className="w-full p-4 bg-white/10 border-2 border-white/30 rounded-2xl flex items-center gap-3 hover:bg-white/20 hover:border-white/50 transition-all group"
+                                >
+                                    <FiEye className="text-white group-hover:scale-110 transition-transform" />
+                                    <span className="text-xs font-bold text-white">View Test Image</span>
+                                </button>
+                            )}
+
                             <button onClick={handleDownload} className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl flex items-center gap-3 hover:bg-white/20 hover:border-white/30 transition-all group">
                                 <FiDownload className="text-white/60 group-hover:text-white" />
                                 <span className="text-xs font-bold text-white/60 group-hover:text-white">Download PDF</span>
@@ -187,14 +199,20 @@ const PathologyViewDialog = ({ isOpen, onClose, report }) => {
                                 </div>
 
                                 <div className="flex items-center gap-4">
-                                    {(reportData.imageRef || reportData.fileRef) && (
+                                    {(reportData.imageRef || reportData.fileRef || reportData.pdfRef) ? (
                                         <button
                                             onClick={handleViewImage}
-                                            className="w-14 h-14 rounded-full bg-[#207DC0] text-white flex items-center justify-center shadow-lg hover:scale-110 active:scale-95 transition-all group/btn"
-                                            title="View Image Scan"
+                                            className="px-6 py-3 rounded-xl bg-gradient-to-r from-[#207DC0] to-[#165a8a] text-white flex items-center gap-3 shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all font-bold"
+                                            title="View Uploaded Test Report Image"
                                         >
-                                            <FiEye size={20} className="group-hover/btn:rotate-12 transition-transform" />
+                                            <FiEye size={20} />
+                                            <span>View Uploaded Image</span>
                                         </button>
+                                    ) : (
+                                        <div className="px-6 py-3 rounded-xl bg-gray-100 text-gray-400 flex items-center gap-3 font-medium">
+                                            <FiImage size={20} />
+                                            <span>No Image Uploaded</span>
+                                        </div>
                                     )}
                                 </div>
                             </div>
