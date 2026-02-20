@@ -1409,7 +1409,7 @@ router.get('/prescriptions/:intakeId/pdf', auth, async (req, res) => {
     const filename = `Prescription_${patientName.replace(/\s+/g, '_')}_${Date.now()}.pdf`;
 
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
 
     doc.pipe(res);
 

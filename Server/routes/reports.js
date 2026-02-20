@@ -13,13 +13,13 @@ const pdfGenerator = require('../utils/pdfGenerator');
 router.get('/patient/:patientId', auth, async (req, res) => {
   try {
     const { patientId } = req.params;
-    
+
     // Fetch patient data
     const patient = await Patient.findById(patientId).lean();
     if (!patient) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Patient not found' 
+      return res.status(404).json({
+        success: false,
+        message: 'Patient not found'
       });
     }
 
@@ -50,7 +50,7 @@ router.get('/patient/:patientId', auth, async (req, res) => {
     // Set response headers
     const patientName = `${patient.firstName}_${patient.lastName || 'Report'}`.replace(/\s+/g, '_');
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${patientName}_Report_${Date.now()}.pdf"`);
+    res.setHeader('Content-Disposition', `inline; filename="${patientName}_Report_${Date.now()}.pdf"`);
 
     // Pipe PDF to response
     doc.pipe(res);
@@ -60,7 +60,7 @@ router.get('/patient/:patientId', auth, async (req, res) => {
 
     // Patient Information Section
     pdfGenerator.addSectionHeader(doc, 'Patient Information', '👤');
-    
+
     pdfGenerator.addInfoRow(doc, 'Patient ID', patient._id?.toString() || 'N/A');
     pdfGenerator.addInfoRow(doc, 'Full Name', `${patient.firstName} ${patient.lastName || ''}`);
     pdfGenerator.addInfoRow(doc, 'Age', patient.age?.toString() || 'N/A');
@@ -68,7 +68,7 @@ router.get('/patient/:patientId', auth, async (req, res) => {
     pdfGenerator.addInfoRow(doc, 'Blood Group', patient.bloodGroup || 'N/A');
     pdfGenerator.addInfoRow(doc, 'Phone', patient.phone || 'N/A');
     pdfGenerator.addInfoRow(doc, 'Email', patient.email || 'N/A');
-    
+
     // Address
     if (patient.address) {
       const addressParts = [];
@@ -78,13 +78,13 @@ router.get('/patient/:patientId', auth, async (req, res) => {
       if (patient.address.city) addressParts.push(patient.address.city);
       if (patient.address.state) addressParts.push(patient.address.state);
       if (patient.address.pincode) addressParts.push(patient.address.pincode);
-      
+
       if (addressParts.length > 0) {
         pdfGenerator.addInfoRow(doc, 'Address', addressParts.join(', '));
       }
     }
 
-    pdfGenerator.addInfoRow(doc, 'Registration Date', 
+    pdfGenerator.addInfoRow(doc, 'Registration Date',
       patient.createdAt ? new Date(patient.createdAt).toLocaleDateString() : 'N/A'
     );
 
@@ -101,7 +101,7 @@ router.get('/patient/:patientId', auth, async (req, res) => {
     // Vitals Section
     if (patient.vitals) {
       pdfGenerator.addSectionHeader(doc, 'Vital Signs', '❤️');
-      
+
       if (patient.vitals.heightCm) {
         pdfGenerator.addInfoRow(doc, 'Height', `${patient.vitals.heightCm} cm`);
       }
@@ -128,11 +128,11 @@ router.get('/patient/:patientId', auth, async (req, res) => {
     // Medical History
     if (patient.medicalHistory && patient.medicalHistory.length > 0) {
       pdfGenerator.addSectionHeader(doc, 'Medical History', '📋');
-      
+
       patient.medicalHistory.forEach((condition, index) => {
         doc.fontSize(11)
-           .fillColor('#1f2937')
-           .text(`${index + 1}. ${condition}`, 60, doc.y);
+          .fillColor('#1f2937')
+          .text(`${index + 1}. ${condition}`, 60, doc.y);
         doc.y += 18;
       });
     }
@@ -140,11 +140,11 @@ router.get('/patient/:patientId', auth, async (req, res) => {
     // Allergies
     if (patient.allergies && patient.allergies.length > 0) {
       pdfGenerator.addSectionHeader(doc, 'Known Allergies', '⚠️');
-      
+
       patient.allergies.forEach((allergy, index) => {
         doc.fontSize(11)
-           .fillColor('#dc2626')
-           .text(`${index + 1}. ${allergy}`, 60, doc.y);
+          .fillColor('#dc2626')
+          .text(`${index + 1}. ${allergy}`, 60, doc.y);
         doc.y += 18;
       });
     }
@@ -158,7 +158,7 @@ router.get('/patient/:patientId', auth, async (req, res) => {
       const totalAppointments = appointments.length;
       const completedAppointments = appointments.filter(a => a.status === 'completed').length;
       const cancelledAppointments = appointments.filter(a => a.status === 'cancelled').length;
-      const upcomingAppointments = appointments.filter(a => 
+      const upcomingAppointments = appointments.filter(a =>
         a.status === 'scheduled' && new Date(a.appointmentDate) > new Date()
       ).length;
 
@@ -185,11 +185,11 @@ router.get('/patient/:patientId', auth, async (req, res) => {
 
     // Summary Statistics
     pdfGenerator.addSectionHeader(doc, 'Summary', '📊');
-    
-    const lastVisit = appointments.length > 0 
+
+    const lastVisit = appointments.length > 0
       ? new Date(appointments[0].appointmentDate).toLocaleDateString()
       : 'No visits recorded';
-    
+
     pdfGenerator.addInfoRow(doc, 'Last Visit', lastVisit);
     pdfGenerator.addInfoRow(doc, 'Total Visits', appointments.length.toString());
     pdfGenerator.addInfoRow(doc, 'Patient Status', patient.status || 'Active');
@@ -200,10 +200,10 @@ router.get('/patient/:patientId', auth, async (req, res) => {
   } catch (error) {
     console.error('Error generating patient report:', error);
     if (!res.headersSent) {
-      res.status(500).json({ 
-        success: false, 
+      res.status(500).json({
+        success: false,
         message: 'Failed to generate patient report',
-        error: error.message 
+        error: error.message
       });
     }
   }
@@ -215,7 +215,7 @@ router.get('/patient/:patientId', auth, async (req, res) => {
 router.get('/doctor/:doctorId', auth, async (req, res) => {
   try {
     const { doctorId } = req.params;
-    
+
     // Get date range (default: current week)
     const endDate = new Date();
     const startDate = new Date();
@@ -224,7 +224,7 @@ router.get('/doctor/:doctorId', auth, async (req, res) => {
     // Try to fetch doctor data from both User and Staff collections
     // First try User collection (for authenticated doctors)
     let doctor = await User.findById(doctorId).lean();
-    
+
     // If not found in User, try Staff collection
     if (!doctor) {
       const staff = await Staff.findById(doctorId).lean();
@@ -246,51 +246,51 @@ router.get('/doctor/:doctorId', auth, async (req, res) => {
         doctor.name = `${doctor.firstName || ''} ${doctor.lastName || ''}`.trim();
       }
     }
-    
+
     if (!doctor) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Doctor not found' 
+      return res.status(404).json({
+        success: false,
+        message: 'Doctor not found'
       });
     }
 
     console.log(`\n[Legacy Report] Original Doctor ID: ${doctorId}`);
-    
+
     // SMART ID RESOLUTION
     let queryDoctorId = doctorId;
-    
+
     // Try to find User by email if doctor is from Staff
     const isFromUser = await User.findById(doctorId).select('_id').lean();
     if (!isFromUser && doctor.email) {
       console.log(`[Legacy Report] Staff ID detected - searching for User...`);
-      const userDoctor = await User.findOne({ 
-        email: doctor.email, 
-        role: 'doctor' 
+      const userDoctor = await User.findOne({
+        email: doctor.email,
+        role: 'doctor'
       }).select('_id').lean();
-      
+
       if (userDoctor) {
         queryDoctorId = userDoctor._id;
         console.log(`[Legacy Report] ✅ Using User ID: ${queryDoctorId}`);
       }
     }
-    
+
     // Fetch patients using RESOLVED doctor ID
-    const patients = await Patient.find({ 
-      doctorId: queryDoctorId, 
-      deleted_at: null 
+    const patients = await Patient.find({
+      doctorId: queryDoctorId,
+      deleted_at: null
     })
-    .select('-__v')
-    .lean();
-    
+      .select('-__v')
+      .lean();
+
     console.log(`[Legacy Report] Found ${patients.length} patients for doctor ${queryDoctorId}`);
-    
+
     // Fetch all appointments for this doctor
     const allAppointments = await Appointment.find({ doctorId: queryDoctorId }).lean();
     console.log(`[Legacy Report] Found ${allAppointments.length} total appointments`);
 
     // Fetch appointments for this week (filter by startAt field)
-    const appointments = allAppointments.filter(apt => 
-      new Date(apt.startAt) >= startDate && 
+    const appointments = allAppointments.filter(apt =>
+      new Date(apt.startAt) >= startDate &&
       new Date(apt.startAt) <= endDate
     );
     console.log(`[Legacy Report] Found ${appointments.length} appointments this week`);
@@ -301,7 +301,7 @@ router.get('/doctor/:doctorId', auth, async (req, res) => {
       weekAppointments: appointments.length,
       completedThisWeek: appointments.filter(a => a.status?.toLowerCase() === 'completed').length,
       cancelledThisWeek: appointments.filter(a => a.status?.toLowerCase() === 'cancelled').length,
-      upcomingThisWeek: appointments.filter(a => 
+      upcomingThisWeek: appointments.filter(a =>
         a.status?.toLowerCase() === 'scheduled' && new Date(a.startAt) > new Date()
       ).length,
       totalAppointments: allAppointments.length,
@@ -323,7 +323,7 @@ router.get('/doctor/:doctorId', auth, async (req, res) => {
     // Set response headers
     const doctorName = doctor.name.replace(/\s+/g, '_');
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${doctorName}_Report_${Date.now()}.pdf"`);
+    res.setHeader('Content-Disposition', `inline; filename="${doctorName}_Report_${Date.now()}.pdf"`);
 
     // Pipe PDF to response
     doc.pipe(res);
@@ -333,14 +333,14 @@ router.get('/doctor/:doctorId', auth, async (req, res) => {
 
     // Doctor Information Section
     pdfGenerator.addSectionHeader(doc, 'Doctor Information', '⚕️');
-    
+
     pdfGenerator.addInfoRow(doc, 'Doctor ID', doctor._id?.toString() || 'N/A');
     pdfGenerator.addInfoRow(doc, 'Name', doctor.name || 'N/A');
     pdfGenerator.addInfoRow(doc, 'Specialization', doctor.specialization || 'N/A');
     pdfGenerator.addInfoRow(doc, 'Email', doctor.email || 'N/A');
     pdfGenerator.addInfoRow(doc, 'Phone', doctor.phone || 'N/A');
     pdfGenerator.addInfoRow(doc, 'Qualification', doctor.qualification || 'N/A');
-    
+
     doc.y += 20;
 
     // Report Period
@@ -348,7 +348,7 @@ router.get('/doctor/:doctorId', auth, async (req, res) => {
     pdfGenerator.addInfoRow(doc, 'From', startDate.toLocaleDateString());
     pdfGenerator.addInfoRow(doc, 'To', endDate.toLocaleDateString());
     pdfGenerator.addInfoRow(doc, 'Duration', '7 Days (Current Week)');
-    
+
     doc.y += 20;
 
     // Overall Statistics
@@ -364,13 +364,13 @@ router.get('/doctor/:doctorId', auth, async (req, res) => {
 
     // Performance Metrics
     pdfGenerator.addSectionHeader(doc, 'Performance Metrics', '📈');
-    
-    const completionRate = stats.totalAppointments > 0 
+
+    const completionRate = stats.totalAppointments > 0
       ? ((stats.totalCompleted / stats.totalAppointments) * 100).toFixed(1)
       : '0';
-    
+
     const avgPatientsPerDay = (stats.weekAppointments / 7).toFixed(1);
-    
+
     pdfGenerator.addInfoRow(doc, 'Total Appointments (All Time)', stats.totalAppointments.toString());
     pdfGenerator.addInfoRow(doc, 'Total Completed (All Time)', stats.totalCompleted.toString());
     pdfGenerator.addInfoRow(doc, 'Completion Rate', `${completionRate}%`);
@@ -385,10 +385,10 @@ router.get('/doctor/:doctorId', auth, async (req, res) => {
       const headers = ['Date', 'Time', 'Patient', 'Reason', 'Status'];
       const rows = appointments.map(apt => {
         const patient = patients.find(p => p._id.toString() === (apt.patientId?.toString() || apt.patientId));
-        const patientName = patient 
+        const patientName = patient
           ? `${patient.firstName} ${patient.lastName || ''}`.trim()
           : 'Unknown Patient';
-        
+
         return [
           new Date(apt.startAt).toLocaleDateString(),
           new Date(apt.startAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
@@ -404,8 +404,8 @@ router.get('/doctor/:doctorId', auth, async (req, res) => {
       });
     } else {
       doc.fontSize(11)
-         .fillColor('#6b7280')
-         .text('No appointments scheduled for this week.', 60, doc.y);
+        .fillColor('#6b7280')
+        .text('No appointments scheduled for this week.', 60, doc.y);
       doc.y += 20;
     }
 
@@ -477,15 +477,15 @@ router.get('/doctor/:doctorId', auth, async (req, res) => {
     pdfGenerator.addSectionHeader(doc, 'Summary', '✅');
 
     doc.fontSize(11)
-       .fillColor('#1f2937')
-       .text(
-         `Dr. ${doctor.name} has handled ${stats.weekAppointments} appointments this week ` +
-         `with ${stats.completedThisWeek} completed consultations. The doctor has ${stats.totalPatients} ` +
-         `active patients and maintains a ${completionRate}% completion rate overall.`,
-         60,
-         doc.y,
-         { width: doc.page.width - 120, align: 'justify' }
-       );
+      .fillColor('#1f2937')
+      .text(
+        `Dr. ${doctor.name} has handled ${stats.weekAppointments} appointments this week ` +
+        `with ${stats.completedThisWeek} completed consultations. The doctor has ${stats.totalPatients} ` +
+        `active patients and maintains a ${completionRate}% completion rate overall.`,
+        60,
+        doc.y,
+        { width: doc.page.width - 120, align: 'justify' }
+      );
 
     // Finalize PDF with proper page numbers
     pdfGenerator.finalize(doc);
@@ -493,10 +493,10 @@ router.get('/doctor/:doctorId', auth, async (req, res) => {
   } catch (error) {
     console.error('Error generating doctor report:', error);
     if (!res.headersSent) {
-      res.status(500).json({ 
-        success: false, 
+      res.status(500).json({
+        success: false,
         message: 'Failed to generate doctor report',
-        error: error.message 
+        error: error.message
       });
     }
   }

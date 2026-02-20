@@ -677,7 +677,8 @@ router.get('/reports/:id/download', auth, async (req, res) => {
         if (dbFile && dbFile.data) {
           console.log('✅ [LAB REPORT DOWNLOAD] Found in MongoDB:', dbFile.fileName);
           res.setHeader('Content-Type', dbFile.mimeType || 'application/pdf');
-          res.setHeader('Content-Disposition', `attachment; filename="${dbFile.fileName}"`);
+          // CHANGED: inline instead of attachment to view in browser
+          res.setHeader('Content-Disposition', `inline; filename="${dbFile.fileName}"`);
           res.setHeader('Content-Length', dbFile.data.length);
           return res.send(dbFile.data);
         }
@@ -691,7 +692,9 @@ router.get('/reports/:id/download', auth, async (req, res) => {
       try {
         await fs.access(fPath);
         console.log('✅ [LAB REPORT DOWNLOAD] Found on disk:', fPath);
-        return res.download(fPath, report.metadata?.originalFilename || path.basename(fPath));
+        // CHANGED: Use sendFile with inline disposition
+        res.setHeader('Content-Disposition', `inline; filename="${report.metadata?.originalFilename || path.basename(fPath)}"`);
+        return res.sendFile(fPath);
       } catch (e) {
         // Skip to next path
       }
@@ -707,7 +710,9 @@ router.get('/reports/:id/download', auth, async (req, res) => {
       if (matchedFile) {
         const fullPath = path.join(medicalDir, matchedFile);
         console.log('✅ [LAB REPORT DOWNLOAD] Deep search match:', fullPath);
-        return res.download(fullPath, report.metadata?.originalFilename || path.basename(fullPath));
+        // CHANGED: Use sendFile with inline disposition
+        res.setHeader('Content-Disposition', `inline; filename="${report.metadata?.originalFilename || path.basename(fullPath)}"`);
+        return res.sendFile(fullPath);
       }
     } catch (e) {
       console.warn('⚠️ [STRATEGY 3] Deep search error:', e.message);

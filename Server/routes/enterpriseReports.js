@@ -12,13 +12,13 @@ const pdfGen = require('../utils/enterprisePdfGenerator');
 router.get('/patient/:patientId', auth, async (req, res) => {
   try {
     const { patientId } = req.params;
-    
+
     // Fetch patient data
     const patient = await Patient.findById(patientId).lean();
     if (!patient) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Patient not found' 
+      return res.status(404).json({
+        success: false,
+        message: 'Patient not found'
       });
     }
 
@@ -45,8 +45,8 @@ router.get('/patient/:patientId', auth, async (req, res) => {
     const filename = `${patient.firstName}_${patient.lastName || 'Report'}`
       .replace(/\s+/g, '_');
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', 
-      `attachment; filename="${filename}_Medical_Report_${Date.now()}.pdf"`);
+    res.setHeader('Content-Disposition',
+      `inline; filename="${filename}_Medical_Report_${Date.now()}.pdf"`);
 
     // Pipe to response
     doc.pipe(res);
@@ -69,7 +69,7 @@ router.get('/patient/:patientId', auth, async (req, res) => {
     pdfGen.addInfoRow(doc, 'Full Name', patientName, { labelWidth: 140 });
     pdfGen.addInfoRow(doc, 'First Name', patient.firstName || 'N/A', { labelWidth: 140 });
     pdfGen.addInfoRow(doc, 'Last Name', patient.lastName || 'N/A', { labelWidth: 140 });
-    pdfGen.addInfoRow(doc, 'Date of Birth', 
+    pdfGen.addInfoRow(doc, 'Date of Birth',
       patient.dateOfBirth ? new Date(patient.dateOfBirth).toLocaleDateString('en-IN') : 'N/A',
       { labelWidth: 140 }
     );
@@ -82,10 +82,10 @@ router.get('/patient/:patientId', auth, async (req, res) => {
       color: pdfGen.colors.secondary,
       marginTop: 15
     });
-    
+
     pdfGen.addInfoRow(doc, 'Phone Number', patient.phone || 'N/A', { labelWidth: 140 });
     pdfGen.addInfoRow(doc, 'Email Address', patient.email || 'N/A', { labelWidth: 140 });
-    
+
     // Full address breakdown
     if (patient.address) {
       pdfGen.addInfoRow(doc, 'House Number', patient.address.houseNo || 'N/A', { labelWidth: 140 });
@@ -98,7 +98,7 @@ router.get('/patient/:patientId', auth, async (req, res) => {
     } else {
       pdfGen.addInfoRow(doc, 'Address', 'Not Provided', { labelWidth: 140 });
     }
-    
+
     // Telegram Integration (if available)
     if (patient.telegramUserId || patient.telegramUsername) {
       pdfGen.addSectionHeader(doc, 'Telegram Integration', '', {
@@ -108,20 +108,20 @@ router.get('/patient/:patientId', auth, async (req, res) => {
       pdfGen.addInfoRow(doc, 'Telegram User ID', patient.telegramUserId || 'N/A', { labelWidth: 140 });
       pdfGen.addInfoRow(doc, 'Telegram Username', patient.telegramUsername || 'N/A', { labelWidth: 140 });
     }
-    
+
     // Registration Information
     pdfGen.addSectionHeader(doc, 'Registration Details', '', {
       color: pdfGen.colors.accent,
       marginTop: 15
     });
-    pdfGen.addInfoRow(doc, 'Registration Date', 
-      patient.createdAt ? new Date(patient.createdAt).toLocaleDateString('en-IN') + ' at ' + 
-      new Date(patient.createdAt).toLocaleTimeString('en-IN') : 'N/A',
+    pdfGen.addInfoRow(doc, 'Registration Date',
+      patient.createdAt ? new Date(patient.createdAt).toLocaleDateString('en-IN') + ' at ' +
+        new Date(patient.createdAt).toLocaleTimeString('en-IN') : 'N/A',
       { labelWidth: 140 }
     );
-    pdfGen.addInfoRow(doc, 'Last Updated', 
-      patient.updatedAt ? new Date(patient.updatedAt).toLocaleDateString('en-IN') + ' at ' + 
-      new Date(patient.updatedAt).toLocaleTimeString('en-IN') : 'N/A',
+    pdfGen.addInfoRow(doc, 'Last Updated',
+      patient.updatedAt ? new Date(patient.updatedAt).toLocaleDateString('en-IN') + ' at ' +
+        new Date(patient.updatedAt).toLocaleTimeString('en-IN') : 'N/A',
       { labelWidth: 140 }
     );
 
@@ -131,10 +131,10 @@ router.get('/patient/:patientId', auth, async (req, res) => {
         color: pdfGen.colors.secondary,
         marginTop: 15
       });
-      
+
       const doctorName = doctor.name || `${doctor.firstName} ${doctor.lastName || ''}`;
       pdfGen.addInfoRow(doc, 'Doctor Name', doctorName, { labelWidth: 120 });
-      pdfGen.addInfoRow(doc, 'Specialization', 
+      pdfGen.addInfoRow(doc, 'Specialization',
         doctor.specialization || doctor.metadata?.specialization || 'General Physician',
         { labelWidth: 120 }
       );
@@ -149,45 +149,45 @@ router.get('/patient/:patientId', auth, async (req, res) => {
 
     // Vitals in cards (using actual field names from schema)
     const vitalsStats = [
-      { 
-        icon: '', 
-        value: patient.vitals?.bp || 'Not Recorded', 
+      {
+        icon: '',
+        value: patient.vitals?.bp || 'Not Recorded',
         label: 'Blood Pressure',
         color: pdfGen.colors.danger
       },
-      { 
-        icon: '', 
-        value: patient.vitals?.pulse ? `${patient.vitals.pulse} bpm` : 'Not Recorded', 
+      {
+        icon: '',
+        value: patient.vitals?.pulse ? `${patient.vitals.pulse} bpm` : 'Not Recorded',
         label: 'Pulse Rate',
         color: pdfGen.colors.secondary
       },
-      { 
-        icon: '', 
-        value: patient.vitals?.temp ? `${patient.vitals.temp}°C` : 'Not Recorded', 
+      {
+        icon: '',
+        value: patient.vitals?.temp ? `${patient.vitals.temp}°C` : 'Not Recorded',
         label: 'Temperature',
         color: pdfGen.colors.warning
       },
-      { 
-        icon: '', 
-        value: patient.vitals?.spo2 ? `${patient.vitals.spo2}%` : 'Not Recorded', 
+      {
+        icon: '',
+        value: patient.vitals?.spo2 ? `${patient.vitals.spo2}%` : 'Not Recorded',
         label: 'SpO2 Level',
         color: pdfGen.colors.success
       },
-      { 
-        icon: '', 
-        value: patient.vitals?.heightCm ? `${patient.vitals.heightCm} cm` : 'Not Recorded', 
+      {
+        icon: '',
+        value: patient.vitals?.heightCm ? `${patient.vitals.heightCm} cm` : 'Not Recorded',
         label: 'Height',
         color: pdfGen.colors.accent
       },
-      { 
-        icon: '', 
-        value: patient.vitals?.weightKg ? `${patient.vitals.weightKg} kg` : 'Not Recorded', 
+      {
+        icon: '',
+        value: patient.vitals?.weightKg ? `${patient.vitals.weightKg} kg` : 'Not Recorded',
         label: 'Weight',
         color: pdfGen.colors.accent
       },
-      { 
-        icon: '', 
-        value: patient.vitals?.bmi ? patient.vitals.bmi.toFixed(1) : 'Not Calculated', 
+      {
+        icon: '',
+        value: patient.vitals?.bmi ? patient.vitals.bmi.toFixed(1) : 'Not Calculated',
         label: 'BMI',
         color: pdfGen.colors.secondary
       }
@@ -197,23 +197,23 @@ router.get('/patient/:patientId', auth, async (req, res) => {
     if (vitalsStats.length > 4) {
       pdfGen.addStatsCards(doc, vitalsStats.slice(4), { cardsPerRow: 3 });
     }
-    
+
     // Detailed vitals note
     const noteText = 'All vital signs are recorded as per latest consultation. Values marked as "Not Recorded" were not measured during last visit.';
     const noteHeight = doc.heightOfString(noteText, { width: doc.page.width - 100, fontSize: pdfGen.fonts.small });
     doc.fontSize(pdfGen.fonts.small)
-       .fillColor(pdfGen.colors.text.secondary)
-       .text(noteText, pdfGen.margins.page.left, doc.y, { width: doc.page.width - 100 });
+      .fillColor(pdfGen.colors.text.secondary)
+      .text(noteText, pdfGen.margins.page.left, doc.y, { width: doc.page.width - 100 });
     doc.y += noteHeight + 8;
 
     // ===== ALLERGIES (CRITICAL - Patient Safety) =====
     if (patient.allergies && patient.allergies.length > 0) {
-      pdfGen.addAlertBox(doc, 
+      pdfGen.addAlertBox(doc,
         `⚠ ALLERGIES: ${patient.allergies.join(', ')}`,
         { type: 'danger', icon: '⚠' }
       );
     } else {
-      pdfGen.addAlertBox(doc, 
+      pdfGen.addAlertBox(doc,
         'No known allergies recorded.',
         { type: 'success', icon: '✓' }
       );
@@ -230,45 +230,45 @@ router.get('/patient/:patientId', auth, async (req, res) => {
         const medicineCount = prescription.medicines?.length || 0;
         const estimatedHeight = 60 + (medicineCount * 18);
         pdfGen.checkPageBreak(doc, estimatedHeight);
-        
+
         doc.fontSize(pdfGen.fonts.body)
-           .fillColor(pdfGen.colors.text.primary)
-           .text(`Prescription ${index + 1}:`, pdfGen.margins.page.left, doc.y);
+          .fillColor(pdfGen.colors.text.primary)
+          .text(`Prescription ${index + 1}:`, pdfGen.margins.page.left, doc.y);
         doc.y += 6;
-        
+
         pdfGen.addInfoRow(doc, '  Prescription ID', prescription.prescriptionId || 'N/A', { labelWidth: 140 });
-        pdfGen.addInfoRow(doc, '  Issued Date', 
+        pdfGen.addInfoRow(doc, '  Issued Date',
           prescription.issuedAt ? new Date(prescription.issuedAt).toLocaleDateString('en-IN') : 'N/A',
           { labelWidth: 140 }
         );
         pdfGen.addInfoRow(doc, '  Notes', prescription.notes || 'None', { labelWidth: 140 });
-        
+
         if (prescription.medicines && prescription.medicines.length > 0) {
           doc.fontSize(pdfGen.fonts.small)
-             .fillColor(pdfGen.colors.text.secondary)
-             .text('  Medicines:', pdfGen.margins.page.left, doc.y);
+            .fillColor(pdfGen.colors.text.secondary)
+            .text('  Medicines:', pdfGen.margins.page.left, doc.y);
           doc.y += 4;
-          
+
           prescription.medicines.forEach((med, medIndex) => {
             const medText = `    ${medIndex + 1}. ${med.name || 'N/A'} - ${med.dosage || 'N/A'}, ${med.frequency || 'N/A'}, ${med.duration || 'N/A'} (Qty: ${med.quantity || 'N/A'})`;
             const medHeight = doc.heightOfString(medText, { width: doc.page.width - 100 });
             pdfGen.checkPageBreak(doc, medHeight + 4);
-            
+
             doc.fontSize(pdfGen.fonts.small)
-               .fillColor(pdfGen.colors.text.primary)
-               .text(medText, pdfGen.margins.page.left, doc.y, { width: doc.page.width - 100 });
+              .fillColor(pdfGen.colors.text.primary)
+              .text(medText, pdfGen.margins.page.left, doc.y, { width: doc.page.width - 100 });
             doc.y += medHeight + 2;
           });
         }
         doc.y += 8;
       });
-      
+
       if (patient.prescriptions.length > 5) {
         const moreText = `... and ${patient.prescriptions.length - 5} more prescriptions on record.`;
         const moreHeight = doc.heightOfString(moreText, { width: doc.page.width - 100 });
         doc.fontSize(pdfGen.fonts.small)
-           .fillColor(pdfGen.colors.text.secondary)
-           .text(moreText, pdfGen.margins.page.left, doc.y, { width: doc.page.width - 100 });
+          .fillColor(pdfGen.colors.text.secondary)
+          .text(moreText, pdfGen.margins.page.left, doc.y, { width: doc.page.width - 100 });
         doc.y += moreHeight + 8;
       }
     }
@@ -297,8 +297,8 @@ router.get('/patient/:patientId', auth, async (req, res) => {
         const totalText = `Total ${patient.medicalReports.length} medical documents on record.`;
         const totalHeight = doc.heightOfString(totalText, { width: doc.page.width - 100 });
         doc.fontSize(pdfGen.fonts.small)
-           .fillColor(pdfGen.colors.text.secondary)
-           .text(totalText, pdfGen.margins.page.left, doc.y, { width: doc.page.width - 100 });
+          .fillColor(pdfGen.colors.text.secondary)
+          .text(totalText, pdfGen.margins.page.left, doc.y, { width: doc.page.width - 100 });
         doc.y += totalHeight + 8;
       }
     }
@@ -317,11 +317,11 @@ router.get('/patient/:patientId', auth, async (req, res) => {
       });
 
       doc.fontSize(pdfGen.fonts.body)
-         .fillColor(pdfGen.colors.text.primary)
-         .text(patient.notes, pdfGen.margins.page.left, doc.y, {
-           width: doc.page.width - 100,
-           align: 'justify'
-         });
+        .fillColor(pdfGen.colors.text.primary)
+        .text(patient.notes, pdfGen.margins.page.left, doc.y, {
+          width: doc.page.width - 100,
+          align: 'justify'
+        });
       doc.y += 15;
     }
 
@@ -333,8 +333,8 @@ router.get('/patient/:patientId', auth, async (req, res) => {
       });
 
       Object.keys(patient.metadata).slice(0, 10).forEach(key => {
-        pdfGen.addInfoRow(doc, key, 
-          typeof patient.metadata[key] === 'object' 
+        pdfGen.addInfoRow(doc, key,
+          typeof patient.metadata[key] === 'object'
             ? JSON.stringify(patient.metadata[key]).substring(0, 50) + '...'
             : patient.metadata[key]?.toString() || 'N/A',
           { labelWidth: 140 }
@@ -360,7 +360,7 @@ router.get('/patient/:patientId', auth, async (req, res) => {
     // Appointment statistics
     const totalAppts = appointments.length;
     const completedAppts = appointments.filter(a => a.status === 'completed').length;
-    const upcomingAppts = appointments.filter(a => 
+    const upcomingAppts = appointments.filter(a =>
       a.status === 'scheduled' && new Date(a.appointmentDate) > new Date()
     ).length;
     const cancelledAppts = appointments.filter(a => a.status === 'cancelled').length;
@@ -378,12 +378,12 @@ router.get('/patient/:patientId', auth, async (req, res) => {
     if (appointments.length > 0) {
       const headers = ['Date & Time', 'Type', 'Status', 'Location', 'Notes'];
       const rows = appointments.slice(0, 15).map(apt => [
-        new Date(apt.startAt).toLocaleString('en-IN', { 
-          year: 'numeric', 
-          month: 'short', 
-          day: 'numeric', 
-          hour: '2-digit', 
-          minute: '2-digit' 
+        new Date(apt.startAt).toLocaleString('en-IN', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
         }),
         apt.appointmentType || 'Consultation',
         apt.status || 'Scheduled',
@@ -395,150 +395,150 @@ router.get('/patient/:patientId', auth, async (req, res) => {
         columnWidths: [110, 80, 75, 70, 145],
         headerBg: pdfGen.colors.primary
       });
-      
+
       // Detailed appointment breakdowns
       pdfGen.addSectionHeader(doc, 'Recent Appointment Details', '', {
         color: pdfGen.colors.secondary,
         marginTop: 15
       });
-      
+
       appointments.slice(0, 3).forEach((apt, index) => {
         const labTests = apt.followUp?.labTests?.length || 0;
         const imaging = apt.followUp?.imaging?.length || 0;
         const procedures = apt.followUp?.procedures?.length || 0;
         const estimatedHeight = 150 + (labTests * 20) + (imaging * 20) + (procedures * 20);
         pdfGen.checkPageBreak(doc, estimatedHeight);
-        
+
         doc.fontSize(pdfGen.fonts.body)
-           .fillColor(pdfGen.colors.text.primary)
-           .text(`Appointment ${index + 1}:`, pdfGen.margins.page.left, doc.y);
+          .fillColor(pdfGen.colors.text.primary)
+          .text(`Appointment ${index + 1}:`, pdfGen.margins.page.left, doc.y);
         doc.y += 6;
-        
+
         pdfGen.addInfoRow(doc, '  Code', apt.appointmentCode || 'N/A', { labelWidth: 140 });
         pdfGen.addInfoRow(doc, '  Date', new Date(apt.startAt).toLocaleDateString('en-IN'), { labelWidth: 140 });
         pdfGen.addInfoRow(doc, '  Time', new Date(apt.startAt).toLocaleTimeString('en-IN'), { labelWidth: 140 });
         pdfGen.addInfoRow(doc, '  Type', apt.appointmentType || 'Consultation', { labelWidth: 140 });
         pdfGen.addInfoRow(doc, '  Status', apt.status || 'Scheduled', { labelWidth: 140 });
         pdfGen.addInfoRow(doc, '  Location', apt.location || 'Not Specified', { labelWidth: 140 });
-        
+
         // Follow-up information
         if (apt.followUp && apt.followUp.isRequired) {
-          pdfGen.addAlertBox(doc, 
+          pdfGen.addAlertBox(doc,
             `Follow-up Required: ${apt.followUp.reason || 'General follow-up'} - Priority: ${apt.followUp.priority || 'Routine'}`,
             { type: 'warning', icon: '' }
           );
-          
+
           if (apt.followUp.recommendedDate) {
-            pdfGen.addInfoRow(doc, '  Recommended Follow-up', 
+            pdfGen.addInfoRow(doc, '  Recommended Follow-up',
               new Date(apt.followUp.recommendedDate).toLocaleDateString('en-IN'),
               { labelWidth: 140 }
             );
           }
-          
+
           if (apt.followUp.diagnosis) {
             pdfGen.addInfoRow(doc, '  Diagnosis', apt.followUp.diagnosis, { labelWidth: 140 });
           }
-          
+
           if (apt.followUp.treatmentPlan) {
             pdfGen.addInfoRow(doc, '  Treatment Plan', apt.followUp.treatmentPlan, { labelWidth: 140 });
           }
-          
+
           // Lab tests with enhanced details
           if (apt.followUp.labTests && apt.followUp.labTests.length > 0) {
             doc.fontSize(pdfGen.fonts.small)
-               .fillColor(pdfGen.colors.text.secondary)
-               .text('  Lab Tests Ordered:', pdfGen.margins.page.left, doc.y);
+              .fillColor(pdfGen.colors.text.secondary)
+              .text('  Lab Tests Ordered:', pdfGen.margins.page.left, doc.y);
             doc.y += 4;
-            
+
             apt.followUp.labTests.forEach((test, testIndex) => {
-              const status = test.completed ? `✓ ${test.resultStatus || 'Completed'}` : 
-                             test.ordered ? '⏳ Ordered' : '○ Pending';
+              const status = test.completed ? `✓ ${test.resultStatus || 'Completed'}` :
+                test.ordered ? '⏳ Ordered' : '○ Pending';
               const testText = `    ${testIndex + 1}. ${test.testName || 'N/A'} - ${status}`;
               const testHeight = doc.heightOfString(testText, { width: doc.page.width - 100 });
-              
+
               pdfGen.checkPageBreak(doc, testHeight + 16);
-              
+
               doc.fontSize(pdfGen.fonts.small)
-                 .fillColor(pdfGen.colors.text.primary)
-                 .text(testText, pdfGen.margins.page.left, doc.y, { width: doc.page.width - 100 });
+                .fillColor(pdfGen.colors.text.primary)
+                .text(testText, pdfGen.margins.page.left, doc.y, { width: doc.page.width - 100 });
               doc.y += testHeight + 4;
-              
+
               if (test.results) {
                 const resultsText = `       Results: ${test.results}`;
                 const resultsHeight = doc.heightOfString(resultsText, { width: doc.page.width - 100 });
                 doc.fontSize(pdfGen.fonts.tiny)
-                   .fillColor(pdfGen.colors.text.secondary)
-                   .text(resultsText, pdfGen.margins.page.left, doc.y, { width: doc.page.width - 100 });
+                  .fillColor(pdfGen.colors.text.secondary)
+                  .text(resultsText, pdfGen.margins.page.left, doc.y, { width: doc.page.width - 100 });
                 doc.y += resultsHeight + 4;
               }
             });
             doc.y += 4;
           }
-          
+
           // Imaging with findings
           if (apt.followUp.imaging && apt.followUp.imaging.length > 0) {
             doc.fontSize(pdfGen.fonts.small)
-               .fillColor(pdfGen.colors.text.secondary)
-               .text('  Imaging Studies:', pdfGen.margins.page.left, doc.y);
+              .fillColor(pdfGen.colors.text.secondary)
+              .text('  Imaging Studies:', pdfGen.margins.page.left, doc.y);
             doc.y += 4;
-            
+
             apt.followUp.imaging.forEach((img, imgIndex) => {
-              const status = img.completed ? `✓ ${img.findingsStatus || 'Completed'}` : 
-                             img.ordered ? '⏳ Ordered' : '○ Pending';
+              const status = img.completed ? `✓ ${img.findingsStatus || 'Completed'}` :
+                img.ordered ? '⏳ Ordered' : '○ Pending';
               const imgText = `    ${imgIndex + 1}. ${img.imagingType || 'N/A'} - ${status}`;
               const imgHeight = doc.heightOfString(imgText, { width: doc.page.width - 100 });
-              
+
               pdfGen.checkPageBreak(doc, imgHeight + 16);
-              
+
               doc.fontSize(pdfGen.fonts.small)
-                 .fillColor(pdfGen.colors.text.primary)
-                 .text(imgText, pdfGen.margins.page.left, doc.y, { width: doc.page.width - 100 });
+                .fillColor(pdfGen.colors.text.primary)
+                .text(imgText, pdfGen.margins.page.left, doc.y, { width: doc.page.width - 100 });
               doc.y += imgHeight + 4;
-              
+
               if (img.findings) {
                 const findingsText = `       Findings: ${img.findings}`;
                 const findingsHeight = doc.heightOfString(findingsText, { width: doc.page.width - 100 });
                 doc.fontSize(pdfGen.fonts.tiny)
-                   .fillColor(pdfGen.colors.text.secondary)
-                   .text(findingsText, pdfGen.margins.page.left, doc.y, { width: doc.page.width - 100 });
+                  .fillColor(pdfGen.colors.text.secondary)
+                  .text(findingsText, pdfGen.margins.page.left, doc.y, { width: doc.page.width - 100 });
                 doc.y += findingsHeight + 4;
               }
             });
             doc.y += 4;
           }
-          
+
           // Procedures
           if (apt.followUp.procedures && apt.followUp.procedures.length > 0) {
             doc.fontSize(pdfGen.fonts.small)
-               .fillColor(pdfGen.colors.text.secondary)
-               .text('  Procedures:', pdfGen.margins.page.left, doc.y);
+              .fillColor(pdfGen.colors.text.secondary)
+              .text('  Procedures:', pdfGen.margins.page.left, doc.y);
             doc.y += 4;
-            
+
             apt.followUp.procedures.forEach((proc, procIndex) => {
-              const status = proc.completed ? '✓ Completed' : 
-                             proc.scheduled ? '📅 Scheduled' : '○ Pending';
+              const status = proc.completed ? '✓ Completed' :
+                proc.scheduled ? '📅 Scheduled' : '○ Pending';
               const procText = `    ${procIndex + 1}. ${proc.procedureName || 'N/A'} - ${status}`;
               const procHeight = doc.heightOfString(procText, { width: doc.page.width - 100 });
-              
+
               pdfGen.checkPageBreak(doc, procHeight + 16);
-              
+
               doc.fontSize(pdfGen.fonts.small)
-                 .fillColor(pdfGen.colors.text.primary)
-                 .text(procText, pdfGen.margins.page.left, doc.y, { width: doc.page.width - 100 });
+                .fillColor(pdfGen.colors.text.primary)
+                .text(procText, pdfGen.margins.page.left, doc.y, { width: doc.page.width - 100 });
               doc.y += procHeight + 4;
-              
+
               if (proc.notes) {
                 const notesText = `       Notes: ${proc.notes}`;
                 const notesHeight = doc.heightOfString(notesText, { width: doc.page.width - 100 });
                 doc.fontSize(pdfGen.fonts.tiny)
-                   .fillColor(pdfGen.colors.text.secondary)
-                   .text(notesText, pdfGen.margins.page.left, doc.y, { width: doc.page.width - 100 });
+                  .fillColor(pdfGen.colors.text.secondary)
+                  .text(notesText, pdfGen.margins.page.left, doc.y, { width: doc.page.width - 100 });
                 doc.y += notesHeight + 4;
               }
             });
             doc.y += 4;
           }
-          
+
           // Medication Review & Compliance
           if (apt.followUp.prescriptionReview) {
             pdfGen.addInfoRow(doc, '  Medication Review', 'Required', { labelWidth: 140 });
@@ -546,42 +546,42 @@ router.get('/patient/:patientId', auth, async (req, res) => {
           if (apt.followUp.medicationCompliance && apt.followUp.medicationCompliance !== 'Unknown') {
             pdfGen.addInfoRow(doc, '  Medication Compliance', apt.followUp.medicationCompliance, { labelWidth: 140 });
           }
-          
+
           // Outcome
           if (apt.followUp.outcome && apt.followUp.outcome !== 'Pending') {
             pdfGen.addInfoRow(doc, '  Patient Outcome', apt.followUp.outcome, { labelWidth: 140 });
-            
+
             if (apt.followUp.outcomeNotes) {
               const notesHeight = doc.heightOfString(apt.followUp.outcomeNotes, { width: doc.page.width - 100 });
               doc.fontSize(pdfGen.fonts.small)
-                 .fillColor(pdfGen.colors.text.secondary)
-                 .text(`  Outcome Notes: ${apt.followUp.outcomeNotes}`, pdfGen.margins.page.left, doc.y, { width: doc.page.width - 100 });
+                .fillColor(pdfGen.colors.text.secondary)
+                .text(`  Outcome Notes: ${apt.followUp.outcomeNotes}`, pdfGen.margins.page.left, doc.y, { width: doc.page.width - 100 });
               doc.y += notesHeight + 4;
             }
           }
         }
-        
+
         if (apt.notes) {
           pdfGen.addInfoRow(doc, '  Notes', apt.notes, { labelWidth: 140 });
         }
-        
+
         doc.y += 8;
       });
-      
+
       if (appointments.length > 3) {
         const showingText = `Showing 3 of ${appointments.length} total appointments. See appointment table above for complete list.`;
         const showingHeight = doc.heightOfString(showingText, { width: doc.page.width - 100 });
         doc.fontSize(pdfGen.fonts.small)
-           .fillColor(pdfGen.colors.text.secondary)
-           .text(showingText, pdfGen.margins.page.left, doc.y, { width: doc.page.width - 100 });
+          .fillColor(pdfGen.colors.text.secondary)
+          .text(showingText, pdfGen.margins.page.left, doc.y, { width: doc.page.width - 100 });
         doc.y += showingHeight + 8;
       }
     } else {
       const noApptText = 'No appointment history available.';
       const noApptHeight = doc.heightOfString(noApptText, { width: doc.page.width - 100 });
       doc.fontSize(pdfGen.fonts.body)
-         .fillColor(pdfGen.colors.text.secondary)
-         .text(noApptText, pdfGen.margins.page.left, doc.y, { width: doc.page.width - 100 });
+        .fillColor(pdfGen.colors.text.secondary)
+        .text(noApptText, pdfGen.margins.page.left, doc.y, { width: doc.page.width - 100 });
       doc.y += noApptHeight + 12;
     }
 
@@ -591,20 +591,20 @@ router.get('/patient/:patientId', auth, async (req, res) => {
         color: pdfGen.colors.secondary,
         marginTop: 12
       });
-      
+
       const notesHeight = doc.heightOfString(patient.notes, {
         width: doc.page.width - 100,
         lineGap: 1
       });
       pdfGen.checkPageBreak(doc, notesHeight + 8);
-      
+
       doc.fontSize(pdfGen.fonts.body)
-         .fillColor(pdfGen.colors.text.primary)
-         .text(patient.notes, pdfGen.margins.page.left, doc.y, {
-           width: doc.page.width - 100,
-           align: 'justify',
-           lineGap: 1
-         });
+        .fillColor(pdfGen.colors.text.primary)
+        .text(patient.notes, pdfGen.margins.page.left, doc.y, {
+          width: doc.page.width - 100,
+          align: 'justify',
+          lineGap: 1
+        });
       doc.y += notesHeight + 8;
     }
 
@@ -614,16 +614,16 @@ router.get('/patient/:patientId', auth, async (req, res) => {
       color: pdfGen.colors.primary
     });
 
-    const lastVisit = appointments.length > 0 
+    const lastVisit = appointments.length > 0
       ? new Date(appointments[0].appointmentDate).toLocaleDateString('en-IN')
       : 'No visits recorded';
-    
+
     doc.fontSize(pdfGen.fonts.body)
-       .fillColor(pdfGen.colors.text.primary)
-       .text(`This comprehensive medical report was generated for ${patientName} (ID: ${patient._id?.toString().substring(0, 12)}) on ${new Date().toLocaleDateString('en-IN')}. The patient is currently registered with Movi Innovations and has completed ${completedAppts} appointment(s) to date. Last visit: ${lastVisit}. This document contains confidential medical information and should be handled with appropriate care.`, {
-         align: 'justify',
-         lineGap: 3
-       });
+      .fillColor(pdfGen.colors.text.primary)
+      .text(`This comprehensive medical report was generated for ${patientName} (ID: ${patient._id?.toString().substring(0, 12)}) on ${new Date().toLocaleDateString('en-IN')}. The patient is currently registered with Movi Innovations and has completed ${completedAppts} appointment(s) to date. Last visit: ${lastVisit}. This document contains confidential medical information and should be handled with appropriate care.`, {
+        align: 'justify',
+        lineGap: 3
+      });
 
     // Finalize with page numbers
     pdfGen.finalize(doc);
@@ -631,10 +631,10 @@ router.get('/patient/:patientId', auth, async (req, res) => {
   } catch (error) {
     console.error('Error generating patient report:', error);
     if (!res.headersSent) {
-      res.status(500).json({ 
-        success: false, 
+      res.status(500).json({
+        success: false,
         message: 'Failed to generate report',
-        error: error.message 
+        error: error.message
       });
     }
   }
@@ -646,12 +646,12 @@ router.get('/patient/:patientId', auth, async (req, res) => {
 router.get('/doctor/:doctorId', auth, async (req, res) => {
   try {
     const { doctorId } = req.params;
-    
+
     console.log(`\n========== DOCTOR REPORT DEBUG ==========`);
     console.log(`Requested Doctor ID: ${doctorId}`);
     console.log(`JWT User ID: ${req.user?.id}`);
     console.log(`JWT User Role: ${req.user?.role}`);
-    
+
     // Date range - last 7 days
     const endDate = new Date();
     const startDate = new Date();
@@ -660,7 +660,7 @@ router.get('/doctor/:doctorId', auth, async (req, res) => {
     // Fetch doctor from both collections
     let doctor = await User.findById(doctorId).lean();
     let doctorSource = null;
-    
+
     if (!doctor) {
       console.log(`❌ Doctor not found in User collection`);
       const staff = await Staff.findById(doctorId).lean();
@@ -684,32 +684,32 @@ router.get('/doctor/:doctorId', auth, async (req, res) => {
         doctor.name = `${doctor.firstName || ''} ${doctor.lastName || ''}`.trim();
       }
     }
-    
+
     if (!doctor) {
       console.log(`❌ Doctor not found in any collection!`);
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Doctor not found' 
+      return res.status(404).json({
+        success: false,
+        message: 'Doctor not found'
       });
     }
-    
+
     console.log(`Doctor Source: ${doctorSource}`);
     console.log(`Doctor Name: ${doctor.name}`);
-    
+
     // SMART ID RESOLUTION: Try to find the actual ID used in database
     let queryDoctorId = doctorId;
-    
+
     console.log(`\n--- SMART ID RESOLUTION ---`);
     console.log(`Original ID from request: ${doctorId}`);
-    
+
     // If doctor is from Staff collection, try to find matching User
     if (doctorSource === 'Staff' && doctor.email) {
       console.log(`Doctor from Staff collection - searching for User with same email...`);
-      const userDoctor = await User.findOne({ 
-        email: doctor.email, 
-        role: 'doctor' 
+      const userDoctor = await User.findOne({
+        email: doctor.email,
+        role: 'doctor'
       }).select('_id').lean();
-      
+
       if (userDoctor) {
         queryDoctorId = userDoctor._id;
         console.log(`✅ Found User ID: ${queryDoctorId}`);
@@ -720,24 +720,24 @@ router.get('/doctor/:doctorId', auth, async (req, res) => {
     } else {
       console.log(`Doctor from User collection - using same ID: ${doctorId}`);
     }
-    
+
     console.log(`Final query will use: ${queryDoctorId}`);
-    
+
     // Fetch patients using RESOLVED doctor ID
-    const patients = await Patient.find({ 
-      doctorId: queryDoctorId, 
-      deleted_at: null 
+    const patients = await Patient.find({
+      doctorId: queryDoctorId,
+      deleted_at: null
     })
-    .select('-__v')
-    .lean();
-    
+      .select('-__v')
+      .lean();
+
     console.log(`\n--- QUERY RESULTS ---`);
     console.log(`✅ Found ${patients.length} patients for doctorId: ${queryDoctorId}`);
     if (patients.length === 0 && queryDoctorId !== doctorId) {
       console.log(`⚠️  No patients found with User ID, trying with Staff ID...`);
-      const patientsWithStaffId = await Patient.find({ 
-        doctorId: doctorId, 
-        deleted_at: null 
+      const patientsWithStaffId = await Patient.find({
+        doctorId: doctorId,
+        deleted_at: null
       }).lean();
       console.log(`   Found ${patientsWithStaffId.length} patients with Staff ID`);
       if (patientsWithStaffId.length > 0) {
@@ -745,14 +745,14 @@ router.get('/doctor/:doctorId', auth, async (req, res) => {
         patients.push(...patientsWithStaffId);
       }
     }
-    
+
     // Fetch ALL appointments for this doctor
     const allAppointments = await Appointment.find({ doctorId: queryDoctorId }).lean();
     console.log(`✅ Found ${allAppointments.length} total appointments for doctorId: ${queryDoctorId}`);
-    
+
     // Filter appointments for the week (using startAt field from Appointment model)
-    const weekAppointments = allAppointments.filter(apt => 
-      new Date(apt.startAt) >= startDate && 
+    const weekAppointments = allAppointments.filter(apt =>
+      new Date(apt.startAt) >= startDate &&
       new Date(apt.startAt) <= endDate
     );
     console.log(`✅ Found ${weekAppointments.length} appointments this week`);
@@ -766,8 +766,8 @@ router.get('/doctor/:doctorId', auth, async (req, res) => {
 
     const filename = `Dr_${doctor.name.replace(/\s+/g, '_')}`;
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', 
-      `attachment; filename="${filename}_Performance_Report_${Date.now()}.pdf"`);
+    res.setHeader('Content-Disposition',
+      `inline; filename="${filename}_Performance_Report_${Date.now()}.pdf"`);
 
     doc.pipe(res);
 
@@ -787,19 +787,19 @@ router.get('/doctor/:doctorId', auth, async (req, res) => {
     // Basic Information
     pdfGen.addInfoRow(doc, 'Doctor ID', doctor._id?.toString(), { labelWidth: 160 });
     pdfGen.addInfoRow(doc, 'Name', `Dr. ${doctor.name}`, { labelWidth: 160 });
-    pdfGen.addInfoRow(doc, 'Specialization', 
+    pdfGen.addInfoRow(doc, 'Specialization',
       doctor.specialization || doctor.designation || doctor.metadata?.specialization || 'General Physician',
       { labelWidth: 160 }
     );
-    pdfGen.addInfoRow(doc, 'Qualification', 
+    pdfGen.addInfoRow(doc, 'Qualification',
       doctor.qualification || doctor.metadata?.qualification || 'MBBS',
       { labelWidth: 160 }
     );
-    
+
     // Contact Information
     pdfGen.addInfoRow(doc, 'Email', doctor.email || 'N/A', { labelWidth: 160 });
     pdfGen.addInfoRow(doc, 'Phone', doctor.phone || doctor.contact || 'N/A', { labelWidth: 160 });
-    
+
     // Additional Details (if from Staff collection)
     if (doctor.department) {
       pdfGen.addInfoRow(doc, 'Department', doctor.department, { labelWidth: 160 });
@@ -816,9 +816,9 @@ router.get('/doctor/:doctorId', auth, async (req, res) => {
     if (doctor.location) {
       pdfGen.addInfoRow(doc, 'Location', doctor.location, { labelWidth: 160 });
     }
-    
+
     // Registration date
-    pdfGen.addInfoRow(doc, 'Account Created', 
+    pdfGen.addInfoRow(doc, 'Account Created',
       doctor.createdAt ? new Date(doctor.createdAt).toLocaleDateString('en-IN') : 'N/A',
       { labelWidth: 160 }
     );
@@ -844,27 +844,27 @@ router.get('/doctor/:doctorId', auth, async (req, res) => {
     const totalCompleted = allAppointments.filter(a => a.status === 'completed').length;
 
     const performanceStats = [
-      { 
-        icon: '', 
-        value: patients.length, 
+      {
+        icon: '',
+        value: patients.length,
         label: 'Total Patients',
         color: pdfGen.colors.secondary
       },
-      { 
-        icon: '', 
-        value: weekAppointments.length, 
+      {
+        icon: '',
+        value: weekAppointments.length,
         label: 'This Week\'s Appointments',
         color: pdfGen.colors.accent
       },
-      { 
-        icon: '', 
-        value: weekCompleted, 
+      {
+        icon: '',
+        value: weekCompleted,
         label: 'Completed This Week',
         color: pdfGen.colors.success
       },
-      { 
-        icon: '', 
-        value: weekScheduled, 
+      {
+        icon: '',
+        value: weekScheduled,
         label: 'Scheduled This Week',
         color: pdfGen.colors.warning
       }
@@ -878,34 +878,34 @@ router.get('/doctor/:doctorId', auth, async (req, res) => {
       marginTop: 15
     });
 
-    const completionRate = allAppointments.length > 0 
+    const completionRate = allAppointments.length > 0
       ? ((totalCompleted / allAppointments.length) * 100).toFixed(1)
       : 0;
-    
+
     const avgPatientsPerDay = (weekAppointments.length / 7).toFixed(1);
 
     const metricsStats = [
-      { 
-        icon: '', 
-        value: allAppointments.length, 
+      {
+        icon: '',
+        value: allAppointments.length,
         label: 'Total Appointments (All-Time)',
         color: pdfGen.colors.secondary
       },
-      { 
-        icon: '', 
-        value: totalCompleted, 
+      {
+        icon: '',
+        value: totalCompleted,
         label: 'Total Completed (All-Time)',
         color: pdfGen.colors.success
       },
-      { 
-        icon: '', 
-        value: `${completionRate}%`, 
+      {
+        icon: '',
+        value: `${completionRate}%`,
         label: 'Completion Rate',
         color: pdfGen.colors.accent
       },
-      { 
-        icon: '', 
-        value: avgPatientsPerDay, 
+      {
+        icon: '',
+        value: avgPatientsPerDay,
         label: 'Avg. Patients/Day',
         color: pdfGen.colors.warning
       }
@@ -923,13 +923,13 @@ router.get('/doctor/:doctorId', auth, async (req, res) => {
       const headers = ['Date', 'Time', 'Patient', 'Reason', 'Status'];
       const rows = weekAppointments.slice(0, 10).map(apt => {
         // Find patient by matching IDs (handle both string and ObjectId)
-        const patient = patients.find(p => 
+        const patient = patients.find(p =>
           p._id.toString() === (apt.patientId?.toString() || apt.patientId)
         );
-        const patientName = patient 
+        const patientName = patient
           ? `${patient.firstName} ${patient.lastName || ''}`.trim()
           : 'Unknown Patient';
-        
+
         return [
           new Date(apt.startAt).toLocaleDateString('en-IN'),
           new Date(apt.startAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
@@ -945,8 +945,8 @@ router.get('/doctor/:doctorId', auth, async (req, res) => {
       });
     } else {
       doc.fontSize(pdfGen.fonts.body)
-         .fillColor(pdfGen.colors.text.secondary)
-         .text('No appointments scheduled for this week.', pdfGen.margins.page.left, doc.y);
+        .fillColor(pdfGen.colors.text.secondary)
+        .text('No appointments scheduled for this week.', pdfGen.margins.page.left, doc.y);
       doc.y += 20;
     }
 
@@ -1004,13 +1004,13 @@ router.get('/doctor/:doctorId', auth, async (req, res) => {
       const headers = ['Patient Name', 'Age', 'Gender', 'Last Visit', 'Total Visits'];
       const rows = patients.slice(0, 10).map(p => {
         // Match appointments with proper ID comparison
-        const patientAppts = allAppointments.filter(a => 
+        const patientAppts = allAppointments.filter(a =>
           (a.patientId?.toString() || a.patientId) === p._id.toString()
         );
-        const lastAppt = patientAppts.sort((a, b) => 
+        const lastAppt = patientAppts.sort((a, b) =>
           new Date(b.startAt) - new Date(a.startAt)
         )[0];
-        
+
         return [
           `${p.firstName} ${p.lastName || ''}`.trim(),
           (p.age || 'N/A').toString(),
@@ -1033,11 +1033,11 @@ router.get('/doctor/:doctorId', auth, async (req, res) => {
     });
 
     doc.fontSize(pdfGen.fonts.body)
-       .fillColor(pdfGen.colors.text.primary)
-       .text(`This performance report for Dr. ${doctor.name} covers the period from ${startDate.toLocaleDateString('en-IN')} to ${endDate.toLocaleDateString('en-IN')}. During this week, the doctor handled ${weekAppointments.length} appointment(s) with ${patients.length} total registered patient(s). The overall completion rate stands at ${completionRate}%, demonstrating ${completionRate > 80 ? 'excellent' : 'good'} performance. The doctor maintains an average of ${avgPatientsPerDay} patients per day. This report was generated by Movi Innovations HMS on ${new Date().toLocaleDateString('en-IN')}.`, {
-         align: 'justify',
-         lineGap: 3
-       });
+      .fillColor(pdfGen.colors.text.primary)
+      .text(`This performance report for Dr. ${doctor.name} covers the period from ${startDate.toLocaleDateString('en-IN')} to ${endDate.toLocaleDateString('en-IN')}. During this week, the doctor handled ${weekAppointments.length} appointment(s) with ${patients.length} total registered patient(s). The overall completion rate stands at ${completionRate}%, demonstrating ${completionRate > 80 ? 'excellent' : 'good'} performance. The doctor maintains an average of ${avgPatientsPerDay} patients per day. This report was generated by Movi Innovations HMS on ${new Date().toLocaleDateString('en-IN')}.`, {
+        align: 'justify',
+        lineGap: 3
+      });
 
     // Finalize
     pdfGen.finalize(doc);
@@ -1045,10 +1045,10 @@ router.get('/doctor/:doctorId', auth, async (req, res) => {
   } catch (error) {
     console.error('Error generating doctor report:', error);
     if (!res.headersSent) {
-      res.status(500).json({ 
-        success: false, 
+      res.status(500).json({
+        success: false,
         message: 'Failed to generate report',
-        error: error.message 
+        error: error.message
       });
     }
   }

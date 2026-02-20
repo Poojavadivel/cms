@@ -48,7 +48,7 @@ router.get('/patient/:patientId', auth, async (req, res) => {
     // Set response headers
     const filename = `${patientName.replace(/\s+/g, '_')}_Medical_Report_${Date.now()}.pdf`;
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
 
     // Stream PDF using browser-compatible approach
     const PdfPrinter = require('pdfmake');
@@ -232,7 +232,7 @@ router.get('/doctor/:doctorId', auth, async (req, res) => {
     // Set response headers
     const filename = `${doctorName.replace(/\s+/g, '_')}_Performance_Report_${Date.now()}.pdf`;
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
 
     // Stream PDF
     const PdfPrinter = require('pdfmake');
@@ -282,7 +282,7 @@ router.get('/staff/:staffId', auth, async (req, res) => {
     // Set response headers
     const filename = `${staffName.replace(/\s+/g, '_')}_Staff_Report_${Date.now()}.pdf`;
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
 
     // Stream PDF
     const PdfPrinter = require('pdfmake');
@@ -332,7 +332,7 @@ router.get('/payroll/:id', auth, async (req, res) => {
 
     // Set response headers
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
 
     // Stream PDF
     const PdfPrinter = require('pdfmake');
@@ -450,7 +450,7 @@ router.get('/pathology/:id', auth, async (req, res) => {
 
     // Set response headers
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${safeFileName}"`);
+    res.setHeader('Content-Disposition', `inline; filename="${safeFileName}"`);
 
     // Stream PDF
     console.log(`[Pathology Report] Creating PDF printer and streaming...`);
