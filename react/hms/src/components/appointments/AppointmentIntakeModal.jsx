@@ -29,6 +29,7 @@ const AppointmentIntakeModal = ({ isOpen, onClose, appointmentId, onSuccess }) =
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
+  const [successNotification, setSuccessNotification] = useState(null);
 
   // Form state
   const [height, setHeight] = useState('');
@@ -190,25 +191,7 @@ const AppointmentIntakeModal = ({ isOpen, onClose, appointmentId, onSuccess }) =
     setError('');
 
     try {
-      // Step 1: Check stock availability if pharmacy items exist
-      if (pharmacyRows.length > 0) {
-        console.log('🔍 Checking stock availability for pharmacy items...');
-        const stockCheck = await pharmacyService.checkStockAvailability(pharmacyRows);
-
-        if (stockCheck.hasWarnings) {
-          const warningMessages = stockCheck.warnings.map(w => w.message).join('\n');
-          const shouldContinue = window.confirm(
-            `⚠️ Stock Warning:\n\n${warningMessages}\n\nDo you want to continue anyway?`
-          );
-
-          if (!shouldContinue) {
-            setIsSaving(false);
-            return;
-          }
-        }
-      }
-
-      // Step 2: Save intake data to appointment
+      // Save intake data to appointment
       // Extract patient ID safely
       let patientId = null;
       if (appointment?.patientId) {
@@ -276,88 +259,40 @@ const AppointmentIntakeModal = ({ isOpen, onClose, appointmentId, onSuccess }) =
       let successMessage = '✅ Intake saved successfully!';
       const details = [];
 
-      // Step 3: Create prescription if pharmacy items exist
+      // Step 3: SKIP automatic prescription creation - let pharmacist do it manually
+      // Pharmacy items are already saved in intake.meta.pharmacyItems by the backend
       if (pharmacyRows.length > 0) {
-        try {
-          const prescriptionPayload = {
-            patientId: appointment?.patientId?._id || appointment?.patientId,
-            patientName: appointment?.clientName || 'Unknown Patient',
-            appointmentId: appointmentId,
-            intakeId: savedIntake?._id || savedIntake?.id || appointmentId,
-            items: pharmacyRows.map(row => ({
-              medicineId: row.medicineId,
-              Medicine: row.Medicine || '',
-              Dosage: row.Dosage || '',
-              Frequency: row.Frequency || '',
-              duration: row.duration || '',
-              Duration: row.duration || '',
-              notes: row.Notes || '',
-              Notes: row.Notes || '',
-              quantity: row.quantity || '1',
-              price: row.price || '0',
-            })),
-
-            paid: false,
-            paymentMethod: 'Cash',
-          };
-
-          console.log('📝 Creating prescription with', prescriptionPayload.items.length, 'items...');
-          const prescriptionResult = await pharmacyService.createPrescriptionFromIntake(prescriptionPayload);
-
-          if (prescriptionResult) {
-            const total = prescriptionResult.total || 0;
-            const reductions = prescriptionResult.stockReductions || [];
-            console.log('✅ Prescription created! Total: ₹' + total);
-            console.log('📦 Stock reduced from ' + reductions.length + ' batch(es)');
-            details.push(`💊 Prescription created: ₹${total}`);
-            details.push(`📦 Stock reduced: ${reductions.length} batch(es)`);
-          }
-        } catch (prescriptionError) {
-          console.warn('⚠️ Warning: Failed to create prescription:', prescriptionError);
-          details.push('⚠️ Warning: Failed to create prescription');
-        }
+        console.log('💊 Prescription items saved to intake (pending pharmacist review)');
+        details.push(`💊 ${pharmacyRows.length} medicine(s) added to prescription (pending dispensing)`);
       }
 
-      // Step 4: Create pathology reports if pathology items exist
+      // Step 4: SKIP automatic lab report creation - let pathologist do it manually
+      // Pathology items are already saved in intake.meta.pathologyItems by the backend
       if (pathologyRows.length > 0) {
-        try {
-          const pathologyPayload = {
-            patientId: appointment?.patientId?._id || appointment?.patientId,
-            patientName: appointment?.clientName || 'Unknown Patient',
-            appointmentId: appointmentId,
-            intakeId: savedIntake?._id || savedIntake?.id || appointmentId,
-            pathologyRows: pathologyRows,
-          };
+        console.log('🧪 Lab test orders saved to intake (pending pathologist review)');
+        details.push(`🧪 ${pathologyRows.length} test(s) ordered (pending processing)`);
+      }
 
-          console.log('🧪 Creating lab reports for', pathologyPayload.pathologyRows.length, 'tests...');
-          const pathologyResult = await pathologyService.createReportsFromIntake(pathologyPayload);
+      // Prepare detailed success notification
+      const notificationData = {
+        message: successMessage,
+        details: details,
+        hasPharmacy: pharmacyRows.length > 0,
+        hasPathology: pathologyRows.length > 0,
+        pharmacyCount: pharmacyRows.length,
+        pathologyCount: pathologyRows.length
+      };
 
-          if (pathologyResult && pathologyResult.success) {
-            console.log('✅ Lab reports created:', pathologyResult.reports.length);
-            details.push(`🧪 Lab reports created: ${pathologyResult.reports.length} test(s)`);
+      // Show success notification
+      setSuccessNotification(notificationData);
 
-            if (pathologyResult.errors && pathologyResult.errors.length > 0) {
-              console.warn('⚠️ Some lab reports failed:', pathologyResult.errors);
-              details.push(`⚠️ ${pathologyResult.errors.length} test(s) failed`);
-            }
-          }
-        } catch (pathologyError) {
-          console.warn('⚠️ Warning: Failed to create lab reports:', pathologyError);
-          details.push('⚠️ Warning: Failed to create lab reports');
+      // Wait for user to see notification before closing
+      setTimeout(async () => {
+        if (onSuccess) {
+          await onSuccess();
         }
-      }
-
-      // Show consolidated success message
-      if (details.length > 0) {
-        successMessage += '\n\n' + details.join('\n');
-      }
-      alert(successMessage);
-
-      if (onSuccess) {
-        await onSuccess();
-      }
-
-      onClose();
+        onClose();
+      }, 3000);
     } catch (err) {
       setError(err.message || 'Failed to save intake data');
       console.error('❌ Error saving intake:', err);
@@ -429,6 +364,46 @@ const AppointmentIntakeModal = ({ isOpen, onClose, appointmentId, onSuccess }) =
   return (
     <div className="intake-modal-overlay">
       <div className="intake-modal-dialog">
+        {/* Success Notification Overlay */}
+        {successNotification && (
+          <div className="intake-success-overlay">
+            <div className="intake-success-card">
+              <div className="success-header">
+                <div className="success-icon">✅</div>
+                <h3>Intake Saved Successfully!</h3>
+              </div>
+              <div className="success-body">
+                {successNotification.details.map((detail, idx) => (
+                  <div key={idx} className="success-detail">{detail}</div>
+                ))}
+                
+                {successNotification.hasPharmacy && (
+                  <div className="success-navigation-hint pharmacy-hint">
+                    <div className="hint-icon">💊</div>
+                    <div className="hint-text">
+                      <strong>Prescription Order Created</strong>
+                      <p>{successNotification.pharmacyCount} medicine(s) sent to Pharmacy (Pending Dispensing)</p>
+                    </div>
+                  </div>
+                )}
+                
+                {successNotification.hasPathology && (
+                  <div className="success-navigation-hint pathology-hint">
+                    <div className="hint-icon">🧪</div>
+                    <div className="hint-text">
+                      <strong>Lab Test Order Created</strong>
+                      <p>{successNotification.pathologyCount} test(s) sent to Pathology (Pending Processing)</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="success-footer">
+                <p className="auto-close-hint">Closing automatically...</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Floating Close Button */}
         <button
           className="intake-modal-close-floating"

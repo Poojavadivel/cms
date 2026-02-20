@@ -103,18 +103,46 @@ const Pathology = ({ initialSearchQuery = '' }) => {
     }
   }, [initialSearchQuery]);
 
-  // Fetch reports from API
+  // Fetch reports from API (both pending tests and completed reports)
   const fetchReports = useCallback(async () => {
     setIsLoading(true);
     try {
-      const data = await pathologyService.fetchReports({ limit: 100 });
-      console.log('✅ Fetched pathology reports:', data);
+      // Fetch both pending test orders and completed reports
+      const [completedReports, pendingTests] = await Promise.all([
+        pathologyService.fetchReports({ limit: 100 }),
+        pathologyService.fetchPendingTests({ limit: 50 })
+      ]);
+      
+      console.log('✅ Fetched completed reports:', completedReports.length);
+      console.log('✅ Fetched pending tests:', pendingTests.length);
 
-      setReports(data);
-      setFilteredReports(data);
+      // Transform pending tests to match report structure
+      const pendingWithStatus = pendingTests.map(test => ({
+        ...test,
+        id: test._id,
+        status: 'Pending',
+        testName: test.pathologyItems?.[0]?.testName || 'Multiple Tests',
+        isPending: true, // Flag to identify pending tests
+        // Flatten pathologyItems for display
+        testCount: test.pathologyItems?.length || 0
+      }));
+
+      // Mark completed reports
+      const completedWithStatus = completedReports.map(report => ({
+        ...report,
+        isPending: false
+      }));
+
+      // Combine: Show pending tests first, then completed reports
+      const allData = [...pendingWithStatus, ...completedWithStatus];
+      
+      console.log('📊 Total items:', allData.length, '(Pending:', pendingWithStatus.length, ', Completed:', completedWithStatus.length, ')');
+
+      setReports(allData);
+      setFilteredReports(allData);
     } catch (error) {
       console.error('❌ Failed to fetch reports:', error);
-      alert('Failed to load pathology reports: ' + error.message);
+      alert('Failed to load pathology data: ' + error.message);
     } finally {
       setIsLoading(false);
     }
@@ -182,6 +210,27 @@ const Pathology = ({ initialSearchQuery = '' }) => {
   const handleEditReport = (report) => {
     setEditingReport(report);
     setShowForm(true);
+  };
+
+  // Handle process pending test (create report from pending order)
+  const handleProcessPendingTest = (pendingTest) => {
+    // Pre-fill form with pending test data
+    const prefilledData = {
+      patientId: pendingTest.patientId,
+      patientName: pendingTest.patientName,
+      appointmentId: pendingTest.appointmentId,
+      testName: pendingTest.testName,
+      testType: pendingTest.pathologyItems?.[0]?.category || 'General',
+      priority: pendingTest.pathologyItems?.[0]?.priority || 'Normal',
+      notes: pendingTest.notes || '',
+      intakeId: pendingTest._id, // Link back to intake
+      pathologyItems: pendingTest.pathologyItems
+    };
+    
+    setEditingReport(prefilledData);
+    setShowForm(true);
+    
+    console.log('📝 Processing pending test:', prefilledData);
   };
 
   // Handle form submit
@@ -406,7 +455,7 @@ const Pathology = ({ initialSearchQuery = '' }) => {
                 <th style={{ width: '22%' }}>Test</th>
                 <th style={{ width: '15%' }}>Report Date</th>
                 <th style={{ width: '12%' }}>Status</th>
-                <th style={{ width: '15%' }}>Technician</th>
+                <th style={{ width: '15%' }}>Ordered By / Tech</th>
                 <th style={{ width: '14%' }}>Actions</th>
               </tr>
             </thead>
@@ -416,35 +465,69 @@ const Pathology = ({ initialSearchQuery = '' }) => {
                   <td>
                     <div className="info-group">
                       <span className="primary">{report.patientName || 'Unknown'}</span>
-                      <span className="secondary">{report.patientCode || 'PAT-00'}</span>
+                      <span className="secondary">{report.patientCode || report.patientId || 'PAT-00'}</span>
                     </div>
                   </td>
                   <td>
                     <div className="info-group">
-                      <span className="primary">{report.testName || 'N/A'}</span>
+                      <span className="primary">
+                        {report.testName || 'N/A'}
+                        {report.isPending && report.testCount > 1 && (
+                          <span style={{ marginLeft: '8px', fontSize: '11px', color: '#64748b' }}>
+                            +{report.testCount - 1} more
+                          </span>
+                        )}
+                      </span>
                       <div className="flex items-center gap-2">
-                        <span className="secondary">{report.testType || 'General'}</span>
+                        <span className="secondary">{report.testType || report.testCategory || 'General'}</span>
+                        {report.isPending && (
+                          <span className="artifact-tag" style={{ background: '#dbeafe', color: '#1e40af' }} title="Pending Order from Doctor">
+                            ORDER
+                          </span>
+                        )}
                         {report.pdfRef && <span className="artifact-tag pdf" title="Searchable PDF Attached">PDF</span>}
                         {report.imageRef && <span className="artifact-tag img" title="Visual Scan Attached">IMG</span>}
                       </div>
                     </div>
                   </td>
-                  <td>{formatDate(report.reportDate)}</td>
+                  <td>{formatDate(report.reportDate || report.createdAt)}</td>
                   <td><StatusBadge status={report.status} /></td>
                   <td>
-                    <span className="technician-badge">{report.technician || 'N/A'}</span>
+                    <span className="technician-badge">
+                      {report.isPending ? (
+                        <span style={{ color: '#64748b', fontStyle: 'italic' }}>
+                          {report.doctorName || 'Dr. ' + (report.doctorId?.firstName || 'N/A')}
+                        </span>
+                      ) : (
+                        report.technician || 'N/A'
+                      )}
+                    </span>
                   </td>
                   <td>
                     <div className="action-buttons-group">
                       <button className="btn-action view" title="View" onClick={() => handleView(report)}>
                         <Icons.Eye />
                       </button>
-                      <button className="btn-action edit" title="Edit" onClick={() => handleEditReport(report)}>
-                        <Icons.Edit />
-                      </button>
-                      <button className="btn-action download" title="Download" onClick={() => handleDownloadReport(report)} disabled={isDownloading}>
-                        <Icons.Download />
-                      </button>
+                      {!report.isPending && (
+                        <>
+                          <button className="btn-action edit" title="Edit" onClick={() => handleEditReport(report)}>
+                            <Icons.Edit />
+                          </button>
+                          <button className="btn-action download" title="Download" onClick={() => handleDownloadReport(report)} disabled={isDownloading}>
+                            <Icons.Download />
+                          </button>
+                        </>
+                      )}
+                      {report.isPending && (
+                        <button 
+                          className="btn-action" 
+                          title="Process Test" 
+                          onClick={() => handleProcessPendingTest(report)}
+                          style={{ background: '#dbeafe', color: '#1e40af' }}
+                        >
+                          <Icons.Plus />
+                        </button>
+                      )}
                       <button className="btn-action delete" title="Delete" onClick={() => handleDeleteReport(report)}>
                         <Icons.Delete />
                       </button>
