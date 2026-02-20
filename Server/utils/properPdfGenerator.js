@@ -1117,38 +1117,98 @@ class ProperPdfGenerator {
         columnGap: 20
       },
       { text: '', margin: [0, 20] },
-      {
-        stack: [
-          this._sectionHeader('X-RAY & DIAGNOSTIC DETAILS'),
-          {
-            table: {
-              widths: ['*'],
-              body: [[
-                {
-                  stack: [
-                    { text: 'TEST NAME', fontSize: 9, color: '#64748b', bold: true, margin: [0, 0, 0, 4] },
-                    { text: report.testName || 'X-RAY SCAN', fontSize: 16, bold: true, color: '#1e3a8a' },
-                    { text: '', margin: [0, 8] },
-                    { text: 'DIAGNOSTIC FINDINGS / REMARKS', fontSize: 9, color: '#64748b', bold: true, margin: [0, 0, 0, 4] },
-                    { text: report.remarks || 'Visual scan completed. Detailed interpretation provided in the attached image.', fontSize: 11, italics: true, color: '#334155', lineHeight: 1.4 },
-                    publicUrl ? { text: '', margin: [0, 15] } : {},
-                    publicUrl ? { text: 'DIGITAL SCAN ACCESS (WEB URL)', fontSize: 9, color: '#64748b', bold: true, margin: [0, 0, 0, 4] } : {},
-                    publicUrl ? { text: publicUrl, fontSize: 10, color: '#2563eb', decoration: 'underline', link: publicUrl } : {}
-                  ],
-                  padding: [20, 20, 20, 20],
-                  fillColor: '#f8fafc'
+      (() => {
+        // Build parameter/results table
+        const results = report.results;
+        const hasResults = results && typeof results === 'object' && Object.keys(results).length > 0;
+
+        // Check if results is an array of parameter objects
+        const resultsArray = Array.isArray(results) ? results :
+          (hasResults && Array.isArray(results.parameters) ? results.parameters : null);
+
+        if (resultsArray && resultsArray.length > 0) {
+          // Render structured results table
+          const tableBody = [
+            [
+              { text: 'Parameter', style: 'tableHeader' },
+              { text: 'Result', style: 'tableHeader' },
+              { text: 'Unit', style: 'tableHeader' },
+              { text: 'Reference Range', style: 'tableHeader' },
+              { text: 'Flag', style: 'tableHeader' }
+            ]
+          ];
+
+          resultsArray.forEach(row => {
+            const flag = row.flag || row.status || '';
+            const flagColor = flag === 'High' || flag === 'H' ? '#ef4444' :
+              flag === 'Low' || flag === 'L' ? '#3b82f6' : '#1f2937';
+            tableBody.push([
+              { text: row.parameter || row.name || row.test || '-', style: 'tableCell' },
+              { text: String(row.result || row.value || '-'), style: 'tableCell', bold: true },
+              { text: row.unit || '-', style: 'tableCell' },
+              { text: row.referenceRange || row.reference || row.normalRange || '-', style: 'tableCell' },
+              { text: flag || '-', style: 'tableCell', color: flagColor, bold: !!flag }
+            ]);
+          });
+
+          return {
+            stack: [
+              this._sectionHeader('Test Results'),
+              {
+                table: {
+                  headerRows: 1,
+                  widths: ['30%', '15%', '13%', '30%', '12%'],
+                  body: tableBody
+                },
+                layout: {
+                  fillColor: (rowIndex) => rowIndex === 0 ? '#1a365d' : (rowIndex % 2 === 0 ? '#f9fafb' : null)
+                },
+                margin: [0, 0, 0, 10]
+              }
+            ]
+          };
+        } else {
+          // No structured results — show fallback message referencing attached file
+          return {
+            stack: [
+              this._sectionHeader('Test Results'),
+              {
+                table: {
+                  widths: ['*'],
+                  body: [[
+                    {
+                      stack: [
+                        { text: report.testName || 'Lab Test', fontSize: 14, bold: true, color: '#1e3a8a', margin: [0, 0, 0, 8] },
+                        {
+                          text: report.remarks
+                            ? `Remarks: ${report.remarks}`
+                            : (publicUrl
+                              ? 'Detailed results are available in the attached document. Use the link below to view the complete report.'
+                              : 'Detailed results are available in the original attachment uploaded with this report.'),
+                          fontSize: 11,
+                          italics: true,
+                          color: '#334155',
+                          lineHeight: 1.5,
+                          margin: [0, 0, 0, publicUrl ? 12 : 0]
+                        },
+                        publicUrl ? { text: 'View Attached Document', fontSize: 10, color: '#2563eb', decoration: 'underline', link: publicUrl } : {}
+                      ],
+                      margin: [16, 16, 16, 16],
+                      fillColor: '#f8fafc'
+                    }
+                  ]]
+                },
+                layout: {
+                  hLineWidth: () => 1,
+                  vLineWidth: () => 1,
+                  hLineColor: () => '#e2e8f0',
+                  vLineColor: () => '#e2e8f0'
                 }
-              ]]
-            },
-            layout: {
-              hLineWidth: () => 1,
-              vLineWidth: () => 1,
-              hLineColor: () => '#e2e8f0',
-              vLineColor: () => '#e2e8f0'
-            }
-          }
-        ]
-      },
+              }
+            ]
+          };
+        }
+      })(),
       { text: '', margin: [0, 20] },
       {
         stack: [
