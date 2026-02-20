@@ -427,3 +427,150 @@
     justify-content: center;
   }
 }
+/* Success Notification Overlay */
+.intake-success-overlay {
+  position: absolute;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.intake-success-card {
+  background: #FFFFFF;
+  border-radius: 16px;
+  padding: 32px;
+  max-width: 500px;
+  width: 90%;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  animation: successSlideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes successSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.success-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #E5E7EB;
+}
+
+.success-icon {
+  font-size: 48px;
+  animation: successBounce 0.6s ease-out;
+}
+
+@keyframes successBounce {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+}
+
+.success-header h3 {
+  font-family: 'Lexend', sans-serif;
+  font-size: 20px;
+  font-weight: 600;
+  color: #0F172A;
+  margin: 0;
+}
+
+.success-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.success-detail {
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  color: #475569;
+  padding: 8px 12px;
+  background: #F8FAFC;
+  border-radius: 8px;
+  border-left: 3px solid #10B981;
+}
+
+.success-navigation-hint {
+  display: flex;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 12px;
+  margin-top: 8px;
+  animation: hintSlide 0.5s ease-out;
+}
+
+@keyframes hintSlide {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.pharmacy-hint {
+  background: linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%);
+  border: 1px solid #C7D2FE;
+}
+
+.pathology-hint {
+  background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
+  border: 1px solid #FCD34D;
+}
+
+.hint-icon {
+  font-size: 32px;
+  line-height: 1;
+}
+
+.hint-text {
+  flex: 1;
+}
+
+.hint-text strong {
+  font-family: 'Lexend', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  color: #1E293B;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.hint-text p {
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  color: #475569;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.success-footer {
+  text-align: center;
+  padding-top: 16px;
+  border-top: 1px solid #E5E7EB;
+}
+
+.auto-close-hint {
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  color: #94A3B8;
+  margin: 0;
+  font-style: italic;
+}
