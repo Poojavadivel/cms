@@ -413,8 +413,8 @@ async function callGeminiChatWithRetries(messages, temperature = DEFAULT_TEMPERA
       const data = await response.json();
       
       // Extract content from OpenAI-compatible response format
-      // This API returns reasoning_content instead of content
-      const content = data?.choices?.[0]?.message?.reasoning_content || data?.choices?.[0]?.message?.content;
+      // Use content (final answer) not reasoning_content (internal thinking)
+      const content = data?.choices?.[0]?.message?.content || data?.choices?.[0]?.message?.reasoning_content;
 
       if (content && String(content).trim()) {
         metrics.successes += 1;
@@ -640,36 +640,32 @@ router.post("/chat", auth, async (req, res) => {
     // Get role-specific system prompt
     const systemPrompt = ENTERPRISE_SYSTEM_PROMPTS[userRole] || ENTERPRISE_SYSTEM_PROMPTS.default;
     
-    // greeting short-circuit with role awareness
+    // greeting short-circuit with simple predefined responses
     const lower = trimmed.toLowerCase();
     const isGreeting = lower.match(/\b(hi|hello|hey|greetings|thanks|thank you)\b/);
     if (isGreeting) {
+      // Use predefined friendly greetings instead of AI generation
+      const greetingResponses = [
+        "Hello! How can I assist you today?",
+        "Hi there! What can I help you with?",
+        "Hey! I'm here to help. What do you need?",
+        "Hello! How may I help you today?",
+        "Hi! What brings you here today?",
+      ];
+      
+      const thankYouResponses = [
+        "You're welcome! Let me know if you need anything else.",
+        "Happy to help! Feel free to ask if you have more questions.",
+        "My pleasure! Anything else I can assist with?",
+      ];
+      
       let finalReply;
-      try {
-        const greetingMessages = [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: `User sent a greeting: ${trimmed}. Reply warmly and professionally in 1-2 sentences.` },
-        ];
-        
-        const summaryText = await callGeminiChatWithRetries(
-          greetingMessages,
-          DEFAULT_TEMPERATURE,
-          Math.max(150, Math.min(DEFAULT_MAX_COMPLETION_TOKENS, 300)),
-          {
-            userId: user.id,
-            userRole: userRole,
-            userName: user.firstName || user.email,
-            endpoint: 'chatbot',
-            requestType: 'greeting',
-            sessionId: chatId,
-            metadata: { userMessage: trimmed }
-          }
-        );
-        finalReply = String(summaryText).trim();
-      } catch (summErr) {
-        console.error(`[${cid}] Greeting call failed:`, summErr);
-        finalReply = "Hello! How can I help you today?";
+      if (lower.includes('thank')) {
+        finalReply = thankYouResponses[Math.floor(Math.random() * thankYouResponses.length)];
+      } else {
+        finalReply = greetingResponses[Math.floor(Math.random() * greetingResponses.length)];
       }
+      
       return saveAndReturnChat(cid, tStart, chatId, user, trimmed, finalReply, res);
     }
 
@@ -872,20 +868,28 @@ Return strictly valid JSON.`;
     }
 
     if (isDataMissing) {
-      try {
-        finalReply = await callGeminiChatWithRetries(
-          [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: `User Query: ${trimmed}\n\nNo relevant records were found in the database. Please respond professionally acknowledging this.` },
-          ],
-          DEFAULT_TEMPERATURE,
-          300
-        );
-        finalReply = String(finalReply).trim();
-      } catch (summErr) {
-        console.error(`[${cid}] Summarizer (Fallback) call failed:`, summErr);
-        finalReply = "No relevant records were found for this query.";
-      }
+      // Provide structured "no data found" response
+      const entityName = extraction.entity || 'the requested entity';
+      const queryType = extraction.intent === 'patient_info' ? 'patient' : 
+                       extraction.intent === 'staff_info' ? 'staff member' :
+                       extraction.intent === 'medicines' ? 'medicine' :
+                       extraction.intent === 'lab_reports' ? 'lab report' : 'record';
+      
+      finalReply = `**Summary:** No ${queryType} found for "${entityName}"
+
+**Key Points:**
+• Record not found
+• Database search complete
+• No matching entries
+
+**Recommendations:**
+• Verify spelling/name
+• Check patient ID
+• Try alternative identifiers
+• Contact registration desk
+
+**Alerts:**
+• None`;
     } else {
       const safePatient = buildPatientContext(patientDoc);
       const safeStaff = buildStaffContext(staffDoc);
@@ -908,13 +912,31 @@ Return strictly valid JSON.`;
 Available Context:
 ${JSON.stringify(fullContext, null, 2)}
 
-Instructions:
-- Use ONLY the provided context above
-- If the query relates to your role (${userRole}), provide role-specific insights
-- If data is incomplete, acknowledge what's available
-- Keep response concise but informative (2-4 paragraphs max)
-- Format medical/technical data clearly
-- If no relevant data, state clearly`;
+CRITICAL INSTRUCTIONS - YOU MUST FOLLOW THIS EXACT FORMAT:
+
+**Summary:** [1 line summary]
+
+**Key Points:**
+• [2-3 words max]
+• [2-3 words max]
+• [2-3 words max]
+
+**Recommendations:**
+• [Action item]
+• [Action item]
+
+**Alerts:**
+• [Critical items OR "None"]
+
+RULES:
+- Use ONLY provided context
+- ALWAYS use bullet points (•)
+- Maximum 2-3 words per bullet in Key Points
+- NO paragraphs or long text
+- If data incomplete, list what's available
+- Follow the 4-section structure EXACTLY
+- DO NOT explain your reasoning or thought process
+- Output ONLY the formatted answer, nothing else`;
 
       try {
         finalReply = await callGeminiChatWithRetries(
@@ -923,7 +945,16 @@ Instructions:
             { role: "user", content: summarizerUser },
           ],
           DEFAULT_TEMPERATURE,
-          DEFAULT_MAX_COMPLETION_TOKENS
+          DEFAULT_MAX_COMPLETION_TOKENS,
+          {
+            userId: user.id,
+            userRole: userRole,
+            userName: user.firstName || user.email,
+            endpoint: 'chatbot',
+            requestType: 'query_with_data',
+            sessionId: chatId,
+            metadata: { userMessage: trimmed, intent: extraction.intent }
+          }
         );
         finalReply = String(finalReply).trim();
       } catch (summErr) {
