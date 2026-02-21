@@ -27,6 +27,7 @@ export class PatientDetails {
     state = '',
     pincode,
     district = '',
+    town = '',
     country = '',
     lat = '',
     lng = '',
@@ -71,6 +72,7 @@ export class PatientDetails {
     this.state = state;
     this.pincode = pincode;
     this.district = district;
+    this.town = town;
     this.country = country;
     this.lat = lat;
     this.lng = lng;
@@ -269,6 +271,7 @@ export class PatientDetails {
       state: addressObj.state?.toString() || json.state?.toString() || '',
       pincode: addressObj.pincode?.toString() || json.pincode?.toString() || '',
       district: addressObj.district?.toString() || json.district?.toString() || '',
+      town: addressObj.town?.toString() || json.town?.toString() || '',
       country: addressObj.country?.toString() || json.country?.toString() || '',
       lat: addressObj.lat?.toString() || json.lat?.toString() || '',
       lng: addressObj.lng?.toString() || json.lng?.toString() || '',
@@ -312,6 +315,7 @@ export class PatientDetails {
         state: this.state,
         pincode: this.pincode,
         district: this.district,
+        town: this.town,
         country: this.country,
         lat: this.lat,
         lng: this.lng,

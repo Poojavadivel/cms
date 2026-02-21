@@ -392,9 +392,14 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                             finalState = stateKeys.find(s => s.toLowerCase().includes(detectedState.toLowerCase())) || detectedState;
                         }
 
-                        let finalDistrict = "";
+                        let finalDistrict = detectedDistrict;
                         if (finalState && LOCATION_DATA[finalState]) {
-                            finalDistrict = LOCATION_DATA[finalState].find(d => d.toLowerCase().includes(detectedDistrict.toLowerCase())) || detectedDistrict;
+                            const matchedDistrict = LOCATION_DATA[finalState].find(d =>
+                                d.toLowerCase() === detectedDistrict.toLowerCase() ||
+                                d.toLowerCase().includes(detectedDistrict.toLowerCase()) ||
+                                detectedDistrict.toLowerCase().includes(d.toLowerCase())
+                            );
+                            if (matchedDistrict) finalDistrict = matchedDistrict;
                         }
 
                         setFormData(prev => ({
@@ -1007,6 +1012,9 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                                                                     {formData.state && (LOCATION_DATA[formData.state] || []).map(d => (
                                                                         <option key={d} value={d}>{d}</option>
                                                                     ))}
+                                                                    {formData.district && formData.state && LOCATION_DATA[formData.state] && !LOCATION_DATA[formData.state].includes(formData.district) && (
+                                                                        <option value={formData.district}>{formData.district}</option>
+                                                                    )}
                                                                 </select>
                                                                 <FiChevronDown className="absolute right-0 text-slate-400 pointer-events-none" />
                                                             </div>
@@ -1048,7 +1056,7 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                                                             </div>
                                                         </PremiumInput>
 
-                                                        <PremiumInput label="Village / Town / Area *">
+                                                        <PremiumInput label="Town / Locality *">
                                                             <div className="relative flex items-center w-full">
                                                                 {localityList.length > 0 ? (
                                                                     <div className="w-full relative">
@@ -1092,6 +1100,14 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                                                             <input name="street" value={formData.street} onChange={handleInputChange} className="w-full outline-none text-[#0f3e61] font-semibold bg-transparent" placeholder="Main Street" />
                                                         </PremiumInput>
 
+                                                        <PremiumInput label="Latitude">
+                                                            <input name="lat" value={formData.lat} onChange={handleInputChange} className="w-full outline-none text-[#0f3e61] font-semibold bg-transparent" placeholder="e.g. 12.9716" />
+                                                        </PremiumInput>
+
+                                                        <PremiumInput label="Longitude">
+                                                            <input name="lng" value={formData.lng} onChange={handleInputChange} className="w-full outline-none text-[#0f3e61] font-semibold bg-transparent" placeholder="e.g. 77.5946" />
+                                                        </PremiumInput>
+
                                                         <PremiumInput label="Country">
                                                             <input name="country" value={formData.country} onChange={handleInputChange} className="w-full outline-none text-[#0f3e61] font-semibold bg-transparent opacity-50" readOnly />
                                                         </PremiumInput>
@@ -1107,8 +1123,8 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                                                                     {/* Premium Summary Card (Matches User Reference Image) */}
                                                                     <div className="flex-1 space-y-4">
                                                                         <div className="flex justify-between items-center pb-2 border-b-2 border-slate-100">
-                                                                            <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-widest">CITY / AREA</span>
-                                                                            <span className="text-[#0f3e61] font-bold text-sm text-right">{formData.city || '---'}</span>
+                                                                            <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-widest">TOWN / LOCALITY</span>
+                                                                            <span className="text-[#0f3e61] font-bold text-sm text-right">{formData.town || formData.city || '---'}</span>
                                                                         </div>
                                                                         <div className="flex justify-between items-center pb-2 border-b-2 border-slate-100">
                                                                             <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-widest">DISTRICT</span>
@@ -1121,6 +1137,14 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                                                                         <div className="flex justify-between items-center pb-2 border-b-2 border-slate-100">
                                                                             <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-widest">PINCODE</span>
                                                                             <span className="text-[#0f3e61] font-bold text-sm text-right">{formData.pincode || '---'}</span>
+                                                                        </div>
+                                                                        <div className="flex justify-between items-center pb-2 border-b-2 border-slate-100">
+                                                                            <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-widest">LATITUDE</span>
+                                                                            <span className="text-[#0f3e61] font-bold text-sm text-right">{formData.lat || '---'}</span>
+                                                                        </div>
+                                                                        <div className="flex justify-between items-center pb-2 border-b-2 border-slate-100">
+                                                                            <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-widest">LONGITUDE</span>
+                                                                            <span className="text-[#0f3e61] font-bold text-sm text-right">{formData.lng || '---'}</span>
                                                                         </div>
                                                                         <div className="flex justify-between items-center">
                                                                             <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-widest">COUNTRY</span>

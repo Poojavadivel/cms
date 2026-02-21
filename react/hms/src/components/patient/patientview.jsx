@@ -129,18 +129,18 @@ const PatientView = ({ isOpen, onClose, patientId, patient: patientProp, onEdit,
 
         // Location: prioritize street, then district/city
         let location = 'Location not set';
-        if (patient.address?.street) {
-            location = patient.address.street;
-        } else if (patient.street) {
+        if (patient.street) {
             location = patient.street;
-        } else if (patient.address?.city) {
-            location = patient.address.city;
+        } else if (patient.town) {
+            location = patient.town;
         } else if (patient.city) {
             location = patient.city;
-        } else if (patient.address?.state) {
-            location = patient.address.state;
+        } else if (patient.district) {
+            location = patient.district;
         } else if (patient.state) {
             location = patient.state;
+        } else if (patient.address && typeof patient.address === 'string') {
+            location = patient.address;
         }
 
         let occupation = patient.profession || patient.metadata?.profession || 'Not specified';
@@ -537,9 +537,9 @@ const ProfileTab = ({ patient, copyToClipboard }) => {
 
                     </div>
                     <div className="pv-info-row">
-                        <span className="pv-label">CITY</span>
+                        <span className="pv-label">TOWN / LOCALITY</span>
                         <span className="pv-value">
-                            <strong>{patient.city || patient.address?.city || 'Not Provided'}</strong>
+                            <strong>{patient.town || patient.city || 'Not Provided'}</strong>
                         </span>
                     </div>
 
@@ -585,6 +585,12 @@ const ProfileTab = ({ patient, copyToClipboard }) => {
                                 </span>
                             </div>
                         </>
+                    )}
+
+                    {(!patient.lat || !patient.lng) && (
+                        <div className="pv-info-row mt-2 pt-2 border-t border-slate-100">
+                            <span className="pv-label uppercase tracking-widest text-[10px] opacity-70 italic text-amber-600">Note: Coordinates not stored. Map will use address search.</span>
+                        </div>
                     )}
 
                     <div className="pv-action-buttons">
@@ -660,7 +666,7 @@ const MedicalHistoryTab = ({ patientId, patient }) => {
                 // Get medical history array from patient object
                 const medicalHistoryArray = patient.medicalHistory || patient.metadata?.medicalHistory || [];
                 const conditions = Array.isArray(medicalHistoryArray) ? medicalHistoryArray : [];
-                
+
                 if (conditions.length > 0) {
                     conditions.forEach(condition => {
                         if (condition && condition.trim()) {
