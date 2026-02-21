@@ -22,6 +22,7 @@ const PrescriptionDocument = require('./PrescriptionDocument');
 const LabReportDocument = require('./LabReportDocument');
 const MedicalHistoryDocument = require('./MedicalHistoryDocument');
 const Payroll = require('./Payroll');
+const APILog = require('./APILog');
 
 // Export all models
 module.exports = {
@@ -43,6 +44,7 @@ module.exports = {
   LabReportDocument,
   MedicalHistoryDocument,
   Payroll,
+  APILog,
   // Helper function for transactions
   startSession: () => mongoose.startSession()
 };
