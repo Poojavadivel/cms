@@ -867,7 +867,7 @@ const MedicalHistoryTab = ({ patientId, patient }) => {
                     >
                         {/* Modal Header */}
                         <div style={{
-                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                            background: 'linear-gradient(135deg, #207DC0 0%, #165a8a 100%)',
                             padding: '24px 28px',
                             display: 'flex',
                             justifyContent: 'space-between',
@@ -1200,6 +1200,8 @@ const MedicalHistoryTab = ({ patientId, patient }) => {
 const PrescriptionTab = ({ patientId }) => {
     const [prescriptions, setPrescriptions] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [selectedPrescription, setSelectedPrescription] = useState(null);
+    const [showModal, setShowModal] = useState(false);
 
     useEffect(() => {
         if (patientId) {
@@ -1250,6 +1252,16 @@ const PrescriptionTab = ({ patientId }) => {
         }
     };
 
+    const handleViewDetails = (prescription) => {
+        setSelectedPrescription(prescription);
+        setShowModal(true);
+    };
+
+    const handleCloseModal = () => {
+        setShowModal(false);
+        setSelectedPrescription(null);
+    };
+
     return (
         <div className="pv-tab-container">
             {/* Header */}
@@ -1280,6 +1292,7 @@ const PrescriptionTab = ({ patientId }) => {
                             <th>Actions</th>
                         </tr>
                     </thead>
+
 
                     <tbody>
                         {/* Loading */}
@@ -1329,7 +1342,11 @@ const PrescriptionTab = ({ patientId }) => {
                                                 <MdVisibility />
                                             </button>
                                         ) : (
-                                            <button className="pv-btn-action-circle" title="View Details">
+                                            <button
+                                                className="pv-btn-action-circle"
+                                                title="View Details"
+                                                onClick={() => handleViewDetails(item)}
+                                            >
                                                 <MdVisibility />
                                             </button>
                                         )}
@@ -1348,6 +1365,117 @@ const PrescriptionTab = ({ patientId }) => {
                     <button className="pv-page-btn" disabled>&gt;</button>
                 </div>
             </div>
+
+            {/* Prescription Detail Modal */}
+            {showModal && selectedPrescription && (
+                <div
+                    className="modal-overlay"
+                    style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundColor: 'rgba(0,0,0,0.6)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: 10000,
+                        backdropFilter: 'blur(4px)'
+                    }}
+                    onClick={handleCloseModal}
+                >
+                    <div
+                        className="modal-content"
+                        style={{
+                            backgroundColor: 'white',
+                            borderRadius: '24px',
+                            width: '90%',
+                            maxWidth: '500px',
+                            overflow: 'hidden',
+                            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)'
+                        }}
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <div style={{
+                            background: 'linear-gradient(135deg, #207DC0 0%, #165a8a 100%)',
+                            padding: '24px',
+                            color: 'white',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center'
+                        }}>
+                            <div>
+                                <h3 style={{ margin: 0, fontSize: '20px', fontWeight: '700' }}>Prescription Details</h3>
+                                <p style={{ margin: '4px 0 0 0', opacity: 0.8, fontSize: '13px' }}>
+                                    {selectedPrescription.createdAt ? new Date(selectedPrescription.createdAt).toLocaleDateString() : 'Date not available'}
+                                </p>
+                            </div>
+                            <button
+                                onClick={handleCloseModal}
+                                style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '50%', width: '36px', height: '36px', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            >
+                                <MdClose size={20} />
+                            </button>
+                        </div>
+
+                        <div style={{ padding: '24px', backgroundColor: '#f8fafc' }}>
+                            <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '20px', border: '1px solid #e2e8f0' }}>
+                                <h4 style={{ margin: '0 0 16px 0', color: '#207DC0', fontSize: '16px', borderBottom: '1px solid #f1f5f9', paddingBottom: '8px' }}>Medicine Information</h4>
+
+                                <div style={{ display: 'grid', gap: '16px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                        <span style={{ color: '#64748b', fontSize: '13px', fontWeight: '600', textTransform: 'uppercase' }}>Medicine</span>
+                                        <span style={{ color: '#1e293b', fontWeight: '700' }}>{selectedPrescription.medicationName || '—'}</span>
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                        <span style={{ color: '#64748b', fontSize: '13px', fontWeight: '600', textTransform: 'uppercase' }}>Dosage</span>
+                                        <span style={{ color: '#1e293b', fontWeight: '700' }}>{selectedPrescription.dosage || '—'}</span>
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                        <span style={{ color: '#64748b', fontSize: '13px', fontWeight: '600', textTransform: 'uppercase' }}>Frequency</span>
+                                        <span style={{ color: '#1e293b', fontWeight: '700' }}>{selectedPrescription.frequency || '—'}</span>
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                        <span style={{ color: '#64748b', fontSize: '13px', fontWeight: '600', textTransform: 'uppercase' }}>Duration</span>
+                                        <span style={{ color: '#1e293b', fontWeight: '700' }}>{selectedPrescription.duration ? `${selectedPrescription.duration} Days` : '—'}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {selectedPrescription.instructions && (
+                                <div style={{ marginTop: '20px', backgroundColor: 'white', borderRadius: '16px', padding: '20px', border: '1px solid #e2e8f0' }}>
+                                    <h4 style={{ margin: '0 0 12px 0', color: '#64748b', fontSize: '13px', fontWeight: '600', textTransform: 'uppercase' }}>Special Instructions</h4>
+                                    <p style={{ margin: 0, color: '#334155', lineHeight: '1.6', fontSize: '14px' }}>
+                                        {selectedPrescription.instructions}
+                                    </p>
+                                </div>
+                            )}
+
+                            <div style={{ marginTop: '24px' }}>
+                                <button
+                                    onClick={handleCloseModal}
+                                    style={{
+                                        width: '100%',
+                                        padding: '12px',
+                                        borderRadius: '12px',
+                                        border: 'none',
+                                        backgroundColor: '#207DC0',
+                                        color: 'white',
+                                        fontWeight: '600',
+                                        cursor: 'pointer',
+                                        transition: 'background 0.2s'
+                                    }}
+                                    onMouseOver={e => e.target.style.backgroundColor = '#165a8a'}
+                                    onMouseOut={e => e.target.style.backgroundColor = '#207DC0'}
+                                >
+                                    Dismiss
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
@@ -1480,7 +1608,7 @@ const LabResultTab = ({ patientId }) => {
                                                     className="pv-btn-action-circle"
                                                     onClick={() => reportService.viewPdf(item.pdfId || item.fileRef)}
                                                     title="View Report"
-                                                    style={{ color: '#7c3aed' }}
+                                                    style={{ color: '#207DC0' }}
                                                 >
                                                     <MdVisibility size={18} />
                                                 </button>
