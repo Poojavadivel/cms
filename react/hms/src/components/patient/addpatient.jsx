@@ -26,6 +26,46 @@ import scannerService from '../../services/scannerService';
 import appointmentsService from '../../services/appointmentsService';
 import './addpatient.css';
 
+// --- Indian States and Cities Data ---
+const INDIAN_STATES = {
+    'Andhra Pradesh': ['Visakhapatnam', 'Vijayawada', 'Guntur', 'Nellore', 'Kurnool', 'Tirupati', 'Rajahmundry'],
+    'Arunachal Pradesh': ['Itanagar', 'Naharlagun', 'Pasighat', 'Tawang'],
+    'Assam': ['Guwahati', 'Silchar', 'Dibrugarh', 'Jorhat', 'Nagaon', 'Tinsukia'],
+    'Bihar': ['Patna', 'Gaya', 'Bhagalpur', 'Muzaffarpur', 'Darbhanga', 'Bihar Sharif'],
+    'Chhattisgarh': ['Raipur', 'Bhilai', 'Bilaspur', 'Korba', 'Durg', 'Rajnandgaon'],
+    'Goa': ['Panaji', 'Margao', 'Vasco da Gama', 'Mapusa', 'Ponda'],
+    'Gujarat': ['Ahmedabad', 'Surat', 'Vadodara', 'Rajkot', 'Bhavnagar', 'Jamnagar', 'Gandhinagar'],
+    'Haryana': ['Faridabad', 'Gurgaon', 'Rohtak', 'Panipat', 'Karnal', 'Hisar', 'Ambala'],
+    'Himachal Pradesh': ['Shimla', 'Dharamshala', 'Solan', 'Mandi', 'Kullu', 'Baddi'],
+    'Jharkhand': ['Ranchi', 'Jamshedpur', 'Dhanbad', 'Bokaro', 'Deoghar', 'Hazaribagh'],
+    'Karnataka': ['Bangalore', 'Mysore', 'Mangalore', 'Hubli', 'Belgaum', 'Gulbarga', 'Dharwad'],
+    'Kerala': ['Thiruvananthapuram', 'Kochi', 'Kozhikode', 'Thrissur', 'Kollam', 'Kannur', 'Palakkad'],
+    'Madhya Pradesh': ['Bhopal', 'Indore', 'Gwalior', 'Jabalpur', 'Ujjain', 'Sagar', 'Dewas'],
+    'Maharashtra': ['Mumbai', 'Pune', 'Nagpur', 'Thane', 'Nashik', 'Aurangabad', 'Solapur', 'Kolhapur'],
+    'Manipur': ['Imphal', 'Thoubal', 'Bishnupur', 'Churachandpur'],
+    'Meghalaya': ['Shillong', 'Tura', 'Jowai', 'Nongstoin'],
+    'Mizoram': ['Aizawl', 'Lunglei', 'Champhai', 'Serchhip'],
+    'Nagaland': ['Kohima', 'Dimapur', 'Mokokchung', 'Tuensang'],
+    'Odisha': ['Bhubaneswar', 'Cuttack', 'Rourkela', 'Puri', 'Brahmapur', 'Sambalpur'],
+    'Punjab': ['Ludhiana', 'Amritsar', 'Jalandhar', 'Patiala', 'Bathinda', 'Mohali', 'Chandigarh'],
+    'Rajasthan': ['Jaipur', 'Jodhpur', 'Kota', 'Udaipur', 'Ajmer', 'Bikaner', 'Alwar'],
+    'Sikkim': ['Gangtok', 'Namchi', 'Geyzing', 'Mangan'],
+    'Tamil Nadu': ['Chennai', 'Coimbatore', 'Madurai', 'Tiruchirappalli', 'Salem', 'Tirunelveli', 'Vellore', 'Karur'],
+    'Telangana': ['Hyderabad', 'Warangal', 'Nizamabad', 'Khammam', 'Karimnagar', 'Ramagundam'],
+    'Tripura': ['Agartala', 'Udaipur', 'Dharmanagar', 'Kailasahar'],
+    'Uttar Pradesh': ['Lucknow', 'Kanpur', 'Ghaziabad', 'Agra', 'Varanasi', 'Meerut', 'Allahabad', 'Noida'],
+    'Uttarakhand': ['Dehradun', 'Haridwar', 'Roorkee', 'Haldwani', 'Rudrapur', 'Rishikesh'],
+    'West Bengal': ['Kolkata', 'Howrah', 'Durgapur', 'Asansol', 'Siliguri', 'Darjeeling'],
+    'Andaman and Nicobar Islands': ['Port Blair', 'Diglipur', 'Rangat'],
+    'Chandigarh': ['Chandigarh'],
+    'Dadra and Nagar Haveli and Daman and Diu': ['Daman', 'Diu', 'Silvassa'],
+    'Delhi': ['New Delhi', 'Delhi Cantt', 'Dwarka', 'Rohini', 'Karol Bagh'],
+    'Jammu and Kashmir': ['Srinagar', 'Jammu', 'Anantnag', 'Baramulla', 'Udhampur'],
+    'Ladakh': ['Leh', 'Kargil'],
+    'Lakshadweep': ['Kavaratti', 'Agatti', 'Minicoy'],
+    'Puducherry': ['Puducherry', 'Karaikal', 'Mahe', 'Yanam']
+};
+
 // --- Reusable Components ---
 
 const StepIndicator = ({ step, currentStep, icon, label, description, isLast }) => {
@@ -99,6 +139,7 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
     const [fetchingData, setFetchingData] = useState(false);
     const [errors, setErrors] = useState({});
     const [doctors, setDoctors] = useState([]);
+    const [cities, setCities] = useState([]);
 
     // File Upload State
     const [uploadedFiles, setUploadedFiles] = useState([]);
@@ -109,13 +150,19 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
     const [formData, setFormData] = useState({
         firstName: '', lastName: '', dateOfBirth: '', age: '', gender: '', bloodGroup: '',
         phone: '', email: '', emergencyContactName: '', emergencyContactPhone: '',
-        houseNo: '', street: '', city: '', state: '', pincode: '', country: 'India',
+        houseNo: '', street: '', town: '', city: '', state: '', pincode: '', country: 'India',
         assignedDoctor: '', knownConditions: '', allergies: '', currentMedications: '',
         pastSurgeries: '', notes: '', lastVisit: '',
         height: '', weight: '', bmi: '', bp: '', pulse: '', spo2: '',
         insuranceNumber: '', insuranceProvider: '', insuranceExpiry: '',
         appointmentDate: '', appointmentTime: '', appointmentReason: '', patientCode: ''
     });
+    
+    // Medications and Surgeries as arrays
+    const [medications, setMedications] = useState([]);
+    const [surgeries, setSurgeries] = useState([]);
+    const [newMedication, setNewMedication] = useState('');
+    const [newSurgery, setNewSurgery] = useState('');
 
     // Reset & Load Data
     useEffect(() => {
@@ -138,12 +185,13 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                         phone: patient.phone || '', email: patient.email || '',
                         emergencyContactName: patient.emergencyContactName || '', emergencyContactPhone: patient.emergencyContactPhone || '',
                         houseNo: patient.houseNo || '', street: patient.street || '',
-                        city: patient.city || '', state: patient.state || '',
+                        town: patient.town || '', city: patient.city || '', state: patient.state || '',
                         pincode: patient.pincode || '', country: patient.country || 'India',
                         assignedDoctor: patient.doctorId || '',
                         knownConditions: Array.isArray(patient.medicalHistory) ? patient.medicalHistory.join(', ') : (patient.medicalHistory || ''),
                         allergies: Array.isArray(patient.allergies) ? patient.allergies.join(', ') : (patient.allergies || ''),
-                        currentMedications: patient.currentMedications || '',
+                        currentMedications: '',
+                        pastSurgeries: '',
                         height: patient.height || '', weight: patient.weight || '',
                         bmi: patient.bmi || '', bp: patient.bp || '',
                         pulse: patient.pulse || '', spo2: patient.oxygen || '',
@@ -152,19 +200,41 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                         insuranceExpiry: patient.expiryDate || '',
                         patientCode: patient.patientCode || ''
                     });
+                    
+                    // Load medications and surgeries as arrays
+                    if (patient.currentMedications) {
+                        const meds = typeof patient.currentMedications === 'string' 
+                            ? patient.currentMedications.split(',').map(s => s.trim()).filter(Boolean)
+                            : patient.currentMedications;
+                        setMedications(Array.isArray(meds) ? meds : []);
+                    }
+                    if (patient.pastSurgeries) {
+                        const surgs = typeof patient.pastSurgeries === 'string'
+                            ? patient.pastSurgeries.split(',').map(s => s.trim()).filter(Boolean)
+                            : patient.pastSurgeries;
+                        setSurgeries(Array.isArray(surgs) ? surgs : []);
+                    }
+                    
+                    // Set cities if state is present
+                    if (patient.state && INDIAN_STATES[patient.state]) {
+                        setCities(INDIAN_STATES[patient.state]);
+                    }
                 }).catch(console.error).finally(() => setFetchingData(false));
             } else {
                 // Reset for new patient
                 setFormData({
                     firstName: '', lastName: '', dateOfBirth: '', age: '', gender: '', bloodGroup: '',
                     phone: '', email: '', emergencyContactName: '', emergencyContactPhone: '',
-                    houseNo: '', street: '', city: '', state: '', pincode: '', country: 'India',
+                    houseNo: '', street: '', town: '', city: '', state: '', pincode: '', country: 'India',
                     assignedDoctor: '', knownConditions: '', allergies: '', currentMedications: '',
                     pastSurgeries: '', notes: '', lastVisit: '',
                     height: '', weight: '', bmi: '', bp: '', pulse: '', spo2: '',
                     insuranceNumber: '', insuranceProvider: '', insuranceExpiry: '',
                     appointmentDate: '', appointmentTime: '', appointmentReason: '', patientCode: ''
                 });
+                setMedications([]);
+                setSurgeries([]);
+                setCities([]);
             }
         }
     }, [isOpen, patientId]);
@@ -228,32 +298,83 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
         setScannerError(null);
 
         try {
-            const file = files[0];
-            // Use temp ID if new patient
-            const pid = patientId || `temp-${Date.now()}`;
-            const scannedResult = await scannerService.scanAndExtractMedicalData(file, pid);
+            // Process multiple files
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                // Use temp ID if new patient
+                const pid = patientId || `temp-${Date.now()}`;
+                
+                try {
+                    const scannedResult = await scannerService.scanAndExtractMedicalData(file, pid);
 
-            // Auto-fill form fields if data was extracted
-            if (scannedResult) {
-                setFormData(prev => ({
-                    ...prev,
-                    knownConditions: prev.knownConditions ? `${prev.knownConditions}, ${scannedResult.medicalHistory || ''}` : (scannedResult.medicalHistory || ''),
-                    allergies: prev.allergies ? `${prev.allergies}, ${scannedResult.allergies || ''}` : (scannedResult.allergies || ''),
-                    currentMedications: prev.currentMedications ? `${prev.currentMedications}, ${scannedResult.medications || ''}` : (scannedResult.medications || '')
-                }));
+                    // Auto-fill form fields if data was extracted
+                    if (scannedResult) {
+                        setFormData(prev => ({
+                            ...prev,
+                            knownConditions: prev.knownConditions ? `${prev.knownConditions}, ${scannedResult.medicalHistory || ''}` : (scannedResult.medicalHistory || ''),
+                            allergies: prev.allergies ? `${prev.allergies}, ${scannedResult.allergies || ''}` : (scannedResult.allergies || '')
+                        }));
+                        
+                        // Add extracted medications to list
+                        if (scannedResult.medications) {
+                            const extractedMeds = scannedResult.medications.split(',').map(s => s.trim()).filter(Boolean);
+                            setMedications(prev => [...prev, ...extractedMeds]);
+                        }
+                    }
+
+                    setUploadedFiles(prev => [...prev, { file, name: file.name, scannedResult }]);
+                } catch (fileError) {
+                    console.error(`Error processing ${file.name}:`, fileError);
+                    setUploadedFiles(prev => [...prev, { file, name: file.name, error: fileError.message }]);
+                }
             }
-
-            setUploadedFiles(prev => [...prev, { file, name: file.name, scannedResult }]);
         } catch (error) {
             console.error('File upload error:', error);
-            setScannerError(error.message || 'Failed to process document');
+            setScannerError(error.message || 'Failed to process documents');
         } finally {
             setUploading(false);
+            event.target.value = ''; // Reset input
         }
     };
 
     const removeUploadedFile = (index) => {
         setUploadedFiles(prev => prev.filter((_, i) => i !== index));
+    };
+
+    // Medication handlers
+    const addMedication = () => {
+        if (newMedication.trim()) {
+            setMedications(prev => [...prev, newMedication.trim()]);
+            setNewMedication('');
+        }
+    };
+
+    const removeMedication = (index) => {
+        setMedications(prev => prev.filter((_, i) => i !== index));
+    };
+
+    // Surgery handlers
+    const addSurgery = () => {
+        if (newSurgery.trim()) {
+            setSurgeries(prev => [...prev, newSurgery.trim()]);
+            setNewSurgery('');
+        }
+    };
+
+    const removeSurgery = (index) => {
+        setSurgeries(prev => prev.filter((_, i) => i !== index));
+    };
+
+    // State/City handler
+    const handleStateChange = (e) => {
+        const selectedState = e.target.value;
+        setFormData(prev => ({
+            ...prev,
+            state: selectedState,
+            city: '', // Reset city when state changes
+            pincode: ''
+        }));
+        setCities(INDIAN_STATES[selectedState] || []);
     };
 
     const validateStep = () => {
@@ -267,6 +388,14 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
         }
         if (currentStep === 1) {
             if (!formData.phone.trim() || formData.phone.length < 10) newErrors.phone = 'Valid phone number required';
+        }
+        if (currentStep === 2) {
+            // Mandatory vitals during initial registration
+            if (!patientId) {
+                if (!formData.height || parseFloat(formData.height) <= 0) newErrors.height = 'Height is required';
+                if (!formData.weight || parseFloat(formData.weight) <= 0) newErrors.weight = 'Weight is required';
+                if (!formData.bp || !formData.bp.trim()) newErrors.bp = 'Blood Pressure is required';
+            }
         }
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -292,24 +421,27 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                 email: formData.email,
                 address: {
                     houseNo: formData.houseNo, street: formData.street,
-                    city: formData.city, state: formData.state,
+                    town: formData.town, city: formData.city, state: formData.state,
                     pincode: formData.pincode, country: formData.country,
-                    line1: `${formData.houseNo} ${formData.street} ${formData.city}`.trim()
+                    line1: `${formData.houseNo} ${formData.street} ${formData.town} ${formData.city}`.trim()
                 },
                 doctorId: formData.assignedDoctor || null,
                 metadata: {
                     emergencyContactName: formData.emergencyContactName,
                     emergencyContactPhone: formData.emergencyContactPhone,
                     medicalHistory: formData.knownConditions ? formData.knownConditions.split(',').map(s => s.trim()) : [],
-                    prescriptions: formData.currentMedications ? formData.currentMedications.split(',').map(s => s.trim()) : [],
+                    prescriptions: medications,
                     allergies: formData.allergies ? formData.allergies.split(',').map(s => s.trim()) : [],
+                    pastSurgeries: surgeries,
                     insuranceNumber: formData.insuranceNumber,
                     insuranceProvider: formData.insuranceProvider
                 },
                 // Flattened fields for some backward compatibility if needed
                 medicalHistory: formData.knownConditions ? formData.knownConditions.split(',').map(s => s.trim()) : [],
                 allergies: formData.allergies ? formData.allergies.split(',').map(s => s.trim()) : [],
-                currentMedications: formData.currentMedications,
+                currentMedications: medications.join(', '),
+                pastSurgeries: surgeries.join(', '),
+                town: formData.town,
 
                 vitals: {
                     heightCm: formData.height ? parseFloat(formData.height) : null,
@@ -579,17 +711,31 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                                                             <input name="street" value={formData.street} onChange={handleInputChange} className="w-full outline-none text-[#0f3e61] font-semibold bg-transparent" placeholder="Main Street" />
                                                         </PremiumInput>
 
-                                                        <PremiumInput label="City">
-                                                            <input name="city" value={formData.city} onChange={handleInputChange} className="w-full outline-none text-[#0f3e61] font-semibold bg-transparent" placeholder="City" />
+                                                        <PremiumInput label="State" icon={<MdLocationOn />}>
+                                                            <select name="state" value={formData.state} onChange={handleStateChange} className="w-full outline-none text-[#0f3e61] font-semibold bg-transparent cursor-pointer appearance-none">
+                                                                <option value="">Select State</option>
+                                                                {Object.keys(INDIAN_STATES).map(state => (
+                                                                    <option key={state} value={state}>{state}</option>
+                                                                ))}
+                                                            </select>
                                                         </PremiumInput>
-                                                        <PremiumInput label="State">
-                                                            <input name="state" value={formData.state} onChange={handleInputChange} className="w-full outline-none text-[#0f3e61] font-semibold bg-transparent" placeholder="State" />
+                                                        <PremiumInput label="City">
+                                                            <select name="city" value={formData.city} onChange={handleInputChange} className="w-full outline-none text-[#0f3e61] font-semibold bg-transparent cursor-pointer appearance-none" disabled={!formData.state}>
+                                                                <option value="">Select City</option>
+                                                                {cities.map(city => (
+                                                                    <option key={city} value={city}>{city}</option>
+                                                                ))}
+                                                            </select>
                                                         </PremiumInput>
 
+                                                        <PremiumInput label="Town / Area">
+                                                            <input name="town" value={formData.town} onChange={handleInputChange} className="w-full outline-none text-[#0f3e61] font-semibold bg-transparent" placeholder="Area / Locality" />
+                                                        </PremiumInput>
                                                         <PremiumInput label="Pincode">
                                                             <input name="pincode" value={formData.pincode} onChange={handleInputChange} className="w-full outline-none text-[#0f3e61] font-semibold bg-transparent" placeholder="000000" />
                                                         </PremiumInput>
-                                                        <PremiumInput label="Country">
+
+                                                        <PremiumInput label="Country" className="md:col-span-2">
                                                             <input name="country" value={formData.country} onChange={handleInputChange} className="w-full outline-none text-[#0f3e61] font-semibold bg-transparent" />
                                                         </PremiumInput>
                                                     </div>
@@ -606,6 +752,7 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                                                                 onChange={handleFileUpload}
                                                                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                                                                 accept="image/*,.pdf"
+                                                                multiple
                                                                 disabled={uploading}
                                                             />
                                                             {uploading ? (
@@ -644,16 +791,16 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
 
                                                         <div className="bg-[#ecf6ff] rounded-2xl p-6 border border-blue-100/50">
                                                             <h3 className="text-[#0f3e61] font-extrabold mb-4 flex items-center gap-2 text-lg tracking-tight">
-                                                                <FiActivity className="text-xl text-[#207DC0]" /> Critical Vitals
+                                                                <FiActivity className="text-xl text-[#207DC0]" /> Critical Vitals {!patientId && <span className="text-red-500 text-xs">(Required for new patients)</span>}
                                                             </h3>
                                                             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                                                                <PremiumInput label="Height (cm)" icon={<MdHeight className="rotate-90" />}>
-                                                                    <input type="text" name="height" value={formData.height} onChange={handleInputChange} className="w-full outline-none bg-transparent font-bold text-[#0f3e61]" placeholder="0" />
+                                                                <PremiumInput label="Height (cm)" required={!patientId} error={errors.height} icon={<MdHeight className="rotate-90" />}>
+                                                                    <input type="number" name="height" value={formData.height} onChange={handleInputChange} className="w-full outline-none bg-transparent font-bold text-[#0f3e61]" placeholder="170" min="0" />
                                                                 </PremiumInput>
-                                                                <PremiumInput label="Weight (kg)" icon={<MdMonitorWeight />}>
-                                                                    <input type="text" name="weight" value={formData.weight} onChange={handleInputChange} className="w-full outline-none bg-transparent font-bold text-[#0f3e61]" placeholder="0" />
+                                                                <PremiumInput label="Weight (kg)" required={!patientId} error={errors.weight} icon={<MdMonitorWeight />}>
+                                                                    <input type="number" name="weight" value={formData.weight} onChange={handleInputChange} className="w-full outline-none bg-transparent font-bold text-[#0f3e61]" placeholder="70" min="0" />
                                                                 </PremiumInput>
-                                                                <PremiumInput label="BP (mmHg)" icon={<FiHeart />}>
+                                                                <PremiumInput label="BP (mmHg)" required={!patientId} error={errors.bp} icon={<FiHeart />}>
                                                                     <input name="bp" value={formData.bp} onChange={handleInputChange} className="w-full outline-none bg-transparent font-bold text-[#0f3e61]" placeholder="120/80" />
                                                                 </PremiumInput>
                                                                 <PremiumInput label="BMI" className={formData.bmi > 25 ? 'bg-orange-50' : ''}>
@@ -675,10 +822,57 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                                                                     className="w-full outline-none bg-transparent resize-none text-[#0f3e61] font-semibold" placeholder="e.g. Diabetes, Hypertension..." />
                                                             </PremiumInput>
 
-                                                            <PremiumInput label="Current Medications">
-                                                                <textarea name="currentMedications" value={formData.currentMedications} onChange={handleInputChange} rows={2}
-                                                                    className="w-full outline-none bg-transparent resize-none text-[#0f3e61] font-semibold" placeholder="e.g. Metformin 500mg..." />
-                                                            </PremiumInput>
+                                                            {/* Dynamic Medications */}
+                                                            <div className="space-y-3">
+                                                                <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-500">Current Medications</label>
+                                                                <div className="flex gap-2">
+                                                                    <input 
+                                                                        type="text" 
+                                                                        value={newMedication} 
+                                                                        onChange={(e) => setNewMedication(e.target.value)}
+                                                                        onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addMedication())}
+                                                                        className="flex-1 px-4 py-2 border border-slate-200 rounded-xl outline-none text-[#0f3e61] font-semibold focus:border-[#207DC0] focus:ring-4 focus:ring-[#207DC0]/10" 
+                                                                        placeholder="e.g. Metformin 500mg twice daily" 
+                                                                    />
+                                                                    <button type="button" onClick={addMedication} className="px-6 py-2 bg-[#207DC0] text-white rounded-xl font-bold hover:bg-[#165a8a] transition-colors">Add</button>
+                                                                </div>
+                                                                {medications.length > 0 && (
+                                                                    <div className="space-y-2">
+                                                                        {medications.map((med, idx) => (
+                                                                            <div key={idx} className="flex items-center justify-between bg-white border border-slate-200 p-3 rounded-lg">
+                                                                                <span className="text-[#0f3e61] font-semibold">{med}</span>
+                                                                                <button type="button" onClick={() => removeMedication(idx)} className="text-red-400 hover:text-red-600"><MdDelete size={20} /></button>
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+
+                                                            {/* Dynamic Past Surgeries */}
+                                                            <div className="space-y-3">
+                                                                <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-500">Past Surgeries</label>
+                                                                <div className="flex gap-2">
+                                                                    <input 
+                                                                        type="text" 
+                                                                        value={newSurgery} 
+                                                                        onChange={(e) => setNewSurgery(e.target.value)}
+                                                                        onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addSurgery())}
+                                                                        className="flex-1 px-4 py-2 border border-slate-200 rounded-xl outline-none text-[#0f3e61] font-semibold focus:border-[#207DC0] focus:ring-4 focus:ring-[#207DC0]/10" 
+                                                                        placeholder="e.g. Appendectomy (2020)" 
+                                                                    />
+                                                                    <button type="button" onClick={addSurgery} className="px-6 py-2 bg-[#207DC0] text-white rounded-xl font-bold hover:bg-[#165a8a] transition-colors">Add</button>
+                                                                </div>
+                                                                {surgeries.length > 0 && (
+                                                                    <div className="space-y-2">
+                                                                        {surgeries.map((surgery, idx) => (
+                                                                            <div key={idx} className="flex items-center justify-between bg-white border border-slate-200 p-3 rounded-lg">
+                                                                                <span className="text-[#0f3e61] font-semibold">{surgery}</span>
+                                                                                <button type="button" onClick={() => removeSurgery(idx)} className="text-red-400 hover:text-red-600"><MdDelete size={20} /></button>
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                )}
+                                                            </div>
 
                                                             <PremiumInput label="Assigned Doctor" icon={<MdPerson />}>
                                                                 <select name="assignedDoctor" value={formData.assignedDoctor} onChange={handleInputChange} className="w-full outline-none bg-transparent text-[#0f3e61] font-bold cursor-pointer appearance-none">
