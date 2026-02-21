@@ -173,19 +173,15 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
     const [formData, setFormData] = useState({
         firstName: '', lastName: '', dateOfBirth: '', age: '', gender: '', bloodGroup: '',
         phone: '', email: '', emergencyContactName: '', emergencyContactPhone: '',
-<<<<<<< HEAD
-        houseNo: '', street: '', city: '', district: '', state: '', pincode: '', country: 'India',
+        houseNo: '', street: '', town: '', city: '', district: '', state: '', pincode: '', country: 'India',
         lat: '', lng: '',
-=======
-        houseNo: '', street: '', town: '', city: '', state: '', pincode: '', country: 'India',
->>>>>>> d82503dfe21873167f2058fb5964cbb1cef4484d
         assignedDoctor: '', knownConditions: '', allergies: '', currentMedications: '',
         pastSurgeries: '', notes: '', lastVisit: '',
         height: '', weight: '', bmi: '', bp: '', pulse: '', spo2: '',
         insuranceNumber: '', insuranceProvider: '', insuranceExpiry: '',
         appointmentDate: '', appointmentTime: '', appointmentReason: '', patientCode: ''
     });
-    
+
     // Medications and Surgeries as arrays
     const [medications, setMedications] = useState([]);
     const [surgeries, setSurgeries] = useState([]);
@@ -208,7 +204,7 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                     const fullPhone = patient.phone || '';
                     let extractedCode = '+91';
                     let extractedNumber = '';
-                    
+
                     if (fullPhone) {
                         // Try to extract country code (starts with +)
                         const match = fullPhone.match(/^(\+\d{1,4})?(\d+)$/);
@@ -219,10 +215,10 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                             extractedNumber = fullPhone.replace(/\D/g, '');
                         }
                     }
-                    
+
                     setCountryCode(extractedCode);
                     setPhoneNumber(extractedNumber);
-                    
+
                     setFormData({
                         firstName: patient.firstName || (patient.name ? patient.name.split(' ')[0] : ''),
                         lastName: patient.lastName || (patient.name ? patient.name.split(' ').slice(1).join(' ') : ''),
@@ -231,9 +227,9 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                         gender: patient.gender || '', bloodGroup: patient.bloodGroup || '',
                         phone: fullPhone, email: patient.email || '',
                         emergencyContactName: patient.emergencyContactName || '', emergencyContactPhone: patient.emergencyContactPhone || '',
-<<<<<<< HEAD
                         houseNo: patient.houseNo || '',
                         street: patient.street || '',
+                        town: patient.town || '',
                         city: patient.city || '',
                         district: patient.district || '',
                         state: patient.state || '',
@@ -241,11 +237,6 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                         country: patient.country || 'India',
                         lat: patient.lat || '',
                         lng: patient.lng || '',
-=======
-                        houseNo: patient.houseNo || '', street: patient.street || '',
-                        town: patient.town || '', city: patient.city || '', state: patient.state || '',
-                        pincode: patient.pincode || '', country: patient.country || 'India',
->>>>>>> d82503dfe21873167f2058fb5964cbb1cef4484d
                         assignedDoctor: patient.doctorId || '',
                         knownConditions: Array.isArray(patient.medicalHistory) ? patient.medicalHistory.join(', ') : (patient.medicalHistory || ''),
                         allergies: Array.isArray(patient.allergies) ? patient.allergies.join(', ') : (patient.allergies || ''),
@@ -259,10 +250,10 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                         insuranceExpiry: patient.expiryDate || '',
                         patientCode: patient.patientCode || ''
                     });
-                    
+
                     // Load medications and surgeries as arrays
                     if (patient.currentMedications) {
-                        const meds = typeof patient.currentMedications === 'string' 
+                        const meds = typeof patient.currentMedications === 'string'
                             ? patient.currentMedications.split(',').map(s => s.trim()).filter(Boolean)
                             : patient.currentMedications;
                         setMedications(Array.isArray(meds) ? meds : []);
@@ -273,7 +264,7 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                             : patient.pastSurgeries;
                         setSurgeries(Array.isArray(surgs) ? surgs : []);
                     }
-                    
+
                     // Set cities if state is present
                     if (patient.state && INDIAN_STATES[patient.state]) {
                         setCities(INDIAN_STATES[patient.state]);
@@ -284,12 +275,8 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                 setFormData({
                     firstName: '', lastName: '', dateOfBirth: '', age: '', gender: '', bloodGroup: '',
                     phone: '', email: '', emergencyContactName: '', emergencyContactPhone: '',
-<<<<<<< HEAD
-                    houseNo: '', street: '', city: '', district: '', state: '', pincode: '', country: 'India',
+                    houseNo: '', street: '', town: '', city: '', district: '', state: '', pincode: '', country: 'India',
                     lat: '', lng: '',
-=======
-                    houseNo: '', street: '', town: '', city: '', state: '', pincode: '', country: 'India',
->>>>>>> d82503dfe21873167f2058fb5964cbb1cef4484d
                     assignedDoctor: '', knownConditions: '', allergies: '', currentMedications: '',
                     pastSurgeries: '', notes: '', lastVisit: '',
                     height: '', weight: '', bmi: '', bp: '', pulse: '', spo2: '',
@@ -534,7 +521,7 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                 const file = files[i];
                 // Use temp ID if new patient
                 const pid = patientId || `temp-${Date.now()}`;
-                
+
                 try {
                     const scannedResult = await scannerService.scanAndExtractMedicalData(file, pid);
 
@@ -545,7 +532,7 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                             knownConditions: prev.knownConditions ? `${prev.knownConditions}, ${scannedResult.medicalHistory || ''}` : (scannedResult.medicalHistory || ''),
                             allergies: prev.allergies ? `${prev.allergies}, ${scannedResult.allergies || ''}` : (scannedResult.allergies || '')
                         }));
-                        
+
                         // Add extracted medications to list
                         if (scannedResult.medications) {
                             const extractedMeds = scannedResult.medications.split(',').map(s => s.trim()).filter(Boolean);
@@ -680,18 +667,12 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                 email: formData.email,
                 address: {
                     houseNo: formData.houseNo, street: formData.street,
-<<<<<<< HEAD
-                    city: formData.city, district: formData.district,
+                    town: formData.town, city: formData.city, district: formData.district,
                     state: formData.state, pincode: formData.pincode,
                     country: formData.country,
                     lat: formData.lat,
                     lng: formData.lng,
-                    line1: `${formData.houseNo} ${formData.street} ${formData.city}`.trim()
-=======
-                    town: formData.town, city: formData.city, state: formData.state,
-                    pincode: formData.pincode, country: formData.country,
                     line1: `${formData.houseNo} ${formData.street} ${formData.town} ${formData.city}`.trim()
->>>>>>> d82503dfe21873167f2058fb5964cbb1cef4484d
                 },
                 doctorId: formData.assignedDoctor || null,
                 metadata: {
@@ -944,8 +925,8 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                                         <PremiumInput label="Phone Number" error={errors.phone} required icon={<MdPhone />} className="md:col-span-2">
                                                             <div className="flex items-center gap-2 w-full">
-                                                                <select 
-                                                                    value={countryCode} 
+                                                                <select
+                                                                    value={countryCode}
                                                                     onChange={handleCountryCodeChange}
                                                                     className="outline-none text-[#0f3e61] font-bold text-base bg-transparent border-r border-slate-200 pr-2"
                                                                 >
@@ -955,13 +936,13 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                                                                         </option>
                                                                     ))}
                                                                 </select>
-                                                                <input 
-                                                                    type="tel" 
-                                                                    value={phoneNumber} 
+                                                                <input
+                                                                    type="tel"
+                                                                    value={phoneNumber}
                                                                     onChange={handlePhoneChange}
                                                                     maxLength={10}
-                                                                    className="flex-1 outline-none text-[#0f3e61] placeholder-slate-300 font-bold text-lg bg-transparent" 
-                                                                    placeholder="9999900000" 
+                                                                    className="flex-1 outline-none text-[#0f3e61] placeholder-slate-300 font-bold text-lg bg-transparent"
+                                                                    placeholder="9999900000"
                                                                 />
                                                                 <span className="text-xs text-slate-400 font-medium">
                                                                     {phoneNumber.length}/10
@@ -1111,7 +1092,6 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                                                             <input name="street" value={formData.street} onChange={handleInputChange} className="w-full outline-none text-[#0f3e61] font-semibold bg-transparent" placeholder="Main Street" />
                                                         </PremiumInput>
 
-<<<<<<< HEAD
                                                         <PremiumInput label="Country">
                                                             <input name="country" value={formData.country} onChange={handleInputChange} className="w-full outline-none text-[#0f3e61] font-semibold bg-transparent opacity-50" readOnly />
                                                         </PremiumInput>
@@ -1206,35 +1186,6 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                                                                 </div>
                                                             </motion.div>
                                                         )}
-=======
-                                                        <PremiumInput label="State" icon={<MdLocationOn />}>
-                                                            <select name="state" value={formData.state} onChange={handleStateChange} className="w-full outline-none text-[#0f3e61] font-semibold bg-transparent cursor-pointer appearance-none">
-                                                                <option value="">Select State</option>
-                                                                {Object.keys(INDIAN_STATES).map(state => (
-                                                                    <option key={state} value={state}>{state}</option>
-                                                                ))}
-                                                            </select>
-                                                        </PremiumInput>
-                                                        <PremiumInput label="City">
-                                                            <select name="city" value={formData.city} onChange={handleInputChange} className="w-full outline-none text-[#0f3e61] font-semibold bg-transparent cursor-pointer appearance-none" disabled={!formData.state}>
-                                                                <option value="">Select City</option>
-                                                                {cities.map(city => (
-                                                                    <option key={city} value={city}>{city}</option>
-                                                                ))}
-                                                            </select>
-                                                        </PremiumInput>
-
-                                                        <PremiumInput label="Town / Area">
-                                                            <input name="town" value={formData.town} onChange={handleInputChange} className="w-full outline-none text-[#0f3e61] font-semibold bg-transparent" placeholder="Area / Locality" />
-                                                        </PremiumInput>
-                                                        <PremiumInput label="Pincode">
-                                                            <input name="pincode" value={formData.pincode} onChange={handleInputChange} className="w-full outline-none text-[#0f3e61] font-semibold bg-transparent" placeholder="000000" />
-                                                        </PremiumInput>
-
-                                                        <PremiumInput label="Country" className="md:col-span-2">
-                                                            <input name="country" value={formData.country} onChange={handleInputChange} className="w-full outline-none text-[#0f3e61] font-semibold bg-transparent" />
-                                                        </PremiumInput>
->>>>>>> d82503dfe21873167f2058fb5964cbb1cef4484d
                                                     </div>
                                                 )}
 
@@ -1323,13 +1274,13 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                                                             <div className="space-y-3">
                                                                 <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-500">Current Medications</label>
                                                                 <div className="flex gap-2">
-                                                                    <input 
-                                                                        type="text" 
-                                                                        value={newMedication} 
+                                                                    <input
+                                                                        type="text"
+                                                                        value={newMedication}
                                                                         onChange={(e) => setNewMedication(e.target.value)}
                                                                         onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addMedication())}
-                                                                        className="flex-1 px-4 py-2 border border-slate-200 rounded-xl outline-none text-[#0f3e61] font-semibold focus:border-[#207DC0] focus:ring-4 focus:ring-[#207DC0]/10" 
-                                                                        placeholder="e.g. Metformin 500mg twice daily" 
+                                                                        className="flex-1 px-4 py-2 border border-slate-200 rounded-xl outline-none text-[#0f3e61] font-semibold focus:border-[#207DC0] focus:ring-4 focus:ring-[#207DC0]/10"
+                                                                        placeholder="e.g. Metformin 500mg twice daily"
                                                                     />
                                                                     <button type="button" onClick={addMedication} className="px-6 py-2 bg-[#207DC0] text-white rounded-xl font-bold hover:bg-[#165a8a] transition-colors">Add</button>
                                                                 </div>
@@ -1349,13 +1300,13 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                                                             <div className="space-y-3">
                                                                 <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-500">Past Surgeries</label>
                                                                 <div className="flex gap-2">
-                                                                    <input 
-                                                                        type="text" 
-                                                                        value={newSurgery} 
+                                                                    <input
+                                                                        type="text"
+                                                                        value={newSurgery}
                                                                         onChange={(e) => setNewSurgery(e.target.value)}
                                                                         onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addSurgery())}
-                                                                        className="flex-1 px-4 py-2 border border-slate-200 rounded-xl outline-none text-[#0f3e61] font-semibold focus:border-[#207DC0] focus:ring-4 focus:ring-[#207DC0]/10" 
-                                                                        placeholder="e.g. Appendectomy (2020)" 
+                                                                        className="flex-1 px-4 py-2 border border-slate-200 rounded-xl outline-none text-[#0f3e61] font-semibold focus:border-[#207DC0] focus:ring-4 focus:ring-[#207DC0]/10"
+                                                                        placeholder="e.g. Appendectomy (2020)"
                                                                     />
                                                                     <button type="button" onClick={addSurgery} className="px-6 py-2 bg-[#207DC0] text-white rounded-xl font-bold hover:bg-[#165a8a] transition-colors">Add</button>
                                                                 </div>
