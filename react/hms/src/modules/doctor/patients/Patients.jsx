@@ -10,6 +10,7 @@ import patientsService from '../../../services/patientsService';
 import reportService from '../../../services/reportService';
 import PatientView from '../../../components/patient/patientview';
 import FollowUpDialog from '../../../components/doctor/FollowUpDialog';
+import AddPatientModal from '../../../components/patient/addpatient';
 import './Patients.css';
 
 // Toast notification helper
@@ -77,6 +78,8 @@ const DoctorPatients = () => {
   const [modalData, setModalData] = useState(null);
   const [showFollowUpDialog, setShowFollowUpDialog] = useState(false);
   const [selectedFollowUpPatient, setSelectedFollowUpPatient] = useState(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editPatientId, setEditPatientId] = useState(null);
 
   // Refs for cleanup
   const abortControllerRef = useRef(null);
@@ -375,6 +378,31 @@ const DoctorPatients = () => {
     fetchPatients();
   }, [fetchPatients]);
 
+  // Handle edit patient
+  const handleEditPatient = useCallback((patient) => {
+    const patientId = patient?.id || patient?._id;
+    if (!patientId) {
+      toast.error('Invalid patient data');
+      return;
+    }
+    
+    setEditPatientId(patientId);
+    setShowEditModal(true);
+    setActiveModal(null); // Close view modal if open
+  }, []);
+
+  const handleCloseEditModal = useCallback(() => {
+    setShowEditModal(false);
+    setEditPatientId(null);
+  }, []);
+
+  const handleEditSuccess = useCallback(() => {
+    setShowEditModal(false);
+    setEditPatientId(null);
+    toast.success('Patient updated successfully');
+    fetchPatients(); // Refresh the list
+  }, [fetchPatients]);
+
   // Format date with proper validation
   const formatLastVisit = useCallback((dateString) => {
     if (!dateString) return 'N/A';
@@ -660,7 +688,18 @@ const DoctorPatients = () => {
           patientId={modalData.id || modalData._id || modalData.patientId}
           isOpen={true}
           onClose={handleCloseModal}
+          onEdit={handleEditPatient}
           showBillingTab={false}
+        />
+      )}
+
+      {/* Edit Patient Modal */}
+      {showEditModal && editPatientId && (
+        <AddPatientModal
+          isOpen={showEditModal}
+          onClose={handleCloseEditModal}
+          onSuccess={handleEditSuccess}
+          patientId={editPatientId}
         />
       )}
 

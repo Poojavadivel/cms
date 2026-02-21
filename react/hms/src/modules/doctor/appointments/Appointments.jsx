@@ -503,12 +503,16 @@ const transformAppointment = (apt, index) => {
     }
   }
 
-  // Extract reason/chiefComplaint
+  // Extract reason/chiefComplaint/followUpReason
   let reason = '';
-  if (apt.chiefComplaint) {
+  if (apt.followUpReason) {
+    reason = String(apt.followUpReason).trim();
+  } else if (apt.chiefComplaint) {
     reason = String(apt.chiefComplaint).trim();
   } else if (apt.reason) {
     reason = String(apt.reason).trim();
+  } else if (apt.metadata && apt.metadata.followUpReason) {
+    reason = String(apt.metadata.followUpReason).trim();
   } else if (apt.metadata && apt.metadata.chiefComplaint) {
     reason = String(apt.metadata.chiefComplaint).trim();
   } else if (apt.metadata && apt.metadata.reason) {

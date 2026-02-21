@@ -66,6 +66,20 @@ const INDIAN_STATES = {
     'Puducherry': ['Puducherry', 'Karaikal', 'Mahe', 'Yanam']
 };
 
+// --- Country Codes ---
+const COUNTRY_CODES = [
+    { code: '+91', country: 'India', flag: '🇮🇳' },
+    { code: '+1', country: 'USA/Canada', flag: '🇺🇸' },
+    { code: '+44', country: 'UK', flag: '🇬🇧' },
+    { code: '+971', country: 'UAE', flag: '🇦🇪' },
+    { code: '+966', country: 'Saudi Arabia', flag: '🇸🇦' },
+    { code: '+65', country: 'Singapore', flag: '🇸🇬' },
+    { code: '+60', country: 'Malaysia', flag: '🇲🇾' },
+    { code: '+61', country: 'Australia', flag: '🇦🇺' },
+    { code: '+81', country: 'Japan', flag: '🇯🇵' },
+    { code: '+86', country: 'China', flag: '🇨🇳' },
+];
+
 // --- Reusable Components ---
 
 const StepIndicator = ({ step, currentStep, icon, label, description, isLast }) => {
@@ -141,6 +155,10 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
     const [doctors, setDoctors] = useState([]);
     const [cities, setCities] = useState([]);
 
+    // Phone number state with country code
+    const [countryCode, setCountryCode] = useState('+91'); // Default India
+    const [phoneNumber, setPhoneNumber] = useState('');
+
     // File Upload State
     const [uploadedFiles, setUploadedFiles] = useState([]);
     const [uploading, setUploading] = useState(false);
@@ -176,13 +194,32 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
             if (patientId) {
                 setFetchingData(true);
                 patientsService.fetchPatientById(patientId).then(patient => {
+                    // Extract phone number and country code
+                    const fullPhone = patient.phone || '';
+                    let extractedCode = '+91';
+                    let extractedNumber = '';
+                    
+                    if (fullPhone) {
+                        // Try to extract country code (starts with +)
+                        const match = fullPhone.match(/^(\+\d{1,4})?(\d+)$/);
+                        if (match) {
+                            extractedCode = match[1] || '+91';
+                            extractedNumber = match[2] || '';
+                        } else {
+                            extractedNumber = fullPhone.replace(/\D/g, '');
+                        }
+                    }
+                    
+                    setCountryCode(extractedCode);
+                    setPhoneNumber(extractedNumber);
+                    
                     setFormData({
                         firstName: patient.firstName || (patient.name ? patient.name.split(' ')[0] : ''),
                         lastName: patient.lastName || (patient.name ? patient.name.split(' ').slice(1).join(' ') : ''),
                         dateOfBirth: patient.dateOfBirth ? new Date(patient.dateOfBirth).toISOString().split('T')[0] : '',
                         age: patient.age || '',
                         gender: patient.gender || '', bloodGroup: patient.bloodGroup || '',
-                        phone: patient.phone || '', email: patient.email || '',
+                        phone: fullPhone, email: patient.email || '',
                         emergencyContactName: patient.emergencyContactName || '', emergencyContactPhone: patient.emergencyContactPhone || '',
                         houseNo: patient.houseNo || '', street: patient.street || '',
                         town: patient.town || '', city: patient.city || '', state: patient.state || '',
@@ -235,6 +272,8 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                 setMedications([]);
                 setSurgeries([]);
                 setCities([]);
+                setCountryCode('+91'); // Reset to default
+                setPhoneNumber(''); // Clear phone number
             }
         }
     }, [isOpen, patientId]);
@@ -377,6 +416,30 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
         setCities(INDIAN_STATES[selectedState] || []);
     };
 
+    // Handle phone number input (only allow digits, max 10)
+    const handlePhoneChange = (e) => {
+        const value = e.target.value.replace(/\D/g, ''); // Remove non-digits
+        if (value.length <= 10) {
+            setPhoneNumber(value);
+            // Update formData with country code + phone
+            setFormData(prev => ({
+                ...prev,
+                phone: countryCode + value
+            }));
+        }
+    };
+
+    // Handle country code change
+    const handleCountryCodeChange = (e) => {
+        const newCode = e.target.value;
+        setCountryCode(newCode);
+        // Update formData with new country code + existing phone
+        setFormData(prev => ({
+            ...prev,
+            phone: newCode + phoneNumber
+        }));
+    };
+
     const validateStep = () => {
         const newErrors = {};
         if (currentStep === 0) {
@@ -387,7 +450,11 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
             if (!formData.age && !formData.dateOfBirth) newErrors.age = true;
         }
         if (currentStep === 1) {
-            if (!formData.phone.trim() || formData.phone.length < 10) newErrors.phone = 'Valid phone number required';
+            // Phone validation: Must be exactly 10 digits
+            const phoneDigits = phoneNumber.replace(/\D/g, ''); // Remove non-digits
+            if (!phoneDigits || phoneDigits.length !== 10) {
+                newErrors.phone = 'Phone number must be exactly 10 digits';
+            }
         }
         if (currentStep === 2) {
             // Mandatory vitals during initial registration
@@ -675,8 +742,30 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                                                 {currentStep === 1 && (
                                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                                         <PremiumInput label="Phone Number" error={errors.phone} required icon={<MdPhone />} className="md:col-span-2">
-                                                            <input name="phone" value={formData.phone} onChange={handleInputChange}
-                                                                className="w-full outline-none text-[#0f3e61] placeholder-slate-300 font-bold text-lg bg-transparent" placeholder="+91 99999 00000" />
+                                                            <div className="flex items-center gap-2 w-full">
+                                                                <select 
+                                                                    value={countryCode} 
+                                                                    onChange={handleCountryCodeChange}
+                                                                    className="outline-none text-[#0f3e61] font-bold text-base bg-transparent border-r border-slate-200 pr-2"
+                                                                >
+                                                                    {COUNTRY_CODES.map(item => (
+                                                                        <option key={item.code} value={item.code}>
+                                                                            {item.flag} {item.code}
+                                                                        </option>
+                                                                    ))}
+                                                                </select>
+                                                                <input 
+                                                                    type="tel" 
+                                                                    value={phoneNumber} 
+                                                                    onChange={handlePhoneChange}
+                                                                    maxLength={10}
+                                                                    className="flex-1 outline-none text-[#0f3e61] placeholder-slate-300 font-bold text-lg bg-transparent" 
+                                                                    placeholder="9999900000" 
+                                                                />
+                                                                <span className="text-xs text-slate-400 font-medium">
+                                                                    {phoneNumber.length}/10
+                                                                </span>
+                                                            </div>
                                                         </PremiumInput>
 
                                                         <PremiumInput label="Email Address" icon={<MdEmail />} className="md:col-span-2">

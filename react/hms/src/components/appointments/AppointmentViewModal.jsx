@@ -606,8 +606,10 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdi
 
                             // Extract reason for condition
                             let reason = '';
-                            if (appt.chiefComplaint) reason = appt.chiefComplaint;
+                            if (appt.followUpReason) reason = appt.followUpReason;
+                            else if (appt.chiefComplaint) reason = appt.chiefComplaint;
                             else if (appt.reason) reason = appt.reason;
+                            else if (appt.metadata?.followUpReason) reason = appt.metadata.followUpReason;
                             else if (appt.metadata?.chiefComplaint) reason = appt.metadata.chiefComplaint;
                             else if (appt.metadata?.reason) reason = appt.metadata.reason;
                             else if (appt.notes) reason = appt.notes;
