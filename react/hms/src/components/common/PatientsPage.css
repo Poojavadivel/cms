@@ -1,4 +1,4 @@
-/* --- ENTERPRISE DESIGN SYSTEM (Doctor Patients - Matching Admin Patients) --- */
+/* --- ENTERPRISE DESIGN SYSTEM (Patients - Matching Appointments) --- */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 /* Loading spinner animation */
@@ -7,6 +7,7 @@
     transform: rotate(360deg);
   }
 }
+
 
 .patients-page {
   /* 1. BRAND COLORS */
@@ -52,113 +53,83 @@
 }
 
 /* --- HEADER --- */
-/* Direct h1 and p element targeting for maximum specificity */
-#doctor-patients-page h1 {
-  font-size: 28px !important;
-  font-weight: 800 !important;
-  color: #0F172A !important;
-  margin: 0 !important;
-  letter-spacing: -0.04em !important;
-  line-height: 1.1 !important;
-  text-transform: uppercase !important;
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-3);
+  flex-shrink: 0;
 }
 
-#doctor-patients-page .dashboard-header h1,
-#doctor-patients-page .header-content h1 {
-  font-size: 28px !important;
-  font-weight: 800 !important;
-  color: #0F172A !important;
-  margin: 0 !important;
-  letter-spacing: -0.04em !important;
-  line-height: 1.1 !important;
-  text-transform: uppercase !important;
+.patients-page .main-title {
+  font-size: 28px;
+  font-weight: 800;
+  color: #0F172A;
+  margin: 0;
+  letter-spacing: -0.04em;
+  line-height: 1.1;
+  text-transform: uppercase;
 }
 
-#doctor-patients-page p {
-  font-size: 14px !important;
-  color: #64748B !important;
-  margin: 4px 0 0 0 !important;
-  font-weight: 500 !important;
+.patients-page .main-subtitle {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin: 4px 0 0 0;
+  letter-spacing: var(--ls-body);
+  font-weight: 500;
+  white-space: nowrap;
+  /* Enforce single line */
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-#doctor-patients-page .dashboard-header p,
-#doctor-patients-page .header-content p {
-  font-size: 14px !important;
-  color: #64748B !important;
-  margin: 4px 0 0 0 !important;
-  font-weight: 500 !important;
-  white-space: nowrap !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
+.patients-page .btn-new-appointment {
+  height: 40px;
+  /* Reduced from 48px to be more compact */
+  padding: 0 20px;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+  color: white;
+  border: none;
+  border-radius: var(--radius-btn);
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(32, 125, 192, 0.2);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+  overflow: hidden;
+  white-space: nowrap;
+  /* Enforce single line */
 }
 
-#doctor-patients-page .dashboard-header {
-  display: flex !important;
-  justify-content: space-between !important;
-  align-items: center !important;
-  margin-bottom: var(--space-3) !important;
-  flex-shrink: 0 !important;
+.btn-new-appointment::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 150%;
+  height: 150%;
+  background: rgba(255, 255, 255, 0.2);
+  transform: translate(-50%, -50%) scale(0);
+  border-radius: 50%;
+  transition: transform 0.5s;
 }
 
-#doctor-patients-page .dashboard-header .header-content {
-  display: flex !important;
-  flex-direction: column !important;
+.btn-new-appointment:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 15px 30px -8px rgba(32, 125, 192, 0.4);
 }
 
-#doctor-patients-page .dashboard-header .patients-main-title,
-#doctor-patients-page .patients-main-title {
-  font-size: 28px !important;
-  font-weight: 800 !important;
-  color: #0F172A !important;
-  margin: 0 !important;
-  letter-spacing: -0.04em !important;
-  line-height: 1.1 !important;
-  text-transform: uppercase !important;
+.btn-new-appointment:hover::after {
+  transform: translate(-50%, -50%) scale(1);
+  opacity: 0;
 }
 
-#doctor-patients-page .dashboard-header .patients-main-subtitle,
-#doctor-patients-page .patients-main-subtitle {
-  font-size: 14px !important;
-  color: #64748B !important;
-  margin: 4px 0 0 0 !important;
-  font-weight: 500 !important;
-  white-space: nowrap !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-}
-
-/* Fallback with class selector */
-.patients-page .dashboard-header {
-  display: flex !important;
-  justify-content: space-between !important;
-  align-items: center !important;
-  margin-bottom: var(--space-3) !important;
-  flex-shrink: 0 !important;
-}
-
-.patients-page .dashboard-header .header-content {
-  display: flex !important;
-  flex-direction: column !important;
-}
-
-.patients-page .dashboard-header .patients-main-title {
-  font-size: 28px !important;
-  font-weight: 800 !important;
-  color: #0F172A !important;
-  margin: 0 !important;
-  letter-spacing: -0.04em !important;
-  line-height: 1.1 !important;
-  text-transform: uppercase !important;
-}
-
-.patients-page .dashboard-header .patients-main-subtitle {
-  font-size: 14px !important;
-  color: #64748B !important;
-  margin: 4px 0 0 0 !important;
-  font-weight: 500 !important;
-  white-space: nowrap !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
+.btn-new-appointment:active {
+  transform: translateY(0) scale(0.98);
 }
 
 /* --- SEARCH & FILTER --- */
@@ -400,16 +371,35 @@
   color: var(--neutral-gray);
 }
 
-.font-semibold {
-  font-weight: 600;
+/* Doctor Cell */
+.cell-doctor {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
-.opacity-60 {
-  opacity: 0.6;
+.doc-avatar-sm {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid #E2E8F0;
+  background: white;
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
-.text-xs {
-  font-size: 11px;
+.doc-avatar-sm svg {
+  width: 16px;
+  height: 16px;
+}
+
+.font-medium {
+  font-weight: 500;
+  font-size: 13px;
+  color: var(--text-title);
 }
 
 /* Actions */
@@ -444,7 +434,7 @@
   stroke: #374151;
 }
 
-/* Edit/Calendar - Green */
+/* Edit - Green */
 .btn-action.edit svg {
   stroke: #207DC0;
 }
@@ -455,6 +445,43 @@
 
 .btn-action.edit:hover svg {
   stroke: #047857;
+}
+
+/* Delete - Red */
+.btn-action.delete svg {
+  stroke: #DC2626;
+}
+
+.btn-action.delete:hover {
+  background: #FEF2F2;
+}
+
+.btn-action.delete:hover svg {
+  stroke: #B91C1C;
+}
+
+/* Follow-Up - Blue */
+.btn-action.followup {
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  color: #1e40af;
+  padding: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.btn-action.followup:hover {
+  background: linear-gradient(135deg, #bfdbfe 0%, #93c5fd 100%);
+}
+
+.btn-action.followup svg {
+  stroke: #1e40af;
 }
 
 /* Download - Amber */
@@ -560,4 +587,28 @@
   .tabs-wrapper {
     flex: 1;
   }
+}
+
+/* Doctor name clickable styling - Match Appointments page */
+.doctor-name-clickable {
+  cursor: pointer;
+  color: var(--text-body);
+  font-weight: 500;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.doctor-name-clickable:hover {
+  color: var(--primary);
+  transform: translateX(2px);
+}
+
+.doctor-name-clickable:active {
+  transform: translateX(0);
+}
+
+.cell-doctor {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }

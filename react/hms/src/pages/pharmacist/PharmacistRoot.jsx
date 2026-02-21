@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useApp } from '../../provider';
+import LogoutConfirmModal from '../../components/common/LogoutConfirmModal';
 import './PharmacistRoot.css';
 import {
   MdDashboard,
@@ -21,6 +22,7 @@ const PharmacistRoot = () => {
   const { user, signOut } = useApp();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   const navItems = useMemo(() => [
     { icon: <MdDashboard />, label: 'Dashboard', path: '/pharmacist/dashboard' },
@@ -44,6 +46,7 @@ const PharmacistRoot = () => {
 
   const handleLogout = async () => {
     await signOut();
+    setShowLogoutModal(false);
     navigate('/login');
   };
 
@@ -95,7 +98,7 @@ const PharmacistRoot = () => {
               </div>
               <button
                 className="logout-btn-collapsed"
-                onClick={handleLogout}
+                onClick={() => setShowLogoutModal(true)}
                 title="Logout"
               >
                 <MdLogout size={20} />
@@ -112,7 +115,7 @@ const PharmacistRoot = () => {
               </div>
               <button
                 className="logout-btn"
-                onClick={handleLogout}
+                onClick={() => setShowLogoutModal(true)}
                 title="Logout"
               >
                 <MdLogout size={20} />
@@ -125,6 +128,14 @@ const PharmacistRoot = () => {
       <div className="main-content">
         <Outlet />
       </div>
+
+      {/* Logout Confirmation Modal */}
+      <LogoutConfirmModal
+        isOpen={showLogoutModal}
+        onClose={() => setShowLogoutModal(false)}
+        onConfirm={handleLogout}
+        userName={user?.fullName || user?.firstName}
+      />
     </div>
   );
 };

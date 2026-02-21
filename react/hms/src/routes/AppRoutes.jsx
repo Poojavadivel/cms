@@ -135,11 +135,11 @@ const AppRoutes = () => {
           }
         >
           <Route index element={<Navigate to="dashboard" replace />} />
-          <Route path="dashboard" element={<DoctorDashboard />} />
-          <Route path="appointments" element={<DoctorAppointments />} />
-          <Route path="patients" element={<DoctorPatients />} />
-          <Route path="schedule" element={<DoctorSchedule />} />
-          <Route path="settings" element={<DoctorSettings />} />
+          <Route path="dashboard" element={<DoctorDashboard key="doctor-dashboard" />} />
+          <Route path="appointments" element={<DoctorAppointments key="doctor-appointments" />} />
+          <Route path="patients" element={<DoctorPatients key="doctor-patients" />} />
+          <Route path="schedule" element={<DoctorSchedule key="doctor-schedule" />} />
+          <Route path="settings" element={<DoctorSettings key="doctor-settings" />} />
           <Route path="*" element={<Navigate to="/doctor/dashboard" replace />} />
         </Route>
 

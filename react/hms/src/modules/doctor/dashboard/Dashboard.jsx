@@ -31,6 +31,8 @@ import {
 import { useApp } from '../../../provider';
 import appointmentsService from '../../../services/appointmentsService';
 import patientsService from '../../../services/patientsService';
+import AppointmentViewModal from '../../../components/appointments/AppointmentViewModal';
+import AppointmentEditModal from '../../../components/appointments/AppointmentEditModal';
 import './Dashboard.css';
 
 const DoctorDashboard = () => {
@@ -44,6 +46,10 @@ const DoctorDashboard = () => {
   // Modal State
   const [selectedItem, setSelectedItem] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [showAppointmentViewModal, setShowAppointmentViewModal] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedAppointmentId, setSelectedAppointmentId] = useState(null);
 
   useEffect(() => {
     loadData();
@@ -66,14 +72,30 @@ const DoctorDashboard = () => {
     }
   };
 
-  // Calculate metrics
+  // Calculate metrics based on selected period
+  const getDateRange = () => {
+    const now = new Date();
+    const startDate = new Date();
+    
+    if (selectedPeriod === 'Today') {
+      startDate.setHours(0, 0, 0, 0);
+    } else if (selectedPeriod === 'Week') {
+      startDate.setDate(now.getDate() - 7);
+    } else if (selectedPeriod === 'Month') {
+      startDate.setDate(now.getDate() - 30);
+    }
+    
+    return { startDate, endDate: now };
+  };
+
+  const { startDate, endDate } = getDateRange();
+
   const totalPatients = patients.length;
 
   const todayAppointments = appointments.filter(a => {
     try {
       const apptDate = new Date(a.startAt || a.date || a.appointmentDate);
-      const today = new Date();
-      return apptDate.toDateString() === today.toDateString();
+      return apptDate >= startDate && apptDate <= endDate;
     } catch {
       return false;
     }
@@ -82,10 +104,9 @@ const DoctorDashboard = () => {
   const waitingNow = appointments.filter(a => {
     try {
       const apptDate = new Date(a.startAt || a.date || a.appointmentDate);
-      const today = new Date();
-      const isToday = apptDate.toDateString() === today.toDateString();
+      const isInRange = apptDate >= startDate && apptDate <= endDate;
       const isScheduled = (a.status || '').toLowerCase() === 'scheduled';
-      return isToday && isScheduled;
+      return isInRange && isScheduled;
     } catch {
       return false;
     }
@@ -94,10 +115,9 @@ const DoctorDashboard = () => {
   const completedToday = appointments.filter(a => {
     try {
       const apptDate = new Date(a.startAt || a.date || a.appointmentDate);
-      const today = new Date();
-      const isToday = apptDate.toDateString() === today.toDateString();
+      const isInRange = apptDate >= startDate && apptDate <= endDate;
       const isCompleted = (a.status || '').toLowerCase() === 'completed';
-      return isToday && isCompleted;
+      return isInRange && isCompleted;
     } catch {
       return false;
     }
@@ -157,26 +177,63 @@ const DoctorDashboard = () => {
 
   const getChartData = () => {
     const days = [];
-    for (let i = 6; i >= 0; i--) {
+    let numDays = 7;
+    let dateFormat = { weekday: 'short' };
+
+    if (selectedPeriod === 'Week') {
+      numDays = 7;
+      dateFormat = { weekday: 'short' };
+    } else if (selectedPeriod === 'Month') {
+      numDays = 30;
+      dateFormat = { day: 'numeric' };
+    } else { // Today
+      numDays = 1;
+      dateFormat = { hour: '2-digit', minute: '2-digit' };
+    }
+
+    for (let i = numDays - 1; i >= 0; i--) {
       const d = new Date();
-      d.setDate(d.getDate() - i);
-      const dateStr = d.toDateString();
-      days.push({
-        date: d.toLocaleDateString('en-US', { weekday: 'short' }),
-        fullDate: dateStr,
-        scheduled: 0,
-        completed: 0,
-      });
+      if (selectedPeriod === 'Today') {
+        d.setHours(d.getHours() - i);
+        days.push({
+          date: d.toLocaleTimeString('en-US', dateFormat),
+          fullDate: d.toDateString(),
+          fullHour: d.getHours(),
+          scheduled: 0,
+          completed: 0,
+        });
+      } else {
+        d.setDate(d.getDate() - i);
+        const dateStr = d.toDateString();
+        days.push({
+          date: d.toLocaleDateString('en-US', dateFormat),
+          fullDate: dateStr,
+          scheduled: 0,
+          completed: 0,
+        });
+      }
     }
 
     appointments.forEach(a => {
       try {
-        const apptDate = new Date(a.startAt || a.date || a.appointmentDate).toDateString();
-        const dayData = days.find(d => d.fullDate === apptDate);
-        if (dayData) {
-          const status = (a.status || '').toLowerCase();
-          if (status === 'scheduled') dayData.scheduled++;
-          else if (status === 'completed') dayData.completed++;
+        const apptDate = new Date(a.startAt || a.date || a.appointmentDate);
+        const apptDateStr = apptDate.toDateString();
+        
+        if (selectedPeriod === 'Today') {
+          const apptHour = apptDate.getHours();
+          const dayData = days.find(d => d.fullDate === apptDateStr && d.fullHour === apptHour);
+          if (dayData) {
+            const status = (a.status || '').toLowerCase();
+            if (status === 'scheduled') dayData.scheduled++;
+            else if (status === 'completed') dayData.completed++;
+          }
+        } else {
+          const dayData = days.find(d => d.fullDate === apptDateStr);
+          if (dayData) {
+            const status = (a.status || '').toLowerCase();
+            if (status === 'scheduled') dayData.scheduled++;
+            else if (status === 'completed') dayData.completed++;
+          }
         }
       } catch (e) { }
     });
@@ -242,62 +299,10 @@ const DoctorDashboard = () => {
         </div>
       </div>
 
-      {/* Quick Actions */}
-      <div className="quick-actions">
-        <button className="action-btn success">
-          <MdLocalHospital />
-          <span>Start Consultation</span>
-        </button>
-        <button className="action-btn danger">
-          <MdWarning />
-          <span>Emergency</span>
-        </button>
-        <button className="action-btn warning">
-          <MdNote />
-          <span>Quick Notes</span>
-        </button>
-        <button className="action-btn purple">
-          <MdMessage />
-          <span>Messages</span>
-        </button>
-      </div>
-
       {/* Main Content */}
       <div className="dashboard-content">
         {/* Left Section */}
         <div className="content-left">
-          {/* Stats Cards */}
-          <div className="stats-cards">
-            <StatCard
-              icon={<MdPeople />}
-              label="Total Patients"
-              value={totalPatients}
-              color="#0EA5E9"
-              onClick={() => navigate('/doctor/patients')}
-            />
-            <StatCard
-              icon={<MdCalendarToday />}
-              label="Today's Appointments"
-              value={todayAppointments}
-              color="#8B5CF6"
-              onClick={() => navigate('/doctor/appointments')}
-            />
-            <StatCard
-              icon={<MdAccessTime />}
-              label="Waiting Now"
-              value={waitingNow}
-              color="#F59E0B"
-              onClick={() => navigate('/doctor/appointments')}
-            />
-            <StatCard
-              icon={<MdCheckCircle />}
-              label="Completed Today"
-              value={completedToday}
-              color="#207DC0"
-              onClick={() => navigate('/doctor/appointments')}
-            />
-          </div>
-
           {/* Patient Flow Chart */}
           <div className="chart-card">
             <div className="card-header">
@@ -425,7 +430,10 @@ const DoctorDashboard = () => {
                   <UpcomingItem
                     key={appointment._id || appointment.id}
                     appointment={appointment}
-                    onClick={() => handleItemClick(appointment)}
+                    onClick={() => {
+                      setSelectedAppointment(appointment);
+                      setShowAppointmentViewModal(true);
+                    }}
                   />
                 ))
               )}
@@ -470,6 +478,64 @@ const DoctorDashboard = () => {
           item={selectedItem}
           onClose={() => setShowModal(false)}
           onNavigate={navigateToDetails}
+        />
+      )}
+
+      {/* Appointment View Modal */}
+      {showAppointmentViewModal && selectedAppointment && (
+        <AppointmentViewModal
+          isOpen={showAppointmentViewModal}
+          onClose={() => {
+            console.log('View modal closing');
+            setShowAppointmentViewModal(false);
+            setSelectedAppointment(null);
+          }}
+          appointmentData={selectedAppointment}
+          onEdit={(appointment) => {
+            console.log('Edit callback triggered');
+            console.log('Appointment object:', appointment);
+            console.log('Appointment keys:', Object.keys(appointment));
+            
+            // Try multiple possible ID fields
+            const appointmentId = appointment._id 
+              || appointment.id 
+              || appointment.appointmentId
+              || appointment.appointmentObjectId;
+              
+            console.log('Extracted appointment ID:', appointmentId);
+            
+            if (!appointmentId) {
+              console.error('No appointment ID found!');
+              console.error('Available fields:', Object.keys(appointment));
+              alert('Unable to edit: Appointment ID not found. Please try from the Appointments page.');
+              return;
+            }
+            
+            setSelectedAppointmentId(appointmentId);
+            setShowAppointmentViewModal(false);
+            // Use setTimeout to ensure the view modal closes before opening edit modal
+            setTimeout(() => {
+              console.log('Opening edit modal with ID:', appointmentId);
+              setShowEditModal(true);
+            }, 50);
+          }}
+        />
+      )}
+
+      {/* Appointment Edit Modal */}
+      {showEditModal && selectedAppointmentId && (
+        <AppointmentEditModal
+          isOpen={showEditModal}
+          onClose={() => {
+            setShowEditModal(false);
+            setSelectedAppointmentId(null);
+          }}
+          appointmentId={selectedAppointmentId}
+          onSuccess={() => {
+            setShowEditModal(false);
+            setSelectedAppointmentId(null);
+            loadData(); // Refresh dashboard data
+          }}
         />
       )}
     </div>
@@ -558,7 +624,7 @@ const QuickDetailModal = ({ item, onClose, onNavigate }) => {
 
 const QueueItem = ({ appointment, position, onClick }) => {
   const patientName = appointment.patientName || appointment.patientId?.fullName || 'Unknown Patient';
-  const reason = appointment.reason || 'General Consultation';
+  const reason = appointment.reason || appointment.appointmentType || 'General Consultation';
   const time = appointment.time || appointment.appointmentTime || '--:--';
 
   return (
@@ -584,20 +650,46 @@ const QueueItem = ({ appointment, position, onClick }) => {
 
 const UpcomingItem = ({ appointment, onClick }) => {
   const patientName = appointment.patientName || appointment.patientId?.fullName || 'Unknown Patient';
-  const date = new Date(appointment.date || appointment.appointmentDate).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-  });
-  const time = appointment.time || appointment.appointmentTime || '--:--';
+  
+  // Fix date and time formatting
+  let date = 'Invalid Date';
+  let time = '--:--';
+  
+  try {
+    const appointmentDate = new Date(appointment.startAt || appointment.date || appointment.appointmentDate);
+    if (!isNaN(appointmentDate.getTime())) {
+      date = appointmentDate.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+      });
+      
+      // Extract time from date if not provided separately
+      if (appointment.time || appointment.appointmentTime) {
+        time = appointment.time || appointment.appointmentTime;
+      } else {
+        // Extract time from the date object
+        time = appointmentDate.toLocaleTimeString('en-US', {
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        });
+      }
+    }
+  } catch (e) {
+    console.error('Date parsing error:', e);
+  }
+  
+  const reason = appointment.reason || appointment.appointmentType || 'Consultation';
 
   return (
-    <div className="upcoming-item" onClick={onClick} style={{ cursor: 'pointer' }}>
+    <div className="upcoming-item" style={{ cursor: 'pointer' }}>
       <div className="upcoming-icon">
         <MdCalendarToday />
       </div>
       <div className="upcoming-details">
         <div className="upcoming-name">{patientName}</div>
         <div className="upcoming-datetime">{date} • {time}</div>
+        <div className="upcoming-reason">{reason}</div>
       </div>
       <button className="upcoming-action" title="View details" onClick={(e) => {
         e.stopPropagation();

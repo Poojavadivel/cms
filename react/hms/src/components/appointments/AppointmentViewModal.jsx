@@ -29,7 +29,8 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdi
         // Map appointment-specific data
         const mappedAppt = {
           ...appointmentData,
-          _id: appointmentData.id, // Ensure internal ID usage
+          _id: appointmentData._id || appointmentData.id, // Preserve existing _id or use id
+          id: appointmentData.id || appointmentData._id, // Ensure both id formats exist
           clientName: appointmentData.patientName,
           condition: appointmentData.condition
         };
@@ -514,7 +515,19 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdi
 
                     {/* Right Actions */}
                     <div className="pv-header-right">
-                      <button className="pv-edit-btn" onClick={() => onEdit && onEdit(appointment)}>
+                      <button 
+                        className="pv-edit-btn" 
+                        onClick={() => {
+                          console.log('Edit button clicked in AppointmentViewModal');
+                          console.log('onEdit prop:', onEdit);
+                          console.log('appointment object:', appointment);
+                          if (onEdit) {
+                            onEdit(appointment);
+                          } else {
+                            console.error('onEdit prop is not defined!');
+                          }
+                        }}
+                      >
                         <MdEdit size={14} /> Edit
                       </button>
 

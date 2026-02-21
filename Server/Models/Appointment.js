@@ -84,7 +84,12 @@ const AppointmentSchema = new Schema({
   // Telegram-specific fields
   telegramUserId: { type: String, index: true },
   telegramChatId: { type: String, index: true },
-  bookingSource: { type: String, enum: ['web', 'telegram', 'admin'], default: 'web' }
+  bookingSource: { type: String, enum: ['web', 'telegram', 'admin'], default: 'web' },
+
+  // Soft delete
+  isDeleted: { type: Boolean, default: false, index: true },
+  deletedAt: { type: Date, default: null },
+  deletedBy: { type: String, ref: 'User', default: null }
 }, Object.assign({}, commonOptions));
 
 // Generate appointment code before saving

@@ -235,8 +235,34 @@ const Icons = {
 const Header = () => (
   <div className="appointments-header">
     <div className="header-content">
-      <h1 className="main-title">APPOINTMENTS</h1>
-      <p className="main-subtitle">Manage bookings, schedules, and patient statuses</p>
+      <h1 
+        className="appointments-main-title"
+        style={{
+          fontSize: '28px',
+          fontWeight: 800,
+          color: '#0F172A',
+          margin: 0,
+          letterSpacing: '-0.04em',
+          lineHeight: 1.1,
+          textTransform: 'uppercase'
+        }}
+      >
+        APPOINTMENTS
+      </h1>
+      <p 
+        className="appointments-main-subtitle"
+        style={{
+          fontSize: '14px',
+          color: '#64748B',
+          margin: '4px 0 0 0',
+          fontWeight: 500,
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis'
+        }}
+      >
+        Manage bookings, schedules, and patient statuses
+      </p>
     </div>
   </div>
 );
@@ -320,6 +346,12 @@ const FilterBar = ({
             onClick={() => onTabChange('cancelled')}
           >
             Cancelled
+          </button>
+          <button
+            className={`tab-btn ${activeTab === 'deleted' ? 'active' : ''}`}
+            onClick={() => onTabChange('deleted')}
+          >
+            Deleted
           </button>
         </div>
 
@@ -535,13 +567,18 @@ const Appointments = () => {
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [showPatientDialog, setShowPatientDialog] = useState(false);
 
-  // Fetch appointments from API on mount
+  // Fetch appointments from API on mount or when tab changes to deleted
   useEffect(() => {
     const fetchData = async () => {
       try {
         setIsLoading(true);
-        const data = await appointmentsService.fetchAppointments();
-        console.log('✅ Fetched appointments from API:', data);
+        
+        // Fetch deleted appointments if on deleted tab, otherwise fetch regular appointments
+        const data = activeTab === 'deleted' 
+          ? await appointmentsService.fetchDeletedAppointments()
+          : await appointmentsService.fetchAppointments();
+          
+        console.log(`✅ Fetched ${activeTab === 'deleted' ? 'deleted ' : ''}appointments from API:`, data);
 
         // Log first appointment to see structure
         if (data && data.length > 0) {
@@ -559,21 +596,43 @@ const Appointments = () => {
       } catch (error) {
         console.error('❌ Failed to fetch appointments:', error);
         showNotification('Failed to load appointments from server.', 'error');
-        // Fallback to mock data if API fails
-        setAllAppointments(MOCK_APPOINTMENTS);
-        setFilteredAppointments(MOCK_APPOINTMENTS);
+        // Fallback to mock data if API fails (only for non-deleted tabs)
+        if (activeTab !== 'deleted') {
+          setAllAppointments(MOCK_APPOINTMENTS);
+          setFilteredAppointments(MOCK_APPOINTMENTS);
+        } else {
+          setAllAppointments([]);
+          setFilteredAppointments([]);
+        }
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchData();
-  }, []);
+  }, [activeTab]); // Re-fetch when tab changes
+
+  // Reset state on component mount to ensure fresh start
+  useEffect(() => {
+    setActiveTab('all');
+    setSearchQuery('');
+    setSelectedDate(null);
+    setCurrentPage(1);
+    setShowCalendar(false);
+    
+    return () => {
+      // Cleanup: reset state when component unmounts
+      setAllAppointments([]);
+      setFilteredAppointments([]);
+    };
+  }, []); // Empty dependency array = runs only on mount/unmount
 
   // Filter appointments based on tab and search
   useEffect(() => {
     let result = allAppointments;
-    if (activeTab !== 'all') {
+    
+    // Don't filter by status if we're on the deleted tab
+    if (activeTab !== 'all' && activeTab !== 'deleted') {
       result = result.filter(a => a.status.toLowerCase() === activeTab.toLowerCase());
     }
 
@@ -591,7 +650,7 @@ const Appointments = () => {
     }
     setFilteredAppointments(result);
     setCurrentPage(1);
-  }, [activeTab, searchQuery, selectedDate, allAppointments]);
+  }, [searchQuery, selectedDate, allAppointments, activeTab]);
 
   const indexOfLastRow = currentPage * rowsPerPage;
   const indexOfFirstRow = indexOfLastRow - rowsPerPage;
@@ -775,7 +834,7 @@ const Appointments = () => {
   };
 
   return (
-    <div className="dashboard-container">
+    <div className="appointments-page dashboard-container">
       <Header />
       {notification && (
         <div className={`modern-notification ${notification.type}`}>

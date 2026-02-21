@@ -35,7 +35,7 @@
 }
 
 /* Header */
-.dashboard-header {
+.doctor-dashboard .dashboard-header {
   background: linear-gradient(135deg, #165a8a 0%, #165a8a 100%);
   border-radius: 12px;
   padding: 20px;
@@ -61,18 +61,18 @@
   font-size: 24px;
 }
 
-.header-content {
+.doctor-dashboard .header-content {
   flex: 1;
 }
 
-.header-content h1 {
+.doctor-dashboard .header-content h1 {
   font-size: 20px;
   font-weight: 700;
   margin: 0 0 4px 0;
   line-height: 1;
 }
 
-.header-content p {
+.doctor-dashboard .header-content p {
   font-size: 12px;
   margin: 0;
   opacity: 0.9;
@@ -491,6 +491,13 @@
   font-size: 10px;
   font-weight: 500;
   color: #64748B;
+}
+
+.upcoming-reason {
+  font-size: 9px;
+  font-weight: 400;
+  color: #94A3B8;
+  margin-top: 2px;
 }
 
 .upcoming-action {

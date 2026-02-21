@@ -169,7 +169,7 @@ router.get('/', auth, async (req, res) => {
   try {
     const userId = req.user.id;
     const role = req.user.role;
-    const { doctorId: doctorQuery, patientId, hasFollowUp } = req.query;
+    const { doctorId: doctorQuery, patientId, hasFollowUp, includeDeleted } = req.query;
 
     let query = {};
     if (role === 'admin' || role === 'superadmin') {
@@ -188,6 +188,11 @@ router.get('/', auth, async (req, res) => {
       query['followUp.isRequired'] = true;
     }
 
+    // Exclude deleted appointments by default
+    if (includeDeleted !== 'true') {
+      query.isDeleted = { $ne: true };
+    }
+
     console.log("🔎 Appointment query:", query);
 
     const appointments = await Appointment.find(query)
@@ -204,6 +209,49 @@ router.get('/', auth, async (req, res) => {
   } catch (err) {
     console.error('💥 GET all appointments error:', err);
     res.status(500).json({ success: false, message: 'Failed to fetch appointments', errorCode: 5001 });
+  }
+});
+
+// -----------------------------
+// GET Deleted Appointments
+// -----------------------------
+router.get('/deleted/list', auth, async (req, res) => {
+  console.log("📥 GET deleted appointments request, user:", req.user);
+  try {
+    const userId = req.user.id;
+    const role = req.user.role;
+
+    let query = { isDeleted: true };
+    
+    // Doctors can only see their own deleted appointments
+    if (role === 'doctor') {
+      query.doctorId = userId;
+    }
+    // Admins can see all deleted appointments or filter by doctor
+    else if (role === 'admin' || role === 'superadmin') {
+      const { doctorId } = req.query;
+      if (doctorId) {
+        query.doctorId = doctorId;
+      }
+    }
+
+    console.log("🔎 Deleted appointments query:", query);
+
+    const appointments = await Appointment.find(query)
+      .populate('patientId', 'firstName lastName phone email bloodGroup metadata dateOfBirth gender patientCode')
+      .populate('doctorId', 'firstName lastName email')
+      .populate('deletedBy', 'firstName lastName email')
+      .sort({ deletedAt: -1 }) // Sort by deletion date, newest first
+      .lean();
+
+    console.log("✅ Found deleted appointments:", appointments.length);
+
+    const normalized = normalizeAppointments(appointments);
+
+    res.status(200).json({ success: true, appointments: normalized });
+  } catch (err) {
+    console.error('💥 GET deleted appointments error:', err);
+    res.status(500).json({ success: false, message: 'Failed to fetch deleted appointments', errorCode: 5001 });
   }
 });
 
@@ -288,7 +336,7 @@ router.patch('/:id/status', auth, async (req, res) => {
 });
 
 // -----------------------------
-// DELETE Appointment
+// DELETE Appointment (Soft Delete)
 // -----------------------------
 router.delete('/:id', auth, async (req, res) => {
   console.log("📥 DELETE appointment:", req.params.id, "user:", req.user);
@@ -307,8 +355,13 @@ router.delete('/:id', auth, async (req, res) => {
       return res.status(403).json({ success: false, message: 'Forbidden', errorCode: 1009 });
     }
 
-    await Appointment.findByIdAndDelete(req.params.id);
-    console.log("✅ Appointment deleted:", req.params.id);
+    // Soft delete: mark as deleted instead of removing
+    appointment.isDeleted = true;
+    appointment.deletedAt = new Date();
+    appointment.deletedBy = userId;
+    await appointment.save();
+    
+    console.log("✅ Appointment soft deleted:", req.params.id);
 
     res.status(200).json({ success: true, message: 'Appointment deleted successfully' });
   } catch (err) {
