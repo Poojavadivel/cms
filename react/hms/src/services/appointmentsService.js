@@ -296,12 +296,36 @@ export const addIntake = async (payload, patientId) => {
     logger.apiResponse('POST', endpoint, response.status);
     logger.success('INTAKE', 'Intake data saved successfully');
 
-    // Normalize response shape
-    const result = response.data.data || response.data.intake || response.data;
-    return result;
+    return response.data.intake || response.data.data || response.data;
   } catch (error) {
     logger.apiError('POST', IntakeEndpoints.create(patientId), error);
     throw new Error(error.response?.data?.message || 'Failed to save intake data');
+  }
+};
+
+/**
+ * Fetch deleted appointments
+ * @returns {Promise<Array>} List of deleted appointments
+ */
+export const fetchDeletedAppointments = async () => {
+  try {
+    const endpoint = '/appointments/deleted/list';
+    logger.apiRequest('GET', endpoint);
+
+    const axiosInstance = createAxiosInstance();
+    const response = await axiosInstance.get(endpoint);
+
+    logger.apiResponse('GET', endpoint, response.status);
+
+    const appointments = Array.isArray(response.data)
+      ? response.data
+      : response.data.appointments || response.data.data || [];
+
+    logger.success('APPOINTMENTS', `Fetched ${appointments.length} deleted appointments`);
+    return appointments;
+  } catch (error) {
+    logger.apiError('GET', '/appointments/deleted/list', error);
+    throw new Error(error.response?.data?.message || 'Failed to fetch deleted appointments');
   }
 };
 
@@ -353,7 +377,8 @@ const appointmentsService = {
   fetchTodayAppointments,
   fetchUpcomingAppointments,
   addIntake,
-  fetchDoctors
+  fetchDoctors,
+  fetchDeletedAppointments
 };
 
 export default appointmentsService;

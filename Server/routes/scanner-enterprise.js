@@ -6,7 +6,6 @@ const vision = require('@google-cloud/vision');
 const path = require('path');
 const fs = require('fs').promises;
 const { v4: uuidv4 } = require('uuid');
-const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 const auth = require('../Middleware/Auth');
 const { Patient, LabReport, PatientPDF, PrescriptionDocument, LabReportDocument, MedicalHistoryDocument, startSession } = require('../Models');
@@ -17,7 +16,9 @@ const { Patient, LabReport, PatientPDF, PrescriptionDocument, LabReportDocument,
 const CONFIG = {
   MAX_FILE_SIZE: 50 * 1024 * 1024, // 50MB
   MAX_FILES_PER_UPLOAD: 10,
-  GEMINI_MODEL: 'gemini-2.5-flash',
+  AI_MODEL: 'openai-gpt-oss-120b',
+  API_URL: process.env.OPENAI_API_URL || 'https://inference.do-ai.run/v1/chat/completions',
+  API_KEY: process.env.OPENAI_API_KEY || 'sk-do-e9Ea0Pjt1cSZ2HWIBarUzy4AD5i6OeMiA7pwooPIJOSD3oqdxby60s5ogW',
   TEMP_UPLOAD_DIR: path.join(__dirname, '../uploads/temp'),
 };
 
@@ -58,7 +59,6 @@ const upload = multer({
 // API CLIENTS INITIALIZATION
 // ============================================================================
 let visionClient = null;
-let genAI = null;
 
 (() => {
   try {
@@ -78,16 +78,52 @@ let genAI = null;
     console.error('[scanner-enterprise] ❌ Vision API init failed:', e.message);
   }
 
-  try {
-    const apiKey = process.env.GEMINI_API_KEY || process.env.Gemi_Api_Key;
-    if (apiKey) {
-      genAI = new GoogleGenerativeAI(apiKey);
-      console.log('[scanner-enterprise] ✅ Gemini API initialized');
-    }
-  } catch (e) {
-    console.error('[scanner-enterprise] ❌ Gemini API init failed:', e.message);
+  if (!CONFIG.API_KEY) {
+    console.warn('[scanner-enterprise] ⚠️ AI API key missing. Set OPENAI_API_KEY in .env');
+  } else {
+    console.log('[scanner-enterprise] ✅ OpenAI-compatible API initialized');
   }
 })();
+
+// ============================================================================
+// OPENAI-COMPATIBLE API HELPER
+// ============================================================================
+async function callAIAPI(messages, maxTokens = 1500, temperature = 0.7) {
+  try {
+    const requestBody = {
+      model: CONFIG.AI_MODEL,
+      messages: messages,
+      max_tokens: maxTokens,
+      temperature: temperature
+    };
+
+    const response = await fetch(CONFIG.API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${CONFIG.API_KEY}`
+      },
+      body: JSON.stringify(requestBody)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`AI API returned ${response.status}: ${errorText}`);
+    }
+
+    const data = await response.json();
+    const content = data?.choices?.[0]?.message?.reasoning_content || data?.choices?.[0]?.message?.content;
+
+    if (!content) {
+      throw new Error('AI API returned empty response');
+    }
+
+    return content.trim();
+  } catch (error) {
+    console.error('[callAIAPI] Error:', error.message);
+    throw error;
+  }
+}
 
 // ============================================================================
 // TEST TYPE INTENTS AND SPECIALIZED PROMPTS
@@ -584,58 +620,16 @@ async function performOCR(filePath, mimetype, batchId) {
       } catch (error) {
         visionError = error;
         logh(batchId, `⚠️ Vision API failed: ${error.message}`);
-
-        // Check if it's a billing error
-        if (error.message.includes('PERMISSION_DENIED') || error.message.includes('billing')) {
-          logh(batchId, '💡 Billing issue detected, falling back to Gemini...');
-        }
       }
     }
 
-    // Fallback to Gemini Vision
-    if (genAI) {
-      try {
-        logh(batchId, '🤖 Using Gemini Vision as fallback...');
-
-        const model = genAI.getGenerativeModel({
-          model: 'gemini-1.5-flash'
-        });
-
-        // Convert buffer to base64
-        const base64Image = buffer.toString('base64');
-        const mimeType = mimetype || 'image/png';
-
-        const result = await model.generateContent([
-          {
-            inlineData: {
-              data: base64Image,
-              mimeType: mimeType
-            }
-          },
-          'Extract all text from this medical document. Return only the extracted text, no explanations.'
-        ]);
-
-        const response = await result.response;
-        const text = response.text();
-
-        logh(batchId, `✅ Gemini OCR: ${text.length} chars`);
-
-        return {
-          text,
-          engine: 'gemini',
-          confidence: 0.85, // Gemini doesn't provide confidence, use estimated value
-          tookMs: Date.now() - t0,
-          fallback: true,
-          originalError: visionError?.message
-        };
-      } catch (geminiError) {
-        logh(batchId, `❌ Gemini fallback also failed: ${geminiError.message}`);
-        throw new Error(`Both Vision API and Gemini failed. Vision: ${visionError?.message}, Gemini: ${geminiError.message}`);
-      }
+    // No fallback available - OCR requires Vision API
+    if (visionError) {
+      throw new Error(visionError.message || 'Vision API failed and no OCR fallback available');
     }
 
     // No OCR available
-    throw new Error(visionError?.message || 'No OCR service available');
+    throw new Error('No OCR service available');
   } catch (error) {
     logh(batchId, '❌ OCR failed:', error.message);
     throw error;
@@ -646,19 +640,11 @@ async function performOCR(filePath, mimetype, batchId) {
 // STEP 2: INTENT DETECTION
 // ============================================================================
 async function detectIntent(ocrText, batchId) {
-  if (!genAI) {
-    throw new Error('Gemini API not configured');
+  if (!CONFIG.API_KEY) {
+    throw new Error('AI API not configured');
   }
 
   logh(batchId, '🎯 Detecting test intent...');
-
-  const model = genAI.getGenerativeModel({
-    model: CONFIG.GEMINI_MODEL,
-    generationConfig: {
-      temperature: 0.1,
-      responseMimeType: "application/json",
-    }
-  });
 
   const intentPrompt = `You are a medical lab report classifier. Analyze the OCR text and determine the PRIMARY test type.
 
@@ -679,9 +665,19 @@ ${ocrText.substring(0, 2000)}
 OUTPUT (JSON only):`;
 
   try {
-    const result = await model.generateContent(intentPrompt);
-    const response = await result.response;
-    const jsonText = response.text().replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    const messages = [
+      {
+        role: "system",
+        content: "You are a medical lab report classifier. Always respond with valid JSON only, no markdown formatting."
+      },
+      {
+        role: "user",
+        content: intentPrompt
+      }
+    ];
+
+    const responseText = await callAIAPI(messages, 500, 0.1);
+    const jsonText = responseText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
     const intentData = JSON.parse(jsonText);
 
     logh(batchId, `✅ Intent detected: ${intentData.primaryIntent} (${(intentData.confidence * 100).toFixed(0)}%)`);
@@ -867,27 +863,30 @@ ${ocrText}
 }
 
 async function extractWithIntent(ocrText, intent, batchId) {
-  if (!genAI) {
-    throw new Error('Gemini API not configured');
+  if (!CONFIG.API_KEY) {
+    throw new Error('AI API not configured');
   }
 
   logh(batchId, `📊 Extracting data with ${intent} specialization...`);
-
-  const model = genAI.getGenerativeModel({
-    model: CONFIG.GEMINI_MODEL,
-    generationConfig: {
-      temperature: 0.1,
-      responseMimeType: "application/json",
-    }
-  });
 
   const prompt = buildSpecializedPrompt(intent, ocrText);
 
   try {
     const t0 = Date.now();
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const jsonText = response.text().replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    
+    const messages = [
+      {
+        role: "system",
+        content: "You are an expert medical document data extraction AI. Always respond with valid JSON only, no markdown formatting."
+      },
+      {
+        role: "user",
+        content: prompt
+      }
+    ];
+
+    const responseText = await callAIAPI(messages, 2000, 0.1);
+    const jsonText = responseText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
     const structuredData = JSON.parse(jsonText);
 
     const extractionTime = Date.now() - t0;
@@ -896,7 +895,7 @@ async function extractWithIntent(ocrText, intent, batchId) {
     structuredData.extractionMetadata = {
       intent,
       extractionTimeMs: extractionTime,
-      model: CONFIG.GEMINI_MODEL,
+      model: CONFIG.AI_MODEL,
       timestamp: new Date().toISOString()
     };
 
@@ -2023,7 +2022,7 @@ router.get('/health', auth, async (req, res) => {
     ok: true,
     services: {
       visionAPI: visionClient ? 'available' : 'not_configured',
-      geminiAPI: genAI ? 'available' : 'not_configured'
+      aiAPI: CONFIG.API_KEY ? 'available' : 'not_configured'
     },
     timestamp: new Date().toISOString()
   });

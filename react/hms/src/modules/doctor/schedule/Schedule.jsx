@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import {
   MdCalendarToday,
   MdRemoveRedEye,
-  MdMan,
-  MdWoman,
   MdChevronLeft,
   MdChevronRight,
   MdDelete,
@@ -11,7 +9,8 @@ import {
 } from 'react-icons/md';
 import appointmentsService from '../../../services/appointmentsService';
 import patientsService from '../../../services/patientsService';
-import { PatientProfileView, IntakeFormDialog } from '../../../components/doctor';
+import { PatientProfileView } from '../../../components/doctor';
+import AppointmentIntakeModal from '../../../components/appointments/AppointmentIntakeModal';
 import './Schedule.css';
 
 const DoctorSchedule = () => {
@@ -129,17 +128,8 @@ const DoctorSchedule = () => {
   const handleViewIntake = async (appointment) => {
     setIsLoadingPatient(true);
     setSelectedAppointment(appointment);
-    try {
-      const patientId = appointment.patientId?._id || appointment.patientId;
-      const patientData = await patientsService.fetchPatientById(patientId);
-      setSelectedPatient(patientData);
-      setShowIntakeDialog(true);
-    } catch (error) {
-      console.error('Error loading patient:', error);
-      alert('Failed to load patient details');
-    } finally {
-      setIsLoadingPatient(false);
-    }
+    setShowIntakeDialog(true);
+    setIsLoadingPatient(false);
   };
 
   const handleViewPatient = async (appointment) => {
@@ -189,54 +179,6 @@ const DoctorSchedule = () => {
     }
   };
 
-  const handleSaveIntake = async (formData) => {
-    try {
-      const patientId = selectedPatient?._id || selectedPatient?.id;
-      if (!patientId) {
-        alert('Internal Error: No patient selected');
-        return;
-      }
-
-      // Structure data for backend: pharmacyRows -> pharmacy, pathologyRows -> pathology
-      const payload = {
-        ...formData,
-        appointmentId: selectedAppointment?._id || selectedAppointment?.id,
-        pharmacy: formData.pharmacyRows?.map(row => ({
-          medicineId: row.medicineId,
-          name: row.medicine,
-          sku: row.sku,
-          dosage: row.dosage,
-          frequency: row.frequency,
-          duration: row.duration,
-          notes: row.notes,
-          quantity: row.quantity,
-          unitPrice: row.price
-        })),
-        pathology: formData.pathologyRows?.map(row => ({
-          testName: row.testName,
-          category: row.category,
-          priority: row.priority,
-          notes: row.notes
-        })),
-        vitals: {
-          heightCm: formData.height,
-          weightKg: formData.weight,
-          bmi: formData.bmi,
-          spo2: formData.spo2
-        }
-      };
-
-      await patientsService.saveIntake(patientId, payload);
-      alert('Intake form saved successfully');
-      await loadAppointments();
-      setShowIntakeDialog(false);
-    } catch (error) {
-      console.error('Error saving intake form:', error);
-      alert(error.message || 'Failed to save intake form');
-      throw error;
-    }
-  };
-
   if (loading) {
     return (
       <div className="doctor-schedule loading">
@@ -254,9 +196,6 @@ const DoctorSchedule = () => {
           <div className="calendar-card">
             <div className="calendar-header">
               <div className="header-left">
-                <div className="header-icon">
-                  <MdCalendarToday />
-                </div>
                 <h2>Schedule Calendar</h2>
               </div>
               <div className="appointments-badge">
@@ -358,16 +297,17 @@ const DoctorSchedule = () => {
         onEdit={handleEditPatient}
       />
 
-      <IntakeFormDialog
-        appointment={selectedAppointment}
-        patient={selectedPatient}
+      <AppointmentIntakeModal
         isOpen={showIntakeDialog}
         onClose={() => {
           setShowIntakeDialog(false);
           setSelectedPatient(null);
           setSelectedAppointment(null);
         }}
-        onSave={handleSaveIntake}
+        appointmentId={selectedAppointment?._id || selectedAppointment?.id}
+        onSuccess={() => {
+          loadAppointments();
+        }}
       />
 
       {isLoadingPatient && (
@@ -431,11 +371,22 @@ const AppointmentCard = ({ appointment, onViewIntake, onViewPatient, onDelete, o
 
   const isActionable = status.toLowerCase() === 'scheduled' || status.toLowerCase() === 'pending';
 
+  // Determine avatar image based on gender
+  const genderStr = (gender || '').toLowerCase().trim();
+  const avatarSrc = genderStr.includes('female') || genderStr.startsWith('f')
+    ? '/girlicon.png'
+    : '/boyicon.png';
+
   return (
     <div className={`appointment-card modern-shadow status-border-${status.toLowerCase()}`}>
       <div className="card-header">
-        <div className="patient-avatar-box" data-gender={gender?.toLowerCase()}>
-          {gender?.toLowerCase() === 'female' ? <MdWoman /> : <MdMan />}
+        <div className="patient-avatar-box" data-gender={genderStr}>
+          <img 
+            src={avatarSrc} 
+            alt={gender} 
+            className="patient-avatar-img"
+            onError={(e) => { e.target.src = '/boyicon.png'; }}
+          />
         </div>
         <div className="patient-info">
           <div

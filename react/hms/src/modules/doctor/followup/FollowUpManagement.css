@@ -7,6 +7,17 @@
   padding: 24px;
   background-color: #f8fafc;
   min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Hide scrollbars but keep functionality */
+.followup-management::-webkit-scrollbar {
+  display: none;
+}
+
+.followup-management {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 /* Header */

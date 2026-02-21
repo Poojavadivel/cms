@@ -1,17 +1,18 @@
 // routes/bot.js
-// Updated to work with Gemini API and Mongoose models: Bot, Patient, User
+// Updated to work with OpenAI-compatible API and Mongoose models: Bot, Patient, User
 const express = require("express");
 const { v4: uuidv4 } = require('uuid');
 const auth = require("../Middleware/Auth");
 const { Bot, Patient, User } = require("../Models");
 const mongoose = require("mongoose");
-const { GoogleGenerativeAI } = require("@google/generative-ai");
+const { createLogger, analytics } = require("../utils/apiLogger");
 
 const router = express.Router();
 
-/* ---------------- CONFIG (Gemini) ---------------- */
-const GEMINI_API_KEY = process.env.Gemi_Api_Key || process.env.GEMINI_API_KEY;
-const GEMINI_MODEL_NAME = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+/* ---------------- CONFIG (OpenAI-compatible API) ---------------- */
+const API_KEY = process.env.OPENAI_API_KEY || "sk-do-e9Ea0Pjt1cSZ2HWIBarUzy4AD5i6OeMiA7pwooPIJOSD3oqdxby60s5ogW";
+const API_URL = process.env.OPENAI_API_URL || "https://inference.do-ai.run/v1/chat/completions";
+const MODEL_NAME = process.env.AI_MODEL || "openai-gpt-oss-120b";
 
 const MAX_RETRIES = Number(process.env.MAX_RETRIES ?? 3);
 const DEFAULT_MAX_COMPLETION_TOKENS = Number(process.env.MAX_COMPLETION_TOKENS ?? 1500);
@@ -23,12 +24,9 @@ const CIRCUIT_BREAKER_COOLDOWN_MS = Number(process.env.CIRCUIT_BREAKER_COOLDOWN_
 
 const DEFAULT_TEMPERATURE = Number(process.env.TEMPERATURE ?? 1);
 
-if (!GEMINI_API_KEY) {
-  console.warn("[bot.js] WARNING: Gemini API key missing. Please set Gemi_Api_Key in .env file.");
+if (!API_KEY) {
+  console.warn("[bot.js] WARNING: API key missing. Please set OPENAI_API_KEY in .env file.");
 }
-
-/* Initialize Gemini */
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
 /* ---------------- In-memory circuit breaker & metrics ---------------- */
 const circuitBreaker = { failures: 0, state: "CLOSED", openedAt: null };
@@ -358,10 +356,27 @@ function recordFailureAndMaybeTripCircuit() {
   }
 }
 
-/* ---------------- Core Gemini call (same logic, different provider) ---------------- */
-async function callGeminiChatWithRetries(messages, temperature = DEFAULT_TEMPERATURE, initialMaxTokens = DEFAULT_MAX_COMPLETION_TOKENS) {
+/* ---------------- Core OpenAI-compatible API call with retries and logging ---------------- */
+async function callGeminiChatWithRetries(messages, temperature = DEFAULT_TEMPERATURE, initialMaxTokens = DEFAULT_MAX_COMPLETION_TOKENS, loggerOptions = {}) {
   metrics.calls += 1;
-  if (circuitIsOpen()) { metrics.failures += 1; throw new Error("Circuit breaker is open; aborting call to Gemini API"); }
+  
+  // Initialize logger
+  const logger = createLogger();
+  logger.startRequest({
+    apiProvider: 'openai-compatible',
+    apiUrl: API_URL,
+    model: MODEL_NAME,
+    messages: messages,
+    temperature: temperature,
+    maxTokens: initialMaxTokens,
+    ...loggerOptions
+  });
+  
+  if (circuitIsOpen()) { 
+    metrics.failures += 1;
+    await logger.logCircuitBreaker('Circuit breaker is open');
+    throw new Error("Circuit breaker is open; aborting call to API");
+  }
   if (!Array.isArray(messages) || messages.length === 0) throw new Error("messages must be a non-empty array");
 
   let attempt = 0;
@@ -372,72 +387,71 @@ async function callGeminiChatWithRetries(messages, temperature = DEFAULT_TEMPERA
     attempt += 1;
     const cid = makeCid();
     try {
-      // Convert OpenAI-style messages to Gemini format
-      const model = genAI.getGenerativeModel({ 
-        model: GEMINI_MODEL_NAME,
-        generationConfig: {
-          temperature: temperature,
-          maxOutputTokens: Math.floor(maxTokens),
-        }
+      console.debug(`[${cid}] Calling OpenAI-compatible API with model: ${MODEL_NAME}, maxTokens=${maxTokens}`);
+      
+      const requestBody = {
+        model: MODEL_NAME,
+        messages: messages,
+        max_tokens: Math.floor(maxTokens),
+        temperature: temperature
+      };
+
+      const response = await fetch(API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${API_KEY}`
+        },
+        body: JSON.stringify(requestBody)
       });
 
-      // Build chat history and current prompt
-      let systemPrompt = "";
-      const chatHistory = [];
-      let userPrompt = "";
-
-      for (const msg of messages) {
-        if (msg.role === "system") {
-          systemPrompt = msg.content;
-        } else if (msg.role === "user") {
-          userPrompt = msg.content;
-        } else if (msg.role === "assistant") {
-          chatHistory.push({
-            role: "model",
-            parts: [{ text: msg.content }]
-          });
-        }
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`API returned ${response.status}: ${errorText}`);
       }
 
-      // Combine system prompt with user prompt if system prompt exists
-      const finalPrompt = systemPrompt ? `${systemPrompt}\n\n${userPrompt}` : userPrompt;
-
-      console.debug(`[${cid}] Calling Gemini API with model: ${GEMINI_MODEL_NAME}, maxTokens=${maxTokens}`);
+      const data = await response.json();
       
-      // Start chat or generate content
-      let result;
-      if (chatHistory.length > 0) {
-        const chat = model.startChat({ history: chatHistory });
-        result = await chat.sendMessage(finalPrompt);
-      } else {
-        result = await model.generateContent(finalPrompt);
-      }
-
-      const response = result.response;
-      const content = response.text();
+      // Extract content from OpenAI-compatible response format
+      // Use content (final answer) not reasoning_content (internal thinking)
+      const content = data?.choices?.[0]?.message?.content || data?.choices?.[0]?.message?.reasoning_content;
 
       if (content && String(content).trim()) {
         metrics.successes += 1;
         circuitBreaker.failures = 0;
         circuitBreaker.state = "CLOSED";
+        
+        // Log successful API call
+        await logger.logSuccess(data, {
+          responseContent: String(content).trim(),
+          costPerToken: 0.00002 // Update with your actual pricing
+        });
+        
         return String(content).trim();
       }
 
       // Handle empty response
       if ((!content || !String(content).trim()) && maxTokens < MAX_COMPLETION_TOKENS_MAX) {
         const newTokens = Math.min(MAX_COMPLETION_TOKENS_MAX, Math.floor(maxTokens * 2));
-        console.warn(`[${cid}] Gemini returned empty output. Increasing maxOutputTokens ${maxTokens} -> ${newTokens} and retrying (attempt ${attempt}/${MAX_RETRIES}).`);
+        console.warn(`[${cid}] API returned empty output. Increasing maxTokens ${maxTokens} -> ${newTokens} and retrying (attempt ${attempt}/${MAX_RETRIES}).`);
         metrics.emptyResponses += 1;
         metrics.retries += 1;
+        
+        // Log retry
+        await logger.logRetry(attempt, `Empty response, increasing tokens to ${newTokens}`);
+        
         maxTokens = newTokens;
         await sleep(RETRY_BACKOFF_BASE_MS * attempt);
         continue;
       }
 
-      console.error(`[${cid}] Gemini returned no usable text.`);
+      console.error(`[${cid}] API returned no usable text.`);
       metrics.failures += 1;
       recordFailureAndMaybeTripCircuit();
-      throw new Error("Gemini API returned empty/whitespace response content.");
+      
+      const error = new Error("API returned empty/whitespace response content.");
+      await logger.logError(error);
+      throw error;
     } catch (err) {
       // Check if it's a rate limit or server error
       const errorMessage = err.message || String(err);
@@ -445,15 +459,18 @@ async function callGeminiChatWithRetries(messages, temperature = DEFAULT_TEMPERA
       const isServerError = errorMessage.includes("500") || errorMessage.includes("503") || errorMessage.includes("internal error");
       const transient = isRateLimitError || isServerError;
 
-      console.error(`[${cid}] Gemini API error:`, errorMessage);
+      console.error(`[${cid}] API error:`, errorMessage);
 
       if (!transient || attempt > MAX_RETRIES) {
         metrics.failures += 1;
         recordFailureAndMaybeTripCircuit();
+        await logger.logError(err, { retryCount: attempt - 1 });
         throw err;
       }
 
       metrics.retries += 1;
+      await logger.logRetry(attempt, errorMessage);
+      
       const backoffMs = RETRY_BACKOFF_BASE_MS * Math.pow(2, attempt - 1);
       console.warn(`[${cid}] Transient error detected. Backing off ${backoffMs}ms and retrying (attempt ${attempt}/${MAX_RETRIES})`);
       await sleep(backoffMs);
@@ -463,7 +480,9 @@ async function callGeminiChatWithRetries(messages, temperature = DEFAULT_TEMPERA
 
   metrics.failures += 1;
   recordFailureAndMaybeTripCircuit();
-  throw new Error("Exceeded retry attempts calling Gemini API");
+  const error = new Error("Exceeded retry attempts calling API");
+  await logger.logError(error, { retryCount: MAX_RETRIES });
+  throw error;
 }
 
 /* ---------------- Bot session helpers (adapted to new Bot schema) ---------------- */
@@ -490,7 +509,7 @@ async function findOrCreateSessionForUser(userId, sessionId = null) {
   // Create new session
   const newSession = {
     sessionId: sessionId || uuidv4(),
-    model: GEMINI_MODEL_NAME,
+    model: MODEL_NAME,
     messages: [], // messages are { sender, text, ts, meta? }
     metadata: {},
     createdAt: new Date(),
@@ -514,7 +533,7 @@ async function appendMessagesToSession(botDoc, sessionId, newMessages = []) {
     // session missing — create it
     const sess = {
       sessionId,
-      model: GEMINI_MODEL_NAME,
+      model: MODEL_NAME,
       messages: newMessages,
       metadata: {},
       createdAt: new Date(),
@@ -541,7 +560,7 @@ async function saveAndReturnChat(cid, tStart, sessionId, user, userMessage, botR
     const now = new Date().toISOString();
     await appendMessagesToSession(botDoc, sessId, [
       { sender: "user", text: userMessage, ts: now },
-      { sender: "bot", text: botReply, ts: now, meta: { model: GEMINI_MODEL_NAME } },
+      { sender: "bot", text: botReply, ts: now, meta: { model: MODEL_NAME } },
     ]);
 
     const latency = Date.now() - tStart;
@@ -621,27 +640,32 @@ router.post("/chat", auth, async (req, res) => {
     // Get role-specific system prompt
     const systemPrompt = ENTERPRISE_SYSTEM_PROMPTS[userRole] || ENTERPRISE_SYSTEM_PROMPTS.default;
     
-    // greeting short-circuit with role awareness
+    // greeting short-circuit with simple predefined responses
     const lower = trimmed.toLowerCase();
     const isGreeting = lower.match(/\b(hi|hello|hey|greetings|thanks|thank you)\b/);
     if (isGreeting) {
+      // Use predefined friendly greetings instead of AI generation
+      const greetingResponses = [
+        "Hello! How can I assist you today?",
+        "Hi there! What can I help you with?",
+        "Hey! I'm here to help. What do you need?",
+        "Hello! How may I help you today?",
+        "Hi! What brings you here today?",
+      ];
+      
+      const thankYouResponses = [
+        "You're welcome! Let me know if you need anything else.",
+        "Happy to help! Feel free to ask if you have more questions.",
+        "My pleasure! Anything else I can assist with?",
+      ];
+      
       let finalReply;
-      try {
-        const greetingMessages = [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: `User sent a greeting: ${trimmed}. Reply warmly and professionally in 1-2 sentences.` },
-        ];
-        
-        const summaryText = await callGeminiChatWithRetries(
-          greetingMessages,
-          DEFAULT_TEMPERATURE,
-          Math.max(150, Math.min(DEFAULT_MAX_COMPLETION_TOKENS, 300))
-        );
-        finalReply = String(summaryText).trim();
-      } catch (summErr) {
-        console.error(`[${cid}] Greeting call failed:`, summErr);
-        finalReply = "Hello! How can I help you today?";
+      if (lower.includes('thank')) {
+        finalReply = thankYouResponses[Math.floor(Math.random() * thankYouResponses.length)];
+      } else {
+        finalReply = greetingResponses[Math.floor(Math.random() * greetingResponses.length)];
       }
+      
       return saveAndReturnChat(cid, tStart, chatId, user, trimmed, finalReply, res);
     }
 
@@ -659,7 +683,20 @@ Return strictly valid JSON.`;
 
     let extractionText;
     try {
-      extractionText = await callGeminiChatWithRetries(extractorMessages, DEFAULT_TEMPERATURE, 400);
+      extractionText = await callGeminiChatWithRetries(
+        extractorMessages, 
+        DEFAULT_TEMPERATURE, 
+        400,
+        {
+          userId: user.id,
+          userRole: userRole,
+          userName: user.firstName || user.email,
+          endpoint: 'chatbot',
+          requestType: 'intent_extraction',
+          sessionId: chatId,
+          metadata: { userMessage: trimmed }
+        }
+      );
     } catch (err) {
       console.error(`[${cid}] Extraction call failed:`, err && err.message ? err.message : err);
       extractionText = null;
@@ -831,20 +868,28 @@ Return strictly valid JSON.`;
     }
 
     if (isDataMissing) {
-      try {
-        finalReply = await callGeminiChatWithRetries(
-          [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: `User Query: ${trimmed}\n\nNo relevant records were found in the database. Please respond professionally acknowledging this.` },
-          ],
-          DEFAULT_TEMPERATURE,
-          300
-        );
-        finalReply = String(finalReply).trim();
-      } catch (summErr) {
-        console.error(`[${cid}] Summarizer (Fallback) call failed:`, summErr);
-        finalReply = "No relevant records were found for this query.";
-      }
+      // Provide structured "no data found" response
+      const entityName = extraction.entity || 'the requested entity';
+      const queryType = extraction.intent === 'patient_info' ? 'patient' : 
+                       extraction.intent === 'staff_info' ? 'staff member' :
+                       extraction.intent === 'medicines' ? 'medicine' :
+                       extraction.intent === 'lab_reports' ? 'lab report' : 'record';
+      
+      finalReply = `**Summary:** No ${queryType} found for "${entityName}"
+
+**Key Points:**
+• Record not found
+• Database search complete
+• No matching entries
+
+**Recommendations:**
+• Verify spelling/name
+• Check patient ID
+• Try alternative identifiers
+• Contact registration desk
+
+**Alerts:**
+• None`;
     } else {
       const safePatient = buildPatientContext(patientDoc);
       const safeStaff = buildStaffContext(staffDoc);
@@ -867,13 +912,31 @@ Return strictly valid JSON.`;
 Available Context:
 ${JSON.stringify(fullContext, null, 2)}
 
-Instructions:
-- Use ONLY the provided context above
-- If the query relates to your role (${userRole}), provide role-specific insights
-- If data is incomplete, acknowledge what's available
-- Keep response concise but informative (2-4 paragraphs max)
-- Format medical/technical data clearly
-- If no relevant data, state clearly`;
+CRITICAL INSTRUCTIONS - YOU MUST FOLLOW THIS EXACT FORMAT:
+
+**Summary:** [1 line summary]
+
+**Key Points:**
+• [2-3 words max]
+• [2-3 words max]
+• [2-3 words max]
+
+**Recommendations:**
+• [Action item]
+• [Action item]
+
+**Alerts:**
+• [Critical items OR "None"]
+
+RULES:
+- Use ONLY provided context
+- ALWAYS use bullet points (•)
+- Maximum 2-3 words per bullet in Key Points
+- NO paragraphs or long text
+- If data incomplete, list what's available
+- Follow the 4-section structure EXACTLY
+- DO NOT explain your reasoning or thought process
+- Output ONLY the formatted answer, nothing else`;
 
       try {
         finalReply = await callGeminiChatWithRetries(
@@ -882,7 +945,16 @@ Instructions:
             { role: "user", content: summarizerUser },
           ],
           DEFAULT_TEMPERATURE,
-          DEFAULT_MAX_COMPLETION_TOKENS
+          DEFAULT_MAX_COMPLETION_TOKENS,
+          {
+            userId: user.id,
+            userRole: userRole,
+            userName: user.firstName || user.email,
+            endpoint: 'chatbot',
+            requestType: 'query_with_data',
+            sessionId: chatId,
+            metadata: { userMessage: trimmed, intent: extraction.intent }
+          }
         );
         finalReply = String(finalReply).trim();
       } catch (summErr) {

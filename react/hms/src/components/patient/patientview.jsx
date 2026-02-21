@@ -402,7 +402,7 @@ const PatientView = ({ isOpen, onClose, patientId, patient: patientProp, onEdit,
                         {/* 3. TAB CONTENT (Scrollable) */}
                         <div className="patient-tab-content">
                             {activeTab === 'profile' && <ProfileTab patient={patient} copyToClipboard={copyToClipboard} />}
-                            {activeTab === 'medical-history' && <MedicalHistoryTab patientId={patientId || patient?._id} />}
+                            {activeTab === 'medical-history' && <MedicalHistoryTab patientId={patientId || patient?._id} patient={patient} />}
                             {activeTab === 'prescription' && <PrescriptionTab patientId={patientId || patient?._id} />}
                             {activeTab === 'lab-results' && <LabResultTab patientId={patientId || patient?._id} />}
                             {activeTab === 'billings' && <BillingsTab patientId={patientId || patient?._id} />}
@@ -627,7 +627,7 @@ const ProfileTab = ({ patient, copyToClipboard }) => {
 };
 
 // --- MEDICAL HISTORY TAB ---
-const MedicalHistoryTab = ({ patientId }) => {
+const MedicalHistoryTab = ({ patientId, patient }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [historyData, setHistoryData] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -654,6 +654,31 @@ const MedicalHistoryTab = ({ patientId }) => {
                 prescriptionService.fetchMedicalHistory(patientId)
             ]);
 
+            // Extract baseline medical history from patient registration
+            const baselineMedicalHistory = [];
+            if (patient) {
+                // Get medical history array from patient object
+                const medicalHistoryArray = patient.medicalHistory || patient.metadata?.medicalHistory || [];
+                const conditions = Array.isArray(medicalHistoryArray) ? medicalHistoryArray : [];
+                
+                if (conditions.length > 0) {
+                    conditions.forEach(condition => {
+                        if (condition && condition.trim()) {
+                            baselineMedicalHistory.push({
+                                id: `baseline-${condition}`,
+                                title: condition.trim(),
+                                date: patient.createdAt || patient.registrationDate || new Date().toISOString(),
+                                reason: condition.trim(),
+                                category: 'Pre-existing Condition',
+                                notes: `Reported during registration`,
+                                type: 'baseline',
+                                status: 'Documented'
+                            });
+                        }
+                    });
+                }
+            }
+
             // Map backend appointments to UI fields
             const mappedAppointments = (Array.isArray(appointments) ? appointments : []).map(apt => ({
                 id: apt._id || apt.id,
@@ -679,8 +704,8 @@ const MedicalHistoryTab = ({ patientId }) => {
                 type: 'scanned'
             }));
 
-            // Combine and sort by date descending
-            const combined = [...mappedAppointments, ...mappedScanned].sort((a, b) => {
+            // Combine all: baseline + appointments + scanned, sort by date descending
+            const combined = [...baselineMedicalHistory, ...mappedAppointments, ...mappedScanned].sort((a, b) => {
                 const dateA = new Date(a.date || 0);
                 const dateB = new Date(b.date || 0);
                 return dateB - dateA;
