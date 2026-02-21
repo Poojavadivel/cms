@@ -23,9 +23,12 @@ const PatientSchema = new Schema({
     street: String,
     line1: String,    // Keep for backward compatibility
     city: String,
+    district: String,
     state: String,
     pincode: String,
-    country: String
+    country: String,
+    lat: String,
+    lng: String
   },
   vitals: {
     heightCm: { type: Number, default: null },

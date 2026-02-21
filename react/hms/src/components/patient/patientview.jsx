@@ -432,6 +432,9 @@ const ProfileTab = ({ patient, copyToClipboard }) => {
         if (address.city) {
             addressParts.push(address.city);
         }
+        if (address.district) {
+            addressParts.push(address.district);
+        }
         if (address.state) {
             addressParts.push(address.state);
         }
@@ -447,6 +450,7 @@ const ProfileTab = ({ patient, copyToClipboard }) => {
             if (patient.houseNo) addressParts.push(patient.houseNo);
             if (patient.street) addressParts.push(patient.street);
             if (patient.city) addressParts.push(patient.city);
+            if (patient.district) addressParts.push(patient.district);
             if (patient.state) addressParts.push(patient.state);
             if (patient.pincode) addressParts.push(patient.pincode);
             if (patient.country) addressParts.push(patient.country);
@@ -457,7 +461,14 @@ const ProfileTab = ({ patient, copyToClipboard }) => {
     };
 
     const openMaps = () => {
-        // Try to build address from multiple possible field locations
+        // PRIORITY 1: Precise Coordinates
+        if (patient.lat && patient.lng) {
+            const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${patient.lat},${patient.lng}`;
+            window.open(mapsUrl, '_blank');
+            return;
+        }
+
+        // PRIORITY 2: Address String Search
         let addressParts = [];
 
         // Check address object first
@@ -469,6 +480,9 @@ const ProfileTab = ({ patient, copyToClipboard }) => {
         }
         if (address.city) {
             addressParts.push(address.city);
+        }
+        if (address.district) {
+            addressParts.push(address.district);
         }
         if (address.state) {
             addressParts.push(address.state);
@@ -482,6 +496,7 @@ const ProfileTab = ({ patient, copyToClipboard }) => {
             if (patient.houseNo) addressParts.push(patient.houseNo);
             if (patient.street) addressParts.push(patient.street);
             if (patient.city) addressParts.push(patient.city);
+            if (patient.district) addressParts.push(patient.district);
             if (patient.state) addressParts.push(patient.state);
             if (patient.pincode) addressParts.push(patient.pincode);
         }
@@ -489,11 +504,11 @@ const ProfileTab = ({ patient, copyToClipboard }) => {
         const fullAddr = addressParts.join(', ').trim();
 
         if (!fullAddr || fullAddr === '') {
-            alert('No address information available to open in maps');
+            alert('No address or coordinate information available to open in maps');
             return;
         }
 
-        // Open Google Maps with the address
+        // Open Google Maps with the address query
         const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddr)}`;
         window.open(mapsUrl, '_blank');
     };
@@ -526,8 +541,13 @@ const ProfileTab = ({ patient, copyToClipboard }) => {
                         <span className="pv-value">
                             <strong>{patient.city || patient.address?.city || 'Not Provided'}</strong>
                         </span>
+                    </div>
 
-
+                    <div className="pv-info-row">
+                        <span className="pv-label">DISTRICT</span>
+                        <span className="pv-value">
+                            <strong>{patient.district || patient.address?.district || 'Not Provided'}</strong>
+                        </span>
                     </div>
                     <div className="pv-info-row">
                         <span className="pv-label">STATE</span>
@@ -548,8 +568,24 @@ const ProfileTab = ({ patient, copyToClipboard }) => {
                         <span className="pv-value">
                             <strong>{patient.country || patient.address?.country || 'Not Provided'}</strong>
                         </span>
-
                     </div>
+
+                    {(patient.lat || patient.lng) && (
+                        <>
+                            <div className="pv-info-row mt-2 pt-2 border-t border-slate-100">
+                                <span className="pv-label uppercase tracking-widest text-[10px] opacity-70">LATITUDE</span>
+                                <span className="pv-value text-[#207DC0] font-bold">
+                                    {patient.lat || '—'}
+                                </span>
+                            </div>
+                            <div className="pv-info-row">
+                                <span className="pv-label uppercase tracking-widest text-[10px] opacity-70">LONGITUDE</span>
+                                <span className="pv-value text-[#207DC0] font-bold">
+                                    {patient.lng || '—'}
+                                </span>
+                            </div>
+                        </>
+                    )}
 
                     <div className="pv-action-buttons">
                         <button className="pv-btn-outline" onClick={copyAddress}>

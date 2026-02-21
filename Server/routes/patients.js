@@ -28,9 +28,12 @@ router.post('/', auth, async (req, res) => {
         street: data.street || '',
         line1: data.address || '',
         city: data.city || '',
+        district: data.district || '',
         state: data.state || '',
         pincode: data.pincode || '',
         country: data.country || '',
+        lat: data.lat || '',
+        lng: data.lng || '',
       };
 
     console.log('🏠 [PATIENT CREATE] Address object:', JSON.stringify(address, null, 2));
@@ -326,9 +329,12 @@ router.put('/:id', auth, async (req, res) => {
           street: data.street || '',
           line1: data.address || '',
           city: data.city || '',
+          district: data.district || '',
           state: data.state || '',
           pincode: data.pincode || '',
           country: data.country || '',
+          lat: data.lat || '',
+          lng: data.lng || '',
         };
 
       console.log('🏠 [PATIENT UPDATE] Address object:', JSON.stringify(address, null, 2));

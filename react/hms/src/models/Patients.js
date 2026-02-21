@@ -26,7 +26,10 @@ export class PatientDetails {
     city,
     state = '',
     pincode,
+    district = '',
     country = '',
+    lat = '',
+    lng = '',
     address = '',
     insuranceNumber,
     insuranceProvider,
@@ -67,7 +70,10 @@ export class PatientDetails {
     this.city = city;
     this.state = state;
     this.pincode = pincode;
+    this.district = district;
     this.country = country;
+    this.lat = lat;
+    this.lng = lng;
     this.address = address;
     this.insuranceNumber = insuranceNumber;
     this.insuranceProvider = insuranceProvider;
@@ -262,7 +268,10 @@ export class PatientDetails {
       city: addressObj.city?.toString() || json.city?.toString() || '',
       state: addressObj.state?.toString() || json.state?.toString() || '',
       pincode: addressObj.pincode?.toString() || json.pincode?.toString() || '',
+      district: addressObj.district?.toString() || json.district?.toString() || '',
       country: addressObj.country?.toString() || json.country?.toString() || '',
+      lat: addressObj.lat?.toString() || json.lat?.toString() || '',
+      lng: addressObj.lng?.toString() || json.lng?.toString() || '',
       address: addressObj.line1?.toString() || json.address?.toString() || '',
       insuranceNumber: metadata.insuranceNumber?.toString() || json.insuranceNumber?.toString() || '',
       insuranceProvider: metadata.insuranceProvider?.toString() || json.insuranceProvider?.toString() || '',
@@ -302,7 +311,10 @@ export class PatientDetails {
         city: this.city,
         state: this.state,
         pincode: this.pincode,
+        district: this.district,
         country: this.country,
+        lat: this.lat,
+        lng: this.lng,
         line1: this.address,
       },
       vitals: {
