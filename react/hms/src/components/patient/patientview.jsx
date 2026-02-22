@@ -129,18 +129,18 @@ const PatientView = ({ isOpen, onClose, patientId, patient: patientProp, onEdit,
 
         // Location: prioritize street, then district/city
         let location = 'Location not set';
-        if (patient.address?.street) {
-            location = patient.address.street;
-        } else if (patient.street) {
+        if (patient.street) {
             location = patient.street;
-        } else if (patient.address?.city) {
-            location = patient.address.city;
+        } else if (patient.town) {
+            location = patient.town;
         } else if (patient.city) {
             location = patient.city;
-        } else if (patient.address?.state) {
-            location = patient.address.state;
+        } else if (patient.district) {
+            location = patient.district;
         } else if (patient.state) {
             location = patient.state;
+        } else if (patient.address && typeof patient.address === 'string') {
+            location = patient.address;
         }
 
         let occupation = patient.profession || patient.metadata?.profession || 'Not specified';
@@ -432,6 +432,9 @@ const ProfileTab = ({ patient, copyToClipboard }) => {
         if (address.city) {
             addressParts.push(address.city);
         }
+        if (address.district) {
+            addressParts.push(address.district);
+        }
         if (address.state) {
             addressParts.push(address.state);
         }
@@ -447,6 +450,7 @@ const ProfileTab = ({ patient, copyToClipboard }) => {
             if (patient.houseNo) addressParts.push(patient.houseNo);
             if (patient.street) addressParts.push(patient.street);
             if (patient.city) addressParts.push(patient.city);
+            if (patient.district) addressParts.push(patient.district);
             if (patient.state) addressParts.push(patient.state);
             if (patient.pincode) addressParts.push(patient.pincode);
             if (patient.country) addressParts.push(patient.country);
@@ -457,7 +461,14 @@ const ProfileTab = ({ patient, copyToClipboard }) => {
     };
 
     const openMaps = () => {
-        // Try to build address from multiple possible field locations
+        // PRIORITY 1: Precise Coordinates
+        if (patient.lat && patient.lng) {
+            const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${patient.lat},${patient.lng}`;
+            window.open(mapsUrl, '_blank');
+            return;
+        }
+
+        // PRIORITY 2: Address String Search
         let addressParts = [];
 
         // Check address object first
@@ -469,6 +480,9 @@ const ProfileTab = ({ patient, copyToClipboard }) => {
         }
         if (address.city) {
             addressParts.push(address.city);
+        }
+        if (address.district) {
+            addressParts.push(address.district);
         }
         if (address.state) {
             addressParts.push(address.state);
@@ -482,6 +496,7 @@ const ProfileTab = ({ patient, copyToClipboard }) => {
             if (patient.houseNo) addressParts.push(patient.houseNo);
             if (patient.street) addressParts.push(patient.street);
             if (patient.city) addressParts.push(patient.city);
+            if (patient.district) addressParts.push(patient.district);
             if (patient.state) addressParts.push(patient.state);
             if (patient.pincode) addressParts.push(patient.pincode);
         }
@@ -489,11 +504,11 @@ const ProfileTab = ({ patient, copyToClipboard }) => {
         const fullAddr = addressParts.join(', ').trim();
 
         if (!fullAddr || fullAddr === '') {
-            alert('No address information available to open in maps');
+            alert('No address or coordinate information available to open in maps');
             return;
         }
 
-        // Open Google Maps with the address
+        // Open Google Maps with the address query
         const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddr)}`;
         window.open(mapsUrl, '_blank');
     };
@@ -522,12 +537,17 @@ const ProfileTab = ({ patient, copyToClipboard }) => {
 
                     </div>
                     <div className="pv-info-row">
-                        <span className="pv-label">CITY</span>
+                        <span className="pv-label">TOWN / LOCALITY</span>
                         <span className="pv-value">
-                            <strong>{patient.city || patient.address?.city || 'Not Provided'}</strong>
+                            <strong>{patient.town || patient.city || 'Not Provided'}</strong>
                         </span>
+                    </div>
 
-
+                    <div className="pv-info-row">
+                        <span className="pv-label">DISTRICT</span>
+                        <span className="pv-value">
+                            <strong>{patient.district || patient.address?.district || 'Not Provided'}</strong>
+                        </span>
                     </div>
                     <div className="pv-info-row">
                         <span className="pv-label">STATE</span>
@@ -548,8 +568,30 @@ const ProfileTab = ({ patient, copyToClipboard }) => {
                         <span className="pv-value">
                             <strong>{patient.country || patient.address?.country || 'Not Provided'}</strong>
                         </span>
-
                     </div>
+
+                    {(patient.lat || patient.lng) && (
+                        <>
+                            <div className="pv-info-row mt-2 pt-2 border-t border-slate-100">
+                                <span className="pv-label uppercase tracking-widest text-[10px] opacity-70">LATITUDE</span>
+                                <span className="pv-value text-[#207DC0] font-bold">
+                                    {patient.lat || '—'}
+                                </span>
+                            </div>
+                            <div className="pv-info-row">
+                                <span className="pv-label uppercase tracking-widest text-[10px] opacity-70">LONGITUDE</span>
+                                <span className="pv-value text-[#207DC0] font-bold">
+                                    {patient.lng || '—'}
+                                </span>
+                            </div>
+                        </>
+                    )}
+
+                    {(!patient.lat || !patient.lng) && (
+                        <div className="pv-info-row mt-2 pt-2 border-t border-slate-100">
+                            <span className="pv-label uppercase tracking-widest text-[10px] opacity-70 italic text-amber-600">Note: Coordinates not stored. Map will use address search.</span>
+                        </div>
+                    )}
 
                     <div className="pv-action-buttons">
                         <button className="pv-btn-outline" onClick={copyAddress}>
@@ -624,7 +666,7 @@ const MedicalHistoryTab = ({ patientId, patient }) => {
                 // Get medical history array from patient object
                 const medicalHistoryArray = patient.medicalHistory || patient.metadata?.medicalHistory || [];
                 const conditions = Array.isArray(medicalHistoryArray) ? medicalHistoryArray : [];
-                
+
                 if (conditions.length > 0) {
                     conditions.forEach(condition => {
                         if (condition && condition.trim()) {
@@ -825,7 +867,7 @@ const MedicalHistoryTab = ({ patientId, patient }) => {
                     >
                         {/* Modal Header */}
                         <div style={{
-                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                            background: 'linear-gradient(135deg, #207DC0 0%, #165a8a 100%)',
                             padding: '24px 28px',
                             display: 'flex',
                             justifyContent: 'space-between',
@@ -1158,6 +1200,8 @@ const MedicalHistoryTab = ({ patientId, patient }) => {
 const PrescriptionTab = ({ patientId }) => {
     const [prescriptions, setPrescriptions] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [selectedPrescription, setSelectedPrescription] = useState(null);
+    const [showModal, setShowModal] = useState(false);
 
     useEffect(() => {
         if (patientId) {
@@ -1208,6 +1252,16 @@ const PrescriptionTab = ({ patientId }) => {
         }
     };
 
+    const handleViewDetails = (prescription) => {
+        setSelectedPrescription(prescription);
+        setShowModal(true);
+    };
+
+    const handleCloseModal = () => {
+        setShowModal(false);
+        setSelectedPrescription(null);
+    };
+
     return (
         <div className="pv-tab-container">
             {/* Header */}
@@ -1238,6 +1292,7 @@ const PrescriptionTab = ({ patientId }) => {
                             <th>Actions</th>
                         </tr>
                     </thead>
+
 
                     <tbody>
                         {/* Loading */}
@@ -1287,7 +1342,11 @@ const PrescriptionTab = ({ patientId }) => {
                                                 <MdVisibility />
                                             </button>
                                         ) : (
-                                            <button className="pv-btn-action-circle" title="View Details">
+                                            <button
+                                                className="pv-btn-action-circle"
+                                                title="View Details"
+                                                onClick={() => handleViewDetails(item)}
+                                            >
                                                 <MdVisibility />
                                             </button>
                                         )}
@@ -1306,6 +1365,117 @@ const PrescriptionTab = ({ patientId }) => {
                     <button className="pv-page-btn" disabled>&gt;</button>
                 </div>
             </div>
+
+            {/* Prescription Detail Modal */}
+            {showModal && selectedPrescription && (
+                <div
+                    className="modal-overlay"
+                    style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundColor: 'rgba(0,0,0,0.6)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: 10000,
+                        backdropFilter: 'blur(4px)'
+                    }}
+                    onClick={handleCloseModal}
+                >
+                    <div
+                        className="modal-content"
+                        style={{
+                            backgroundColor: 'white',
+                            borderRadius: '24px',
+                            width: '90%',
+                            maxWidth: '500px',
+                            overflow: 'hidden',
+                            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)'
+                        }}
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <div style={{
+                            background: 'linear-gradient(135deg, #207DC0 0%, #165a8a 100%)',
+                            padding: '24px',
+                            color: 'white',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center'
+                        }}>
+                            <div>
+                                <h3 style={{ margin: 0, fontSize: '20px', fontWeight: '700' }}>Prescription Details</h3>
+                                <p style={{ margin: '4px 0 0 0', opacity: 0.8, fontSize: '13px' }}>
+                                    {selectedPrescription.createdAt ? new Date(selectedPrescription.createdAt).toLocaleDateString() : 'Date not available'}
+                                </p>
+                            </div>
+                            <button
+                                onClick={handleCloseModal}
+                                style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '50%', width: '36px', height: '36px', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            >
+                                <MdClose size={20} />
+                            </button>
+                        </div>
+
+                        <div style={{ padding: '24px', backgroundColor: '#f8fafc' }}>
+                            <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '20px', border: '1px solid #e2e8f0' }}>
+                                <h4 style={{ margin: '0 0 16px 0', color: '#207DC0', fontSize: '16px', borderBottom: '1px solid #f1f5f9', paddingBottom: '8px' }}>Medicine Information</h4>
+
+                                <div style={{ display: 'grid', gap: '16px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                        <span style={{ color: '#64748b', fontSize: '13px', fontWeight: '600', textTransform: 'uppercase' }}>Medicine</span>
+                                        <span style={{ color: '#1e293b', fontWeight: '700' }}>{selectedPrescription.medicationName || '—'}</span>
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                        <span style={{ color: '#64748b', fontSize: '13px', fontWeight: '600', textTransform: 'uppercase' }}>Dosage</span>
+                                        <span style={{ color: '#1e293b', fontWeight: '700' }}>{selectedPrescription.dosage || '—'}</span>
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                        <span style={{ color: '#64748b', fontSize: '13px', fontWeight: '600', textTransform: 'uppercase' }}>Frequency</span>
+                                        <span style={{ color: '#1e293b', fontWeight: '700' }}>{selectedPrescription.frequency || '—'}</span>
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                        <span style={{ color: '#64748b', fontSize: '13px', fontWeight: '600', textTransform: 'uppercase' }}>Duration</span>
+                                        <span style={{ color: '#1e293b', fontWeight: '700' }}>{selectedPrescription.duration ? `${selectedPrescription.duration} Days` : '—'}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {selectedPrescription.instructions && (
+                                <div style={{ marginTop: '20px', backgroundColor: 'white', borderRadius: '16px', padding: '20px', border: '1px solid #e2e8f0' }}>
+                                    <h4 style={{ margin: '0 0 12px 0', color: '#64748b', fontSize: '13px', fontWeight: '600', textTransform: 'uppercase' }}>Special Instructions</h4>
+                                    <p style={{ margin: 0, color: '#334155', lineHeight: '1.6', fontSize: '14px' }}>
+                                        {selectedPrescription.instructions}
+                                    </p>
+                                </div>
+                            )}
+
+                            <div style={{ marginTop: '24px' }}>
+                                <button
+                                    onClick={handleCloseModal}
+                                    style={{
+                                        width: '100%',
+                                        padding: '12px',
+                                        borderRadius: '12px',
+                                        border: 'none',
+                                        backgroundColor: '#207DC0',
+                                        color: 'white',
+                                        fontWeight: '600',
+                                        cursor: 'pointer',
+                                        transition: 'background 0.2s'
+                                    }}
+                                    onMouseOver={e => e.target.style.backgroundColor = '#165a8a'}
+                                    onMouseOut={e => e.target.style.backgroundColor = '#207DC0'}
+                                >
+                                    Dismiss
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
@@ -1438,7 +1608,7 @@ const LabResultTab = ({ patientId }) => {
                                                     className="pv-btn-action-circle"
                                                     onClick={() => reportService.viewPdf(item.pdfId || item.fileRef)}
                                                     title="View Report"
-                                                    style={{ color: '#7c3aed' }}
+                                                    style={{ color: '#207DC0' }}
                                                 >
                                                     <MdVisibility size={18} />
                                                 </button>
