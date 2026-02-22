@@ -328,7 +328,7 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
         if (errors[name]) setErrors(prev => ({ ...prev, [name]: null }));
     };
 
-    // File Upload Handler
+    // File Upload Handler - Enhanced for LandingAI
     const handleFileUpload = async (event) => {
         const files = event.target.files;
         if (!files || files.length === 0) return;
@@ -347,24 +347,78 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                     const scannedResult = await scannerService.scanAndExtractMedicalData(file, pid);
 
                     // Auto-fill form fields if data was extracted
-                    if (scannedResult) {
-                        setFormData(prev => ({
-                            ...prev,
-                            knownConditions: prev.knownConditions ? `${prev.knownConditions}, ${scannedResult.medicalHistory || ''}` : (scannedResult.medicalHistory || ''),
-                            allergies: prev.allergies ? `${prev.allergies}, ${scannedResult.allergies || ''}` : (scannedResult.allergies || '')
-                        }));
+                    if (scannedResult && scannedResult.success) {
+                        console.log('✅ LandingAI Scanned:', {
+                            type: scannedResult.documentType,
+                            confidence: scannedResult.confidence,
+                            engine: scannedResult.ocrEngine
+                        });
+
+                        // Auto-fill medical history
+                        if (scannedResult.medicalHistory) {
+                            setFormData(prev => ({
+                                ...prev,
+                                knownConditions: prev.knownConditions 
+                                    ? `${prev.knownConditions}, ${scannedResult.medicalHistory}` 
+                                    : scannedResult.medicalHistory
+                            }));
+                        }
+
+                        // Auto-fill allergies
+                        if (scannedResult.allergies) {
+                            setFormData(prev => ({
+                                ...prev,
+                                allergies: prev.allergies 
+                                    ? `${prev.allergies}, ${scannedResult.allergies}` 
+                                    : scannedResult.allergies
+                            }));
+                        }
                         
                         // Add extracted medications to list
                         if (scannedResult.medications) {
-                            const extractedMeds = scannedResult.medications.split(',').map(s => s.trim()).filter(Boolean);
-                            setMedications(prev => [...prev, ...extractedMeds]);
+                            const extractedMeds = scannedResult.medications
+                                .split(',')
+                                .map(s => s.trim())
+                                .filter(Boolean);
+                            if (extractedMeds.length > 0) {
+                                setMedications(prev => [...prev, ...extractedMeds]);
+                            }
                         }
-                    }
 
-                    setUploadedFiles(prev => [...prev, { file, name: file.name, scannedResult }]);
+                        // Add diagnosis to notes
+                        if (scannedResult.diagnosis) {
+                            setFormData(prev => ({
+                                ...prev,
+                                knownConditions: prev.knownConditions 
+                                    ? `${prev.knownConditions}\nDiagnosis: ${scannedResult.diagnosis}` 
+                                    : `Diagnosis: ${scannedResult.diagnosis}`
+                            }));
+                        }
+
+                        setUploadedFiles(prev => [...prev, { 
+                            file, 
+                            name: file.name, 
+                            scannedResult,
+                            documentType: scannedResult.documentType,
+                            confidence: scannedResult.confidence,
+                            success: true
+                        }]);
+                    } else {
+                        setUploadedFiles(prev => [...prev, { 
+                            file, 
+                            name: file.name, 
+                            warning: scannedResult?.warning || 'No data extracted',
+                            success: false
+                        }]);
+                    }
                 } catch (fileError) {
                     console.error(`Error processing ${file.name}:`, fileError);
-                    setUploadedFiles(prev => [...prev, { file, name: file.name, error: fileError.message }]);
+                    setUploadedFiles(prev => [...prev, { 
+                        file, 
+                        name: file.name, 
+                        error: fileError.message,
+                        success: false
+                    }]);
                 }
             }
         } catch (error) {
@@ -854,19 +908,60 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                                                                     <div className="w-12 h-12 bg-white text-[#207DC0] rounded-full flex items-center justify-center mx-auto mb-3 shadow-md group-hover:scale-110 transition-transform">
                                                                         <MdUploadFile size={24} />
                                                                     </div>
-                                                                    <h4 className="text-[#0f3e61] font-bold mb-1">Scan Medical Records</h4>
-                                                                    <p className="text-[#165a8a]/70 text-xs">Upload prescriptions or reports to auto-fill details</p>
+                                                                    <h4 className="text-[#0f3e61] font-bold mb-1">AI-Powered Document Scanner</h4>
+                                                                    <p className="text-[#165a8a]/70 text-xs">Upload prescriptions, lab reports, or medical records</p>
+                                                                    <p className="text-[#207DC0] text-[10px] font-bold mt-2">Powered by LandingAI • Auto-fills form data</p>
                                                                 </>
                                                             )}
                                                         </div>
 
                                                         {uploadedFiles.length > 0 && (
                                                             <div className="space-y-2">
-                                                                <p className="text-xs font-bold uppercase text-slate-400">Uploaded Documents</p>
-                                                                {uploadedFiles.map((file, idx) => (
-                                                                    <div key={idx} className="flex items-center justify-between bg-white border border-slate-100 p-3 rounded-lg text-sm shadow-sm">
-                                                                        <span className="truncate flex-1 font-bold text-[#0f3e61]">{file.name}</span>
-                                                                        <button onClick={() => removeUploadedFile(idx)} className="text-red-400 hover:text-red-600 p-1"><MdDelete /></button>
+                                                                <p className="text-xs font-bold uppercase text-slate-400">Uploaded Documents ({uploadedFiles.length})</p>
+                                                                {uploadedFiles.map((fileObj, idx) => (
+                                                                    <div key={idx} className={`flex items-center justify-between border p-3 rounded-lg text-sm shadow-sm transition-all ${
+                                                                        fileObj.success ? 'bg-green-50 border-green-200' : 
+                                                                        fileObj.error ? 'bg-red-50 border-red-200' : 
+                                                                        'bg-white border-slate-100'
+                                                                    }`}>
+                                                                        <div className="flex-1 min-w-0">
+                                                                            <div className="flex items-center gap-2">
+                                                                                <span className="truncate font-bold text-[#0f3e61] text-sm">{fileObj.name}</span>
+                                                                                {fileObj.documentType && (
+                                                                                    <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-[10px] font-black rounded uppercase tracking-wider whitespace-nowrap">
+                                                                                        {fileObj.documentType}
+                                                                                    </span>
+                                                                                )}
+                                                                                {fileObj.confidence && (
+                                                                                    <span className="text-[10px] text-green-600 font-bold whitespace-nowrap">
+                                                                                        {(fileObj.confidence * 100).toFixed(0)}% ✓
+                                                                                    </span>
+                                                                                )}
+                                                                            </div>
+                                                                            {fileObj.error && (
+                                                                                <p className="text-xs text-red-500 mt-1">❌ {fileObj.error}</p>
+                                                                            )}
+                                                                            {fileObj.warning && (
+                                                                                <p className="text-xs text-orange-500 mt-1">⚠️ {fileObj.warning}</p>
+                                                                            )}
+                                                                            {fileObj.success && fileObj.scannedResult && (
+                                                                                <div className="text-[10px] text-green-600 mt-1 flex items-center gap-2">
+                                                                                    <span>✅ Data extracted & saved</span>
+                                                                                    {fileObj.scannedResult.savedToPatient?.reportId && (
+                                                                                        <span className="text-blue-600 font-mono">
+                                                                                            ID: {fileObj.scannedResult.savedToPatient.reportId.slice(-8)}
+                                                                                        </span>
+                                                                                    )}
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                        <button 
+                                                                            onClick={() => removeUploadedFile(idx)} 
+                                                                            className="ml-2 text-red-400 hover:text-red-600 p-1 hover:bg-red-100 rounded transition-colors"
+                                                                            title="Remove file"
+                                                                        >
+                                                                            <MdDelete size={18} />
+                                                                        </button>
                                                                     </div>
                                                                 ))}
                                                             </div>
