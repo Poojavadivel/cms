@@ -15,7 +15,8 @@ import {
     MdMonitorWeight,
     MdOpacity,
     MdUploadFile,
-    MdDelete
+    MdDelete,
+    MdInfo
 } from 'react-icons/md';
 import {
     FiUser, FiPhone, FiHeart, FiActivity, FiShield, FiFileText, FiLoader, FiX, FiChevronDown, FiTarget
@@ -24,6 +25,7 @@ import patientsService from '../../services/patientsService';
 import doctorService from '../../services/doctorService';
 import scannerService from '../../services/scannerService';
 import appointmentsService from '../../services/appointmentsService';
+import DataVerificationModal from '../modals/DataVerificationModal';
 import './addpatient.css';
 import { LOCATION_DATA, STATES } from '../../constants/locations';
 
@@ -169,6 +171,10 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
     const [uploadedFiles, setUploadedFiles] = useState([]);
     const [uploading, setUploading] = useState(false);
     const [scannerError, setScannerError] = useState(null);
+    
+    // Verification Modal State
+    const [verificationModalOpen, setVerificationModalOpen] = useState(false);
+    const [currentVerificationId, setCurrentVerificationId] = useState(null);
 
     const [formData, setFormData] = useState({
         firstName: '', lastName: '', dateOfBirth: '', age: '', gender: '', bloodGroup: '',
@@ -545,7 +551,13 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                         }
                     }
 
-                    setUploadedFiles(prev => [...prev, { file, name: file.name, scannedResult }]);
+                    setUploadedFiles(prev => [...prev, { 
+                        file, 
+                        name: file.name, 
+                        scannedResult,
+                        verificationId: scannedResult.verificationId,
+                        requiresVerification: scannedResult.verificationRequired || false
+                    }]);
                 } catch (fileError) {
                     console.error(`Error processing ${file.name}:`, fileError);
                     setUploadedFiles(prev => [...prev, { file, name: file.name, error: fileError.message }]);
@@ -1247,9 +1259,27 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                                                             <div className="space-y-2">
                                                                 <p className="text-xs font-bold uppercase text-slate-400">Uploaded Documents</p>
                                                                 {uploadedFiles.map((file, idx) => (
-                                                                    <div key={idx} className="flex items-center justify-between bg-white border border-slate-100 p-3 rounded-lg text-sm shadow-sm">
+                                                                    <div key={`uploaded-file-${idx}-${file.name || 'unnamed'}`} className="flex items-center justify-between bg-white border border-slate-100 p-3 rounded-lg text-sm shadow-sm gap-3">
                                                                         <span className="truncate flex-1 font-bold text-[#0f3e61]">{file.name}</span>
-                                                                        <button onClick={() => removeUploadedFile(idx)} className="text-red-400 hover:text-red-600 p-1"><MdDelete /></button>
+                                                                        {file.requiresVerification && file.verificationId && (
+                                                                            <button
+                                                                                onClick={() => {
+                                                                                    setCurrentVerificationId(file.verificationId);
+                                                                                    setVerificationModalOpen(true);
+                                                                                }}
+                                                                                className="flex items-center gap-1 px-3 py-1.5 bg-blue-50 text-[#207DC0] rounded-lg hover:bg-blue-100 transition-all font-bold text-xs"
+                                                                                title="View and verify extracted data"
+                                                                            >
+                                                                                <MdInfo className="text-base" /> Verify Data
+                                                                            </button>
+                                                                        )}
+                                                                        <button 
+                                                                            onClick={() => removeUploadedFile(idx)} 
+                                                                            className="text-red-400 hover:text-red-600 p-1"
+                                                                            title="Remove file"
+                                                                        >
+                                                                            <MdDelete />
+                                                                        </button>
                                                                     </div>
                                                                 ))}
                                                             </div>
@@ -1451,6 +1481,20 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                     </style>
                 </div>
             )}
+            
+            {/* Data Verification Modal */}
+            <DataVerificationModal
+                isOpen={verificationModalOpen}
+                onClose={() => {
+                    setVerificationModalOpen(false);
+                    setCurrentVerificationId(null);
+                }}
+                verificationId={currentVerificationId}
+                onConfirm={(result) => {
+                    console.log('Data verified and saved:', result);
+                    // Optionally refresh or update UI after confirmation
+                }}
+            />
         </AnimatePresence>
     );
 };

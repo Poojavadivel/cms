@@ -87,6 +87,9 @@ export const scanAndExtractMedicalData = async (file, patientId) => {
       ocrEngine: result.metadata?.ocrEngine || 'landingai-ade',
       confidence: result.metadata?.ocrConfidence || 0.95,
       processingTime: result.metadata?.processingTimeMs || 0,
+      // Verification data
+      verificationRequired: result.verificationRequired || false,
+      verificationId: result.verificationId || null,
       // Save info
       savedToPatient: result.savedToPatient || { saved: true, pdfId: null, reportId: null },
       warning: result.warning || null,
