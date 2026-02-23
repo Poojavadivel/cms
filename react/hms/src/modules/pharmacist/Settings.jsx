@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { MdLock, MdSecurity, MdSave, MdCheckCircle, MdError } from 'react-icons/md';
+import { MdLock, MdSecurity, MdSave, MdCheckCircle, MdError, MdRefresh } from 'react-icons/md';
 import { authService } from '../../services';
-import './Dashboard_Flutter.css'; // Reusing the premium styles
+import './Dashboard.css'; // Consistent styling with dashboard
 
 const PharmacistSettings = () => {
     const [passwordForm, setPasswordForm] = useState({
@@ -54,118 +54,159 @@ const PharmacistSettings = () => {
     };
 
     return (
-        <div className="flutter-pharmacist-dashboard">
-            <div className="flutter-dashboard-scroll">
-                <div className="flutter-header">
-                    <div className="flutter-header-info">
-                        <h1 className="flutter-header-title">Settings</h1>
-                        <p className="flutter-header-date">Manage your account preferences</p>
+        <div className="pharmacist-dashboard">
+            {/* Premium Header */}
+            <div className="dashboard-header-premium">
+                <div className="header-title-section">
+                    <div className="header-icon-box">
+                        <MdSecurity size={32} />
+                    </div>
+                    <div className="header-text">
+                        <h1>Account <span>Settings</span></h1>
+                        <p>MANAGE YOUR SECURITY AND PREFERENCES</p>
                     </div>
                 </div>
+            </div>
 
-                <div style={{ maxWidth: '600px', margin: '0 auto' }}>
-                    {/* Security Section */}
-                    <div className="flutter-card">
-                        <div className="flutter-card-header">
-                            <div className="flutter-card-header-left">
-                                <MdSecurity className="flutter-card-icon flutter-danger-icon" size={24} />
-                                <h3 className="flutter-card-title">Security</h3>
+            <div className="dashboard-content" style={{ display: 'flex', justifyContent: 'center', height: 'auto' }}>
+                <div style={{ width: '100%', maxWidth: '600px' }}>
+                    <div className="premium-alert-card" style={{ padding: '40px' }}>
+                        <div className="alert-card-header" style={{ marginBottom: '30px' }}>
+                            <div className="header-icon danger"><MdLock /></div>
+                            <h3>Security & Authentication</h3>
+                        </div>
+
+                        <form onSubmit={handleSubmitPassword} className="premium-form-settings">
+                            <div className="form-group-premium" style={{ marginBottom: '24px' }}>
+                                <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: '#64748B', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                                    Current Password
+                                </label>
+                                <div style={{ position: 'relative' }}>
+                                    <input
+                                        type="password"
+                                        name="currentPassword"
+                                        value={passwordForm.currentPassword}
+                                        onChange={handlePasswordChange}
+                                        placeholder="Enter current password"
+                                        style={{
+                                            width: '100%',
+                                            height: '54px',
+                                            padding: '0 20px',
+                                            background: '#F8FAFC',
+                                            border: '1.5px solid #F1F5F9',
+                                            borderRadius: '14px',
+                                            fontSize: '15px',
+                                            fontWeight: '600',
+                                            outline: 'none',
+                                            transition: 'all 0.2s',
+                                            boxSizing: 'border-box'
+                                        }}
+                                        required
+                                    />
+                                </div>
                             </div>
-                        </div>
 
-                        <div className="flutter-card-body">
-                            <form onSubmit={handleSubmitPassword}>
-                                <div style={{ marginBottom: '16px' }}>
-                                    <label style={{ display: 'block', fontSize: '13px', color: '#6B7280', marginBottom: '6px', fontWeight: '500' }}>
-                                        Current Password
-                                    </label>
-                                    <div style={{ position: 'relative' }}>
-                                        <MdLock style={{ position: 'absolute', top: '12px', left: '12px', color: '#9CA3AF' }} />
-                                        <input
-                                            type="password"
-                                            name="currentPassword"
-                                            value={passwordForm.currentPassword}
-                                            onChange={handlePasswordChange}
-                                            className="search-input-lg" // Reusing input style
-                                            style={{ paddingLeft: '36px', width: '100%' }}
-                                            placeholder="Enter current password"
-                                            required
-                                        />
-                                    </div>
+                            <div className="form-group-premium" style={{ marginBottom: '24px' }}>
+                                <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: '#64748B', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                                    New Password
+                                </label>
+                                <div style={{ position: 'relative' }}>
+                                    <input
+                                        type="password"
+                                        name="newPassword"
+                                        value={passwordForm.newPassword}
+                                        onChange={handlePasswordChange}
+                                        placeholder="Enter new password"
+                                        style={{
+                                            width: '100%',
+                                            height: '54px',
+                                            padding: '0 20px',
+                                            background: '#F8FAFC',
+                                            border: '1.5px solid #F1F5F9',
+                                            borderRadius: '14px',
+                                            fontSize: '15px',
+                                            fontWeight: '600',
+                                            outline: 'none',
+                                            transition: 'all 0.2s',
+                                            boxSizing: 'border-box'
+                                        }}
+                                        required
+                                    />
                                 </div>
+                            </div>
 
-                                <div style={{ marginBottom: '16px' }}>
-                                    <label style={{ display: 'block', fontSize: '13px', color: '#6B7280', marginBottom: '6px', fontWeight: '500' }}>
-                                        New Password
-                                    </label>
-                                    <div style={{ position: 'relative' }}>
-                                        <MdLock style={{ position: 'absolute', top: '12px', left: '12px', color: '#9CA3AF' }} />
-                                        <input
-                                            type="password"
-                                            name="newPassword"
-                                            value={passwordForm.newPassword}
-                                            onChange={handlePasswordChange}
-                                            className="search-input-lg"
-                                            style={{ paddingLeft: '36px', width: '100%' }}
-                                            placeholder="Enter new password"
-                                            required
-                                        />
-                                    </div>
+                            <div className="form-group-premium" style={{ marginBottom: '30px' }}>
+                                <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: '#64748B', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                                    Confirm New Password
+                                </label>
+                                <div style={{ position: 'relative' }}>
+                                    <input
+                                        type="password"
+                                        name="confirmPassword"
+                                        value={passwordForm.confirmPassword}
+                                        onChange={handlePasswordChange}
+                                        placeholder="Confirm new password"
+                                        style={{
+                                            width: '100%',
+                                            height: '54px',
+                                            padding: '0 20px',
+                                            background: '#F8FAFC',
+                                            border: '1.5px solid #F1F5F9',
+                                            borderRadius: '14px',
+                                            fontSize: '15px',
+                                            fontWeight: '600',
+                                            outline: 'none',
+                                            transition: 'all 0.2s',
+                                            boxSizing: 'border-box'
+                                        }}
+                                        required
+                                    />
                                 </div>
+                            </div>
 
-                                <div style={{ marginBottom: '20px' }}>
-                                    <label style={{ display: 'block', fontSize: '13px', color: '#6B7280', marginBottom: '6px', fontWeight: '500' }}>
-                                        Confirm New Password
-                                    </label>
-                                    <div style={{ position: 'relative' }}>
-                                        <MdCheckCircle style={{ position: 'absolute', top: '12px', left: '12px', color: '#9CA3AF' }} />
-                                        <input
-                                            type="password"
-                                            name="confirmPassword"
-                                            value={passwordForm.confirmPassword}
-                                            onChange={handlePasswordChange}
-                                            className="search-input-lg"
-                                            style={{ paddingLeft: '36px', width: '100%' }}
-                                            placeholder="Confirm new password"
-                                            required
-                                        />
-                                    </div>
+                            {msg.text && (
+                                <div style={{
+                                    padding: '16px',
+                                    borderRadius: '12px',
+                                    marginBottom: '24px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '12px',
+                                    background: msg.type === 'success' ? '#DCFCE7' : '#FEE2E2',
+                                    color: msg.type === 'success' ? '#166534' : '#991B1B',
+                                    fontSize: '14px',
+                                    fontWeight: '700'
+                                }}>
+                                    {msg.type === 'success' ? <MdCheckCircle size={20} /> : <MdError size={20} />}
+                                    <span>{msg.text}</span>
                                 </div>
+                            )}
 
-                                {msg.text && (
-                                    <div className={`flutter-alert-item ${msg.type === 'error' ? 'flutter-alert-item-danger' : 'flutter-alert-item-warning'}`}
-                                        style={{ marginBottom: '16px', background: msg.type === 'success' ? '#ECFDF5' : undefined, borderColor: msg.type === 'success' ? '#A7F3D0' : undefined }}>
-                                        <div className="flutter-alert-icon" style={{
-                                            background: msg.type === 'success' ? '#D1FAE5' : undefined,
-                                            color: msg.type === 'success' ? '#207DC0' : undefined
-                                        }}>
-                                            {msg.type === 'error' ? <MdError /> : <MdCheckCircle />}
-                                        </div>
-                                        <div className="flutter-alert-content">
-                                            <p className="flutter-alert-name" style={{ color: msg.type === 'success' ? '#065F46' : undefined }}>
-                                                {msg.text}
-                                            </p>
-                                        </div>
-                                    </div>
+                            <button
+                                type="submit"
+                                className="btn-refresh-premium"
+                                style={{
+                                    width: '100%',
+                                    height: '54px',
+                                    justifyContent: 'center',
+                                    fontSize: '15px',
+                                    letterSpacing: '1px'
+                                }}
+                                disabled={loading}
+                            >
+                                {loading ? (
+                                    <>
+                                        <MdRefresh size={20} className="spinning" />
+                                        <span>UPDATING HUB...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <MdSave size={20} />
+                                        <span>SAVE NEW PASSWORD</span>
+                                    </>
                                 )}
-
-                                <button
-                                    type="submit"
-                                    className="flutter-action-btn flutter-action-primary"
-                                    style={{ width: '100%', justifyContent: 'center' }}
-                                    disabled={loading}
-                                >
-                                    {loading ? (
-                                        <span>Updating...</span>
-                                    ) : (
-                                        <>
-                                            <MdSave size={18} />
-                                            <span>Reset Password</span>
-                                        </>
-                                    )}
-                                </button>
-                            </form>
-                        </div>
+                            </button>
+                        </form>
                     </div>
                 </div>
             </div>

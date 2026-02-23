@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { MdInventory, MdSave, MdArrowBack, MdAutoAwesome, MdAttachMoney, MdLocalShipping, MdBusiness } from 'react-icons/md';
+import { MdInventory, MdSave, MdArrowBack, MdAutoAwesome, MdAttachMoney, MdLocalShipping, MdBusiness, MdRefresh } from 'react-icons/md';
 import { authService } from '../../services';
-import './Medicines.css'; // Reusing styles
+import './Dashboard.css'; // Using consistent dashboard styles
 
 const AddBatch = () => {
     const [medicines, setMedicines] = useState([]);
@@ -74,254 +74,241 @@ const AddBatch = () => {
 
     const handleSave = async (e) => {
         e.preventDefault();
+        setMsg(null);
         if (!formData.medicineId || !formData.batchNumber || formData.quantity <= 0) {
-            setMessage({ type: 'error', text: 'Please fill all required fields.' });
+            setMessage({ type: 'error', text: 'Required fields missing.' });
             return;
         }
 
         setIsSaving(true);
         try {
             await authService.post('/pharmacy/batches', formData);
-            setMessage({ type: 'success', text: 'Inventory updated successfully!' });
+            setMessage({ type: 'success', text: 'Batch recorded successfully!' });
             setFormData({
-                medicineId: '',
-                batchNumber: '',
-                expiryDate: '',
-                quantity: 0,
-                purchasePrice: 0,
-                salePrice: 0,
-                supplier: '',
-                location: ''
+                medicineId: '', batchNumber: '', expiryDate: '',
+                quantity: 0, purchasePrice: 0, salePrice: 0,
+                supplier: '', location: ''
             });
         } catch (error) {
-            setMessage({ type: 'error', text: error.message || 'Failed to update inventory' });
+            setMessage({ type: 'error', text: error.message || 'Transmission failed.' });
         } finally {
             setIsSaving(false);
-            setTimeout(() => setMessage(null), 3000);
+            setTimeout(() => setMessage(null), 5000);
         }
     };
 
+    const setMsg = (val) => setMessage(val);
+
     return (
-        <div className="dashboard-container" style={{ overflowY: 'auto' }}>
-            <div className="add-batch-wrapper">
-                {/* Custom Header */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
-                    <button className="page-arrow-circle" onClick={() => window.history.back()}>
-                        <MdArrowBack size={20} />
+        <div className="pharmacist-dashboard" style={{ overflowY: 'auto', height: '100%' }}>
+            {/* Premium Header */}
+            <div className="dashboard-header-premium">
+                <div className="header-title-section">
+                    <button className="header-icon-box" onClick={() => window.history.back()} style={{ border: 'none', cursor: 'pointer' }}>
+                        <MdArrowBack size={24} />
                     </button>
-                    <div>
-                        <h1 className="main-title">Stock Intake Management</h1>
-                        <p className="main-subtitle">Add new batches and manage store inventory</p>
+                    <div className="header-text">
+                        <h1>Stock <span>Intake</span></h1>
+                        <p>REGISTER NEW CLINICAL BATCHES TO HUB</p>
                     </div>
                 </div>
+                <div className="header-actions">
+                    <button onClick={loadMedicines} className="btn-refresh-premium" disabled={isLoading}>
+                        <MdRefresh size={20} className={isLoading ? 'spinning' : ''} />
+                        <span>Refresh List</span>
+                    </button>
+                </div>
+            </div>
 
+            <div className="dashboard-content" style={{ display: 'flex', flexDirection: 'column', height: 'auto', paddingBottom: '40px' }}>
                 {message && (
-                    <div className={`status-pill ${message.type}`} style={{
-                        position: 'fixed', top: '30px', right: '30px', zIndex: 2000,
-                        padding: '12px 28px', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-                        animation: 'slideUp 0.3s ease', borderRadius: '12px'
+                    <div style={{
+                        position: 'fixed', top: '24px', right: '24px', zIndex: 1000,
+                        padding: '16px 24px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '12px',
+                        background: message.type === 'success' ? '#DCFCE7' : '#FEE2E2',
+                        color: message.type === 'success' ? '#166534' : '#991B1B',
+                        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)', fontWeight: '700'
                     }}>
-                        {message.text}
+                        {message.type === 'success' ? <MdCheckCircle size={20} /> : <MdError size={20} />}
+                        <span>{message.text}</span>
                     </div>
                 )}
 
-                <div className="premium-card">
-                    <div className="batch-header-box">
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                <div className="batch-section-icon">
-                                    <MdInventory size={20} />
-                                </div>
-                                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700' }}>New Batch Entry</h3>
+                <div className="premium-alert-card" style={{ maxWidth: '900px', margin: '0 auto', width: '100%' }}>
+                    <form onSubmit={handleSave}>
+                        {/* Section 1: Medicine Identification */}
+                        <div style={{ marginBottom: '40px' }}>
+                            <div className="alert-card-header">
+                                <div className="header-icon warning"><MdBusiness /></div>
+                                <h3>Product Identification</h3>
                             </div>
-                        </div>
-                    </div>
-
-                    <div className="batch-form-container">
-                        <form onSubmit={handleSave}>
-                            {/* Section 1: Medicine Selection */}
-                            <div className="batch-section">
-                                <div className="batch-section-title">
-                                    <div className="batch-section-icon"><MdBusiness /></div>
-                                    <span>MEDICINE INFORMATION</span>
-                                </div>
-                                <div className="detail-row batch-input-full">
-                                    <label className="detail-label">Select Registered Medicine *</label>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px' }}>
+                                <div className="form-group-premium">
+                                    <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: '#64748B', marginBottom: '8px', textTransform: 'uppercase' }}>Select Medicine Hub Record *</label>
                                     <select
-                                        className="search-input-lg"
-                                        style={{ height: '48px', fontSize: '15px' }}
+                                        style={{ width: '100%', height: '54px', padding: '0 20px', background: '#F8FAFC', border: '1.5px solid #F1F5F9', borderRadius: '14px', fontSize: '15px', fontWeight: '600', outline: 'none' }}
                                         value={formData.medicineId}
                                         onChange={handleMedicineChange}
                                         required
                                     >
-                                        <option value="">-- Click to select from list --</option>
+                                        <option value="">-- Choose from global inventory --</option>
                                         {medicines.map(med => (
                                             <option key={med._id} value={med._id}>
-                                                {med.name} {med.strength ? `(${med.strength})` : ''} - {med.sku || 'N/A'}
+                                                {med.name} {med.strength ? `(${med.strength})` : ''} — SKU: {med.sku || 'N/A'}
                                             </option>
                                         ))}
                                     </select>
                                 </div>
                             </div>
+                        </div>
 
-                            {/* Section 2: Batch Details */}
-                            <div className="batch-section">
-                                <div className="batch-section-title">
-                                    <div className="batch-section-icon"><MdInventory /></div>
-                                    <span>BATCH & QUANTITY</span>
-                                    <button
-                                        type="button"
-                                        className="auto-gen-btn"
-                                        onClick={generateBatchNumber}
-                                        disabled={!formData.medicineId}
-                                        title="Automatically generate batch number"
-                                    >
-                                        <MdAutoAwesome style={{ marginRight: '6px' }} />
-                                        Auto-Generate
-                                    </button>
-                                </div>
-                                <div className="batch-input-group">
-                                    <div className="detail-row">
-                                        <label className="detail-label">Batch Number *</label>
-                                        <input
-                                            name="batchNumber"
-                                            className="search-input-lg"
-                                            placeholder="e.g. BTC-1002"
-                                            style={{ height: '44px' }}
-                                            value={formData.batchNumber}
-                                            onChange={handleChange}
-                                            required
-                                        />
-                                    </div>
-                                    <div className="detail-row">
-                                        <label className="detail-label">Quantity Received *</label>
-                                        <input
-                                            name="quantity"
-                                            type="number"
-                                            min="1"
-                                            className="search-input-lg"
-                                            placeholder="0"
-                                            style={{ height: '44px' }}
-                                            value={formData.quantity}
-                                            onChange={handleChange}
-                                            required
-                                        />
-                                    </div>
-                                    <div className="detail-row batch-input-full">
-                                        <label className="detail-label">Expiry Date *</label>
-                                        <input
-                                            name="expiryDate"
-                                            type="date"
-                                            className="search-input-lg"
-                                            style={{ height: '44px' }}
-                                            value={formData.expiryDate}
-                                            onChange={handleChange}
-                                            required
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Section 3: Pricing */}
-                            <div className="batch-section pricing-section">
-                                <div className="batch-section-title">
-                                    <div className="batch-section-icon"><MdAttachMoney /></div>
-                                    <span style={{ color: '#E11D48' }}>FINANCIALS & PRICING</span>
-                                </div>
-                                <div className="batch-input-group">
-                                    <div className="detail-row">
-                                        <label className="detail-label" style={{ color: '#E11D48' }}>Unit Purchase Price (₹) *</label>
-                                        <input
-                                            name="purchasePrice"
-                                            type="number"
-                                            step="0.01"
-                                            className="search-input-lg"
-                                            placeholder="0"
-                                            style={{ height: '44px' }}
-                                            value={formData.purchasePrice}
-                                            onChange={handleChange}
-                                            required
-                                        />
-                                    </div>
-                                    <div className="detail-row">
-                                        <label className="detail-label" style={{ color: '#E11D48' }}>Unit Selling Price (₹) *</label>
-                                        <input
-                                            name="salePrice"
-                                            type="number"
-                                            step="0.01"
-                                            className="search-input-lg"
-                                            placeholder="0"
-                                            style={{ height: '44px' }}
-                                            value={formData.salePrice}
-                                            onChange={handleChange}
-                                            required
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Section 4: Supply Chain */}
-                            <div className="batch-section">
-                                <div className="batch-section-title">
-                                    <div className="batch-section-icon"><MdLocalShipping /></div>
-                                    <span>LOGISTICS & SOURCE</span>
-                                </div>
-                                <div className="batch-input-group">
-                                    <div className="detail-row">
-                                        <label className="detail-label">Vendor / Supplier</label>
-                                        <input
-                                            name="supplier"
-                                            className="search-input-lg"
-                                            placeholder="N/A"
-                                            style={{ height: '44px' }}
-                                            value={formData.supplier}
-                                            onChange={handleChange}
-                                        />
-                                    </div>
-                                    <div className="detail-row">
-                                        <label className="detail-label">Storage Rack / Shelf</label>
-                                        <input
-                                            name="location"
-                                            className="search-input-lg"
-                                            placeholder="Main Store"
-                                            style={{ height: '44px' }}
-                                            value={formData.location}
-                                            onChange={handleChange}
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div style={{ marginTop: '32px', display: 'flex', gap: '16px', justifyContent: 'flex-end' }}>
+                        {/* Section 2: Batch Logistics */}
+                        <div style={{ marginBottom: '40px' }}>
+                            <div className="alert-card-header">
+                                <div className="header-icon danger" style={{ background: '#F0F9FF', color: '#0EA5E9' }}><MdInventory /></div>
+                                <h3>Batch Logistics</h3>
                                 <button
                                     type="button"
-                                    className="secondary-btn"
-                                    style={{ height: '48px', padding: '0 32px', borderRadius: '12px' }}
-                                    onClick={() => window.history.back()}
-                                >
-                                    Discard
-                                </button>
-                                <button
-                                    type="submit"
-                                    className="primary-btn"
+                                    onClick={generateBatchNumber}
+                                    disabled={!formData.medicineId}
                                     style={{
-                                        height: '48px', padding: '0 40px', borderRadius: '12px',
-                                        display: 'flex', alignItems: 'center', gap: '10px',
-                                        background: 'linear-gradient(135deg, var(--primary) 0%, #4F46E5 100%)',
-                                        boxShadow: '0 4px 14px 0 rgba(38, 99, 255, 0.39)'
+                                        background: '#F1F5F9', border: 'none', borderRadius: '10px', padding: '8px 16px',
+                                        fontSize: '11px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', color: '#475569'
                                     }}
-                                    disabled={isSaving}
                                 >
-                                    {isSaving ? 'Updating...' : (
-                                        <>
-                                            <MdSave size={20} />
-                                            <span>Save & Release Stock</span>
-                                        </>
-                                    )}
+                                    <MdAutoAwesome /> AUTO-GENERATE ID
                                 </button>
                             </div>
-                        </form>
-                    </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                                <div className="form-group-premium">
+                                    <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: '#64748B', marginBottom: '8px', textTransform: 'uppercase' }}>Batch Reference ID *</label>
+                                    <input
+                                        name="batchNumber"
+                                        placeholder="e.g. HUB-24-X102"
+                                        style={{ width: '100%', height: '54px', padding: '0 20px', background: '#F8FAFC', border: '1.5px solid #F1F5F9', borderRadius: '14px', fontSize: '15px', fontWeight: '600', outline: 'none', boxSizing: 'border-box' }}
+                                        value={formData.batchNumber}
+                                        onChange={handleChange}
+                                        required
+                                    />
+                                </div>
+                                <div className="form-group-premium">
+                                    <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: '#64748B', marginBottom: '8px', textTransform: 'uppercase' }}>Units Received *</label>
+                                    <input
+                                        name="quantity"
+                                        type="number"
+                                        placeholder="0"
+                                        style={{ width: '100%', height: '54px', padding: '0 20px', background: '#F8FAFC', border: '1.5px solid #F1F5F9', borderRadius: '14px', fontSize: '15px', fontWeight: '600', outline: 'none', boxSizing: 'border-box' }}
+                                        value={formData.quantity}
+                                        onChange={handleChange}
+                                        required
+                                    />
+                                </div>
+                                <div className="form-group-premium" style={{ gridColumn: 'span 2' }}>
+                                    <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: '#64748B', marginBottom: '8px', textTransform: 'uppercase' }}>Expiry Date *</label>
+                                    <input
+                                        name="expiryDate"
+                                        type="date"
+                                        style={{ width: '100%', height: '54px', padding: '0 20px', background: '#F8FAFC', border: '1.5px solid #F1F5F9', borderRadius: '14px', fontSize: '15px', fontWeight: '600', outline: 'none', boxSizing: 'border-box' }}
+                                        value={formData.expiryDate}
+                                        onChange={handleChange}
+                                        required
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Section 3: Financials */}
+                        <div style={{ marginBottom: '40px' }}>
+                            <div className="alert-card-header">
+                                <div className="header-icon warning" style={{ background: '#FEE2E2', color: '#EF4444' }}><MdAttachMoney /></div>
+                                <h3>Commercial Pricing</h3>
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                                <div className="form-group-premium">
+                                    <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: '#EF4444', marginBottom: '8px', textTransform: 'uppercase' }}>Unit Cost (₹) *</label>
+                                    <input
+                                        name="purchasePrice"
+                                        type="number"
+                                        step="0.01"
+                                        style={{ width: '100%', height: '54px', padding: '0 20px', background: '#FFF1F2', border: '1.5px solid #FECDD3', borderRadius: '14px', fontSize: '15px', fontWeight: '700', outline: 'none', boxSizing: 'border-box', color: '#991B1B' }}
+                                        value={formData.purchasePrice}
+                                        onChange={handleChange}
+                                        required
+                                    />
+                                </div>
+                                <div className="form-group-premium">
+                                    <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: '#166534', marginBottom: '8px', textTransform: 'uppercase' }}>Unit MRP (₹) *</label>
+                                    <input
+                                        name="salePrice"
+                                        type="number"
+                                        step="0.01"
+                                        style={{ width: '100%', height: '54px', padding: '0 20px', background: '#F0FDF4', border: '1.5px solid #BBF7D0', borderRadius: '14px', fontSize: '15px', fontWeight: '700', outline: 'none', boxSizing: 'border-box', color: '#166534' }}
+                                        value={formData.salePrice}
+                                        onChange={handleChange}
+                                        required
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Section 4: Supply Chain */}
+                        <div style={{ marginBottom: '40px' }}>
+                            <div className="alert-card-header">
+                                <div className="header-icon danger" style={{ background: '#F8FAFC', color: '#64748B' }}><MdLocalShipping /></div>
+                                <h3>Vendor & Location</h3>
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                                <div className="form-group-premium">
+                                    <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: '#64748B', marginBottom: '8px', textTransform: 'uppercase' }}>Vendor Name</label>
+                                    <input
+                                        name="supplier"
+                                        placeholder="Global Medical Supplies"
+                                        style={{ width: '100%', height: '54px', padding: '0 20px', background: '#F8FAFC', border: '1.5px solid #F1F5F9', borderRadius: '14px', fontSize: '15px', fontWeight: '600', outline: 'none', boxSizing: 'border-box' }}
+                                        value={formData.supplier}
+                                        onChange={handleChange}
+                                    />
+                                </div>
+                                <div className="form-group-premium">
+                                    <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: '#64748B', marginBottom: '8px', textTransform: 'uppercase' }}>Storage Shelf ID</label>
+                                    <input
+                                        name="location"
+                                        placeholder="Block-A, Row-12"
+                                        style={{ width: '100%', height: '54px', padding: '0 20px', background: '#F8FAFC', border: '1.5px solid #F1F5F9', borderRadius: '14px', fontSize: '15px', fontWeight: '600', outline: 'none', boxSizing: 'border-box' }}
+                                        value={formData.location}
+                                        onChange={handleChange}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '20px', justifyContent: 'flex-end', paddingTop: '20px', borderTop: '2px dashed #F1F5F9' }}>
+                            <button
+                                type="button"
+                                onClick={() => window.history.back()}
+                                style={{ height: '54px', padding: '0 32px', borderRadius: '14px', border: 'none', background: '#F1F5F9', color: '#64748B', fontSize: '14px', fontWeight: '800', cursor: 'pointer' }}
+                            >
+                                DISCARD
+                            </button>
+                            <button
+                                type="submit"
+                                className="btn-refresh-premium"
+                                style={{ height: '54px', padding: '0 40px', fontSize: '15px' }}
+                                disabled={isSaving}
+                            >
+                                {isSaving ? (
+                                    <>
+                                        <MdRefresh size={20} className="spinning" />
+                                        <span>COMMITTING TO HUB...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <MdSave size={20} />
+                                        <span>RELEASE STOCK BATCH</span>
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
