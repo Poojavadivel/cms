@@ -83,16 +83,16 @@ const Settings = () => {
       // Create FormData
       const formData = new FormData();
       files.forEach((file, index) => {
-        formData.append('files', file);
+        formData.append('images', file);
         appendLog(`   ➤ ${file.name} (${formatSize(file.size)})`);
       });
 
       // Get token
-      const token = localStorage.getItem('authToken');
+      const token = localStorage.getItem('auth_token');
 
       // Send to backend
       const response = await axios.post(
-        `${API_BASE_URL}/scanner/bulk-upload`,
+        `${API_BASE_URL}/scanner-enterprise/bulk-upload-with-matching`,
         formData,
         {
           headers: {
@@ -141,10 +141,10 @@ const Settings = () => {
 
   const openPdf = async (pdfId, suggestedName) => {
     try {
-      const token = localStorage.getItem('authToken');
+      const token = localStorage.getItem('auth_token');
 
       const response = await axios.get(
-        `${API_BASE_URL}/scanner/pdf/${pdfId}`,
+        `${API_BASE_URL}/scanner-enterprise/pdf/${pdfId}`,
         {
           responseType: 'blob',
           headers: {

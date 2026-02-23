@@ -26,6 +26,8 @@ export const scanAndExtractMedicalData = async (file, patientId) => {
     const formData = new FormData();
     formData.append('image', file);  // Backend expects 'image' field
     formData.append('patientId', patientId);
+    // Optional: specify document type for better accuracy
+    // formData.append('documentType', 'PRESCRIPTION'); // or LAB_REPORT, MEDICAL_HISTORY
 
     const endpoint = `${ScannerEndpoints.upload.replace('/upload', '/scan-medical')}`;
     logger.apiRequest('POST', endpoint);
@@ -42,16 +44,54 @@ export const scanAndExtractMedicalData = async (file, patientId) => {
 
     const result = response.data;
 
-    logger.success('SCANNER', `Document scanned successfully for patient ${patientId}`);
+    logger.success('SCANNER', `✅ LandingAI scanned document for patient ${patientId} - Type: ${result.intent}`);
 
-    // Handle the response from /scan-medical endpoint
+    // Handle LandingAI response format
+    const extracted = result.extractedData || {};
+    const patientDetails = extracted.patient_details || {};
+    const labReport = extracted.labReport || {};
+    
+    // Format medications from LandingAI response
+    let medications = '';
+    if (extracted.medications && Array.isArray(extracted.medications)) {
+      // Prescription format
+      medications = extracted.medications
+        .map(med => `${med.name} ${med.dose || ''} ${med.frequency || ''}`.trim())
+        .join(', ');
+    } else if (extracted.patient_details?.currentMedications) {
+      // Medical history format
+      medications = Array.isArray(extracted.patient_details.currentMedications)
+        ? extracted.patient_details.currentMedications.join(', ')
+        : extracted.patient_details.currentMedications;
+    }
+
+    // Format allergies
+    const allergies = patientDetails.allergies || extracted.allergies || '';
+
+    // Format medical history
+    const medicalHistory = extracted.medicalHistory || 
+                          (patientDetails.medicalHistory ? patientDetails.medicalHistory.join(', ') : '') ||
+                          '';
+
+    // Format diagnosis
+    const diagnosis = extracted.diagnosis || labReport.interpretation || labReport.notes || '';
+
     return {
-      medicalHistory: result.extractedData?.medicalHistory || '',
-      allergies: result.extractedData?.allergies || '',
-      medications: result.extractedData?.medications || '',
-      diagnosis: result.extractedData?.diagnosis || '',
-      testResults: result.extractedData?.testResults || [],
-      savedToPatient: result.savedToPatient || { saved: true },
+      medicalHistory,
+      allergies: typeof allergies === 'string' ? allergies : (Array.isArray(allergies) ? allergies.join(', ') : ''),
+      medications,
+      diagnosis,
+      testResults: labReport.results || [],
+      // LandingAI metadata
+      documentType: result.intent || 'UNKNOWN',
+      ocrEngine: result.metadata?.ocrEngine || 'landingai-ade',
+      confidence: result.metadata?.ocrConfidence || 0.95,
+      processingTime: result.metadata?.processingTimeMs || 0,
+      // Verification data
+      verificationRequired: result.verificationRequired || false,
+      verificationId: result.verificationId || null,
+      // Save info
+      savedToPatient: result.savedToPatient || { saved: true, pdfId: null, reportId: null },
       warning: result.warning || null,
       success: result.success || false
     };

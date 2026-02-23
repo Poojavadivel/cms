@@ -21,6 +21,7 @@ const PatientPDF = require('./PatientPDF');
 const PrescriptionDocument = require('./PrescriptionDocument');
 const LabReportDocument = require('./LabReportDocument');
 const MedicalHistoryDocument = require('./MedicalHistoryDocument');
+const ScannedDataVerification = require('./ScannedDataVerification');
 const Payroll = require('./Payroll');
 const APILog = require('./APILog');
 
@@ -43,6 +44,7 @@ module.exports = {
   PrescriptionDocument,
   LabReportDocument,
   MedicalHistoryDocument,
+  ScannedDataVerification,
   Payroll,
   APILog,
   // Helper function for transactions
