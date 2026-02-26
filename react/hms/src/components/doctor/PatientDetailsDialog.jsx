@@ -416,38 +416,13 @@ const HistoryTab = ({ patient }) => {
   const fetchHistory = async () => {
     setLoading(true);
     try {
-      const [appointments, scannedHistory] = await Promise.all([
-        patientsService.fetchPatientAppointments(patientId),
-        prescriptionService.fetchMedicalHistory(patientId)
-      ]);
-
-      const mappedAppointments = (Array.isArray(appointments) ? appointments : []).map(apt => ({
-        id: apt._id || apt.id,
-        title: apt.condition || apt.title || apt.reason || 'Medical Checkup',
-        date: apt.startAt || apt.date,
-        notes: apt.notes || '',
-        category: apt.appointmentType || 'Consultation',
-        pdfId: apt.pdfId || (apt.metadata && apt.metadata.pdfId),
-        type: 'appointment'
-      }));
-
-      const mappedScanned = (Array.isArray(scannedHistory) ? scannedHistory : []).map(record => ({
-        id: record._id || record.id,
-        title: record.title || 'Scanned Record',
-        date: record.recordDate || record.reportDate || record.uploadDate,
-        notes: record.notes || record.diagnosis || '',
-        category: record.category || 'Medical History',
-        pdfId: record.pdfId,
-        type: 'scanned'
-      }));
-
-      const combined = [...mappedAppointments, ...mappedScanned].sort((a, b) =>
-        new Date(b.date || 0) - new Date(a.date || 0)
-      );
-
-      setHistory(combined);
+      console.log('[HISTORY_TAB] 🔍 Fetching medical history for patient:', patientId);
+      const data = await prescriptionService.fetchMedicalHistory(patientId);
+      console.log('[HISTORY_TAB] ✅ Received:', data?.length || 0, 'records');
+      console.log('[HISTORY_TAB] 📋 Sample data:', data?.[0]);
+      setHistory(Array.isArray(data) ? data : []);
     } catch (error) {
-      console.error('Failed to fetch history:', error);
+      console.error('[HISTORY_TAB] ❌ Failed to fetch history:', error);
     } finally {
       setLoading(false);
     }
@@ -456,6 +431,18 @@ const HistoryTab = ({ patient }) => {
   useEffect(() => {
     if (patientId) fetchHistory();
   }, [patientId]);
+
+  const formatDateTime = (date) => {
+    if (!date) return '—';
+    const d = new Date(date);
+    return d.toLocaleString('en-US', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
 
   const handleViewDetails = (item) => {
     setSelectedItem(item);
@@ -467,48 +454,50 @@ const HistoryTab = ({ patient }) => {
     setSelectedItem(null);
   };
 
-  if (loading) return <div className="pd-tab-inner"><p>Loading history...</p></div>;
+  if (loading) return <div className="pd-tab-inner"><p>Loading medical history...</p></div>;
 
   return (
     <div className="pd-tab-inner">
       <h3 className="pd-section-title-flutter">Medical History Timeline</h3>
       {history.length > 0 ? (
-        <div className="pd-timeline-flutter">
-          {history.map((item, i) => (
-            <div key={i} className="pd-history-item-flutter">
-              <div className="pd-history-header">
-                <span className="pd-history-date">{new Date(item.date).toLocaleDateString()}</span>
-                <span className="pd-history-tag">{item.category}</span>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  {item.pdfId && (
-                    <button className="pd-view-pdf-btn" onClick={() => reportService.viewPdf(item.pdfId)}>
-                      <MdPictureAsPdf size={16} />
+        <div className="pd-prescriptions-table-wrapper">
+          <table className="pd-prescriptions-table">
+            <thead>
+              <tr>
+                <th>S.No</th>
+                <th>Date and Time</th>
+                <th>Hospital</th>
+                <th>Doctor</th>
+                <th>Summary</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {history.map((item, index) => (
+                <tr key={index}>
+                  <td>{index + 1}</td>
+                  <td>{formatDateTime(item.recordDate || item.uploadDate)}</td>
+                  <td>{item.hospitalName || '—'}</td>
+                  <td>{item.doctorName || '—'}</td>
+                  <td style={{ maxWidth: '300px', whiteSpace: 'normal', wordWrap: 'break-word' }}>
+                    {item.medicalHistory || item.diagnosis || '—'}
+                  </td>
+                  <td>
+                    <button 
+                      className="pd-prescription-action-btn"
+                      onClick={() => item.pdfId ? reportService.viewPdf(item.pdfId) : handleViewDetails(item)}
+                      title="View Medical History"
+                    >
+                      <MdVisibility size={16} /> View
                     </button>
-                  )}
-                  {!item.pdfId && (
-                    <button className="pd-view-pdf-btn" onClick={() => handleViewDetails(item)} title="View Details">
-                      <MdVisibility size={16} />
-                    </button>
-                  )}
-                </div>
-              </div>
-              <h4 className="pd-history-title">{item.title}</h4>
-              <p className="pd-history-notes">{item.notes}</p>
-            </div>
-          ))}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       ) : (
-        <div>
-          {patient.medicalHistory?.length > 0 ? (
-            <div className="pd-timeline-flutter">
-              {patient.medicalHistory.map((item, i) => (
-                <div key={i} className="pd-history-item-flutter">{item}</div>
-              ))}
-            </div>
-          ) : (
-            <EmptyState title="No Medical History" />
-          )}
-        </div>
+        <EmptyState title="No Medical History" />
       )}
 
       {/* Medical History Detail Modal */}
@@ -536,7 +525,7 @@ const HistoryTab = ({ patient }) => {
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '2px solid #e2e8f0', paddingBottom: '16px' }}>
               <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 'bold', color: '#1e293b' }}>
-                {selectedItem.title || 'Medical History Details'}
+                Medical History Details
               </h2>
               <button
                 onClick={handleCloseDetailModal}
@@ -561,8 +550,8 @@ const HistoryTab = ({ patient }) => {
               <div>
                 <span style={{ fontWeight: '600', color: '#64748b', fontSize: '14px' }}>Date: </span>
                 <span style={{ color: '#1e293b', fontSize: '14px' }}>
-                  {selectedItem.date
-                    ? new Date(selectedItem.date).toLocaleDateString('en-US', {
+                  {selectedItem.recordDate
+                    ? new Date(selectedItem.recordDate).toLocaleDateString('en-US', {
                       year: 'numeric',
                       month: 'long',
                       day: 'numeric'
@@ -573,24 +562,24 @@ const HistoryTab = ({ patient }) => {
               </div>
 
               <div>
-                <span style={{ fontWeight: '600', color: '#64748b', fontSize: '14px' }}>Category: </span>
+                <span style={{ fontWeight: '600', color: '#64748b', fontSize: '14px' }}>Hospital: </span>
                 <span style={{ color: '#1e293b', fontSize: '14px' }}>
-                  {selectedItem.category || 'General'}
+                  {selectedItem.hospitalName || '—'}
                 </span>
               </div>
 
               <div>
-                <span style={{ fontWeight: '600', color: '#64748b', fontSize: '14px' }}>Type: </span>
+                <span style={{ fontWeight: '600', color: '#64748b', fontSize: '14px' }}>Doctor: </span>
                 <span style={{ color: '#1e293b', fontSize: '14px' }}>
-                  {selectedItem.type === 'appointment' ? 'Appointment' : 'Scanned Record'}
+                  {selectedItem.doctorName || '—'}
                 </span>
               </div>
 
-              {selectedItem.notes && (
+              {selectedItem.medicalHistory && (
                 <div style={{ marginTop: '8px' }}>
-                  <div style={{ fontWeight: '600', color: '#64748b', fontSize: '14px', marginBottom: '8px' }}>Notes:</div>
+                  <div style={{ fontWeight: '600', color: '#64748b', fontSize: '14px', marginBottom: '8px' }}>Medical Summary:</div>
                   <div style={{ color: '#1e293b', fontSize: '14px', lineHeight: '1.6', whiteSpace: 'pre-wrap', backgroundColor: '#f8fafc', padding: '12px', borderRadius: '8px' }}>
-                    {selectedItem.notes}
+                    {selectedItem.medicalHistory}
                   </div>
                 </div>
               )}
@@ -628,10 +617,13 @@ const PrescriptionsTab = ({ patient }) => {
     const fetchPrescriptions = async () => {
       setLoading(true);
       try {
-        const data = await patientsService.fetchPatientPrescriptions(patientId);
+        console.log('[PRESCRIPTIONS_TAB] 🔍 Fetching prescriptions for patient:', patientId);
+        const data = await prescriptionService.fetchPrescriptions(patientId);
+        console.log('[PRESCRIPTIONS_TAB] ✅ Received:', data?.length || 0, 'prescriptions');
+        console.log('[PRESCRIPTIONS_TAB] 📋 Sample data:', data?.[0]);
         setPrescriptions(Array.isArray(data) ? data : []);
       } catch (error) {
-        console.error('Failed to fetch prescriptions:', error);
+        console.error('[PRESCRIPTIONS_TAB] ❌ Failed to fetch prescriptions:', error);
       } finally {
         setLoading(false);
       }
@@ -639,29 +631,60 @@ const PrescriptionsTab = ({ patient }) => {
     if (patientId) fetchPrescriptions();
   }, [patientId]);
 
+  const formatDateTime = (date) => {
+    if (!date) return '—';
+    const d = new Date(date);
+    return d.toLocaleString('en-US', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
   if (loading) return <div className="pd-tab-inner"><p>Loading prescriptions...</p></div>;
 
   return (
     <div className="pd-tab-inner">
       <h3 className="pd-section-title-flutter">Prescriptions</h3>
       {prescriptions.length > 0 ? (
-        <div className="pd-grid-flutter">
-          {prescriptions.map((item, i) => (
-            <div key={i} className="pd-info-card">
-              <div className="pd-card-header-flex">
-                <h4 className="pd-card-title">{item.medicationName || item.medicine || 'Medicine'}</h4>
-                {item.pdfId && (
-                  <button className="pd-view-pdf-btn" onClick={() => reportService.viewPdf(item.pdfId)}>
-                    <MdPictureAsPdf size={16} />
-                  </button>
-                )}
-              </div>
-              <p><strong>Dosage:</strong> {item.dosage || '—'}</p>
-              <p><strong>Frequency:</strong> {item.frequency || '—'}</p>
-              {item.instructions && <p className="pd-notes-small">{item.instructions}</p>}
-              <span className="pd-date-tag">{new Date(item.createdAt || item.prescriptionDate).toLocaleDateString()}</span>
-            </div>
-          ))}
+        <div className="pd-prescriptions-table-wrapper">
+          <table className="pd-prescriptions-table">
+            <thead>
+              <tr>
+                <th>S.No</th>
+                <th>Date and Time</th>
+                <th>Hospital</th>
+                <th>Doctor</th>
+                <th>Reason</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {prescriptions.map((item, index) => (
+                <tr key={index}>
+                  <td>{index + 1}</td>
+                  <td>{formatDateTime(item.prescriptionDate || item.uploadDate)}</td>
+                  <td>{item.hospitalName || '—'}</td>
+                  <td>{item.doctorName || '—'}</td>
+                  <td style={{ maxWidth: '300px', whiteSpace: 'normal', wordWrap: 'break-word' }}>
+                    {item.prescriptionSummary || item.diagnosis || '—'}
+                  </td>
+                  <td>
+                    <button 
+                      className="pd-prescription-action-btn"
+                      onClick={() => item.pdfId ? reportService.viewPdf(item.pdfId) : null}
+                      disabled={!item.pdfId}
+                      title="View Prescription"
+                    >
+                      <MdVisibility size={16} /> View
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       ) : (
         <EmptyState title="No Prescriptions Found" />
@@ -679,10 +702,12 @@ const LabTab = ({ patient }) => {
     const fetchLabs = async () => {
       setLoading(true);
       try {
-        const data = await patientsService.fetchPatientLabResults(patientId);
+        console.log('[LAB_TAB] 🔍 Fetching lab reports for patient:', patientId);
+        const data = await prescriptionService.fetchLabReports(patientId);
+        console.log('[LAB_TAB] ✅ Received:', data?.length || 0, 'lab reports');
         setLabs(Array.isArray(data) ? data : []);
       } catch (error) {
-        console.error('Failed to fetch lab results:', error);
+        console.error('[LAB_TAB] ❌ Failed to fetch lab results:', error);
       } finally {
         setLoading(false);
       }
@@ -700,16 +725,44 @@ const LabTab = ({ patient }) => {
           {labs.map((item, i) => (
             <div key={i} className="pd-info-card">
               <div className="pd-card-header-flex">
-                <h4 className="pd-card-title">{item.testName || item.testType || 'Lab Test'}</h4>
+                <h4 className="pd-card-title">{item.testType || 'Lab Test'}</h4>
                 {item.pdfId && (
-                  <button className="pd-view-pdf-btn" onClick={() => reportService.viewPdf(item.pdfId)}>
-                    <MdPictureAsPdf size={16} />
+                  <button 
+                    className="pd-view-pdf-btn" 
+                    onClick={() => reportService.viewPdf(item.pdfId)}
+                    title="View Lab Report Image"
+                  >
+                    <MdVisibility size={18} />
                   </button>
                 )}
               </div>
-              <p><strong>Result:</strong> {item.result || item.summary || '—'}</p>
-              <span className={`pd-status-badge ${item.status || 'Completed'}`}>{item.status || 'Completed'}</span>
-              <span className="pd-date-tag">{new Date(item.date || item.uploadDate).toLocaleDateString()}</span>
+              
+              <p><strong>Lab:</strong> {item.labName || '—'}</p>
+              <p><strong>Date:</strong> {item.reportDate ? new Date(item.reportDate).toLocaleDateString() : '—'}</p>
+              <p><strong>Category:</strong> {item.testCategory || '—'}</p>
+              
+              {item.results && item.results.length > 0 && (
+                <div className="pd-lab-results">
+                  <strong>Test Results:</strong>
+                  <div className="pd-lab-results-list">
+                    {item.results.slice(0, 3).map((result, idx) => (
+                      <div key={idx} className="pd-lab-result-item">
+                        <span className="pd-lab-test-name">{result.testName}</span>
+                        <span className={`pd-lab-value ${result.flag !== 'Normal' ? 'abnormal' : ''}`}>
+                          {result.value} {result.unit}
+                        </span>
+                      </div>
+                    ))}
+                    {item.results.length > 3 && (
+                      <p className="pd-notes-small">+{item.results.length - 3} more tests</p>
+                    )}
+                  </div>
+                </div>
+              )}
+              
+              <span className={`pd-status-badge ${item.status || 'completed'}`}>
+                {item.status || 'Completed'}
+              </span>
             </div>
           ))}
         </div>

@@ -237,32 +237,102 @@ const ProfileTab = ({ patient }) => {
 };
 
 const HistoryTab = ({ patient }) => {
-  // Extract medical history from various possible locations
-  const medicalHistory = (() => {
-    if (patient.medicalHistory && Array.isArray(patient.medicalHistory) && patient.medicalHistory.length > 0) {
-      return patient.medicalHistory;
-    }
-    if (patient.metadata && patient.metadata.medicalHistory) {
-      if (Array.isArray(patient.metadata.medicalHistory)) {
-        return patient.metadata.medicalHistory;
+  const [history, setHistory] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+  const patientId = patient.id || patient._id || patient.patientId;
+
+  React.useEffect(() => {
+    const fetchHistory = async () => {
+      if (!patientId) {
+        setLoading(false);
+        return;
       }
-      if (patient.metadata.medicalHistory.currentConditions && Array.isArray(patient.metadata.medicalHistory.currentConditions)) {
-        return patient.metadata.medicalHistory.currentConditions;
+      
+      try {
+        const response = await fetch(`/api/scanner-enterprise/medical-history/${patientId}`, {
+          headers: {
+            'x-auth-token': localStorage.getItem('auth_token') || localStorage.getItem('x-auth-token')
+          }
+        });
+        const data = await response.json();
+        if (data.success && data.medicalHistory) {
+          setHistory(data.medicalHistory);
+        }
+      } catch (error) {
+        console.error('Error fetching medical history:', error);
+      } finally {
+        setLoading(false);
       }
-    }
-    return [];
-  })();
+    };
+    
+    fetchHistory();
+  }, [patientId]);
+
+  const formatDateTime = (date) => {
+    if (!date) return '—';
+    const d = new Date(date);
+    return d.toLocaleString('en-US', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  if (loading) {
+    return (
+      <div className="appt-tab-inner">
+        <h3 className="appt-section-title-flutter">Medical History Timeline</h3>
+        <p>Loading medical history...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="appt-tab-inner">
       <h3 className="appt-section-title-flutter">Medical History Timeline</h3>
-      {medicalHistory.length > 0 ? (
-        <div>
-          {medicalHistory.map((item, i) => (
-            <div key={i} className="appt-history-item-flutter">
-              {item}
-            </div>
-          ))}
+      {history.length > 0 ? (
+        <div className="appt-prescriptions-table-wrapper">
+          <table className="appt-prescriptions-table">
+            <thead>
+              <tr>
+                <th>S.No</th>
+                <th>Date and Time</th>
+                <th>Hospital</th>
+                <th>Doctor</th>
+                <th>Summary</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {history.map((item, index) => (
+                <tr key={index}>
+                  <td>{index + 1}</td>
+                  <td>{formatDateTime(item.recordDate || item.uploadDate)}</td>
+                  <td>{item.hospitalName || '—'}</td>
+                  <td>{item.doctorName || '—'}</td>
+                  <td style={{ maxWidth: '300px', whiteSpace: 'normal', wordWrap: 'break-word' }}>
+                    {item.medicalHistory || item.diagnosis || '—'}
+                  </td>
+                  <td>
+                    <button 
+                      className="appt-prescription-action-btn"
+                      onClick={() => {
+                        if (item.pdfId) {
+                          window.open(`/api/scanner-enterprise/pdf-public/${item.pdfId}`, '_blank');
+                        }
+                      }}
+                      disabled={!item.pdfId}
+                      title="View Medical History"
+                    >
+                      View
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       ) : (
         <EmptyState title="No Medical History" />
@@ -271,15 +341,111 @@ const HistoryTab = ({ patient }) => {
   );
 };
 
-const PrescriptionsTab = () => (
-  <div className="appt-tab-inner">
-    <h3 className="appt-section-title-flutter">Active Prescriptions</h3>
-    <EmptyState 
-      title="No Active Prescriptions" 
-      subtitle="Prescriptions issued by doctors will appear here."
-    />
-  </div>
-);
+const PrescriptionsTab = ({ patient }) => {
+  const [prescriptions, setPrescriptions] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+  const patientId = patient.id || patient._id || patient.patientId;
+
+  React.useEffect(() => {
+    const fetchPrescriptions = async () => {
+      if (!patientId) {
+        setLoading(false);
+        return;
+      }
+      
+      try {
+        const response = await fetch(`/api/scanner-enterprise/prescriptions/${patientId}`, {
+          headers: {
+            'x-auth-token': localStorage.getItem('auth_token') || localStorage.getItem('x-auth-token')
+          }
+        });
+        const data = await response.json();
+        if (data.success && data.prescriptions) {
+          setPrescriptions(data.prescriptions);
+        }
+      } catch (error) {
+        console.error('Error fetching prescriptions:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchPrescriptions();
+  }, [patientId]);
+
+  const formatDateTime = (date) => {
+    if (!date) return '—';
+    const d = new Date(date);
+    return d.toLocaleString('en-US', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  if (loading) {
+    return (
+      <div className="appt-tab-inner">
+        <h3 className="appt-section-title-flutter">Active Prescriptions</h3>
+        <p>Loading prescriptions...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="appt-tab-inner">
+      <h3 className="appt-section-title-flutter">Active Prescriptions</h3>
+      {prescriptions.length > 0 ? (
+        <div className="appt-prescriptions-table-wrapper">
+          <table className="appt-prescriptions-table">
+            <thead>
+              <tr>
+                <th>S.No</th>
+                <th>Date and Time</th>
+                <th>Hospital</th>
+                <th>Doctor</th>
+                <th>Reason</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {prescriptions.map((prescription, index) => (
+                <tr key={index}>
+                  <td>{index + 1}</td>
+                  <td>{formatDateTime(prescription.prescriptionDate || prescription.uploadDate)}</td>
+                  <td>{prescription.hospitalName || '—'}</td>
+                  <td>{prescription.doctorName || '—'}</td>
+                  <td>{prescription.prescriptionSummary || prescription.diagnosis || '—'}</td>
+                  <td>
+                    <button 
+                      className="appt-prescription-action-btn"
+                      onClick={() => {
+                        if (prescription.pdfId) {
+                          window.open(`/api/scanner-enterprise/pdf-public/${prescription.pdfId}`, '_blank');
+                        }
+                      }}
+                      disabled={!prescription.pdfId}
+                      title="View Prescription"
+                    >
+                      View
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <EmptyState 
+          title="No Active Prescriptions" 
+          subtitle="Prescriptions issued by doctors will appear here."
+        />
+      )}
+    </div>
+  );
+};
 
 const LabTab = () => (
   <div className="appt-tab-inner">

@@ -307,58 +307,36 @@ const LabReportSchema = {
 
 const PrescriptionDocumentSchema = {
   type: 'object',
+  required: ['prescription_summary', 'date_time', 'hospital', 'doctor'],
   properties: {
-    doctor_details: {
-      ...DoctorDetailsSchema,
-      description: 'Information about the consulting doctor.',
-      title: 'Doctor Details'
-    },
-    contact_numbers: {
-      type: 'array',
-      items: { type: 'string' },
-      description: 'List of contact phone numbers for the hospital or clinic.',
-      title: 'Contact Numbers',
-      default: []
-    },
-    patient_details: {
-      ...PatientDetailsSchema,
-      description: 'Information about the patient.',
-      title: 'Patient Details'
-    },
-    prescription_date: {
+    prescription_summary: {
       type: 'string',
-      description: 'The date when the prescription was issued.',
-      title: 'Prescription Date',
+      description: 'Summary or main content of the prescription including medicines or instructions',
+      title: 'Prescription Summary',
       default: ''
     },
-    medications: {
-      type: 'array',
-      items: MedicationSchema,
-      description: 'List of prescribed medications.',
-      title: 'Medications',
-      default: []
-    },
-    review_date: {
+    date_time: {
       type: 'string',
-      description: 'The date for the next patient review.',
-      title: 'Review Date',
+      description: 'Date and time when the prescription was issued',
+      title: 'Date and Time',
       default: ''
     },
-    clinic_address: {
-      ...AddressSchema,
-      description: 'The address of the medical facility.',
-      title: 'Clinic Address'
-    },
-    diagnosis: {
+    hospital: {
       type: 'string',
-      description: 'Diagnosis or reason for prescription.',
-      title: 'Diagnosis',
+      description: 'Hospital or clinic name mentioned in the prescription',
+      title: 'Hospital',
       default: ''
     },
-    notes: {
+    doctor: {
       type: 'string',
-      description: 'Additional notes or instructions.',
-      title: 'Notes',
+      description: 'Doctor who issued the prescription',
+      title: 'Doctor',
+      default: ''
+    },
+    medical_notes: {
+      type: ['string', 'null'],
+      description: 'Additional medical notes or instructions',
+      title: 'Medical Notes',
       default: ''
     }
   }
@@ -387,61 +365,45 @@ const LabReportDocumentSchema = {
 
 const MedicalHistoryDocumentSchema = {
   type: 'object',
+  required: ['medical_summary', 'date_time', 'hospital', 'doctor'],
   properties: {
-    patient_details: {
-      ...PatientDetailsSchema,
-      description: 'Information about the patient.',
-      title: 'Patient Details'
-    },
-    medicalHistory: {
+    medical_summary: {
       type: 'string',
-      description: 'Patient medical history.',
-      title: 'Medical History',
+      description: 'Appointment summary or discharge summary of the patient',
+      title: 'Medical Summary',
       default: ''
     },
-    allergies: {
+    date_time: {
       type: 'string',
-      description: 'Known allergies.',
-      title: 'Allergies',
+      description: 'Date and time of appointment or discharge',
+      title: 'Date and Time',
       default: ''
     },
-    chronicConditions: {
-      type: 'array',
-      items: { type: 'string' },
-      description: 'List of chronic conditions.',
-      title: 'Chronic Conditions',
+    hospital: {
+      type: 'string',
+      description: 'Name of the hospital or clinic',
+      title: 'Hospital',
+      default: ''
+    },
+    doctor: {
+      type: 'string',
+      description: 'Doctor who handled the case',
+      title: 'Doctor',
+      default: ''
+    },
+    services: {
+      type: ['array', 'null'],
+      items: {
+        type: 'string'
+      },
+      description: 'Medical services provided (consultation, lab tests, surgery, etc.)',
+      title: 'Services',
       default: []
     },
-    surgicalHistory: {
-      type: 'array',
-      items: { type: 'string' },
-      description: 'Previous surgeries.',
-      title: 'Surgical History',
-      default: []
-    },
-    familyHistory: {
-      type: 'string',
-      description: 'Family medical history.',
-      title: 'Family History',
-      default: ''
-    },
-    currentMedications: {
-      type: 'array',
-      items: { type: 'string' },
-      description: 'Current medications.',
-      title: 'Current Medications',
-      default: []
-    },
-    diagnosis: {
-      type: 'string',
-      description: 'Current diagnosis.',
-      title: 'Diagnosis',
-      default: ''
-    },
-    recordDate: {
-      type: 'string',
-      description: 'Date of medical history record.',
-      title: 'Record Date',
+    medical_notes: {
+      type: ['string', 'null'],
+      description: 'Additional medical notes or observations',
+      title: 'Medical Notes',
       default: ''
     }
   }

@@ -55,11 +55,13 @@ export const fetchPrescriptions = async (patientId, limit = 50, page = 0) => {
 
     logger.apiResponse('GET', pharmacyEndpoint, response.status);
 
-    // Check for successful response with records
-    if (response.data && response.data.success && response.data.records) {
+    // Check for successful response with records AND has data
+    if (response.data && response.data.success && response.data.records && response.data.records.length > 0) {
       const prescriptions = response.data.records;
       logger.success('PRESCRIPTIONS', `Found ${prescriptions.length} pharmacy records (prescriptions)`);
       return prescriptions;
+    } else {
+      logger.info('PRESCRIPTIONS', `Pharmacy records empty, trying scanned prescriptions...`);
     }
 
   } catch (pharmacyError) {
@@ -187,20 +189,28 @@ export const fetchMedicalHistory = async (patientId) => {
   try {
     const endpoint = ScannerEndpoints.getMedicalHistory(patientId);
     logger.apiRequest('GET', endpoint);
+    console.log('[SERVICE] 🔍 Fetching medical history from:', endpoint);
 
     const axiosInstance = createAxiosInstance();
     const response = await axiosInstance.get(endpoint);
 
     logger.apiResponse('GET', endpoint, response.status);
+    console.log('[SERVICE] 📦 Response data:', {
+      success: response.data?.success,
+      count: response.data?.medicalHistory?.length || 0
+    });
 
     if (response.data && response.data.success && response.data.medicalHistory) {
       logger.success('MEDICAL_HISTORY', `Found ${response.data.medicalHistory.length} medical history records`);
+      console.log('[SERVICE] ✅ Returning', response.data.medicalHistory.length, 'records');
       return response.data.medicalHistory;
     }
 
+    console.log('[SERVICE] ⚠️ No medical history in response');
     return [];
   } catch (error) {
     logger.apiError('GET', ScannerEndpoints.getMedicalHistory(patientId), error);
+    console.error('[SERVICE] ❌ Failed to fetch medical history:', error.message);
     return [];
   }
 };

@@ -1,3 +1,7 @@
+# Node modules
+node_modules/
+**/node_modules/
+
 # Miscellaneous
 *.class
 
@@ -43,3 +47,10 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Mobile development files (keep dist/ for server)
+mobile/.expo/
+
+# Environment variables
+.env
+.env.local

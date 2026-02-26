@@ -73,52 +73,103 @@ async function cleanupTempFile(filePath) {
 // DATA ROW CONVERSION FOR VERIFICATION
 // ============================================================================
 function convertExtractedDataToRows(extractedData, documentType) {
+  console.log('[CONVERT] Starting conversion for document type:', documentType);
+  console.log('[CONVERT] Extracted data keys:', Object.keys(extractedData));
   const rows = [];
 
   if (documentType === 'PRESCRIPTION') {
-    const prescData = extractedData;
-    
-    // Patient details
-    if (prescData.patient_details) {
-      const pd = prescData.patient_details;
-      if (pd.firstName) rows.push({ fieldName: 'patient_firstName', displayLabel: 'First Name', originalValue: pd.firstName, currentValue: pd.firstName, dataType: 'string', category: 'patient_details' });
-      if (pd.lastName) rows.push({ fieldName: 'patient_lastName', displayLabel: 'Last Name', originalValue: pd.lastName, currentValue: pd.lastName, dataType: 'string', category: 'patient_details' });
-      if (pd.age) rows.push({ fieldName: 'patient_age', displayLabel: 'Age', originalValue: pd.age, currentValue: pd.age, dataType: 'number', category: 'patient_details' });
-      if (pd.gender) rows.push({ fieldName: 'patient_gender', displayLabel: 'Gender', originalValue: pd.gender, currentValue: pd.gender, dataType: 'string', category: 'patient_details' });
-    }
+    console.log('[CONVERT] Processing PRESCRIPTION document');
 
-    // Doctor details
-    if (prescData.doctor_details) {
-      const dd = prescData.doctor_details;
-      if (dd.name) rows.push({ fieldName: 'doctor_name', displayLabel: 'Doctor Name', originalValue: dd.name, currentValue: dd.name, dataType: 'string', category: 'other' });
-      if (dd.hospital) rows.push({ fieldName: 'hospital_name', displayLabel: 'Hospital Name', originalValue: dd.hospital, currentValue: dd.hospital, dataType: 'string', category: 'other' });
-    }
+    // ✅ FIX: Read from extraction object (LandingAI returns nested structure)
+    const prescData = extractedData.extraction || extractedData;
+    console.log('[CONVERT] Prescription data keys:', Object.keys(prescData));
+    console.log('[CONVERT] Full prescription data:', JSON.stringify(prescData, null, 2));
 
-    // Diagnosis
-    if (prescData.diagnosis) {
-      rows.push({ fieldName: 'diagnosis', displayLabel: 'Diagnosis', originalValue: prescData.diagnosis, currentValue: prescData.diagnosis, dataType: 'string', category: 'diagnosis' });
-    }
-
-    // Medications
-    if (prescData.medications && Array.isArray(prescData.medications)) {
-      prescData.medications.forEach((med, idx) => {
-        rows.push({
-          fieldName: `medication_${idx}`,
-          displayLabel: `Medication ${idx + 1}`,
-          originalValue: med,
-          currentValue: med,
-          dataType: 'object',
-          category: 'medications'
-        });
+    // Simplified Prescription Schema Fields
+    if (prescData.prescription_summary) {
+      console.log('[CONVERT] ✅ Found prescription_summary:', prescData.prescription_summary.substring(0, 100) + '...');
+      rows.push({
+        fieldName: 'prescription_summary',
+        displayLabel: 'Prescription Summary',
+        originalValue: prescData.prescription_summary,
+        currentValue: prescData.prescription_summary,
+        dataType: 'string',
+        category: 'diagnosis',  // ✅ Valid enum: diagnosis for prescription content
+        confidence: 0.95
       });
+    } else {
+      console.log('[CONVERT] ❌ Missing prescription_summary');
     }
+
+    if (prescData.date_time) {
+      console.log('[CONVERT] ✅ Found date_time:', prescData.date_time);
+      rows.push({ 
+        fieldName: 'date_time', 
+        displayLabel: 'Date and Time', 
+        originalValue: prescData.date_time, 
+        currentValue: prescData.date_time, 
+        dataType: 'string', 
+        category: 'other',  // ✅ Valid enum: other for date/time metadata
+        confidence: 0.95
+      });
+    } else {
+      console.log('[CONVERT] ❌ Missing date_time');
+    }
+
+    if (prescData.hospital) {
+      console.log('[CONVERT] ✅ Found hospital:', prescData.hospital);
+      rows.push({
+        fieldName: 'hospital', 
+        displayLabel: 'Hospital', 
+        originalValue: prescData.hospital, 
+        currentValue: prescData.hospital, 
+        dataType: 'string', 
+        category: 'other',  // ✅ Valid enum: other for hospital metadata
+        confidence: 0.95
+      });
+    } else {
+      console.log('[CONVERT] ❌ Missing hospital');
+    }
+
+    if (prescData.doctor) {
+      console.log('[CONVERT] ✅ Found doctor:', prescData.doctor);
+      rows.push({
+        fieldName: 'doctor', 
+        displayLabel: 'Doctor', 
+        originalValue: prescData.doctor, 
+        currentValue: prescData.doctor, 
+        dataType: 'string', 
+        category: 'patient_details',  // ✅ Valid enum: patient_details for doctor info
+        confidence: 0.95
+      });
+    } else {
+      console.log('[CONVERT] ❌ Missing doctor');
+    }
+
+    if (prescData.medical_notes !== null && prescData.medical_notes !== undefined && prescData.medical_notes !== '') {
+      console.log('[CONVERT] ✅ Found medical_notes:', prescData.medical_notes);
+      rows.push({ 
+        fieldName: 'medical_notes', 
+        displayLabel: 'Medical Notes', 
+        originalValue: prescData.medical_notes, 
+        currentValue: prescData.medical_notes, 
+        dataType: 'string', 
+        category: 'other',  // ✅ Valid enum: other for additional notes
+        confidence: 0.90
+      });
+    } else {
+      console.log('[CONVERT] ⚠️ Missing medical_notes (optional field, null or empty)');
+    }
+
+    console.log(`[CONVERT] ✅ Created ${rows.length} rows for PRESCRIPTION`);
 
   } else if (documentType === 'LAB_REPORT') {
+    console.log('[CONVERT] Processing LAB_REPORT document');
     const labData = extractedData.labReport || {};
     
-    if (labData.testType) rows.push({ fieldName: 'testType', displayLabel: 'Test Type', originalValue: labData.testType, currentValue: labData.testType, dataType: 'string', category: 'lab_results' });
-    if (labData.labName) rows.push({ fieldName: 'labName', displayLabel: 'Lab Name', originalValue: labData.labName, currentValue: labData.labName, dataType: 'string', category: 'other' });
-    if (labData.reportDate) rows.push({ fieldName: 'reportDate', displayLabel: 'Report Date', originalValue: labData.reportDate, currentValue: labData.reportDate, dataType: 'date', category: 'other' });
+    if (labData.testType) rows.push({ fieldName: 'testType', displayLabel: 'Test Type', originalValue: labData.testType, currentValue: labData.testType, dataType: 'string', category: 'lab_results', confidence: 0.95 });
+    if (labData.labName) rows.push({ fieldName: 'labName', displayLabel: 'Lab Name', originalValue: labData.labName, currentValue: labData.labName, dataType: 'string', category: 'other', confidence: 0.95 });
+    if (labData.reportDate) rows.push({ fieldName: 'reportDate', displayLabel: 'Report Date', originalValue: labData.reportDate, currentValue: labData.reportDate, dataType: 'date', category: 'other', confidence: 0.95 });
 
     // Lab results
     if (labData.results && Array.isArray(labData.results)) {
@@ -129,49 +180,124 @@ function convertExtractedDataToRows(extractedData, documentType) {
           originalValue: result,
           currentValue: result,
           dataType: 'object',
-          category: 'lab_results'
+          category: 'lab_results',
+          confidence: 0.95
         });
       });
     }
+
+    console.log(`[CONVERT] ✅ Created ${rows.length} rows for LAB_REPORT`);
 
   } else if (documentType === 'MEDICAL_HISTORY') {
-    const historyData = extractedData;
+    console.log('[CONVERT] Processing MEDICAL_HISTORY document');
     
-    if (historyData.medicalHistory) rows.push({ fieldName: 'medicalHistory', displayLabel: 'Medical History', originalValue: historyData.medicalHistory, currentValue: historyData.medicalHistory, dataType: 'string', category: 'other' });
-    if (historyData.diagnosis) rows.push({ fieldName: 'diagnosis', displayLabel: 'Diagnosis', originalValue: historyData.diagnosis, currentValue: historyData.diagnosis, dataType: 'string', category: 'diagnosis' });
-    if (historyData.allergies) rows.push({ fieldName: 'allergies', displayLabel: 'Allergies', originalValue: historyData.allergies, currentValue: historyData.allergies, dataType: 'string', category: 'other' });
+    // ✅ FIX: Read from extraction object (LandingAI returns nested structure)
+    const historyData = extractedData.extraction || extractedData;
+    console.log('[CONVERT] Medical history data keys:', Object.keys(historyData));
     
-    if (historyData.currentMedications && Array.isArray(historyData.currentMedications)) {
-      historyData.currentMedications.forEach((med, idx) => {
-        rows.push({
-          fieldName: `medication_${idx}`,
-          displayLabel: `Medication ${idx + 1}`,
-          originalValue: med,
-          currentValue: med,
-          dataType: 'string',
-          category: 'medications'
-        });
+    // Simplified Medical History Schema Fields
+    if (historyData.medical_summary) {
+      console.log('[CONVERT] ✅ Found medical_summary:', historyData.medical_summary.substring(0, 100) + '...');
+      rows.push({
+        fieldName: 'medical_summary', 
+        displayLabel: 'Medical Summary', 
+        originalValue: historyData.medical_summary, 
+        currentValue: historyData.medical_summary, 
+        dataType: 'string', 
+        category: 'diagnosis',  // ✅ Valid enum: diagnosis for medical summary
+        confidence: 0.95
       });
+    } else {
+      console.log('[CONVERT] ❌ Missing medical_summary');
     }
+
+    if (historyData.date_time) {
+      console.log('[CONVERT] ✅ Found date_time:', historyData.date_time);
+      rows.push({ 
+        fieldName: 'date_time', 
+        displayLabel: 'Date and Time', 
+        originalValue: historyData.date_time, 
+        currentValue: historyData.date_time, 
+        dataType: 'string', 
+        category: 'other',  // ✅ Valid enum: other for date/time metadata
+        confidence: 0.95
+      });
+    } else {
+      console.log('[CONVERT] ❌ Missing date_time');
+    }
+
+    if (historyData.hospital) {
+      console.log('[CONVERT] ✅ Found hospital:', historyData.hospital);
+      rows.push({ 
+        fieldName: 'hospital', 
+        displayLabel: 'Hospital', 
+        originalValue: historyData.hospital, 
+        currentValue: historyData.hospital, 
+        dataType: 'string', 
+        category: 'other',  // ✅ Valid enum: other for hospital metadata
+        confidence: 0.95
+      });
+    } else {
+      console.log('[CONVERT] ❌ Missing hospital');
+    }
+
+    if (historyData.doctor) {
+      console.log('[CONVERT] ✅ Found doctor:', historyData.doctor);
+      rows.push({ 
+        fieldName: 'doctor', 
+        displayLabel: 'Doctor', 
+        originalValue: historyData.doctor, 
+        currentValue: historyData.doctor, 
+        dataType: 'string', 
+        category: 'patient_details',  // ✅ Valid enum: patient_details for doctor info
+        confidence: 0.95
+      });
+    } else {
+      console.log('[CONVERT] ❌ Missing doctor');
+    }
+
+    if (historyData.services && Array.isArray(historyData.services)) {
+      console.log('[CONVERT] ✅ Found services:', historyData.services);
+      rows.push({
+        fieldName: 'services', 
+        displayLabel: 'Services', 
+        originalValue: historyData.services, 
+        currentValue: historyData.services, 
+        dataType: 'array', 
+        category: 'other',  // ✅ Valid enum: other for services metadata
+        confidence: 0.90
+      });
+    } else {
+      console.log('[CONVERT] ⚠️ Missing services (optional)');
+    }
+
+    if (historyData.medical_notes !== null && historyData.medical_notes !== undefined && historyData.medical_notes !== '') {
+      console.log('[CONVERT] ✅ Found medical_notes:', historyData.medical_notes);
+      rows.push({ 
+        fieldName: 'medical_notes', 
+        displayLabel: 'Medical Notes', 
+        originalValue: historyData.medical_notes, 
+        currentValue: historyData.medical_notes, 
+        dataType: 'string', 
+        category: 'other',  // ✅ Valid enum: other for additional notes
+        confidence: 0.90
+      });
+    } else {
+      console.log('[CONVERT] ⚠️ Missing medical_notes (optional field, null or empty)');
+    }
+    
+    console.log(`[CONVERT] ✅ Created ${rows.length} rows for MEDICAL_HISTORY`);
   }
 
-  // Fallback for GENERAL or any other document type with extracted data
-  if (rows.length === 0 && extractedData && typeof extractedData === 'object') {
-    Object.keys(extractedData).forEach(key => {
-      const value = extractedData[key];
-      if (value !== null && value !== undefined && value !== '') {
-        rows.push({
-          fieldName: key,
-          displayLabel: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-          originalValue: value,
-          currentValue: value,
-          dataType: typeof value === 'object' ? 'object' : typeof value === 'number' ? 'number' : 'string',
-          category: 'other'
-        });
-      }
-    });
+  // ❌ REMOVED FALLBACK - Fail fast instead of hiding bugs
+  if (rows.length === 0) {
+    console.log('[CONVERT] ❌ ERROR: Schema extraction succeeded but conversion failed');
+    console.log('[CONVERT] ❌ Document Type:', documentType);
+    console.log('[CONVERT] ❌ Extracted Data:', JSON.stringify(extractedData, null, 2));
+    throw new Error(`Conversion failed: No rows created for document type ${documentType}. Check if data structure matches expected schema.`);
   }
 
+  console.log(`[CONVERT] 🏁 Final: Returning ${rows.length} rows total`);
   return rows;
 }
 
@@ -283,25 +409,52 @@ router.post('/scan-medical', auth, upload.single('image'), async (req, res) => {
   const batchId = `scan-${Date.now()}`;
   const t0 = Date.now();
 
+  console.log('[SCAN] ========================================');
+  console.log(`[SCAN] Starting scan batch: ${batchId}`);
+  console.log('[SCAN] ========================================');
+
   try {
     if (!req.file) {
+      console.log('[SCAN] ❌ ERROR: No file uploaded');
       return res.status(400).json({ success: false, message: 'No image file uploaded' });
     }
 
     const patientId = req.body.patientId;
     const documentType = req.body.documentType;
 
+    console.log('[SCAN] 📄 File Info:');
+    console.log(`[SCAN]   - Name: ${req.file.originalname}`);
+    console.log(`[SCAN]   - Size: ${req.file.size} bytes`);
+    console.log(`[SCAN]   - Type: ${req.file.mimetype}`);
+    console.log(`[SCAN]   - Path: ${req.file.path}`);
+    console.log(`[SCAN] 👤 Patient ID: ${patientId || 'NOT PROVIDED'}`);
+    console.log(`[SCAN] 📋 Document Type: ${documentType || 'NOT PROVIDED (will auto-detect)'}`);
+
     logh(batchId, `📸 Processing with LandingAI: ${req.file.originalname}`);
     if (patientId) {
       logh(batchId, `👤 Patient ID: ${patientId}`);
     }
+    if (documentType) {
+      logh(batchId, `📋 Document Type: ${documentType}`);
+    }
 
     // Call LandingAI Scanner
+    console.log('[SCAN] 🤖 Calling LandingAI scanner...');
     const scanResult = await landingAIScanner.scanDocument(req.file.path, documentType);
 
+    console.log('[SCAN] 📊 LandingAI Response:');
+    console.log(`[SCAN]   - Success: ${scanResult.success}`);
+    console.log(`[SCAN]   - Document Type: ${scanResult.documentType}`);
+    console.log(`[SCAN]   - Confidence: ${scanResult.confidence}`);
+    console.log(`[SCAN]   - Engine: ${scanResult.engine}`);
+    
     if (!scanResult.success) {
+      console.log('[SCAN] ❌ LandingAI failed:', scanResult.error);
       throw new Error(scanResult.error || 'LandingAI scanning failed');
     }
+
+    console.log('[SCAN] ✅ LandingAI extraction successful');
+    console.log('[SCAN] 📦 Extracted Data Keys:', Object.keys(scanResult.extractedData || {}));
 
     logh(batchId, `✅ LandingAI extraction complete: ${scanResult.documentType}`);
 
@@ -310,10 +463,14 @@ router.post('/scan-medical', auth, upload.single('image'), async (req, res) => {
 
     // Save to verification collection for review (not directly to final collections)
     if (patientId) {
+      console.log('[SCAN] 💾 Saving to database...');
       try {
+        console.log('[SCAN] 📖 Reading file buffer...');
         const fileBuffer = await fs.readFile(req.file.path);
+        console.log(`[SCAN] ✅ File buffer read: ${fileBuffer.length} bytes`);
 
         // Store PDF in MongoDB
+        console.log('[SCAN] 📄 Creating PatientPDF document...');
         const patientPDF = new PatientPDF({
           patientId: patientId,
           title: `${scanResult.documentType} Document (Pending Verification)`,
@@ -328,17 +485,22 @@ router.post('/scan-medical', auth, upload.single('image'), async (req, res) => {
         const pdfIdString = patientPDF._id.toString();
         savedImagePath = pdfIdString;
 
+        console.log(`[SCAN] ✅ PatientPDF saved: ${pdfIdString}`);
         logh(batchId, `💾 Document saved: ${pdfIdString}`);
 
         // Create verification session ID
         const sessionId = `verify-${patientId}-${Date.now()}`;
+        console.log(`[SCAN] 🔑 Session ID: ${sessionId}`);
 
         // Convert extracted data to verification rows
+        console.log('[SCAN] 🔄 Converting extracted data to rows...');
         const dataRows = convertExtractedDataToRows(scanResult.extractedData, scanResult.documentType);
 
-        console.log('[SCANNER] Data rows generated:', dataRows.length);
+        console.log(`[SCAN] ✅ Data rows generated: ${dataRows.length}`);
+        console.log('[SCAN] 📋 Row details:', dataRows.map(r => ({ field: r.fieldName, label: r.displayLabel, hasValue: !!r.currentValue })));
 
         // Save to verification collection
+        console.log('[SCAN] 💾 Creating verification document...');
         const verificationDoc = new ScannedDataVerification({
           patientId: patientId,
           sessionId: sessionId,
@@ -357,16 +519,21 @@ router.post('/scan-medical', auth, upload.single('image'), async (req, res) => {
           uploadedBy: req.user?._id || null
         });
 
-        console.log('[SCANNER] Saving verification document...');
+        console.log('[SCAN] 💾 Saving verification document...');
         await verificationDoc.save();
         verificationId = verificationDoc._id.toString();
 
+        console.log(`[SCAN] ✅ Verification document saved: ${verificationId}`);
         logh(batchId, `✅ Created verification session: ${sessionId} (ID: ${verificationId})`);
 
       } catch (saveError) {
+        console.log('[SCAN] ❌ Save Error:', saveError.message);
+        console.log('[SCAN] ❌ Stack:', saveError.stack);
         logh(batchId, `⚠️ Save failed: ${saveError.message}`);
         console.error('[SCANNER] Save error details:', saveError);
       }
+    } else {
+      console.log('[SCAN] ⚠️ No patientId provided, skipping database save');
     }
 
     // Cleanup
@@ -686,16 +853,30 @@ router.delete('/verification/:verificationId/row/:rowIndex', auth, async (req, r
 router.post('/verification/:verificationId/confirm', auth, async (req, res) => {
   const batchId = `confirm-${Date.now()}`;
   
+  console.log('[CONFIRM] ========================================');
+  console.log(`[CONFIRM] Starting confirmation batch: ${batchId}`);
+  console.log('[CONFIRM] ========================================');
+  
   try {
     const { verificationId } = req.params;
     
+    console.log(`[CONFIRM] 🔍 Looking up verification ID: ${verificationId}`);
     const verification = await ScannedDataVerification.findById(verificationId);
 
     if (!verification) {
+      console.log('[CONFIRM] ❌ Verification not found');
       return res.status(404).json({ success: false, message: 'Verification session not found' });
     }
 
+    console.log(`[CONFIRM] ✅ Verification found`);
+    console.log(`[CONFIRM]   - Session: ${verification.sessionId}`);
+    console.log(`[CONFIRM]   - Document Type: ${verification.documentType}`);
+    console.log(`[CONFIRM]   - Patient ID: ${verification.patientId}`);
+    console.log(`[CONFIRM]   - Status: ${verification.verificationStatus}`);
+    console.log(`[CONFIRM]   - Data Rows: ${verification.dataRows.length}`);
+
     if (verification.verificationStatus === 'verified') {
+      console.log('[CONFIRM] ⚠️ Already verified');
       return res.status(400).json({ success: false, message: 'Already verified' });
     }
 
@@ -703,41 +884,83 @@ router.post('/verification/:verificationId/confirm', auth, async (req, res) => {
 
     // Reconstruct the data from verified rows
     const verifiedRows = verification.dataRows.filter(row => !row.isDeleted);
+    console.log(`[CONFIRM] 📋 Verified rows (non-deleted): ${verifiedRows.length}`);
     
     let reportId = null;
+    
+    console.log(`[CONFIRM] 👤 Looking up patient: ${verification.patientId}`);
     const patient = await Patient.findById(verification.patientId);
 
     if (!patient) {
+      console.log('[CONFIRM] ❌ Patient not found');
       return res.status(404).json({ success: false, message: 'Patient not found' });
     }
 
+    console.log(`[CONFIRM] ✅ Patient found: ${patient.firstName} ${patient.lastName}`);
+
     // Save to appropriate collection based on document type
     if (verification.documentType === 'PRESCRIPTION') {
-      const prescData = verification.extractedData;
+      console.log('[CONFIRM] 💊 Processing PRESCRIPTION document');
       
-      // Build medicines array from verified rows
-      const medicines = verifiedRows
-        .filter(r => r.category === 'medications')
-        .map(r => {
-          const med = r.currentValue;
-          return {
-            name: med.name || '',
-            dosage: med.dose || '',
-            frequency: med.frequency || '',
-            duration: med.duration || '',
-            instructions: med.instructions || ''
-          };
-        });
+      // ✅ FIX: Read from extraction object if it exists
+      const rawData = verification.extractedData;
+      const prescData = rawData.extraction || rawData;
+      
+      // Get values from verified rows (new simplified schema)
+      const prescriptionSummary = verifiedRows.find(r => r.fieldName === 'prescription_summary')?.currentValue || prescData.prescription_summary || '';
+      const dateTime = verifiedRows.find(r => r.fieldName === 'date_time')?.currentValue || prescData.date_time || '';
+      const hospital = verifiedRows.find(r => r.fieldName === 'hospital')?.currentValue || prescData.hospital || '';
+      const doctor = verifiedRows.find(r => r.fieldName === 'doctor')?.currentValue || prescData.doctor || '';
+      const medicalNotes = verifiedRows.find(r => r.fieldName === 'medical_notes')?.currentValue || prescData.medical_notes || '';
 
+      console.log('[CONFIRM] 📊 Extracted Values:');
+      console.log(`[CONFIRM]   - Summary: ${prescriptionSummary ? (prescriptionSummary.substring(0, 50) + '...') : 'EMPTY'}`);
+      console.log(`[CONFIRM]   - Date/Time: ${dateTime || 'EMPTY'}`);
+      console.log(`[CONFIRM]   - Hospital: ${hospital || 'EMPTY'}`);
+      console.log(`[CONFIRM]   - Doctor: ${doctor || 'EMPTY'}`);
+      console.log(`[CONFIRM]   - Notes: ${medicalNotes || 'EMPTY'}`);
+
+      // ✅ FIX: Parse date properly (handle DD/MM/YY format)
+      let parsedDate = new Date();
+      if (dateTime) {
+        try {
+          // Try to parse common formats: DD/MM/YY, DD/MM/YYYY, ISO, etc.
+          const dateStr = dateTime.trim();
+          
+          // Handle DD/MM/YY or DD/MM/YYYY format
+          if (dateStr.match(/^\d{1,2}\/\d{1,2}\/\d{2,4}$/)) {
+            const [day, month, year] = dateStr.split('/');
+            const fullYear = year.length === 2 ? `20${year}` : year;
+            parsedDate = new Date(`${fullYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`);
+            console.log(`[CONFIRM] 📅 Parsed date: ${dateStr} → ${parsedDate.toISOString()}`);
+          } else {
+            parsedDate = new Date(dateStr);
+            console.log(`[CONFIRM] 📅 Standard date parse: ${dateStr} → ${parsedDate.toISOString()}`);
+          }
+          
+          // Check if date is valid
+          if (isNaN(parsedDate.getTime())) {
+            console.log(`[CONFIRM] ⚠️ Invalid date, using current date`);
+            parsedDate = new Date();
+          }
+        } catch (err) {
+          console.log(`[CONFIRM] ⚠️ Date parse error: ${err.message}, using current date`);
+          parsedDate = new Date();
+        }
+      }
+
+      console.log('[CONFIRM] 💾 Creating PrescriptionDocument...');
       const prescriptionDoc = new PrescriptionDocument({
         patientId: verification.patientId,
         pdfId: verification.pdfId,
-        doctorName: verifiedRows.find(r => r.fieldName === 'doctor_name')?.currentValue || prescData.doctor_details?.name || '',
-        hospitalName: verifiedRows.find(r => r.fieldName === 'hospital_name')?.currentValue || prescData.doctor_details?.hospital || '',
-        prescriptionDate: prescData.prescription_date || new Date(),
-        medicines: medicines,
-        diagnosis: verifiedRows.find(r => r.fieldName === 'diagnosis')?.currentValue || prescData.diagnosis || '',
-        instructions: prescData.notes || '',
+        prescriptionSummary: prescriptionSummary, // NEW: Store prescription summary
+        doctorName: doctor,
+        hospitalName: hospital,
+        prescriptionDate: parsedDate,
+        medicalNotes: medicalNotes, // NEW: Store medical notes
+        medicines: [], // No longer extracting individual medicines
+        diagnosis: prescriptionSummary, // Legacy: Store summary as diagnosis
+        instructions: medicalNotes, // Legacy: Store notes as instructions
         ocrText: verification.metadata.markdown || '',
         ocrEngine: 'landingai-ade',
         ocrConfidence: verification.metadata.ocrConfidence || 0.95,
@@ -749,6 +972,7 @@ router.post('/verification/:verificationId/confirm', auth, async (req, res) => {
 
       await prescriptionDoc.save();
       reportId = prescriptionDoc._id.toString();
+      console.log(`[CONFIRM] ✅ PrescriptionDocument created: ${reportId}`);
       logh(batchId, `💊 Created PrescriptionDocument: ${reportId}`);
 
     } else if (verification.documentType === 'LAB_REPORT') {
@@ -792,28 +1016,61 @@ router.post('/verification/:verificationId/confirm', auth, async (req, res) => {
       logh(batchId, `🧪 Created LabReportDocument: ${reportId}`);
 
     } else if (verification.documentType === 'MEDICAL_HISTORY') {
-      const historyData = verification.extractedData;
+      // ✅ FIX: Read from extraction object if it exists
+      const rawData = verification.extractedData;
+      const historyData = rawData.extraction || rawData;
       
-      // Build medications array from verified rows
-      const medications = verifiedRows
-        .filter(r => r.category === 'medications')
-        .map(r => r.currentValue)
-        .join(', ');
+      // Get values from verified rows (new simplified schema)
+      const medicalSummary = verifiedRows.find(r => r.fieldName === 'medical_summary')?.currentValue || historyData.medical_summary || '';
+      const dateTime = verifiedRows.find(r => r.fieldName === 'date_time')?.currentValue || historyData.date_time || '';
+      const hospital = verifiedRows.find(r => r.fieldName === 'hospital')?.currentValue || historyData.hospital || '';
+      const doctor = verifiedRows.find(r => r.fieldName === 'doctor')?.currentValue || historyData.doctor || '';
+      const services = verifiedRows.find(r => r.fieldName === 'services')?.currentValue || historyData.services || [];
+      const medicalNotes = verifiedRows.find(r => r.fieldName === 'medical_notes')?.currentValue || historyData.medical_notes || '';
+
+      // ✅ FIX: Parse date properly (handle DD/MM/YY format)
+      let parsedDate = new Date();
+      if (dateTime) {
+        try {
+          const dateStr = dateTime.trim();
+          
+          // Handle DD/MM/YY or DD/MM/YYYY format
+          if (dateStr.match(/^\d{1,2}\/\d{1,2}\/\d{2,4}$/)) {
+            const [day, month, year] = dateStr.split('/');
+            const fullYear = year.length === 2 ? `20${year}` : year;
+            parsedDate = new Date(`${fullYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`);
+            console.log(`[CONFIRM] 📅 Parsed date: ${dateStr} → ${parsedDate.toISOString()}`);
+          } else {
+            parsedDate = new Date(dateStr);
+            console.log(`[CONFIRM] 📅 Standard date parse: ${dateStr} → ${parsedDate.toISOString()}`);
+          }
+          
+          if (isNaN(parsedDate.getTime())) {
+            console.log(`[CONFIRM] ⚠️ Invalid date, using current date`);
+            parsedDate = new Date();
+          }
+        } catch (err) {
+          console.log(`[CONFIRM] ⚠️ Date parse error: ${err.message}, using current date`);
+          parsedDate = new Date();
+        }
+      }
 
       const medicalHistoryDoc = new MedicalHistoryDocument({
         patientId: verification.patientId,
         pdfId: verification.pdfId,
         title: 'Medical History Record',
         category: 'General',
-        medicalHistory: verifiedRows.find(r => r.fieldName === 'medicalHistory')?.currentValue || historyData.medicalHistory || '',
-        diagnosis: verifiedRows.find(r => r.fieldName === 'diagnosis')?.currentValue || historyData.diagnosis || '',
-        allergies: verifiedRows.find(r => r.fieldName === 'allergies')?.currentValue || historyData.allergies || '',
-        chronicConditions: historyData.chronicConditions || [],
-        surgicalHistory: historyData.surgicalHistory || [],
-        familyHistory: historyData.familyHistory || '',
-        medications: medications,
-        recordDate: historyData.recordDate || new Date(),
-        reportDate: historyData.recordDate || new Date(),
+        medicalHistory: medicalSummary,
+        diagnosis: medicalSummary, // Store summary as diagnosis too
+        allergies: '',
+        chronicConditions: Array.isArray(services) ? services : [],
+        surgicalHistory: [],
+        familyHistory: '',
+        medications: '',
+        recordDate: parsedDate,
+        reportDate: parsedDate,
+        doctorName: doctor,
+        hospitalName: hospital,
         ocrText: verification.metadata.markdown || '',
         ocrEngine: 'landingai-ade',
         ocrConfidence: verification.metadata.ocrConfidence || 0.95,
@@ -826,6 +1083,14 @@ router.post('/verification/:verificationId/confirm', auth, async (req, res) => {
       await medicalHistoryDoc.save();
       reportId = medicalHistoryDoc._id.toString();
       logh(batchId, `📋 Created MedicalHistoryDocument: ${reportId}`);
+      console.log('[CONFIRM] 📋 MedicalHistoryDocument saved:', {
+        _id: reportId,
+        patientId: verification.patientId,
+        title: medicalHistoryDoc.title,
+        medicalHistory: medicalHistoryDoc.medicalHistory?.substring(0, 100),
+        recordDate: medicalHistoryDoc.recordDate,
+        pdfId: medicalHistoryDoc.pdfId
+      });
     }
 
     // Update patient record
@@ -835,6 +1100,13 @@ router.post('/verification/:verificationId/confirm', auth, async (req, res) => {
       'MEDICAL_HISTORY': 'DISCHARGE_SUMMARY',
       'GENERAL': 'GENERAL'
     };
+
+    console.log('[CONFIRM] 📝 Adding to patient.medicalReports[]:', {
+      reportId: reportId,
+      reportType: reportTypeMap[verification.documentType],
+      pdfId: verification.pdfId,
+      patientId: verification.patientId
+    });
 
     patient.medicalReports.push({
       reportId: reportId,
@@ -849,6 +1121,7 @@ router.post('/verification/:verificationId/confirm', auth, async (req, res) => {
 
     await patient.save();
     logh(batchId, `✅ Report attached to patient: ${verification.patientId}`);
+    console.log('[CONFIRM] ✅ Patient updated, medicalReports count:', patient.medicalReports.length);
 
     // Update verification status
     verification.verificationStatus = 'verified';
@@ -900,6 +1173,108 @@ router.post('/verification/:verificationId/reject', auth, async (req, res) => {
   } catch (error) {
     console.error('[VERIFICATION] Reject error:', error);
     return res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// ✅ GET Prescriptions for a patient (scanned prescription documents)
+router.get('/prescriptions/:patientId', auth, async (req, res) => {
+  try {
+    const { patientId } = req.params;
+    
+    console.log(`[PRESCRIPTIONS] 💊 Fetching prescriptions for patient: ${patientId}`);
+    
+    const prescriptions = await PrescriptionDocument.find({ 
+      patientId: patientId 
+    })
+    .sort({ prescriptionDate: -1, uploadDate: -1 })
+    .lean();
+    
+    console.log(`[PRESCRIPTIONS] ✅ Found ${prescriptions.length} prescription records`);
+    
+    return res.json({
+      success: true,
+      prescriptions: prescriptions
+    });
+
+  } catch (error) {
+    console.error('[PRESCRIPTIONS] ❌ Error:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: error.message,
+      prescriptions: []
+    });
+  }
+});
+
+// ✅ GET Lab Reports for a patient (scanned lab documents)
+router.get('/lab-reports/:patientId', auth, async (req, res) => {
+  try {
+    const { patientId } = req.params;
+    
+    console.log(`[LAB_REPORTS] 🧪 Fetching lab reports for patient: ${patientId}`);
+    
+    const labReports = await LabReportDocument.find({ 
+      patientId: patientId 
+    })
+    .sort({ reportDate: -1, uploadDate: -1 })
+    .lean();
+    
+    console.log(`[LAB_REPORTS] ✅ Found ${labReports.length} lab report records`);
+    
+    return res.json({
+      success: true,
+      labReports: labReports
+    });
+
+  } catch (error) {
+    console.error('[LAB_REPORTS] ❌ Error:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: error.message,
+      labReports: []
+    });
+  }
+});
+
+// ✅ GET Medical History for a patient
+router.get('/medical-history/:patientId', auth, async (req, res) => {
+  try {
+    const { patientId } = req.params;
+    
+    console.log(`[MEDICAL_HISTORY] 📋 Fetching medical history for patient: ${patientId}`);
+    
+    const medicalHistory = await MedicalHistoryDocument.find({ 
+      patientId: patientId 
+    })
+    .sort({ recordDate: -1, uploadDate: -1 })
+    .lean();
+    
+    console.log(`[MEDICAL_HISTORY] ✅ Found ${medicalHistory.length} records`);
+    
+    // Log each record for debugging
+    medicalHistory.forEach((record, idx) => {
+      console.log(`[MEDICAL_HISTORY] Record ${idx + 1}:`, {
+        _id: record._id,
+        title: record.title,
+        medicalHistory: record.medicalHistory?.substring(0, 50),
+        recordDate: record.recordDate,
+        category: record.category,
+        pdfId: record.pdfId
+      });
+    });
+    
+    return res.json({
+      success: true,
+      medicalHistory: medicalHistory
+    });
+
+  } catch (error) {
+    console.error('[MEDICAL_HISTORY] ❌ Error:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: error.message,
+      medicalHistory: []
+    });
   }
 });
 

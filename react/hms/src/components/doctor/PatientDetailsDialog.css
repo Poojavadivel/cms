@@ -906,11 +906,11 @@
 
 .pd-view-pdf-btn {
   margin-left: auto;
-  background: #fee2e2;
-  color: #ef4444;
+  background: #dbeafe;
+  color: #2563eb;
   border: none;
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   border-radius: 8px;
   display: flex;
   align-items: center;
@@ -920,8 +920,24 @@
 }
 
 .pd-view-pdf-btn:hover {
-  background: #fecaca;
+  background: #bfdbfe;
   transform: scale(1.05);
+}
+
+.pd-prescription-summary,
+.pd-prescription-notes {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #F1F5F9;
+}
+
+.pd-prescription-summary strong,
+.pd-prescription-notes strong {
+  display: block;
+  margin-bottom: 6px;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .pd-grid-flutter {
@@ -991,4 +1007,150 @@
   font-size: 14px;
   color: #94a3b8;
   max-width: 300px;
+}
+/* Lab Results Styling */
+.pd-lab-results {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #F1F5F9;
+}
+
+.pd-lab-results strong {
+  display: block;
+  margin-bottom: 8px;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.pd-lab-results-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pd-lab-result-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 10px;
+  background: #f8fafc;
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.pd-lab-test-name {
+  color: #64748b;
+  font-weight: 500;
+}
+
+.pd-lab-value {
+  color: #22c55e;
+  font-weight: 600;
+}
+
+.pd-lab-value.abnormal {
+  color: #ef4444;
+}
+
+.pd-status-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: capitalize;
+  margin-top: 8px;
+}
+
+.pd-status-badge.completed,
+.pd-status-badge.Completed {
+  background: #d1fae5;
+  color: #059669;
+}
+
+.pd-status-badge.pending,
+.pd-status-badge.Pending {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.pd-status-badge.processing,
+.pd-status-badge.Processing {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+/* Prescription Table Styles */
+.pd-prescriptions-table-wrapper {
+  overflow-x: auto;
+  margin-top: 16px;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.pd-prescriptions-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.pd-prescriptions-table thead {
+  background: linear-gradient(135deg, #207DC0 0%, #165a8a 100%);
+  color: white;
+}
+
+.pd-prescriptions-table th {
+  padding: 12px 16px;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.pd-prescriptions-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #E5E7EB;
+  font-size: 14px;
+  color: #1F2937;
+  vertical-align: top;
+}
+
+.pd-prescriptions-table tbody tr:hover {
+  background-color: #F3F4F6;
+}
+
+.pd-prescriptions-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.pd-prescription-action-btn {
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #207DC0 0%, #165a8a 100%);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.pd-prescription-action-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(32, 125, 192, 0.3);
+}
+
+.pd-prescription-action-btn:disabled {
+  background: #9CA3AF;
+  cursor: not-allowed;
+  opacity: 0.6;
 }

@@ -25,8 +25,8 @@ app.use(cors({
   exposedHeaders: ['Content-Disposition']
 }));
 app.use(express.json());
-// Updated to serve React HMS app build
-const webAppPath = path.join(__dirname, '..', 'react', 'hms', 'build');
+// Updated to serve Mobile HMS app build (Expo web export)
+const webAppPath = path.join(__dirname, '..', 'mobile', 'dist');
 
 // --- API Route Definitions ---
 app.use('/api/auth', authRoutes);

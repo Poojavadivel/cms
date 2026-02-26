@@ -16,7 +16,10 @@ import {
     MdOpacity,
     MdUploadFile,
     MdDelete,
-    MdInfo
+    MdInfo,
+    MdLocalPharmacy,
+    MdScience,
+    MdDescription
 } from 'react-icons/md';
 import {
     FiUser, FiPhone, FiHeart, FiActivity, FiShield, FiFileText, FiLoader, FiX, FiChevronDown, FiTarget
@@ -171,6 +174,7 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
     const [uploadedFiles, setUploadedFiles] = useState([]);
     const [uploading, setUploading] = useState(false);
     const [scannerError, setScannerError] = useState(null);
+    const [selectedDocumentType, setSelectedDocumentType] = useState('PRESCRIPTION');
     
     // Verification Modal State
     const [verificationModalOpen, setVerificationModalOpen] = useState(false);
@@ -181,18 +185,11 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
         phone: '', email: '', emergencyContactName: '', emergencyContactPhone: '',
         houseNo: '', street: '', town: '', city: '', district: '', state: '', pincode: '', country: 'India',
         lat: '', lng: '',
-        assignedDoctor: '', knownConditions: '', allergies: '', currentMedications: '',
-        pastSurgeries: '', notes: '', lastVisit: '',
+        assignedDoctor: '', knownConditions: '', allergies: '', notes: '', lastVisit: '',
         height: '', weight: '', bmi: '', bp: '', pulse: '', spo2: '',
         insuranceNumber: '', insuranceProvider: '', insuranceExpiry: '',
         appointmentDate: '', appointmentTime: '', appointmentReason: '', patientCode: ''
     });
-
-    // Medications and Surgeries as arrays
-    const [medications, setMedications] = useState([]);
-    const [surgeries, setSurgeries] = useState([]);
-    const [newMedication, setNewMedication] = useState('');
-    const [newSurgery, setNewSurgery] = useState('');
 
     // Reset & Load Data
     useEffect(() => {
@@ -246,8 +243,6 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                         assignedDoctor: patient.doctorId || '',
                         knownConditions: Array.isArray(patient.medicalHistory) ? patient.medicalHistory.join(', ') : (patient.medicalHistory || ''),
                         allergies: Array.isArray(patient.allergies) ? patient.allergies.join(', ') : (patient.allergies || ''),
-                        currentMedications: '',
-                        pastSurgeries: '',
                         height: patient.height || '', weight: patient.weight || '',
                         bmi: patient.bmi || '', bp: patient.bp || '',
                         pulse: patient.pulse || '', spo2: patient.oxygen || '',
@@ -256,20 +251,6 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                         insuranceExpiry: patient.expiryDate || '',
                         patientCode: patient.patientCode || ''
                     });
-
-                    // Load medications and surgeries as arrays
-                    if (patient.currentMedications) {
-                        const meds = typeof patient.currentMedications === 'string'
-                            ? patient.currentMedications.split(',').map(s => s.trim()).filter(Boolean)
-                            : patient.currentMedications;
-                        setMedications(Array.isArray(meds) ? meds : []);
-                    }
-                    if (patient.pastSurgeries) {
-                        const surgs = typeof patient.pastSurgeries === 'string'
-                            ? patient.pastSurgeries.split(',').map(s => s.trim()).filter(Boolean)
-                            : patient.pastSurgeries;
-                        setSurgeries(Array.isArray(surgs) ? surgs : []);
-                    }
 
                     // Set cities if state is present
                     if (patient.state && INDIAN_STATES[patient.state]) {
@@ -283,14 +264,11 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                     phone: '', email: '', emergencyContactName: '', emergencyContactPhone: '',
                     houseNo: '', street: '', town: '', city: '', district: '', state: '', pincode: '', country: 'India',
                     lat: '', lng: '',
-                    assignedDoctor: '', knownConditions: '', allergies: '', currentMedications: '',
-                    pastSurgeries: '', notes: '', lastVisit: '',
+                    assignedDoctor: '', knownConditions: '', allergies: '', notes: '', lastVisit: '',
                     height: '', weight: '', bmi: '', bp: '', pulse: '', spo2: '',
                     insuranceNumber: '', insuranceProvider: '', insuranceExpiry: '',
                     appointmentDate: '', appointmentTime: '', appointmentReason: '', patientCode: ''
                 });
-                setMedications([]);
-                setSurgeries([]);
                 setCities([]);
                 setCountryCode('+91'); // Reset to default
                 setPhoneNumber(''); // Clear phone number
@@ -534,7 +512,7 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                 const pid = patientId || `temp-${Date.now()}`;
 
                 try {
-                    const scannedResult = await scannerService.scanAndExtractMedicalData(file, pid);
+                    const scannedResult = await scannerService.scanAndExtractMedicalData(file, pid, selectedDocumentType);
 
                     // Auto-fill form fields if data was extracted
                     if (scannedResult) {
@@ -543,20 +521,15 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                             knownConditions: prev.knownConditions ? `${prev.knownConditions}, ${scannedResult.medicalHistory || ''}` : (scannedResult.medicalHistory || ''),
                             allergies: prev.allergies ? `${prev.allergies}, ${scannedResult.allergies || ''}` : (scannedResult.allergies || '')
                         }));
-
-                        // Add extracted medications to list
-                        if (scannedResult.medications) {
-                            const extractedMeds = scannedResult.medications.split(',').map(s => s.trim()).filter(Boolean);
-                            setMedications(prev => [...prev, ...extractedMeds]);
-                        }
                     }
 
-                    setUploadedFiles(prev => [...prev, { 
+                    setUploadedFiles(prev => [...prev, {
                         file, 
                         name: file.name, 
                         scannedResult,
                         verificationId: scannedResult.verificationId,
-                        requiresVerification: scannedResult.verificationRequired || false
+                        requiresVerification: scannedResult.verificationRequired || false,
+                        documentType: selectedDocumentType
                     }]);
                 } catch (fileError) {
                     console.error(`Error processing ${file.name}:`, fileError);
@@ -574,30 +547,6 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
 
     const removeUploadedFile = (index) => {
         setUploadedFiles(prev => prev.filter((_, i) => i !== index));
-    };
-
-    // Medication handlers
-    const addMedication = () => {
-        if (newMedication.trim()) {
-            setMedications(prev => [...prev, newMedication.trim()]);
-            setNewMedication('');
-        }
-    };
-
-    const removeMedication = (index) => {
-        setMedications(prev => prev.filter((_, i) => i !== index));
-    };
-
-    // Surgery handlers
-    const addSurgery = () => {
-        if (newSurgery.trim()) {
-            setSurgeries(prev => [...prev, newSurgery.trim()]);
-            setNewSurgery('');
-        }
-    };
-
-    const removeSurgery = (index) => {
-        setSurgeries(prev => prev.filter((_, i) => i !== index));
     };
 
     // State/City handler
@@ -696,17 +645,13 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                     emergencyContactName: formData.emergencyContactName,
                     emergencyContactPhone: formData.emergencyContactPhone,
                     medicalHistory: formData.knownConditions ? formData.knownConditions.split(',').map(s => s.trim()) : [],
-                    prescriptions: medications,
                     allergies: formData.allergies ? formData.allergies.split(',').map(s => s.trim()) : [],
-                    pastSurgeries: surgeries,
                     insuranceNumber: formData.insuranceNumber,
                     insuranceProvider: formData.insuranceProvider
                 },
                 // Flattened fields for some backward compatibility if needed
                 medicalHistory: formData.knownConditions ? formData.knownConditions.split(',').map(s => s.trim()) : [],
                 allergies: formData.allergies ? formData.allergies.split(',').map(s => s.trim()) : [],
-                currentMedications: medications.join(', '),
-                pastSurgeries: surgeries.join(', '),
                 town: formData.town,
 
                 vitals: {
@@ -1229,6 +1174,88 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                                                 {currentStep === 2 && (
                                                     <div className="space-y-8">
 
+                                                        {/* Document Type Selector */}
+                                                        <div className="bg-white border border-[#207DC0]/20 rounded-xl p-5">
+                                                            <h4 className="text-[#0f3e61] font-bold mb-3 flex items-center gap-2 text-sm">
+                                                                <MdDescription className="text-[#207DC0]" />
+                                                                Select Document Type
+                                                            </h4>
+                                                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                                                {[
+                                                                    { 
+                                                                        type: 'PRESCRIPTION', 
+                                                                        label: 'Prescription', 
+                                                                        icon: MdLocalPharmacy,
+                                                                        color: '#10b981',
+                                                                        bgColor: '#d1fae5',
+                                                                        description: 'Doctor\'s prescription with medicines'
+                                                                    },
+                                                                    { 
+                                                                        type: 'LAB_REPORT', 
+                                                                        label: 'Lab Report', 
+                                                                        icon: MdScience,
+                                                                        color: '#3b82f6',
+                                                                        bgColor: '#dbeafe',
+                                                                        description: 'Laboratory test results'
+                                                                    },
+                                                                    { 
+                                                                        type: 'MEDICAL_HISTORY', 
+                                                                        label: 'Medical History', 
+                                                                        icon: MdMedicalServices,
+                                                                        color: '#8b5cf6',
+                                                                        bgColor: '#ede9fe',
+                                                                        description: 'Hospital discharge or medical history'
+                                                                    }
+                                                                ].map((docType) => {
+                                                                    const Icon = docType.icon;
+                                                                    const isSelected = selectedDocumentType === docType.type;
+                                                                    
+                                                                    return (
+                                                                        <button
+                                                                            key={docType.type}
+                                                                            type="button"
+                                                                            onClick={() => setSelectedDocumentType(docType.type)}
+                                                                            className={`relative p-4 rounded-lg border-2 transition-all duration-300 text-left group hover:scale-105 ${
+                                                                                isSelected 
+                                                                                    ? 'border-[#207DC0] bg-[#ecf6ff] shadow-lg' 
+                                                                                    : 'border-slate-200 bg-white hover:border-[#207DC0]/50 hover:bg-[#ecf6ff]/30'
+                                                                            }`}
+                                                                        >
+                                                                            {/* Selection Indicator */}
+                                                                            {isSelected && (
+                                                                                <div className="absolute top-2 right-2 w-6 h-6 bg-[#207DC0] rounded-full flex items-center justify-center">
+                                                                                    <MdCheck className="text-white text-sm" />
+                                                                                </div>
+                                                                            )}
+                                                                            
+                                                                            {/* Icon */}
+                                                                            <div 
+                                                                                className="w-10 h-10 rounded-lg flex items-center justify-center mb-3 transition-all duration-300"
+                                                                                style={{ 
+                                                                                    backgroundColor: isSelected ? docType.color + '20' : docType.bgColor,
+                                                                                    color: docType.color
+                                                                                }}
+                                                                            >
+                                                                                <Icon size={22} />
+                                                                            </div>
+                                                                            
+                                                                            {/* Label */}
+                                                                            <h5 className={`font-bold text-sm mb-1 ${
+                                                                                isSelected ? 'text-[#207DC0]' : 'text-[#0f3e61]'
+                                                                            }`}>
+                                                                                {docType.label}
+                                                                            </h5>
+                                                                            
+                                                                            {/* Description */}
+                                                                            <p className="text-xs text-slate-500 leading-tight">
+                                                                                {docType.description}
+                                                                            </p>
+                                                                        </button>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        </div>
+
                                                         {/* Scanner Section */}
                                                         <div className="bg-[#ecf6ff] border-2 border-dashed border-[#207DC0]/30 rounded-xl p-6 text-center hover:bg-[#207DC0]/10 transition-colors cursor-pointer relative group">
                                                             <input
@@ -1258,30 +1285,63 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                                                         {uploadedFiles.length > 0 && (
                                                             <div className="space-y-2">
                                                                 <p className="text-xs font-bold uppercase text-slate-400">Uploaded Documents</p>
-                                                                {uploadedFiles.map((file, idx) => (
-                                                                    <div key={`uploaded-file-${idx}-${file.name || 'unnamed'}`} className="flex items-center justify-between bg-white border border-slate-100 p-3 rounded-lg text-sm shadow-sm gap-3">
-                                                                        <span className="truncate flex-1 font-bold text-[#0f3e61]">{file.name}</span>
-                                                                        {file.requiresVerification && file.verificationId && (
-                                                                            <button
-                                                                                onClick={() => {
-                                                                                    setCurrentVerificationId(file.verificationId);
-                                                                                    setVerificationModalOpen(true);
-                                                                                }}
-                                                                                className="flex items-center gap-1 px-3 py-1.5 bg-blue-50 text-[#207DC0] rounded-lg hover:bg-blue-100 transition-all font-bold text-xs"
-                                                                                title="View and verify extracted data"
-                                                                            >
-                                                                                <MdInfo className="text-base" /> Verify Data
-                                                                            </button>
-                                                                        )}
-                                                                        <button 
-                                                                            onClick={() => removeUploadedFile(idx)} 
-                                                                            className="text-red-400 hover:text-red-600 p-1"
-                                                                            title="Remove file"
-                                                                        >
-                                                                            <MdDelete />
-                                                                        </button>
-                                                                    </div>
-                                                                ))}
+                                                                {uploadedFiles.map((file, idx) => {
+                                                                    // Get document type badge styling
+                                                                    const getDocTypeBadge = (type) => {
+                                                                        const badges = {
+                                                                            'PRESCRIPTION': { label: 'Prescription', color: '#10b981', bgColor: '#d1fae5', icon: MdLocalPharmacy },
+                                                                            'LAB_REPORT': { label: 'Lab Report', color: '#3b82f6', bgColor: '#dbeafe', icon: MdScience },
+                                                                            'MEDICAL_HISTORY': { label: 'Medical History', color: '#8b5cf6', bgColor: '#ede9fe', icon: MdMedicalServices }
+                                                                        };
+                                                                        return badges[type] || badges['PRESCRIPTION'];
+                                                                    };
+                                                                    
+                                                                    const badge = getDocTypeBadge(file.documentType);
+                                                                    const BadgeIcon = badge.icon;
+                                                                    
+                                                                    return (
+                                                                        <div key={`uploaded-file-${idx}-${file.name || 'unnamed'}`} className="flex items-center justify-between bg-white border border-slate-100 p-3 rounded-lg text-sm shadow-sm gap-3">
+                                                                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                                                {/* Document Type Badge */}
+                                                                                <div 
+                                                                                    className="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-semibold whitespace-nowrap"
+                                                                                    style={{ 
+                                                                                        backgroundColor: badge.bgColor,
+                                                                                        color: badge.color
+                                                                                    }}
+                                                                                >
+                                                                                    <BadgeIcon size={14} />
+                                                                                    {badge.label}
+                                                                                </div>
+                                                                                
+                                                                                {/* File Name */}
+                                                                                <span className="truncate font-bold text-[#0f3e61]">{file.name}</span>
+                                                                            </div>
+                                                                            
+                                                                            <div className="flex items-center gap-2">
+                                                                                {file.requiresVerification && file.verificationId && (
+                                                                                    <button
+                                                                                        onClick={() => {
+                                                                                            setCurrentVerificationId(file.verificationId);
+                                                                                            setVerificationModalOpen(true);
+                                                                                        }}
+                                                                                        className="flex items-center gap-1 px-3 py-1.5 bg-blue-50 text-[#207DC0] rounded-lg hover:bg-blue-100 transition-all font-bold text-xs whitespace-nowrap"
+                                                                                        title="View and verify extracted data"
+                                                                                    >
+                                                                                        <MdInfo className="text-base" /> Verify Data
+                                                                                    </button>
+                                                                                )}
+                                                                                <button 
+                                                                                    onClick={() => removeUploadedFile(idx)} 
+                                                                                    className="text-red-400 hover:text-red-600 p-1"
+                                                                                    title="Remove file"
+                                                                                >
+                                                                                    <MdDelete />
+                                                                                </button>
+                                                                            </div>
+                                                                        </div>
+                                                                    );
+                                                                })}
                                                             </div>
                                                         )}
 
@@ -1323,58 +1383,6 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                                                                 <textarea name="knownConditions" value={formData.knownConditions} onChange={handleInputChange} rows={2}
                                                                     className="w-full outline-none bg-transparent resize-none text-[#0f3e61] font-semibold" placeholder="e.g. Diabetes, Hypertension..." />
                                                             </PremiumInput>
-
-                                                            {/* Dynamic Medications */}
-                                                            <div className="space-y-3">
-                                                                <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-500">Current Medications</label>
-                                                                <div className="flex gap-2">
-                                                                    <input
-                                                                        type="text"
-                                                                        value={newMedication}
-                                                                        onChange={(e) => setNewMedication(e.target.value)}
-                                                                        onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addMedication())}
-                                                                        className="flex-1 px-4 py-2 border border-slate-200 rounded-xl outline-none text-[#0f3e61] font-semibold focus:border-[#207DC0] focus:ring-4 focus:ring-[#207DC0]/10"
-                                                                        placeholder="e.g. Metformin 500mg twice daily"
-                                                                    />
-                                                                    <button type="button" onClick={addMedication} className="px-6 py-2 bg-[#207DC0] text-white rounded-xl font-bold hover:bg-[#165a8a] transition-colors">Add</button>
-                                                                </div>
-                                                                {medications.length > 0 && (
-                                                                    <div className="space-y-2">
-                                                                        {medications.map((med, idx) => (
-                                                                            <div key={idx} className="flex items-center justify-between bg-white border border-slate-200 p-3 rounded-lg">
-                                                                                <span className="text-[#0f3e61] font-semibold">{med}</span>
-                                                                                <button type="button" onClick={() => removeMedication(idx)} className="text-red-400 hover:text-red-600"><MdDelete size={20} /></button>
-                                                                            </div>
-                                                                        ))}
-                                                                    </div>
-                                                                )}
-                                                            </div>
-
-                                                            {/* Dynamic Past Surgeries */}
-                                                            <div className="space-y-3">
-                                                                <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-500">Past Surgeries</label>
-                                                                <div className="flex gap-2">
-                                                                    <input
-                                                                        type="text"
-                                                                        value={newSurgery}
-                                                                        onChange={(e) => setNewSurgery(e.target.value)}
-                                                                        onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addSurgery())}
-                                                                        className="flex-1 px-4 py-2 border border-slate-200 rounded-xl outline-none text-[#0f3e61] font-semibold focus:border-[#207DC0] focus:ring-4 focus:ring-[#207DC0]/10"
-                                                                        placeholder="e.g. Appendectomy (2020)"
-                                                                    />
-                                                                    <button type="button" onClick={addSurgery} className="px-6 py-2 bg-[#207DC0] text-white rounded-xl font-bold hover:bg-[#165a8a] transition-colors">Add</button>
-                                                                </div>
-                                                                {surgeries.length > 0 && (
-                                                                    <div className="space-y-2">
-                                                                        {surgeries.map((surgery, idx) => (
-                                                                            <div key={idx} className="flex items-center justify-between bg-white border border-slate-200 p-3 rounded-lg">
-                                                                                <span className="text-[#0f3e61] font-semibold">{surgery}</span>
-                                                                                <button type="button" onClick={() => removeSurgery(idx)} className="text-red-400 hover:text-red-600"><MdDelete size={20} /></button>
-                                                                            </div>
-                                                                        ))}
-                                                                    </div>
-                                                                )}
-                                                            </div>
 
                                                             <PremiumInput label="Assigned Doctor" icon={<MdPerson />}>
                                                                 <select name="assignedDoctor" value={formData.assignedDoctor} onChange={handleInputChange} className="w-full outline-none bg-transparent text-[#0f3e61] font-bold cursor-pointer appearance-none">

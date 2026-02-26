@@ -34,7 +34,7 @@ const MedicalHistoryDocumentSchema = new Schema({
   
   // OCR data
   ocrText: { type: String, default: '' },
-  ocrEngine: { type: String, enum: ['vision', 'google-vision', 'tesseract', 'manual', 'gemini'], default: 'google-vision' },
+  ocrEngine: { type: String, enum: ['vision', 'google-vision', 'tesseract', 'manual', 'gemini', 'landingai', 'landingai-ade'], default: 'google-vision' },
   ocrConfidence: { type: Number, default: 0 },
   
   // Metadata
