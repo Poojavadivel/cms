@@ -16,6 +16,7 @@ import AppointmentViewModal from '../../../components/appointments/AppointmentVi
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const [data, setData] = useState(null);
+  const [bedStats, setBedStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [revenueTab, setRevenueTab] = useState(0);
   const [selectedDay, setSelectedDay] = useState(new Date());
@@ -44,13 +45,24 @@ const AdminDashboard = () => {
         ? patientsData.length
         : (patientsData?.patients?.length || 0);
 
-      // Count staff/beds (you can adjust this logic)
+      // Count staff
       const staffCount = Array.isArray(staffData)
         ? staffData.length
         : (staffData?.staff?.length || 0);
 
       // Get stats from dashboard service or use calculated values
       const stats = statsData?.data || statsData || {};
+
+      // Set bed stats from backend (real data from DB)
+      if (stats.beds) {
+        setBedStats({
+          total: stats.beds.total || 0,
+          available: stats.beds.available || 0,
+          occupied: stats.beds.occupied || 0,
+          cleaning: stats.beds.cleaning || 0,
+          occupancyRate: stats.beds.occupancyRate || 0
+        });
+      }
 
       setData({
         invoice: stats.totalInvoices || stats.invoices || 0,
@@ -317,6 +329,40 @@ const AdminDashboard = () => {
           onClick={() => navigate('/admin/staff')}
         />
       </div>
+
+      {/* Bed Stats Cards */}
+      {bedStats && (
+        <div className="stats-grid bed-stats-grid" style={{ marginTop: '16px' }}>
+          <StatCard
+            icon="🛏️"
+            title="Total Beds"
+            value={bedStats.total}
+            iconColor="#6366f1"
+            onClick={() => navigate('/admin/ward-map')}
+          />
+          <StatCard
+            icon="✅"
+            title="Available"
+            value={bedStats.available}
+            iconColor="#22c55e"
+            onClick={() => navigate('/admin/ward-map')}
+          />
+          <StatCard
+            icon="🏥"
+            title="Occupied"
+            value={bedStats.occupied}
+            iconColor="#f97316"
+            onClick={() => navigate('/admin/ward-map')}
+          />
+          <StatCard
+            icon="🧹"
+            title="Cleaning"
+            value={bedStats.cleaning}
+            iconColor="#eab308"
+            onClick={() => navigate('/admin/ward-map')}
+          />
+        </div>
+      )}
 
       {/* Main Content */}
       <div className="dashboard-main">

@@ -43,10 +43,11 @@
   justify-content: center;
   width: 40px;
   height: 40px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
+  border-radius: 12px;
+  background: #eff6ff;
   color: #207DC0;
   flex-shrink: 0;
+  border: 1px solid #dbeafe;
 }
 
 .section-card-icon svg {
@@ -107,6 +108,7 @@
     opacity: 0;
     transform: translateY(-10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -115,26 +117,31 @@
 
 /* Different icon background colors for sections */
 .section-card-icon.vitals {
-  background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
-  color: #F59E0B;
+  background: #eff6ff;
+  color: #207DC0;
+  border-color: #dbeafe;
 }
 
 .section-card-icon.notes {
-  background: linear-gradient(135deg, #DBEAFE 0%, #BFDBFE 100%);
+  background: #eff6ff;
   color: #207DC0;
+  border-color: #dbeafe;
 }
 
 .section-card-icon.pharmacy {
-  background: linear-gradient(135deg, #D1FAE5 0%, #A7F3D0 100%);
+  background: #eff6ff;
   color: #207DC0;
+  border-color: #dbeafe;
 }
 
 .section-card-icon.pathology {
-  background: linear-gradient(135deg, #FCE7F3 0%, #FBCFE8 100%);
-  color: #EC4899;
+  background: #eff6ff;
+  color: #207DC0;
+  border-color: #dbeafe;
 }
 
 .section-card-icon.followup {
-  background: linear-gradient(135deg, #E0E7FF 0%, #C7D2FE 100%);
-  color: #6366F1;
+  background: #eff6ff;
+  color: #207DC0;
+  border-color: #dbeafe;
 }

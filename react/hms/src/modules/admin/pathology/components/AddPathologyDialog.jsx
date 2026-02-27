@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import './PathologyDialog.css';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MdOutlineScience, MdOutlineNoteAlt, MdHealthAndSafety, MdContentCopy } from 'react-icons/md';
-import { FiX, FiUser, FiSearch, FiArrowRight, FiArrowLeft, FiSave, FiCheck, FiUpload, FiPhone, FiMail } from 'react-icons/fi';
+import { FiX, FiUser, FiSearch, FiArrowRight, FiArrowLeft, FiSave, FiCheck, FiUpload, FiPhone, FiMail, FiEye } from 'react-icons/fi';
 import { fetchPatients } from '../../../../services/patientsService';
 import { fetchAllDoctors } from '../../../../services/doctorService';
 
@@ -20,6 +21,8 @@ const AddPathologyDialog = ({ initial, onSubmit, onCancel }) => {
     // Doctor states
     const [doctors, setDoctors] = useState([]);
     const [isLoadingDoctors, setIsLoadingDoctors] = useState(false);
+    const [showImagePreview, setShowImagePreview] = useState(false);
+    const [previewUrl, setPreviewUrl] = useState(null);
 
     const [formData, setFormData] = useState({
         patientId: '',
@@ -35,21 +38,21 @@ const AddPathologyDialog = ({ initial, onSubmit, onCancel }) => {
         doctorName: '',
         technician: '',
         notes: '',
-        file: null,
-        fileName: '',
-        testResults: []
+        pdfFile: null,
+        imageFile: null,
+        results: []
     });
 
     useEffect(() => {
         if (initial) {
-            setFormData({
-                ...formData,
+            setFormData(prev => ({
+                ...prev,
                 ...initial,
                 collectionDate: initial.collectionDate ? new Date(initial.collectionDate).toISOString().split('T')[0] : '',
                 reportDate: initial.reportDate ? new Date(initial.reportDate).toISOString().split('T')[0] : '',
                 notes: initial.remarks || initial.notes || '',
-                testResults: initial.testResults || initial.results || []
-            });
+                results: initial.results || initial.testResults || []
+            }));
             setPatientSearchQuery(initial.patientName || '');
             setPatientSelected(true);
         }
@@ -104,11 +107,37 @@ const AddPathologyDialog = ({ initial, onSubmit, onCancel }) => {
         setShowPatientDropdown(false);
     };
 
+    const handleFileChange = (e, type) => {
+        const file = e.target.files[0];
+        if (file) {
+            setFormData(prev => ({
+                ...prev,
+                [type]: file,
+                status: 'Completed' // Auto-set status as requested
+            }));
+
+            // Generate preview URL if it's an image
+            if (type === 'imageFile') {
+                if (previewUrl) URL.revokeObjectURL(previewUrl);
+                const url = URL.createObjectURL(file);
+                setPreviewUrl(url);
+            }
+        }
+    };
+
+    // Cleanup preview URL on unmount
+    useEffect(() => {
+        return () => {
+            if (previewUrl) URL.revokeObjectURL(previewUrl);
+        };
+    }, [previewUrl]);
+
     const steps = [
         { id: 1, name: 'Patient', icon: FiUser },
         { id: 2, name: 'Test Details', icon: MdOutlineScience },
-        { id: 3, name: 'Medical Info', icon: MdHealthAndSafety },
-        { id: 4, name: 'Finish', icon: FiCheck }
+        { id: 3, name: 'Diagnostics', icon: MdHealthAndSafety },
+        { id: 4, name: 'Artifacts', icon: FiUpload },
+        { id: 5, name: 'Finish', icon: FiCheck }
     ];
 
     const handleChange = (e) => {
@@ -135,26 +164,37 @@ const AddPathologyDialog = ({ initial, onSubmit, onCancel }) => {
     const handleBack = () => setCurrentStep(prev => prev - 1);
 
     const handleSubmit = async (e) => {
-        e.preventDefault();
+        if (e) e.preventDefault();
         if (!validateStep(currentStep)) return;
         setIsSubmitting(true);
         try {
             const submitData = new FormData();
+
+            // Append all textual data
             Object.keys(formData).forEach(key => {
-                if (key === 'file' && formData[key]) {
-                    submitData.append('file', formData[key]);
-                } else if (key !== 'file' && key !== 'fileName') {
+                if (key !== 'pdfFile' && key !== 'imageFile') {
                     const value = formData[key];
                     if (Array.isArray(value) || (typeof value === 'object' && value !== null)) {
                         submitData.append(key, JSON.stringify(value));
                     } else {
-                        submitData.append(key, value);
+                        submitData.append(key, value || '');
                     }
                 }
             });
+
+            // Append files with specific keys matching backend multer
+            if (formData.pdfFile) {
+                submitData.append('pdf', formData.pdfFile);
+            }
+            if (formData.imageFile) {
+                submitData.append('image', formData.imageFile);
+            }
+
             await onSubmit(submitData);
+            setErrors({});
         } catch (error) {
             console.error('Submit error:', error);
+            setErrors({ submit: error.message || 'Failed to sync diagnostic data' });
         } finally {
             setIsSubmitting(false);
         }
@@ -165,7 +205,7 @@ const AddPathologyDialog = ({ initial, onSubmit, onCancel }) => {
             <motion.div
                 initial={{ opacity: 0, scale: 0.95, y: 30 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
-                className="w-[85%] max-w-[1280px] h-[85vh] bg-white rounded-[24px] shadow-2xl overflow-hidden flex border border-white/20"
+                className="pathology-modal-container shadow-2xl border border-white/20"
             >
                 {/* Sidebar - Modern Deep Blue */}
                 <div className="hidden md:flex flex-col w-[280px] bg-gradient-to-br from-[#207DC0] to-[#165a8a] relative overflow-hidden shrink-0">
@@ -454,6 +494,87 @@ const AddPathologyDialog = ({ initial, onSubmit, onCancel }) => {
 
                                 {currentStep === 4 && (
                                     <motion.div
+                                        initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+                                        className="space-y-10 max-w-4xl mx-auto"
+                                    >
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                            {/* PDF Upload */}
+                                            <div className="space-y-4">
+                                                <label className="text-[10px] font-black text-[#207DC0] uppercase tracking-widest block ml-1">Official Report (PDF)</label>
+                                                <div className={`relative h-48 rounded-[32px] border-4 border-dashed transition-all flex flex-col items-center justify-center p-6 text-center ${formData.pdfFile ? 'border-green-500 bg-green-50/30' : 'border-slate-100 bg-slate-50/50 hover:border-[#207DC0] hover:bg-blue-50/30'}`}>
+                                                    <input
+                                                        type="file" accept=".pdf" onChange={(e) => handleFileChange(e, 'pdfFile')}
+                                                        className="absolute inset-0 opacity-0 cursor-pointer z-10"
+                                                    />
+                                                    {formData.pdfFile ? (
+                                                        <>
+                                                            <div className="w-16 h-16 rounded-2xl bg-green-500 text-white flex items-center justify-center mb-3 shadow-xl shadow-green-200">
+                                                                <FiCheck size={32} />
+                                                            </div>
+                                                            <p className="font-black text-green-600 text-xs truncate max-w-full italic">{formData.pdfFile.name}</p>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <div className="w-16 h-16 rounded-2xl bg-white text-[#207DC0] border-2 border-slate-100 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                                                                <MdContentCopy size={32} />
+                                                            </div>
+                                                            <p className="font-black text-slate-400 text-[10px] uppercase tracking-widest">Drop PDF report here</p>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* Image Upload */}
+                                            <div className="space-y-4">
+                                                <label className="text-[10px] font-black text-[#207DC0] uppercase tracking-widest block ml-1">Scan/Result Image (JPG/PNG)</label>
+                                                <div className={`relative h-48 rounded-[32px] border-4 border-dashed transition-all flex flex-col items-center justify-center p-6 text-center ${formData.imageFile ? 'border-blue-500 bg-blue-50/30' : 'border-slate-100 bg-slate-50/50 hover:border-[#207DC0] hover:bg-blue-50/30'}`}>
+                                                    <input
+                                                        type="file" accept="image/*" onChange={(e) => handleFileChange(e, 'imageFile')}
+                                                        className="absolute inset-0 opacity-0 cursor-pointer z-10"
+                                                    />
+                                                    {formData.imageFile ? (
+                                                        <div className="relative w-full h-full flex flex-col items-center justify-center group/preview">
+                                                            <div className="w-24 h-24 rounded-2xl overflow-hidden border-2 border-white shadow-2xl mb-2 relative">
+                                                                <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={(e) => { e.stopPropagation(); setShowImagePreview(true); }}
+                                                                    className="absolute inset-0 bg-blue-600/60 opacity-0 group-hover/preview:opacity-100 transition-opacity flex items-center justify-center text-white z-20"
+                                                                >
+                                                                    <FiEye size={24} />
+                                                                </button>
+                                                            </div>
+                                                            <div className="flex flex-col items-center">
+                                                                <p className="font-black text-blue-600 text-[10px] truncate max-w-[150px] italic">{formData.imageFile.name}</p>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={(e) => { e.stopPropagation(); setShowImagePreview(true); }}
+                                                                    className="mt-1 text-[9px] font-black text-[#207DC0] uppercase tracking-tighter hover:underline"
+                                                                >
+                                                                    Click to Enlarge
+                                                                </button>
+                                                            </div>
+                                                            <input
+                                                                type="file" accept="image/*" onChange={(e) => handleFileChange(e, 'imageFile')}
+                                                                className="absolute inset-0 opacity-0 cursor-pointer z-10"
+                                                            />
+                                                        </div>
+                                                    ) : (
+                                                        <>
+                                                            <div className="w-16 h-16 rounded-2xl bg-white text-[#207DC0] border-2 border-slate-100 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                                                                <FiUpload size={32} />
+                                                            </div>
+                                                            <p className="font-black text-slate-400 text-[10px] uppercase tracking-widest">Drop test scan here</p>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </motion.div>
+                                )}
+
+                                {currentStep === 5 && (
+                                    <motion.div
                                         initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
                                         className="flex flex-col items-center justify-center py-12 space-y-8 text-center"
                                     >
@@ -462,15 +583,15 @@ const AddPathologyDialog = ({ initial, onSubmit, onCancel }) => {
                                         </div>
                                         <div>
                                             <h3 className="text-3xl font-black text-slate-800 mb-3 tracking-tight uppercase">Ready to Commit</h3>
-                                            <p className="text-sm font-semibold text-slate-400 max-w-sm mx-auto">All diagnostic data has been validated against our secure healthcare protocols.</p>
+                                            <p className="text-sm font-semibold text-slate-400 max-w-sm mx-auto">Diagnostic artifacts and medical findings verified. Ready for record submission.</p>
                                         </div>
                                         <div className="grid grid-cols-2 gap-4 w-full max-w-md">
-                                            <div className="p-4 bg-white rounded-2xl border border-slate-100 shadow-sm group hover:border-[#207DC0] transition-all">
-                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Final Status</p>
-                                                <p className="text-xs font-black text-[#207DC0] uppercase">{formData.status}</p>
+                                            <div className="p-4 bg-white rounded-2xl border border-slate-100 shadow-sm">
+                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Files Attached</p>
+                                                <p className="text-xs font-black text-[#207DC0] uppercase">{(formData.pdfFile ? 1 : 0) + (formData.imageFile ? 1 : 0)} Total</p>
                                             </div>
-                                            <div className="p-4 bg-white rounded-2xl border border-slate-100 shadow-sm group hover:border-[#207DC0] transition-all">
-                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Committing Priority</p>
+                                            <div className="p-4 bg-white rounded-2xl border border-slate-100 shadow-sm">
+                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Priority</p>
                                                 <p className="text-xs font-black text-[#207DC0] uppercase">{formData.priority}</p>
                                             </div>
                                         </div>
@@ -485,40 +606,84 @@ const AddPathologyDialog = ({ initial, onSubmit, onCancel }) => {
                         {currentStep > 1 ? (
                             <button
                                 onClick={handleBack}
-                                className="px-8 py-4 rounded-[22px] font-black text-slate-400 hover:text-[#0f3e61] transition-all flex items-center gap-3 group"
+                                className="px-8 py-4 rounded-[22px] font-black text-slate-400 hover:text-[#207DC0] transition-all flex items-center gap-3 group"
                             >
-                                <FiArrowLeft className="group-hover:-translate-x-1 transition-transform" /> Back
+                                <FiArrowLeft className="group-hover:-translate-x-1 transition-transform" /> Prev Phase
                             </button>
                         ) : <div />}
 
                         <div className="flex gap-4">
-                            <button
-                                onClick={onCancel}
-                                className="px-8 py-4 rounded-[22px] font-black text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all font-primary uppercase tracking-widest text-[10px]"
-                            >
-                                Dismiss
-                            </button>
+                            <button onClick={onCancel} className="px-8 py-4 text-slate-300 font-black uppercase tracking-widest text-[10px] hover:text-red-500 transition-colors">Discard</button>
 
-                            {currentStep < 4 ? (
+                            {currentStep < 5 ? (
                                 <button
                                     onClick={handleNext}
-                                    className="px-12 py-4 rounded-[22px] font-black bg-gradient-to-r from-[#207DC0] to-[#165a8a] text-white shadow-2xl shadow-blue-500/20 hover:shadow-blue-500/40 hover:-translate-y-1 transition-all flex items-center gap-3 uppercase tracking-widest text-[10px]"
+                                    className="px-12 py-4 rounded-[22px] font-black bg-gradient-to-r from-[#207DC0] to-[#165a8a] text-white shadow-2xl shadow-blue-500/20 hover:-translate-y-1 transition-all flex items-center gap-3 uppercase tracking-widest text-[10px]"
                                 >
-                                    Next Phase <FiArrowRight />
+                                    Transition <FiArrowRight />
                                 </button>
                             ) : (
                                 <button
                                     onClick={handleSubmit}
                                     disabled={isSubmitting}
-                                    className="px-12 py-4 rounded-[22px] font-black bg-gradient-to-r from-[#207DC0] to-[#165a8a] text-white shadow-2xl shadow-blue-500/20 hover:shadow-blue-500/40 hover:-translate-y-1 transition-all flex items-center gap-3 disabled:opacity-50 uppercase tracking-widest text-[10px]"
+                                    className="px-12 py-4 rounded-[22px] font-black bg-gradient-to-r from-[#207DC0] to-[#165a8a] text-white shadow-2xl shadow-blue-500/20 hover:-translate-y-1 transition-all flex items-center gap-3 disabled:opacity-50 uppercase tracking-widest text-[10px]"
                                 >
-                                    {isSubmitting ? 'Syncing...' : 'Confirm Entry'} <FiSave />
+                                    {isSubmitting ? 'Syncing...' : 'Submit Report'} <FiSave />
                                 </button>
                             )}
                         </div>
                     </div>
                 </div>
             </motion.div>
+
+            {/* Image Preview Modal */}
+            <AnimatePresence>
+                {showImagePreview && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => setShowImagePreview(false)}
+                        className="fixed inset-0 z-[3000] bg-slate-900/90 backdrop-blur-xl flex items-center justify-center p-4 sm:p-12 cursor-zoom-out"
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.9, opacity: 0 }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="relative max-w-5xl w-full max-h-[90vh] bg-white rounded-[40px] overflow-hidden shadow-2xl cursor-default"
+                        >
+                            <div className="absolute top-6 right-6 z-50">
+                                <button
+                                    onClick={() => setShowImagePreview(false)}
+                                    className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md text-white hover:bg-white hover:text-slate-900 transition-all flex items-center justify-center shadow-lg"
+                                >
+                                    <FiX size={24} />
+                                </button>
+                            </div>
+                            <div className="w-full h-full overflow-auto p-4 flex items-center justify-center bg-slate-50">
+                                <img
+                                    src={previewUrl}
+                                    alt="Full Preview"
+                                    className="max-w-full max-h-full object-contain rounded-2xl shadow-xl"
+                                />
+                            </div>
+                            <div className="absolute bottom-0 inset-x-0 p-6 bg-gradient-to-t from-slate-900/50 to-transparent flex justify-between items-center">
+                                <div className="text-white">
+                                    <p className="text-[10px] font-black uppercase tracking-widest opacity-70">Artifact Preview</p>
+                                    <h4 className="font-black text-lg">{formData.imageFile?.name}</h4>
+                                </div>
+                                <button
+                                    onClick={() => setShowImagePreview(false)}
+                                    className="px-6 py-3 rounded-xl bg-white text-slate-900 font-black text-xs uppercase tracking-widest shadow-xl hover:-translate-y-0.5 transition-all"
+                                >
+                                    Dismiss
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };

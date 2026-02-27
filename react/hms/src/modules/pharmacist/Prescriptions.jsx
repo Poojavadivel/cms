@@ -161,6 +161,15 @@ const PharmacistPrescriptions = () => {
     }).format(date);
   };
 
+  const getHeaderDate = () => {
+    return new Intl.DateTimeFormat('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    }).format(new Date());
+  };
+
   const handleView = (prescription) => {
     setSelectedPrescription(prescription);
     setShowDetailsModal(true);
@@ -273,52 +282,68 @@ const PharmacistPrescriptions = () => {
 
   return (
     <div className="pharmacist-prescriptions">
-      {/* Statistics Dashboard */}
-      <div className="stats-dashboard">
-        <div className="stat-card">
-          <MdCalendarToday className="stat-icon stat-success" size={20} />
-          <div className="stat-content">
-            <div className="stat-value">{todayCount}</div>
-            <div className="stat-label">Today</div>
+      {/* Dashboard Header */}
+      <div className="dashboard-header-premium">
+        <div className="header-title-section">
+          <div className="header-icon-box">
+            <MdDescription size={28} />
+          </div>
+          <div className="header-text">
+            <h1>Clinical <span>Prescriptions</span></h1>
+            <p>{getHeaderDate()} — MANAGE AND DISPENSE HUB ORDERS</p>
           </div>
         </div>
-
-        <div className="stat-divider"></div>
-
-        <div className="stat-card">
-          <MdInventory className="stat-icon stat-info" size={20} />
-          <div className="stat-content">
-            <div className="stat-value">{weekCount}</div>
-            <div className="stat-label">This Week</div>
-          </div>
+        <div className="header-actions">
+          <button onClick={loadPrescriptions} className="btn-refresh-premium" disabled={loading}>
+            <MdRefresh size={20} className={loading ? 'spinning' : ''} />
+            <span>Sync Hub</span>
+          </button>
         </div>
-
-        <div className="stat-divider"></div>
-
-        <div className="stat-card">
-          <MdDescription className="stat-icon stat-primary" size={20} />
-          <div className="stat-content">
-            <div className="stat-value">{totalCount}</div>
-            <div className="stat-label">Total</div>
-          </div>
-        </div>
-
-        <div className="stat-divider"></div>
-
-        <div className="stat-card">
-          <MdFilterAlt className="stat-icon stat-warning" size={20} />
-          <div className="stat-content">
-            <div className="stat-value">{filteredPrescriptions.length}</div>
-            <div className="stat-label">Filtered</div>
-          </div>
-        </div>
-
-        <div className="stat-divider"></div>
-
-        <button onClick={loadPrescriptions} className="btn-refresh-stat" title="Refresh" disabled={loading}>
-          <MdRefresh size={20} className={loading ? 'spinning' : ''} />
-        </button>
       </div>
+
+      {/* Statistics Dashboard */}
+      <div className="stats-dashboard-premium">
+        <div className="stat-card-premium">
+          <div className="stat-icon-wrapper success">
+            <MdCalendarToday size={22} />
+          </div>
+          <div className="stat-info-premium">
+            <span className="stat-label">TODAY'S ORDERS</span>
+            <span className="stat-value">{todayCount}</span>
+          </div>
+        </div>
+
+        <div className="stat-card-premium">
+          <div className="stat-icon-wrapper info">
+            <MdInventory size={22} />
+          </div>
+          <div className="stat-info-premium">
+            <span className="stat-label">WEEKLY VOLUME</span>
+            <span className="stat-value">{weekCount}</span>
+          </div>
+        </div>
+
+        <div className="stat-card-premium">
+          <div className="stat-icon-wrapper primary">
+            <MdDescription size={22} />
+          </div>
+          <div className="stat-info-premium">
+            <span className="stat-label">TOTAL RECORDS</span>
+            <span className="stat-value">{totalCount}</span>
+          </div>
+        </div>
+
+        <div className="stat-card-premium">
+          <div className="stat-icon-wrapper warning">
+            <MdFilterAlt size={22} />
+          </div>
+          <div className="stat-info-premium">
+            <span className="stat-label">MATCHING SEARCH</span>
+            <span className="stat-value">{filteredPrescriptions.length}</span>
+          </div>
+        </div>
+      </div>
+
 
       {/* Search and Filter Bar */}
       <div className="prescriptions-toolbar">
@@ -367,89 +392,64 @@ const PharmacistPrescriptions = () => {
           <p>Try adjusting your search or filter</p>
         </div>
       ) : (
-        <div className="prescriptions-table-container">
-          <table className="prescriptions-table">
+        <div className="premium-table-wrapper">
+          <table className="premium-table">
             <thead>
               <tr>
-                <th>#</th>
-                <th>Patient Name</th>
-                <th>Phone</th>
-                <th>Medicines</th>
-                <th>Total Amount</th>
-                <th>Date & Time</th>
-                <th>Status</th>
-                <th>Actions</th>
+                <th>PATIENT DETAILS</th>
+                <th>MEDICINES</th>
+                <th>BILLING AMOUNT</th>
+                <th>ORDERED ON</th>
+                <th>FULFILLMENT</th>
+                <th>ACTIONS</th>
               </tr>
             </thead>
             <tbody>
-              {filteredPrescriptions.map((prescription, index) => (
-                <tr key={prescription._id || index}>
-                  <td>{index + 1}</td>
-                  <td className="patient-name-cell">
-                    <strong>{prescription.patientName || 'Unknown'}</strong>
-                  </td>
-                  <td>{prescription.patientPhone || 'N/A'}</td>
-                  <td className="medicines-cell">
-                    {prescription.pharmacyItems && prescription.pharmacyItems.length > 0 ? (
-                      <div className="medicines-summary">
-                        <strong>{prescription.pharmacyItems.length}</strong> medicine(s)
-                        <div className="medicines-preview">
-                          {prescription.pharmacyItems.slice(0, 2).map((med, idx) => (
-                            <div key={idx} className="medicine-item">
-                              • {med.name}
-                            </div>
-                          ))}
-                          {prescription.pharmacyItems.length > 2 && (
-                            <div className="medicine-more">
-                              +{prescription.pharmacyItems.length - 2} more
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ) : (
-                      'No medicines'
-                    )}
-                  </td>
-                  <td className="amount-cell">
-                    <strong>₹{prescription.total ? prescription.total.toFixed(2) : '0.00'}</strong>
-                  </td>
-                  <td>{formatDate(prescription.createdAt)}</td>
+              {filteredPrescriptions.map((p, idx) => (
+                <tr key={p._id || idx}>
                   <td>
-                    {prescription.dispensed ? (
-                      <span className="status-badge status-dispensed">
-                        <MdCheckCircle size={14} />
-                        Dispensed
-                      </span>
-                    ) : (
-                      <span className="status-badge status-pending">
-                        Pending
-                      </span>
-                    )}
+                    <div className="medicine-identity-cell">
+                      <span className="medicine-primary-name">{p.patientName || 'Unknown Patient'}</span>
+                      <span className="medicine-secondary-info">{p.patientPhone || 'NO CONTACT'}</span>
+                    </div>
                   </td>
-                  <td className="actions-cell">
-                    <div className="action-buttons">
-                      <button
-                        className="btn-action btn-view"
-                        onClick={() => handleView(prescription)}
-                        title="View Details"
-                      >
-                        <MdVisibility size={18} />
+                  <td>
+                    <div className="stock-level-cell">
+                      <span className={`stock-count-indicator info`}>{p.pharmacyItems?.length || 0}</span>
+                      <span className="stock-unit">Products</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div className="stock-level-cell">
+                      <span className="stock-unit">₹</span>
+                      <span className="stock-count-indicator" style={{ color: '#0F172A' }}>
+                        {p.total ? p.total.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '0.00'}
+                      </span>
+                    </div>
+                  </td>
+                  <td>
+                    <div className="medicine-secondary-info" style={{ fontWeight: '700' }}>
+                      {formatDate(p.createdAt)}
+                    </div>
+                  </td>
+                  <td>
+                    <span className={`status-badge-premium ${p.dispensed ? 'success' : 'warning'}`}>
+                      {p.dispensed ? <MdCheckCircle /> : <MdRefresh className="spinning" />}
+                      {p.dispensed ? 'DISPENSED' : 'PENDING HUB'}
+                    </span>
+                  </td>
+                  <td>
+                    <div className="action-buttons" style={{ display: 'flex', gap: '8px' }}>
+                      <button className="pagination-btn" onClick={() => handleView(p)} title="View Hub Details">
+                        <MdVisibility />
                       </button>
-                      {!prescription.dispensed && (
+                      {!p.dispensed && (
                         <>
-                          <button
-                            className="btn-action btn-approve"
-                            onClick={() => handleApprove(prescription)}
-                            title="Approve & Dispense"
-                          >
-                            <MdCheckCircle size={18} />
+                          <button className="btn-refresh-premium" style={{ padding: '8px 12px', borderRadius: '8px' }} onClick={() => handleApprove(p)} title="Approve & Release">
+                            <MdCheckCircle />
                           </button>
-                          <button
-                            className="btn-action btn-delete"
-                            onClick={() => handleDelete(prescription)}
-                            title="Delete"
-                          >
-                            <MdDelete size={18} />
+                          <button className="pagination-btn" style={{ color: '#EF4444' }} onClick={() => handleDelete(p)} title="Remove Record">
+                            <MdDelete />
                           </button>
                         </>
                       )}

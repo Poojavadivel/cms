@@ -31,13 +31,7 @@ const Icons = {
       <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
     </svg>
   ),
-  Download: () => (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-      <polyline points="7 10 12 15 17 10"></polyline>
-      <line x1="12" y1="15" x2="12" y2="3"></line>
-    </svg>
-  ),
+
   Plus: () => (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -59,6 +53,13 @@ const Icons = {
       <line x1="18" y1="6" x2="6" y2="18"></line>
       <line x1="6" y1="6" x2="18" y2="18"></line>
     </svg>
+  ),
+  Download: () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+      <polyline points="7 10 12 15 17 10"></polyline>
+      <line x1="12" y1="15" x2="12" y2="3"></line>
+    </svg>
   )
 };
 
@@ -76,13 +77,13 @@ const Header = ({ onAdd }) => (
   </div>
 );
 
-const Pathology = () => {
+const Pathology = ({ initialSearchQuery = '' }) => {
   // State management
   const [reports, setReports] = useState([]);
   const [filteredReports, setFilteredReports] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDownloading, setIsDownloading] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
   const [currentPage, setCurrentPage] = useState(0);
   const [statusFilter, setStatusFilter] = useState('All');
   const [testTypeFilter, setTestTypeFilter] = useState('All');
@@ -94,18 +95,54 @@ const Pathology = () => {
 
   const itemsPerPage = 10;
 
-  // Fetch reports from API
+  // Update search query when initialSearchQuery prop changes
+  useEffect(() => {
+    if (initialSearchQuery) {
+      setSearchQuery(initialSearchQuery);
+      console.log('🔍 Applied initial search filter:', initialSearchQuery);
+    }
+  }, [initialSearchQuery]);
+
+  // Fetch reports from API (both pending tests and completed reports)
   const fetchReports = useCallback(async () => {
     setIsLoading(true);
     try {
-      const data = await pathologyService.fetchReports({ limit: 100 });
-      console.log('✅ Fetched pathology reports:', data);
+      // Fetch both pending test orders and completed reports
+      const [completedReports, pendingTests] = await Promise.all([
+        pathologyService.fetchReports({ limit: 100 }),
+        pathologyService.fetchPendingTests({ limit: 50 })
+      ]);
+      
+      console.log('✅ Fetched completed reports:', completedReports.length);
+      console.log('✅ Fetched pending tests:', pendingTests.length);
 
-      setReports(data);
-      setFilteredReports(data);
+      // Transform pending tests to match report structure
+      const pendingWithStatus = pendingTests.map(test => ({
+        ...test,
+        id: test._id,
+        status: 'Pending',
+        testName: test.pathologyItems?.[0]?.testName || 'Multiple Tests',
+        isPending: true, // Flag to identify pending tests
+        // Flatten pathologyItems for display
+        testCount: test.pathologyItems?.length || 0
+      }));
+
+      // Mark completed reports
+      const completedWithStatus = completedReports.map(report => ({
+        ...report,
+        isPending: false
+      }));
+
+      // Combine: Show pending tests first, then completed reports
+      const allData = [...pendingWithStatus, ...completedWithStatus];
+      
+      console.log('📊 Total items:', allData.length, '(Pending:', pendingWithStatus.length, ', Completed:', completedWithStatus.length, ')');
+
+      setReports(allData);
+      setFilteredReports(allData);
     } catch (error) {
       console.error('❌ Failed to fetch reports:', error);
-      alert('Failed to load pathology reports: ' + error.message);
+      alert('Failed to load pathology data: ' + error.message);
     } finally {
       setIsLoading(false);
     }
@@ -124,10 +161,10 @@ const Pathology = () => {
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(report =>
-        (report.reportId?.toLowerCase() || '').includes(query) ||
         (report.patientName?.toLowerCase() || '').includes(query) ||
         (report.testName?.toLowerCase() || '').includes(query) ||
-        (report.patientId?.toLowerCase() || '').includes(query)
+        (report.patientId?.toLowerCase() || '').includes(query) ||
+        (report.patientCode?.toLowerCase() || '').includes(query)
       );
     }
 
@@ -175,6 +212,27 @@ const Pathology = () => {
     setShowForm(true);
   };
 
+  // Handle process pending test (create report from pending order)
+  const handleProcessPendingTest = (pendingTest) => {
+    // Pre-fill form with pending test data
+    const prefilledData = {
+      patientId: pendingTest.patientId,
+      patientName: pendingTest.patientName,
+      appointmentId: pendingTest.appointmentId,
+      testName: pendingTest.testName,
+      testType: pendingTest.pathologyItems?.[0]?.category || 'General',
+      priority: pendingTest.pathologyItems?.[0]?.priority || 'Normal',
+      notes: pendingTest.notes || '',
+      intakeId: pendingTest._id, // Link back to intake
+      pathologyItems: pendingTest.pathologyItems
+    };
+    
+    setEditingReport(prefilledData);
+    setShowForm(true);
+    
+    console.log('📝 Processing pending test:', prefilledData);
+  };
+
   // Handle form submit
   const handleFormSubmit = async (formData) => {
     try {
@@ -217,23 +275,38 @@ const Pathology = () => {
     }
   };
 
-  // Handle download report (Original file first, then generated fallback)
+  // Handle download report (Prioritize professional generator with 2-page merged content)
   const handleDownloadReport = async (report) => {
     if (isDownloading) return;
     setIsDownloading(true);
+    console.log('[Pathology] Initiating download for report:', { id: report.id, reportId: report.reportId, testName: report.testName });
+
     try {
-      // 1. Try to download the original attached file/scan
-      await pathologyService.downloadReport(report.id);
-      console.log('✅ Original file downloaded');
-    } catch (error) {
-      console.warn('⚠️ No original file found, using professional generator fallback:', error.message);
+      // 1. Try Professional PDF generation (Merged 2-page doc: details + scan)
+      const patientCode = (report.patientCode || 'PAT').replace(/\s+/g, '_');
+      const testName = (report.testName || 'Report').replace(/\s+/g, '_');
+      const fileName = `Report_${patientCode}_${testName}.pdf`;
+
+      console.log(`[Pathology] Downloading professional PDF: ${fileName} for ID: ${report.id}`);
+      await pathologyService.downloadProperReport(report.id, fileName);
+      console.log('✅ Professional merged report downloaded');
+    } catch (genError) {
+      console.warn('⚠️ Professional generator failed:', genError.message);
+
+      // If it's a 404, tell the user what's missing
+      if (genError.message.includes('not found')) {
+        alert(`Download failed: ${genError.message}`);
+        setIsDownloading(false);
+        return;
+      }
+
       try {
-        // 2. Fallback to Professional PDF generation if file doesn't exist
-        const fileName = `Report_${(report.patientName || 'Patient').replace(/\s+/g, '_')}_${(report.testName || 'Test').replace(/\s+/g, '_')}.pdf`;
-        await pathologyService.downloadProperReport(report.id, fileName);
-      } catch (genError) {
-        console.error('❌ Generator failed:', genError);
-        alert('Failed to download report: ' + genError.message);
+        // 2. Fallback to raw uploaded file
+        console.log('[Pathology] Falling back to raw file download...');
+        await pathologyService.downloadReport(report.id);
+      } catch (error) {
+        console.error('❌ Legacy download failed:', error);
+        alert('Failed to download report: ' + error.message);
       }
     } finally {
       setIsDownloading(false);
@@ -245,25 +318,30 @@ const Pathology = () => {
     const getStatusStyle = (status) => {
       const statusLower = (status || '').toLowerCase();
       if (statusLower === 'completed' || statusLower === 'ready') {
-        return { bg: 'rgba(32, 125, 192, 0.1)', color: '#207DC0' };
+        return { bg: '#dcfce7', color: '#15803d' }; // Professional Green for Completed
       } else if (statusLower === 'pending' || statusLower === 'in progress') {
-        return { bg: 'rgba(251, 146, 60, 0.1)', color: '#FB923C' };
-      } else if (statusLower === 'cancelled') {
-        return { bg: 'rgba(239, 68, 68, 0.1)', color: '#EF4444' };
+        return { bg: '#fff7ed', color: '#9a3412' };
+      } else if (statusLower === 'cancelled' || statusLower === 'critical') {
+        return { bg: '#fef2f2', color: '#991b1b' };
       }
-      return { bg: 'rgba(107, 114, 128, 0.1)', color: '#6B7280' };
+      return { bg: '#f8fafc', color: '#64748b' };
     };
 
     const style = getStatusStyle(status);
     return (
       <span
         style={{
-          padding: '4px 12px',
-          borderRadius: '9999px',
-          fontSize: '12px',
-          fontWeight: '500',
+          padding: '6px 14px',
+          borderRadius: '12px',
+          fontSize: '11px',
+          fontWeight: '900',
+          textTransform: 'uppercase',
+          letterSpacing: '0.05em',
           backgroundColor: style.bg,
           color: style.color,
+          display: 'inline-flex',
+          alignItems: 'center',
+          boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
         }}
       >
         {status || 'Unknown'}
@@ -377,7 +455,7 @@ const Pathology = () => {
                 <th style={{ width: '22%' }}>Test</th>
                 <th style={{ width: '15%' }}>Report Date</th>
                 <th style={{ width: '12%' }}>Status</th>
-                <th style={{ width: '15%' }}>Technician</th>
+                <th style={{ width: '15%' }}>Ordered By / Tech</th>
                 <th style={{ width: '14%' }}>Actions</th>
               </tr>
             </thead>
@@ -387,33 +465,71 @@ const Pathology = () => {
                   <td>
                     <div className="info-group">
                       <span className="primary">{report.patientName || 'Unknown'}</span>
-                      <span className="secondary">{report.patientCode || report.reportId || 'N/A'}</span>
+                      <span className="secondary">{report.patientCode || report.patientId || 'PAT-00'}</span>
                     </div>
                   </td>
                   <td>
                     <div className="info-group">
-                      <span className="primary">{report.testName || 'N/A'}</span>
-                      <span className="secondary">{report.testType || 'General'}</span>
+                      <span className="primary">
+                        {report.testName || 'N/A'}
+                        {report.isPending && report.testCount > 1 && (
+                          <span style={{ marginLeft: '8px', fontSize: '11px', color: '#64748b' }}>
+                            +{report.testCount - 1} more
+                          </span>
+                        )}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="secondary">{report.testType || report.testCategory || 'General'}</span>
+                        {report.isPending && (
+                          <span className="artifact-tag" style={{ background: '#dbeafe', color: '#1e40af' }} title="Pending Order from Doctor">
+                            ORDER
+                          </span>
+                        )}
+                        {report.pdfRef && <span className="artifact-tag pdf" title="Searchable PDF Attached">PDF</span>}
+                        {report.imageRef && <span className="artifact-tag img" title="Visual Scan Attached">IMG</span>}
+                      </div>
                     </div>
                   </td>
-                  <td>{formatDate(report.reportDate)}</td>
+                  <td>{formatDate(report.reportDate || report.createdAt)}</td>
                   <td><StatusBadge status={report.status} /></td>
                   <td>
-                    <span className="technician-badge">{report.technician || 'N/A'}</span>
+                    <span className="technician-badge">
+                      {report.isPending ? (
+                        <span style={{ color: '#64748b', fontStyle: 'italic' }}>
+                          {report.doctorName || 'Dr. ' + (report.doctorId?.firstName || 'N/A')}
+                        </span>
+                      ) : (
+                        report.technician || 'N/A'
+                      )}
+                    </span>
                   </td>
                   <td>
                     <div className="action-buttons-group">
                       <button className="btn-action view" title="View" onClick={() => handleView(report)}>
                         <Icons.Eye />
                       </button>
-                      <button className="btn-action edit" title="Edit" onClick={() => handleEditReport(report)}>
-                        <Icons.Edit />
-                      </button>
+                      {!report.isPending && (
+                        <>
+                          <button className="btn-action edit" title="Edit" onClick={() => handleEditReport(report)}>
+                            <Icons.Edit />
+                          </button>
+                          <button className="btn-action download" title="Download" onClick={() => handleDownloadReport(report)} disabled={isDownloading}>
+                            <Icons.Download />
+                          </button>
+                        </>
+                      )}
+                      {report.isPending && (
+                        <button 
+                          className="btn-action" 
+                          title="Process Test" 
+                          onClick={() => handleProcessPendingTest(report)}
+                          style={{ background: '#dbeafe', color: '#1e40af' }}
+                        >
+                          <Icons.Plus />
+                        </button>
+                      )}
                       <button className="btn-action delete" title="Delete" onClick={() => handleDeleteReport(report)}>
                         <Icons.Delete />
-                      </button>
-                      <button className="btn-action download" title="Download" onClick={() => handleDownloadReport(report)} disabled={isDownloading}>
-                        <Icons.Download />
                       </button>
                     </div>
                   </td>
@@ -453,66 +569,11 @@ const Pathology = () => {
         </div>
       </div>
 
-      {showDetail && selectedReport && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl animate-in fade-in zoom-in duration-200">
-            <div className="p-6 border-b flex justify-between items-center bg-blue-primary text-white">
-              <h2 className="text-xl font-bold">Report Details</h2>
-              <button onClick={handleCloseDetail} className="p-2 hover:bg-white/10 rounded-full transition-colors">
-                <Icons.X />
-              </button>
-            </div>
-            <div className="p-8 overflow-y-auto flex-1 dark-scrollbar">
-              <div className="grid grid-cols-2 gap-8">
-                <div>
-                  <label className="text-xs uppercase font-bold text-slate-400 tracking-wider">Patient Name</label>
-                  <p className="text-lg font-semibold text-slate-800 mt-1">{selectedReport.patientName}</p>
-                </div>
-                <div>
-                  <label className="text-xs uppercase font-bold text-slate-400 tracking-wider">Patient Code</label>
-                  <p className="text-lg font-semibold text-slate-800 mt-1">{selectedReport.patientCode || selectedReport.reportId}</p>
-                </div>
-                <div>
-                  <label className="text-xs uppercase font-bold text-slate-400 tracking-wider">Test Name</label>
-                  <p className="text-lg font-semibold text-slate-800 mt-1">{selectedReport.testName}</p>
-                </div>
-                <div>
-                  <label className="text-xs uppercase font-bold text-slate-400 tracking-wider">Test Type</label>
-                  <p className="text-lg font-semibold text-slate-800 mt-1">{selectedReport.testType || 'General'}</p>
-                </div>
-                <div>
-                  <label className="text-xs uppercase font-bold text-slate-400 tracking-wider">Report Date</label>
-                  <p className="text-lg font-semibold text-slate-800 mt-1">{formatDate(selectedReport.reportDate)}</p>
-                </div>
-                <div>
-                  <label className="text-xs uppercase font-bold text-slate-400 tracking-wider">Technician</label>
-                  <p className="text-lg font-semibold text-slate-800 mt-1">{selectedReport.technician}</p>
-                </div>
-                <div className="col-span-2">
-                  <label className="text-xs uppercase font-bold text-slate-400 tracking-wider">Status</label>
-                  <div className="mt-2 text-lg">
-                    <StatusBadge status={selectedReport.status} />
-                  </div>
-                </div>
-                <div className="col-span-2">
-                  <label className="text-xs uppercase font-bold text-slate-400 tracking-wider">Notes / Summary</label>
-                  <div className="mt-2 p-4 bg-slate-50 rounded-xl border border-slate-100 italic text-slate-600">
-                    {selectedReport.notes || 'No notes provided for this report.'}
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="p-6 border-t bg-slate-50 flex justify-end">
-              <button
-                onClick={handleCloseDetail}
-                className="px-6 py-2.5 bg-slate-800 text-white rounded-xl font-bold hover:bg-slate-900 transition-all shadow-lg active:scale-95"
-              >
-                Close View
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <PathologyViewDialog
+        isOpen={showDetail}
+        onClose={handleCloseDetail}
+        report={selectedReport}
+      />
     </div>
   );
 };

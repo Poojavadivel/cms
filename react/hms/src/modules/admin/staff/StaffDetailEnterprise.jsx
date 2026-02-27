@@ -1,12 +1,12 @@
 /**
- * Neo-Pro Staff Detail View
- * Matches the new StaffDetailEnterprise.css design system
+ * Staff Detail Enterprise - Premium View
  */
 
 import React, { useState } from 'react';
 import {
   FiPhone, FiMail, FiMapPin, FiCalendar, FiClock,
-  FiShield, FiEdit2, FiX, FiCheckCircle, FiAlertCircle
+  FiShield, FiEdit2, FiX, FiCheckCircle, FiAlertCircle,
+  FiBriefcase
 } from 'react-icons/fi';
 import './StaffDetailEnterprise.css';
 import adminFemaleIcon from '../../../assets/admin-femaleicon.png';
@@ -17,12 +17,10 @@ import labFemaleIcon from '../../../assets/labfemaleicon.png';
 import labMaleIcon from '../../../assets/labmaleicon.png';
 import nurseFemaleIcon from '../../../assets/nursefemaleicon.png';
 import nurseMaleIcon from '../../../assets/nursemaleicon.png';
-
-// Also keep fallbacks just in case
 import boyIcon from '../../../assets/boyicon.png';
 import girlIcon from '../../../assets/girlicon.png';
 
-const StaffDetailEnterprise = ({ staffId, initial, onClose, onUpdate }) => {
+const StaffDetailEnterprise = ({ staffId, initial, onClose, onUpdate, showUpdate = false }) => {
   const [activeTab, setActiveTab] = useState('overview');
 
   // If no data, show nothing
@@ -32,15 +30,16 @@ const StaffDetailEnterprise = ({ staffId, initial, onClose, onUpdate }) => {
   if (initial.loading) {
     return (
       <div className="enterprise-modal" onClick={(e) => e.target.className === 'enterprise-modal' && onClose && onClose()}>
-        <div className="enterprise-content" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '400px' }}>
+        <div className="enterprise-content" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ textAlign: 'center' }}>
-            <div style={{ width: '48px', height: '48px', border: '4px solid #e5e7eb', borderTopColor: '#207DC0', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 16px' }}></div>
-            <p style={{ color: '#64748B', fontSize: '14px' }}>Loading doctor details...</p>
+            <div style={{ width: '56px', height: '56px', border: '5px solid #f1f5f9', borderTopColor: '#207DC0', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 24px' }}></div>
+            <p style={{ color: '#207DC0', fontSize: '16px', fontWeight: 600 }}>Gathering Doctor Information...</p>
           </div>
         </div>
       </div>
     );
   }
+
 
   // Helper to format dates
   const formatDate = (dateString) => {
@@ -59,39 +58,28 @@ const StaffDetailEnterprise = ({ staffId, initial, onClose, onUpdate }) => {
     const gender = staff.gender?.toLowerCase() || '';
     const isFemale = gender === 'female' || gender === 'f' || gender === 'girl';
 
-    // 1. Doctor
     if (lowerDesignation.includes('doctor') || lowerDesignation.includes('physician') || lowerDesignation.includes('surgeon')) {
       return isFemale ? doctorFemaleIcon : doctorMaleIcon;
     }
-
-    // 2. Nurse
     if (lowerDesignation.includes('nurse') || lowerDesignation.includes('nursing')) {
       return isFemale ? nurseFemaleIcon : nurseMaleIcon;
     }
-
-    // 3. Lab / Technician
     if (lowerDesignation.includes('lab') || lowerDesignation.includes('technician') || lowerDepartment.includes('laboratory') || lowerDepartment.includes('pathology')) {
       return isFemale ? labFemaleIcon : labMaleIcon;
     }
-
-    // 4. Admin / Reception
     if (lowerDesignation.includes('admin') || lowerDesignation.includes('reception') || lowerDesignation.includes('manager') || lowerDesignation.includes('clerk')) {
       return isFemale ? adminFemaleIcon : adminMaleIcon;
     }
-
-    // Default Fallback
-    if (isFemale) return girlIcon;
-
-    return boyIcon;
+    return isFemale ? girlIcon : boyIcon;
   };
 
   const renderStatusDot = (status) => {
-    const color = status === 'Available' ? 'var(--neo-success)' :
-      status === 'Busy' ? 'var(--neo-warning)' : '#64748b';
+    const color = status === 'Available' ? '#10b981' :
+      status === 'Busy' ? '#f59e0b' : '#94a3b8';
     return (
       <div
         className="status-dot"
-        style={{ background: color, boxShadow: `0 0 12px ${color}` }}
+        style={{ background: color }}
       />
     );
   };
@@ -100,7 +88,7 @@ const StaffDetailEnterprise = ({ staffId, initial, onClose, onUpdate }) => {
     <div className="enterprise-modal" onClick={(e) => e.target.className === 'enterprise-modal' && onClose && onClose()}>
       <div className="enterprise-content">
 
-        {/* Close Button */}
+        {/* Floating Close Button */}
         <button className="floating-close" onClick={() => onClose && onClose()}>
           <FiX size={20} />
         </button>
@@ -108,7 +96,6 @@ const StaffDetailEnterprise = ({ staffId, initial, onClose, onUpdate }) => {
         {/* HEADER SECTION */}
         <div className="enterprise-header">
           <div className="avatar-container">
-            {/* Avatars Logic */}
             <img
               src={getAvatarSrc(initial)}
               alt={initial.name}
@@ -121,9 +108,9 @@ const StaffDetailEnterprise = ({ staffId, initial, onClose, onUpdate }) => {
           <div className="header-info">
             <h1 className="staff-name">{initial.name}</h1>
             <div className="staff-subtitle">
-              <span className="id-badge">{initial.patientFacingId || 'NO-ID'}</span>
+              <span className="id-badge">{initial.patientFacingId || 'KGF-STAFF'}</span>
               <span>{initial.designation}</span>
-              <span style={{ opacity: 0.3 }}>•</span>
+              <span style={{ opacity: 0.5 }}>•</span>
               <span>{initial.department}</span>
             </div>
           </div>
@@ -133,19 +120,20 @@ const StaffDetailEnterprise = ({ staffId, initial, onClose, onUpdate }) => {
               <button
                 className="btn-action-glass"
                 onClick={() => window.location.href = `mailto:${initial.email}`}
-                title="Send Email"
               >
-                <FiMail size={18} />
-                <span className="hidden md:inline">Email</span>
+                <FiMail size={16} />
+                <span>Contact</span>
               </button>
             )}
-            <button
-              className="btn-action-glass btn-primary-glow"
-              onClick={() => onUpdate && onUpdate(initial)}
-            >
-              <FiEdit2 size={18} />
-              <span>Edit Profile</span>
-            </button>
+            {showUpdate && (
+              <button
+                className="btn-action-glass btn-primary-glow"
+                onClick={() => onUpdate && onUpdate(initial)}
+              >
+                <FiEdit2 size={16} />
+                <span>Update Profile</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -163,7 +151,7 @@ const StaffDetailEnterprise = ({ staffId, initial, onClose, onUpdate }) => {
               className={`nav-item ${activeTab === 'schedule' ? 'active' : ''}`}
               onClick={() => setActiveTab('schedule')}
             >
-              <FiCalendar size={16} /> Schedule
+              <FiClock size={16} /> Schedule
             </div>
             <div
               className={`nav-item ${activeTab === 'security' ? 'active' : ''}`}
@@ -173,30 +161,30 @@ const StaffDetailEnterprise = ({ staffId, initial, onClose, onUpdate }) => {
             </div>
           </div>
 
-          {/* Main Content Grid */}
-          <div className="right-content custom-scrollbar">
+          {/* Main Content Area */}
+          <div className="right-content">
 
             {activeTab === 'overview' && (
               <div className="content-grid animate-fade-in">
                 {/* Contact Card */}
                 <div className="data-card">
                   <div className="card-header">
-                    <FiPhone className="card-icon" />
-                    <span className="card-title">Contact Information</span>
+                    <div className="card-icon"><FiPhone /></div>
+                    <span className="card-title">Contact Details</span>
                   </div>
 
-                  <div className="data-row mt-4">
-                    <span className="data-label">Phone Number</span>
-                    <span className="data-value">{initial.contact}</span>
+                  <div className="data-row">
+                    <span className="data-label">Mobile Number</span>
+                    <span className="data-value">{initial.contact || 'No contact saved'}</span>
                   </div>
                   <div className="data-row">
                     <span className="data-label">Email Address</span>
-                    <span className="data-value">{initial.email}</span>
+                    <span className="data-value">{initial.email || 'No email saved'}</span>
                   </div>
                   <div className="data-row">
-                    <span className="data-label">Residential Address</span>
-                    <span className="data-value" style={{ fontSize: '13px', lineHeight: '1.4' }}>
-                      {initial.address || 'No address provided'}
+                    <span className="data-label">Home Address</span>
+                    <span className="data-value" style={{ fontSize: '13px' }}>
+                      {initial.address || 'Address not listed'}
                     </span>
                   </div>
                 </div>
@@ -204,27 +192,27 @@ const StaffDetailEnterprise = ({ staffId, initial, onClose, onUpdate }) => {
                 {/* Professional Card */}
                 <div className="data-card">
                   <div className="card-header">
-                    <FiCheckCircle className="card-icon" />
-                    <span className="card-title">Professional Status</span>
+                    <div className="card-icon"><FiBriefcase /></div>
+                    <span className="card-title">Professional Info</span>
                   </div>
 
-                  <div className="data-row mt-4">
-                    <span className="data-label">Department</span>
+                  <div className="data-row">
+                    <span className="data-label">Primary Dept</span>
                     <span className="data-value">
                       {initial.department}
-                      <span className="chip chip-blue">Primary</span>
+                      <span className="chip chip-blue">Core</span>
                     </span>
                   </div>
                   <div className="data-row">
-                    <span className="data-label">Experience</span>
-                    <span className="data-value">{initial.experienceYears} Years</span>
+                    <span className="data-label">Work Experience</span>
+                    <span className="data-value">{initial.experienceYears || '0'} Years Prof.</span>
                   </div>
                   <div className="data-row">
-                    <span className="data-label">Specializations</span>
-                    <div className="flex flex-wrap gap-2 mt-1">
+                    <span className="data-label">Certifications</span>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '4px' }}>
                       {initial.qualifications?.map((q, i) => (
                         <span key={i} className="chip">{q}</span>
-                      )) || <span className="text-gray-500 text-xs">None listed</span>}
+                      )) || <span style={{ color: '#94a3b8', fontSize: '12px' }}>Standard</span>}
                     </div>
                   </div>
                 </div>
@@ -233,11 +221,11 @@ const StaffDetailEnterprise = ({ staffId, initial, onClose, onUpdate }) => {
                 {initial.notes && (
                   <div className="data-card" style={{ gridColumn: '1 / -1' }}>
                     <div className="card-header">
-                      <FiAlertCircle className="card-icon" />
-                      <span className="card-title">Administrative Notes</span>
+                      <div className="card-icon"><FiAlertCircle /></div>
+                      <span className="card-title">Medical/Admin Notes</span>
                     </div>
-                    <p className="mt-4 text-sm text-[var(--neo-text-primary)] leading-relaxed opacity-80">
-                      {typeof initial.notes === 'string' ? initial.notes : initial.notes?.general || 'No notes available.'}
+                    <p style={{ color: '#475569', fontSize: '14px', lineHeight: '1.6', margin: 0 }}>
+                      {typeof initial.notes === 'string' ? initial.notes : initial.notes?.general || 'Detailed clinical notes or administrative remarks are stored here.'}
                     </p>
                   </div>
                 )}
@@ -248,27 +236,27 @@ const StaffDetailEnterprise = ({ staffId, initial, onClose, onUpdate }) => {
               <div className="content-grid animate-fade-in">
                 <div className="data-card">
                   <div className="card-header">
-                    <FiClock className="card-icon" />
-                    <span className="card-title">Shift Details</span>
-                  </div>
-                  <div className="data-row mt-4">
-                    <span className="data-label">Current Assignment</span>
-                    <span className="data-value text-lg text-[var(--neo-accent)]">{initial.shift} Shift</span>
+                    <div className="card-icon"><FiClock /></div>
+                    <span className="card-title">Shift Assignment</span>
                   </div>
                   <div className="data-row">
-                    <span className="data-label">Date Joined</span>
+                    <span className="data-label">Current Scheduled Shift</span>
+                    <span className="data-value" style={{ color: '#207DC0', fontSize: '18px' }}>{initial.shift || 'General'} Shift</span>
+                  </div>
+                  <div className="data-row">
+                    <span className="data-label">Hospital Join Date</span>
                     <span className="data-value">{formatDate(initial.joinedAt)}</span>
                   </div>
                 </div>
 
                 <div className="data-card">
                   <div className="card-header">
-                    <FiMapPin className="card-icon" />
-                    <span className="card-title">Location</span>
+                    <div className="card-icon"><FiMapPin /></div>
+                    <span className="card-title">Current Location</span>
                   </div>
-                  <div className="data-row mt-4">
-                    <span className="data-label">Base Station</span>
-                    <span className="data-value">{initial.location}</span>
+                  <div className="data-row">
+                    <span className="data-label">Assigned Station</span>
+                    <span className="data-value">{initial.location || 'Main Hospital'}</span>
                   </div>
                 </div>
               </div>
@@ -278,16 +266,16 @@ const StaffDetailEnterprise = ({ staffId, initial, onClose, onUpdate }) => {
               <div className="content-grid animate-fade-in">
                 <div className="data-card" style={{ gridColumn: '1 / -1' }}>
                   <div className="card-header">
-                    <FiShield className="card-icon" />
-                    <span className="card-title">System Access</span>
+                    <div className="card-icon"><FiShield /></div>
+                    <span className="card-title">System Permissions</span>
                   </div>
-                  <div className="data-row mt-4">
-                    <span className="data-label">Roles & Permissions</span>
-                    <div className="flex flex-wrap gap-2 mt-2">
+                  <div className="data-row">
+                    <span className="data-label">Authorization Roles</span>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
                       {initial.roles?.map((role, i) => (
                         <span key={i} className="chip chip-blue">{role}</span>
-                      ))}
-                      <span className="chip">View Only</span>
+                      )) || <span className="chip">Staff Member</span>}
+                      <span className="chip">Validated</span>
                     </div>
                   </div>
                 </div>

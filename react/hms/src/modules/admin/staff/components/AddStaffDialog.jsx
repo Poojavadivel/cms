@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import './AddStaffDialog.css';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     FiUser, FiMail, FiPhone, FiMapPin,
@@ -630,7 +631,7 @@ const AddStaffDialog = ({ initial = null, onSubmit, onCancel }) => {
             <motion.div
                 initial={{ opacity: 0, scale: 0.95, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
-                className="w-[85%] max-w-[1280px] h-[85vh] bg-white rounded-[24px] shadow-2xl overflow-hidden flex"
+                className="add-staff-dialog-modal-container"
             >
                 {/* Sidebar - Modern Deep Blue */}
                 <div className="hidden md:flex flex-col w-[280px] bg-gradient-to-br from-[#207DC0] to-[#165a8a] relative overflow-hidden shrink-0">

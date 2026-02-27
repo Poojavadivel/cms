@@ -1,435 +1,121 @@
-# Karur Gastro Foundation - Hospital Management System
-
-## 🏥 Overview
-Enterprise-grade Hospital Management System built with **Flutter** (Frontend) and **Node.js** (Backend). Designed for modern healthcare facilities with comprehensive modules for patient management, pharmacy, pathology, appointments, and payroll.
-
-## 🚀 Quick Start
-
-### Prerequisites
-- Flutter SDK (3.0+)
-- Node.js (16+) & npm
-- MongoDB (4.4+)
-- Git
-
-### Installation
-
-```bash
-# Clone repository
-git clone https://github.com/movi-innovations/Karur-Gastro-Foundation.git
-cd karur
-
-# Install Flutter dependencies
-flutter pub get
-
-# Install server dependencies
-cd Server
-npm install
-```
-
-### Running the Application
-
-**Backend Server:**
-```bash
-cd Server
-node Server.js
-# Server runs on http://localhost:3000
-```
-
-**Flutter App:**
-```bash
-# Desktop
-flutter run -d windows
-
-# Web
-flutter run -d chrome
-
-# Mobile
-flutter run
-```
-
-## 📦 Key Modules
-
-### 👨‍💼 Admin
-- Dashboard with real-time analytics
-- Patient management (CRUD operations)
-- Doctor assignment and tracking
-- Appointment scheduling
-- Pharmacy inventory management
-- Pathology test management  
-- Payroll system
-- Staff management
-
-### 👨‍⚕️ Doctor
-- Patient queue management
-- Medical records access
-- Prescription writing with live stock check
-- Pathology test orders
-- Appointment management
-- Patient history review
-
-### 💊 Pharmacist
-- Medicine inventory (Add/Edit/Delete/View)
-- Stock level monitoring (In Stock/Low Stock/Out of Stock)
-- Prescription fulfillment
-- Sales tracking
-- Analytics dashboard
-
-### 🧪 Pathologist
-- Test result entry
-- Report generation
-- Patient test history
-- Custom test management
-
-## 🗄️ Tech Stack
-
-**Frontend:**
-- Flutter/Dart
-- Provider (State Management)
-- Google Fonts
-- FL Chart (Analytics)
-- File Picker
-- Image Picker
-
-**Backend:**
-- Node.js + Express
-- MongoDB + Mongoose
-- JWT Authentication
-- Bcrypt (Password hashing)
-- Multer (File uploads)
-- Google Generative AI integration
-
-## 📁 Project Structure
-
-```
-karur/
-├── lib/
-│   ├── Models/          # Data models
-│   ├── Services/        # API services
-│   ├── Modules/         # Feature modules
-│   │   ├── Admin/
-│   │   ├── Doctor/
-│   │   ├── Pharmacist/
-│   │   └── Pathologist/
-│   ├── Utils/           # Helper functions
-│   └── Widgets/         # Reusable widgets
-├── Server/
-│   ├── Models/          # MongoDB schemas
-│   ├── routes/          # API endpoints
-│   ├── Middleware/      # Auth middleware
-│   ├── Config/          # Configuration
-│   └── web/             # Flutter web build
-└── assets/              # Images & fonts
-```
-
-## 🔧 Configuration
-
-### Environment Variables
-Create `.env` file in `Server/` directory:
-
-```env
-MONGO_URI=mongodb://localhost:27017/karur_hms
-JWT_SECRET=your_secret_key
-PORT=3000
-```
-
-### API Base URL
-Update in `lib/Services/api_constants.dart`:
-
-```dart
-static const String baseUrl = 'http://localhost:3000';
-```
-
-## 📊 Features
-
-### Patient Management
-- Complete patient profiles with medical history
-- Doctor assignment
-- Appointment scheduling
-- Vitals tracking (BP, pulse, SpO2, temp, BMI)
-- Document uploads
-- Search and filter capabilities
-
-### Pharmacy System
-- Real-time inventory management
-- Stock level alerts
-- Medicine search with autocomplete
-- Batch tracking
-- Expiry date monitoring
-- Live stock check during prescription
-
-### Pathology Module
-- Standard and custom test management
-- Result entry with reference ranges
-- Report generation
-- Test categorization
-- Patient test history
-
-### Appointment System
-- Production-level UI with animations
-- Patient selection with search
-- Date/time picker
-- Reason/complaint tracking
-- Doctor assignment
-- Status management (Scheduled/Completed/Cancelled)
-
-## 🔒 Security
-- JWT-based authentication
-- Password hashing with bcrypt
-- Role-based access control (Admin, Doctor, Pharmacist, Pathologist)
-- Secure API endpoints
-- Input validation
-
-## 🌐 Deployment
-
-### Web Deployment
-```bash
-# Build web app
-flutter build web --release
-
-# Copy to Server folder
-cp -r build/web Server/web
-
-# Server will serve the web app at root URL
-```
-
-### Server Deployment
-```bash
-cd Server
-npm start
-# or use PM2 for production
-pm2 start Server.js --name karur-hms
-```
-
-## 📝 API Endpoints
-
-**Authentication:**
-- POST `/api/auth/register` - Register user
-- POST `/api/auth/login` - Login user
-
-**Patients:**
-- GET `/api/patients` - List patients
-- POST `/api/patients` - Create patient
-- PUT `/api/patients/:id` - Update patient
-- DELETE `/api/patients/:id` - Delete patient
-
-**Pharmacy:**
-- GET `/api/pharmacy/medicines` - List medicines
-- POST `/api/pharmacy/medicines` - Add medicine
-- PUT `/api/pharmacy/medicines/:id` - Update medicine
-- DELETE `/api/pharmacy/medicines/:id` - Delete medicine
-
-**Appointments:**
-- GET `/api/appointments` - List appointments
-- POST `/api/appointments` - Create appointment
-- PUT `/api/appointments/:id` - Update appointment
-- DELETE `/api/appointments/:id` - Delete appointment
-
-## 🐛 Recent Fixes
-- ✅ Doctor assignment in patient update
-- ✅ Appointment reason display from multiple data sources
-- ✅ Patient condition extraction from medical history
-- ✅ Production-level appointment UI with animations
-- ✅ Live stock check in prescription module
-- ✅ Pathology custom test management
-
-## 📞 Support
-- **Organization:** movi-innovations
-- **Repository:** [Karur-Gastro-Foundation](https://github.com/movi-innovations/Karur-Gastro-Foundation)
-- **Test Environment:** [HMS-DEV](https://github.com/movicloudlabs-ai-testenv/HMS-DEV)
-
-## 📄 License
-Proprietary - All rights reserved by Karur Gastro Foundation
-
-## 🤝 Contributing & Branch Workflow
-
-This project follows industry-standard Git workflow practices with feature branches for each module.
-
-### Development Branches
-
-We maintain separate feature branches for modular development:
-
-- `feature/admin-module` - Admin dashboard and management features
-- `feature/doctor-module` - Doctor-specific functionality
-- `feature/pathologist-module` - Pathology lab features
-- `feature/pharmacist-module` - Pharmacy management
-- `feature/common-module` - Shared components and utilities
-
-### How to Clone and Work with Feature Branches
-
-#### 1. Clone the Repository
-```bash
-# Clone from test environment
-git clone https://github.com/movicloudlabs-ai-testenv/HMS-DEV.git
-cd HMS-DEV
-```
-
-#### 2. Checkout a Feature Branch
-```bash
-# List all branches
-git branch -a
-
-# Checkout specific feature branch
-git checkout feature/admin-module
-# OR
-git checkout feature/doctor-module
-# OR
-git checkout feature/pathologist-module
-# OR
-git checkout feature/pharmacist-module
-# OR
-git checkout feature/common-module
-```
-
-#### 3. Create Your Working Branch
-```bash
-# Create a new branch from feature branch
-git checkout -b feature/admin-module-your-feature-name
-
-# Example:
-git checkout -b feature/admin-module-add-analytics
-git checkout -b feature/doctor-module-prescription-fix
-```
-
-#### 4. Make Changes and Commit
-```bash
-# Stage your changes
-git add .
-
-# Commit with descriptive message
-git commit -m "feat(admin): add real-time analytics dashboard"
-
-# Commit message format:
-# feat(module): description - New feature
-# fix(module): description - Bug fix
-# docs(module): description - Documentation
-# refactor(module): description - Code refactoring
-# test(module): description - Adding tests
-```
-
-#### 5. Push Your Changes
-```bash
-# Push to test environment
-git push origin feature/admin-module-your-feature-name
-```
-
-#### 6. Create Pull Request
-1. Go to: https://github.com/movicloudlabs-ai-testenv/HMS-DEV
-2. Click "Pull Requests" → "New Pull Request"
-3. Base: `feature/[module-name]` ← Compare: `feature/[module-name]-your-feature`
-4. Fill in PR template with description and testing notes
-5. Request review from team lead
-
-#### 7. Merge to Main Branch (After Approval)
-
-**Option A: Via Pull Request (Recommended)**
-```bash
-# After feature branch is complete and tested
-# Create PR from feature branch to main
-# Base: main ← Compare: feature/admin-module
-```
-
-**Option B: Manual Merge (Team Lead Only)**
-```bash
-# Switch to main
-git checkout main
-
-# Pull latest changes
-git pull origin main
-
-# Merge feature branch
-git merge feature/admin-module --no-ff
-
-# Push to main
-git push origin main
-
-# Push to production remote
-git push test main
-```
-
-### Best Practices
-
-1. **Never commit directly to main** - Always use feature branches
-2. **Keep branches updated** - Regularly sync with main
-   ```bash
-   git checkout feature/admin-module
-   git pull origin main
-   ```
-3. **Write meaningful commits** - Use conventional commit format
-4. **Test before pushing** - Run tests and build locally
-5. **Small, focused PRs** - Keep changes manageable and reviewable
-6. **Code review required** - All PRs need approval before merge
-7. **Delete merged branches** - Clean up after successful merge
-   ```bash
-   git branch -d feature/admin-module-your-feature
-   git push origin --delete feature/admin-module-your-feature
-   ```
-
-### Branch Protection Rules
-
-- **main branch**: Protected, requires PR and review
-- **feature branches**: Open for team development
-- **CI/CD**: Automated tests run on all PRs
-
-### Getting Help
-
-- Check branch-specific CONTRIBUTING.md in each feature branch
-- Contact module lead for branch-specific questions
-- Review closed PRs for examples
+# HMS Documentation
+
+This folder contains all documentation for the Hospital Management System (HMS) project.
+
+## 📚 Documentation Index
+
+### 🚀 Getting Started
+- [DEPLOYMENT_CHECKLIST.md](DEPLOYMENT_CHECKLIST.md) - Pre-deployment checklist
+- [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) - Developer setup and guide
+- [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md) - System integration guide
+
+### 📱 Mobile & Web Applications
+- [MOBILE_README.md](MOBILE_README.md) - Mobile app documentation
+- [MOBILE_WEB_BUILD_SETUP.md](MOBILE_WEB_BUILD_SETUP.md) - Build mobile app for web
+- [WEB_APP_CONFIGURATION.md](WEB_APP_CONFIGURATION.md) - Web app configuration
+- [REACT_LANDINGAI_INTEGRATION.md](REACT_LANDINGAI_INTEGRATION.md) - React integration with LandingAI
+
+### 🔧 API & Backend
+- [API_CONNECTION_TEST_REPORT.md](API_CONNECTION_TEST_REPORT.md) - API connection tests
+- [API_LOGGING_DOCUMENTATION.md](API_LOGGING_DOCUMENTATION.md) - API logging system
+- [API_MIGRATION_REPORT.md](API_MIGRATION_REPORT.md) - API migration details
+- [BULK_UPLOAD_LOGIC_EXPLAINED.md](BULK_UPLOAD_LOGIC_EXPLAINED.md) - Bulk upload implementation
+- [SEEDING_COMPLETE.md](SEEDING_COMPLETE.md) - Database seeding guide
+
+### 🔍 Document Scanning & AI
+- [LANDINGAI_README.md](LANDINGAI_README.md) - LandingAI integration overview
+- [LANDINGAI_COMPLETE.md](LANDINGAI_COMPLETE.md) - Complete LandingAI implementation
+- [LANDINGAI_FIXED.md](LANDINGAI_FIXED.md) - LandingAI bug fixes
+- [LANDINGAI_INTEGRATION_ANALYSIS.md](LANDINGAI_INTEGRATION_ANALYSIS.md) - Integration analysis
+- [LANDINGAI_MIGRATION_GUIDE.md](LANDINGAI_MIGRATION_GUIDE.md) - Migration guide
+- [HOW_TO_GET_LANDINGAI_KEY.md](HOW_TO_GET_LANDINGAI_KEY.md) - Get API key
+- [SCANNER_CLEANUP_COMPLETE.md](SCANNER_CLEANUP_COMPLETE.md) - Scanner cleanup
+- [SERVER_SCANNER_VERIFIED.md](SERVER_SCANNER_VERIFIED.md) - Scanner verification
+- [FRONTEND_SCANNER_LOCATIONS.md](FRONTEND_SCANNER_LOCATIONS.md) - Frontend scanner locations
+
+### 📄 Document Management
+- [DOCUMENT_UPLOAD_SYSTEM_COMPLETE.md](DOCUMENT_UPLOAD_SYSTEM_COMPLETE.md) - Document upload system
+- [DOCUMENT_TYPE_SELECTOR_IMPLEMENTATION.md](DOCUMENT_TYPE_SELECTOR_IMPLEMENTATION.md) - Document type selection
+- [DOCUMENT_UPLOAD_VERIFICATION_ANALYSIS.md](DOCUMENT_UPLOAD_VERIFICATION_ANALYSIS.md) - Upload verification
+- [DOCUMENT_VERIFICATION_IMPROVEMENTS.md](DOCUMENT_VERIFICATION_IMPROVEMENTS.md) - Verification improvements
+- [DOCUMENT_VERIFICATION_QUICK_REFERENCE.md](DOCUMENT_VERIFICATION_QUICK_REFERENCE.md) - Quick reference
+- [FRONTEND_DOCUMENT_UPLOAD_LOCATIONS.md](FRONTEND_DOCUMENT_UPLOAD_LOCATIONS.md) - Upload locations
+- [MEDICAL_DATA_VERIFICATION_SYSTEM.md](MEDICAL_DATA_VERIFICATION_SYSTEM.md) - Data verification
+
+### 🏥 Medical Features
+- [MEDICAL_HISTORY_DATA_FLOW.md](MEDICAL_HISTORY_DATA_FLOW.md) - Medical history data flow
+- [MEDICAL_HISTORY_PRESCRIPTION_UPDATE_COMPLETE.md](MEDICAL_HISTORY_PRESCRIPTION_UPDATE_COMPLETE.md) - Prescription updates
+- [PRESCRIPTION_UI_UPDATE.md](PRESCRIPTION_UI_UPDATE.md) - Prescription UI
+- [PATHOLOGY_PENDING_TESTS_FIX.md](PATHOLOGY_PENDING_TESTS_FIX.md) - Pathology tests fix
+- [PHARMACY_PATHOLOGY_DISPLAY_FIX.md](PHARMACY_PATHOLOGY_DISPLAY_FIX.md) - Pharmacy display fix
+
+### 🚪 Patient Intake
+- [INTAKE_LOGIC_ANALYSIS.md](INTAKE_LOGIC_ANALYSIS.md) - Intake logic analysis
+- [INTAKE_NAVIGATION_FIX.md](INTAKE_NAVIGATION_FIX.md) - Navigation fixes
+
+### 🐛 Bug Fixes & Improvements
+- [BUG_FIXES_SUMMARY.md](BUG_FIXES_SUMMARY.md) - Bug fixes summary
+- [BUG_FIXES_IMPLEMENTED.md](BUG_FIXES_IMPLEMENTED.md) - Implemented fixes
+- [BUG_FIXES_VERIFICATION.md](BUG_FIXES_VERIFICATION.md) - Fix verification
+- [BUG_FIX_LANDINGAI_DATA_STRUCTURE.md](BUG_FIX_LANDINGAI_DATA_STRUCTURE.md) - LandingAI data fix
+- [BUG_FIX_VERIFICATION_REPORT.md](BUG_FIX_VERIFICATION_REPORT.md) - Verification report
+- [CATEGORY_ENUM_FIX.md](CATEGORY_ENUM_FIX.md) - Category enum fix
+- [FINAL_FIX_ROUTE_PATH.md](FINAL_FIX_ROUTE_PATH.md) - Route path fix
+- [COMPREHENSIVE_LOGGING_ADDED.md](COMPREHENSIVE_LOGGING_ADDED.md) - Logging improvements
+
+### 🎯 Implementation & Architecture
+- [COMPLETE_FIX_SUMMARY.md](COMPLETE_FIX_SUMMARY.md) - Complete fix summary
+- [COMPLETE_INTEGRATION_SUMMARY.md](COMPLETE_INTEGRATION_SUMMARY.md) - Integration summary
+- [IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md) - Implementation overview
+- [SIMPLIFIED_SCHEMA_IMPLEMENTATION.md](SIMPLIFIED_SCHEMA_IMPLEMENTATION.md) - Schema design
+- [SYSTEM_FLOW_DIAGRAM.md](SYSTEM_FLOW_DIAGRAM.md) - System flow diagrams
+- [LOGIC_VERIFICATION_FINAL.md](LOGIC_VERIFICATION_FINAL.md) - Logic verification
+
+### ✅ Testing
+- [TESTING_GUIDE_VERIFICATION.md](TESTING_GUIDE_VERIFICATION.md) - Testing guide
 
 ---
 
-## 📚 Detailed Documentation (New - Dec 15, 2024)
+## 📊 Documentation Statistics
 
-### Staff Management Module Documentation
+- **Total Documents**: 50
+- **Categories**: 10
+- **Last Updated**: 2026-02-26
 
-Comprehensive documentation for the recently implemented Staff Management module:
+## 🔍 Quick Search Guide
 
-#### 🎯 Quick Access
+### By Feature
+- **LandingAI/Scanner**: Search for "LANDINGAI" or "SCANNER"
+- **Documents**: Search for "DOCUMENT"
+- **Medical**: Search for "MEDICAL" or "PRESCRIPTION"
+- **Bug Fixes**: Search for "BUG_FIX"
+- **API**: Search for "API"
 
-| Document | Purpose | For | Read Time |
-|----------|---------|-----|-----------|
-| [IMPLEMENTATION_SUMMARY.md](./IMPLEMENTATION_SUMMARY.md) | Project status & overview | Managers, Stakeholders | 20 min |
-| [QUICK_REFERENCE.md](./QUICK_REFERENCE.md) | Developer quick-start | Developers | 15 min |
-| [STAFF_IMPLEMENTATION_COMPLETE.md](./STAFF_IMPLEMENTATION_COMPLETE.md) | Complete technical docs | Developers, Architects | 30 min |
-| [TESTING_GUIDE.md](./TESTING_GUIDE.md) | Testing procedures | QA, Testers | 25 min |
-| [CHANGES_SUMMARY_2024-12-15.md](./CHANGES_SUMMARY_2024-12-15.md) | Recent changes log | All | 15 min |
+### By Type
+- **Setup Guides**: DEPLOYMENT, DEVELOPER_GUIDE, INTEGRATION_GUIDE
+- **Bug Reports**: BUG_FIX_*, BUG_FIXES_*
+- **Implementation**: *_COMPLETE, *_IMPLEMENTATION, *_SUMMARY
+- **Analysis**: *_ANALYSIS, *_VERIFICATION
 
-#### 📖 Documentation by Role
+## 📝 Contributing
 
-**For Project Managers / Stakeholders:**
-- Start with [IMPLEMENTATION_SUMMARY.md](./IMPLEMENTATION_SUMMARY.md)
-- Review deployment readiness and success metrics
+When adding new documentation:
+1. Use descriptive ALL_CAPS_WITH_UNDERSCORES naming
+2. Add .md extension
+3. Update this README with appropriate category
+4. Keep documents focused and specific
 
-**For Developers:**
-- Quick start: [QUICK_REFERENCE.md](./QUICK_REFERENCE.md)
-- Deep dive: [STAFF_IMPLEMENTATION_COMPLETE.md](./STAFF_IMPLEMENTATION_COMPLETE.md)
-- Recent changes: [CHANGES_SUMMARY_2024-12-15.md](./CHANGES_SUMMARY_2024-12-15.md)
+## 🏗️ Project Structure
 
-**For QA/Testers:**
-- Follow [TESTING_GUIDE.md](./TESTING_GUIDE.md) for comprehensive testing
-- Use bug report template included in guide
-
-#### 🎉 Recent Achievements (Dec 15, 2024)
-
-**Staff Module v1.0.0 - Production Ready:**
-- ✅ All CRUD operations implemented
-- ✅ Exact Flutter feature parity
-- ✅ API 404 errors fixed
-- ✅ UI/UX optimizations complete
-- ✅ Comprehensive documentation
-- ✅ Ready for deployment
-
-**Key Metrics:**
-- Zero known bugs
-- 100% feature completion
-- <2s page load time
-- Cross-browser compatible
-- Fully responsive
-- Production-grade code quality
+```
+HMS/
+├── Server/          # Backend Node.js server
+├── mobile/          # Expo React Native mobile app
+├── react/           # React web app
+├── docs/            # All documentation (this folder)
+└── ...
+```
 
 ---
 
-**Last Updated:** December 15, 2024  
-**Version:** 2.1.0  
-**Build:** Production Ready  
-**Status:** ✅ Staff Module Complete
+**Last organized**: 2026-02-26

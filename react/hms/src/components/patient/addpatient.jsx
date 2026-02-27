@@ -15,16 +15,76 @@ import {
     MdMonitorWeight,
     MdOpacity,
     MdUploadFile,
-    MdDelete
+    MdDelete,
+    MdInfo,
+    MdLocalPharmacy,
+    MdScience,
+    MdDescription
 } from 'react-icons/md';
 import {
-    FiUser, FiPhone, FiHeart, FiActivity, FiShield, FiFileText, FiLoader, FiX
+    FiUser, FiPhone, FiHeart, FiActivity, FiShield, FiFileText, FiLoader, FiX, FiChevronDown, FiTarget
 } from 'react-icons/fi';
 import patientsService from '../../services/patientsService';
 import doctorService from '../../services/doctorService';
 import scannerService from '../../services/scannerService';
 import appointmentsService from '../../services/appointmentsService';
+import DataVerificationModal from '../modals/DataVerificationModal';
 import './addpatient.css';
+import { LOCATION_DATA, STATES } from '../../constants/locations';
+
+// --- Indian States and Cities Data ---
+const INDIAN_STATES = {
+    'Andhra Pradesh': ['Visakhapatnam', 'Vijayawada', 'Guntur', 'Nellore', 'Kurnool', 'Tirupati', 'Rajahmundry'],
+    'Arunachal Pradesh': ['Itanagar', 'Naharlagun', 'Pasighat', 'Tawang'],
+    'Assam': ['Guwahati', 'Silchar', 'Dibrugarh', 'Jorhat', 'Nagaon', 'Tinsukia'],
+    'Bihar': ['Patna', 'Gaya', 'Bhagalpur', 'Muzaffarpur', 'Darbhanga', 'Bihar Sharif'],
+    'Chhattisgarh': ['Raipur', 'Bhilai', 'Bilaspur', 'Korba', 'Durg', 'Rajnandgaon'],
+    'Goa': ['Panaji', 'Margao', 'Vasco da Gama', 'Mapusa', 'Ponda'],
+    'Gujarat': ['Ahmedabad', 'Surat', 'Vadodara', 'Rajkot', 'Bhavnagar', 'Jamnagar', 'Gandhinagar'],
+    'Haryana': ['Faridabad', 'Gurgaon', 'Rohtak', 'Panipat', 'Karnal', 'Hisar', 'Ambala'],
+    'Himachal Pradesh': ['Shimla', 'Dharamshala', 'Solan', 'Mandi', 'Kullu', 'Baddi'],
+    'Jharkhand': ['Ranchi', 'Jamshedpur', 'Dhanbad', 'Bokaro', 'Deoghar', 'Hazaribagh'],
+    'Karnataka': ['Bangalore', 'Mysore', 'Mangalore', 'Hubli', 'Belgaum', 'Gulbarga', 'Dharwad'],
+    'Kerala': ['Thiruvananthapuram', 'Kochi', 'Kozhikode', 'Thrissur', 'Kollam', 'Kannur', 'Palakkad'],
+    'Madhya Pradesh': ['Bhopal', 'Indore', 'Gwalior', 'Jabalpur', 'Ujjain', 'Sagar', 'Dewas'],
+    'Maharashtra': ['Mumbai', 'Pune', 'Nagpur', 'Thane', 'Nashik', 'Aurangabad', 'Solapur', 'Kolhapur'],
+    'Manipur': ['Imphal', 'Thoubal', 'Bishnupur', 'Churachandpur'],
+    'Meghalaya': ['Shillong', 'Tura', 'Jowai', 'Nongstoin'],
+    'Mizoram': ['Aizawl', 'Lunglei', 'Champhai', 'Serchhip'],
+    'Nagaland': ['Kohima', 'Dimapur', 'Mokokchung', 'Tuensang'],
+    'Odisha': ['Bhubaneswar', 'Cuttack', 'Rourkela', 'Puri', 'Brahmapur', 'Sambalpur'],
+    'Punjab': ['Ludhiana', 'Amritsar', 'Jalandhar', 'Patiala', 'Bathinda', 'Mohali', 'Chandigarh'],
+    'Rajasthan': ['Jaipur', 'Jodhpur', 'Kota', 'Udaipur', 'Ajmer', 'Bikaner', 'Alwar'],
+    'Sikkim': ['Gangtok', 'Namchi', 'Geyzing', 'Mangan'],
+    'Tamil Nadu': ['Chennai', 'Coimbatore', 'Madurai', 'Tiruchirappalli', 'Salem', 'Tirunelveli', 'Vellore', 'Karur'],
+    'Telangana': ['Hyderabad', 'Warangal', 'Nizamabad', 'Khammam', 'Karimnagar', 'Ramagundam'],
+    'Tripura': ['Agartala', 'Udaipur', 'Dharmanagar', 'Kailasahar'],
+    'Uttar Pradesh': ['Lucknow', 'Kanpur', 'Ghaziabad', 'Agra', 'Varanasi', 'Meerut', 'Allahabad', 'Noida'],
+    'Uttarakhand': ['Dehradun', 'Haridwar', 'Roorkee', 'Haldwani', 'Rudrapur', 'Rishikesh'],
+    'West Bengal': ['Kolkata', 'Howrah', 'Durgapur', 'Asansol', 'Siliguri', 'Darjeeling'],
+    'Andaman and Nicobar Islands': ['Port Blair', 'Diglipur', 'Rangat'],
+    'Chandigarh': ['Chandigarh'],
+    'Dadra and Nagar Haveli and Daman and Diu': ['Daman', 'Diu', 'Silvassa'],
+    'Delhi': ['New Delhi', 'Delhi Cantt', 'Dwarka', 'Rohini', 'Karol Bagh'],
+    'Jammu and Kashmir': ['Srinagar', 'Jammu', 'Anantnag', 'Baramulla', 'Udhampur'],
+    'Ladakh': ['Leh', 'Kargil'],
+    'Lakshadweep': ['Kavaratti', 'Agatti', 'Minicoy'],
+    'Puducherry': ['Puducherry', 'Karaikal', 'Mahe', 'Yanam']
+};
+
+// --- Country Codes ---
+const COUNTRY_CODES = [
+    { code: '+91', country: 'India', flag: '🇮🇳' },
+    { code: '+1', country: 'USA/Canada', flag: '🇺🇸' },
+    { code: '+44', country: 'UK', flag: '🇬🇧' },
+    { code: '+971', country: 'UAE', flag: '🇦🇪' },
+    { code: '+966', country: 'Saudi Arabia', flag: '🇸🇦' },
+    { code: '+65', country: 'Singapore', flag: '🇸🇬' },
+    { code: '+60', country: 'Malaysia', flag: '🇲🇾' },
+    { code: '+61', country: 'Australia', flag: '🇦🇺' },
+    { code: '+81', country: 'Japan', flag: '🇯🇵' },
+    { code: '+86', country: 'China', flag: '🇨🇳' },
+];
 
 // --- Reusable Components ---
 
@@ -97,21 +157,35 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
     const [currentStep, setCurrentStep] = useState(0);
     const [loading, setLoading] = useState(false);
     const [fetchingData, setFetchingData] = useState(false);
+    const [isDetectingLocation, setIsDetectingLocation] = useState(false);
+    const [pincodeList, setPincodeList] = useState([]);
+    const [isPincodeLoading, setIsPincodeLoading] = useState(false);
+    const [localityList, setLocalityList] = useState([]);
+    const [isLocalityLoading, setIsLocalityLoading] = useState(false);
     const [errors, setErrors] = useState({});
     const [doctors, setDoctors] = useState([]);
+    const [cities, setCities] = useState([]);
+
+    // Phone number state with country code
+    const [countryCode, setCountryCode] = useState('+91'); // Default India
+    const [phoneNumber, setPhoneNumber] = useState('');
 
     // File Upload State
     const [uploadedFiles, setUploadedFiles] = useState([]);
     const [uploading, setUploading] = useState(false);
     const [scannerError, setScannerError] = useState(null);
+    const [selectedDocumentType, setSelectedDocumentType] = useState('PRESCRIPTION');
+    
+    // Verification Modal State
+    const [verificationModalOpen, setVerificationModalOpen] = useState(false);
+    const [currentVerificationId, setCurrentVerificationId] = useState(null);
 
-    // Form State
     const [formData, setFormData] = useState({
         firstName: '', lastName: '', dateOfBirth: '', age: '', gender: '', bloodGroup: '',
         phone: '', email: '', emergencyContactName: '', emergencyContactPhone: '',
-        houseNo: '', street: '', city: '', state: '', pincode: '', country: 'India',
-        assignedDoctor: '', knownConditions: '', allergies: '', currentMedications: '',
-        pastSurgeries: '', notes: '', lastVisit: '',
+        houseNo: '', street: '', town: '', city: '', district: '', state: '', pincode: '', country: 'India',
+        lat: '', lng: '',
+        assignedDoctor: '', knownConditions: '', allergies: '', notes: '', lastVisit: '',
         height: '', weight: '', bmi: '', bp: '', pulse: '', spo2: '',
         insuranceNumber: '', insuranceProvider: '', insuranceExpiry: '',
         appointmentDate: '', appointmentTime: '', appointmentReason: '', patientCode: ''
@@ -129,21 +203,46 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
             if (patientId) {
                 setFetchingData(true);
                 patientsService.fetchPatientById(patientId).then(patient => {
+                    // Extract phone number and country code
+                    const fullPhone = patient.phone || '';
+                    let extractedCode = '+91';
+                    let extractedNumber = '';
+
+                    if (fullPhone) {
+                        // Try to extract country code (starts with +)
+                        const match = fullPhone.match(/^(\+\d{1,4})?(\d+)$/);
+                        if (match) {
+                            extractedCode = match[1] || '+91';
+                            extractedNumber = match[2] || '';
+                        } else {
+                            extractedNumber = fullPhone.replace(/\D/g, '');
+                        }
+                    }
+
+                    setCountryCode(extractedCode);
+                    setPhoneNumber(extractedNumber);
+
                     setFormData({
                         firstName: patient.firstName || (patient.name ? patient.name.split(' ')[0] : ''),
                         lastName: patient.lastName || (patient.name ? patient.name.split(' ').slice(1).join(' ') : ''),
                         dateOfBirth: patient.dateOfBirth ? new Date(patient.dateOfBirth).toISOString().split('T')[0] : '',
                         age: patient.age || '',
                         gender: patient.gender || '', bloodGroup: patient.bloodGroup || '',
-                        phone: patient.phone || '', email: patient.email || '',
+                        phone: fullPhone, email: patient.email || '',
                         emergencyContactName: patient.emergencyContactName || '', emergencyContactPhone: patient.emergencyContactPhone || '',
-                        houseNo: patient.houseNo || '', street: patient.street || '',
-                        city: patient.city || '', state: patient.state || '',
-                        pincode: patient.pincode || '', country: patient.country || 'India',
+                        houseNo: patient.houseNo || '',
+                        street: patient.street || '',
+                        town: patient.town || '',
+                        city: patient.city || '',
+                        district: patient.district || '',
+                        state: patient.state || '',
+                        pincode: patient.pincode || '',
+                        country: patient.country || 'India',
+                        lat: patient.lat || '',
+                        lng: patient.lng || '',
                         assignedDoctor: patient.doctorId || '',
                         knownConditions: Array.isArray(patient.medicalHistory) ? patient.medicalHistory.join(', ') : (patient.medicalHistory || ''),
                         allergies: Array.isArray(patient.allergies) ? patient.allergies.join(', ') : (patient.allergies || ''),
-                        currentMedications: patient.currentMedications || '',
                         height: patient.height || '', weight: patient.weight || '',
                         bmi: patient.bmi || '', bp: patient.bp || '',
                         pulse: patient.pulse || '', spo2: patient.oxygen || '',
@@ -152,22 +251,172 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                         insuranceExpiry: patient.expiryDate || '',
                         patientCode: patient.patientCode || ''
                     });
+
+                    // Set cities if state is present
+                    if (patient.state && INDIAN_STATES[patient.state]) {
+                        setCities(INDIAN_STATES[patient.state]);
+                    }
                 }).catch(console.error).finally(() => setFetchingData(false));
             } else {
                 // Reset for new patient
                 setFormData({
                     firstName: '', lastName: '', dateOfBirth: '', age: '', gender: '', bloodGroup: '',
                     phone: '', email: '', emergencyContactName: '', emergencyContactPhone: '',
-                    houseNo: '', street: '', city: '', state: '', pincode: '', country: 'India',
-                    assignedDoctor: '', knownConditions: '', allergies: '', currentMedications: '',
-                    pastSurgeries: '', notes: '', lastVisit: '',
+                    houseNo: '', street: '', town: '', city: '', district: '', state: '', pincode: '', country: 'India',
+                    lat: '', lng: '',
+                    assignedDoctor: '', knownConditions: '', allergies: '', notes: '', lastVisit: '',
                     height: '', weight: '', bmi: '', bp: '', pulse: '', spo2: '',
                     insuranceNumber: '', insuranceProvider: '', insuranceExpiry: '',
                     appointmentDate: '', appointmentTime: '', appointmentReason: '', patientCode: ''
                 });
+                setCities([]);
+                setCountryCode('+91'); // Reset to default
+                setPhoneNumber(''); // Clear phone number
             }
         }
     }, [isOpen, patientId]);
+
+    // Load Pincodes when district changes (Lazy load comprehensive local database)
+    useEffect(() => {
+        if (formData.district) {
+            setIsPincodeLoading(true);
+
+            // Dynamic import to keep main bundle small
+            import('../../constants/pincode_mapping.json')
+                .then(module => {
+                    const allPincodes = module.default;
+                    const districtPincodes = allPincodes[formData.district];
+
+                    if (districtPincodes && districtPincodes.length > 0) {
+                        setPincodeList([...districtPincodes].sort());
+                    } else {
+                        // Fallback: If not in local DB, try a direct API fetch as safety
+                        fetch(`https://api.postalpincode.in/postoffice/${formData.district}`)
+                            .then(res => res.json())
+                            .then(data => {
+                                if (data && data[0] && data[0].Status === "Success") {
+                                    const pincodes = [...new Set(data[0].PostOffice.map(po => po.Pincode))].sort();
+                                    setPincodeList(pincodes);
+                                } else {
+                                    setPincodeList([]);
+                                }
+                            })
+                            .catch(() => setPincodeList([]));
+                    }
+                })
+                .catch(err => {
+                    console.error("Error loading pincode database:", err);
+                    setPincodeList([]);
+                })
+                .finally(() => setIsPincodeLoading(false));
+
+            setLocalityList([]);
+        } else {
+            setPincodeList([]);
+            setLocalityList([]);
+        }
+    }, [formData.district]);
+
+    // Load Localities when Pincode changes
+    useEffect(() => {
+        if (formData.pincode && formData.pincode !== 'manual') {
+            setIsLocalityLoading(true);
+
+            import('../../constants/locality_mapping.json')
+                .then(module => {
+                    const allLocalities = module.default;
+                    const pincodeLocalities = allLocalities[formData.pincode];
+
+                    if (pincodeLocalities && pincodeLocalities.length > 0) {
+                        // For the dropdown list, we keep it as sorted names for better UX
+                        setLocalityList([...pincodeLocalities]);
+                    } else {
+                        setLocalityList([]);
+                    }
+                })
+                .catch(err => {
+                    console.error("Error loading locality database:", err);
+                    setLocalityList([]);
+                })
+                .finally(() => setIsLocalityLoading(false));
+        } else {
+            setLocalityList([]);
+        }
+    }, [formData.pincode]);
+
+    // Handle Current Location Detection
+    const handleDetectLocation = () => {
+        if (!navigator.geolocation) {
+            alert("Geolocation is not supported by your browser");
+            return;
+        }
+
+        setIsDetectingLocation(true);
+        navigator.geolocation.getCurrentPosition(
+            async (position) => {
+                const { latitude, longitude } = position.coords;
+
+                try {
+                    // Use Nominatim for reverse geocoding
+                    const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`);
+                    const data = await response.json();
+
+                    if (data && data.address) {
+                        const addr = data.address;
+                        const detectedState = addr.state || "";
+                        const detectedDistrict = addr.city_district || addr.district || addr.county || "";
+                        const detectedPincode = addr.postcode || "";
+                        const detectedCity = addr.suburb || addr.neighbourhood || addr.village || addr.town || addr.city || "";
+
+                        // Try to match with our LOCATION_DATA
+                        let finalState = "";
+                        if (detectedState) {
+                            // Simple match check
+                            const stateKeys = Object.keys(LOCATION_DATA);
+                            finalState = stateKeys.find(s => s.toLowerCase().includes(detectedState.toLowerCase())) || detectedState;
+                        }
+
+                        let finalDistrict = detectedDistrict;
+                        if (finalState && LOCATION_DATA[finalState]) {
+                            const matchedDistrict = LOCATION_DATA[finalState].find(d =>
+                                d.toLowerCase() === detectedDistrict.toLowerCase() ||
+                                d.toLowerCase().includes(detectedDistrict.toLowerCase()) ||
+                                detectedDistrict.toLowerCase().includes(d.toLowerCase())
+                            );
+                            if (matchedDistrict) finalDistrict = matchedDistrict;
+                        }
+
+                        setFormData(prev => ({
+                            ...prev,
+                            state: finalState,
+                            district: finalDistrict,
+                            pincode: detectedPincode,
+                            city: detectedCity,
+                            lat: latitude.toString(),
+                            lng: longitude.toString(),
+                            country: addr.country || "India"
+                        }));
+                    }
+                } catch (error) {
+                    console.error("Error in reverse geocoding:", error);
+                    // At least update the map
+                    setFormData(prev => ({
+                        ...prev,
+                        lat: latitude.toString(),
+                        lng: longitude.toString()
+                    }));
+                } finally {
+                    setIsDetectingLocation(false);
+                }
+            },
+            (error) => {
+                console.error("Geolocation error:", error);
+                setIsDetectingLocation(false);
+                alert("Unable to retrieve your location. Please check permissions.");
+            },
+            { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+        );
+    };
 
     // Close on Escape
     useEffect(() => {
@@ -204,6 +453,34 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
         setFormData(prev => {
             const next = { ...prev, [name]: value };
 
+            // Cascading logic
+            if (name === 'state') {
+                next.district = '';
+                next.pincode = '';
+                next.city = '';
+                next.lat = '';
+                next.lng = '';
+            }
+            if (name === 'district') {
+                next.pincode = '';
+                next.city = '';
+                next.lat = '';
+                next.lng = '';
+            }
+            if (name === 'pincode') {
+                next.city = '';
+                next.lat = '';
+                next.lng = '';
+            }
+            if (name === 'city') {
+                // When city is selected, find its coordinates from localityList
+                const selectedLocality = localityList.find(l => l.name === value);
+                if (selectedLocality) {
+                    next.lat = selectedLocality.lat || '';
+                    next.lng = selectedLocality.lng || '';
+                }
+            }
+
             // Auto-logic
             if (name === 'dateOfBirth') next.age = calculateAge(value);
             if ((name === 'height' || name === 'weight')) {
@@ -228,32 +505,84 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
         setScannerError(null);
 
         try {
-            const file = files[0];
-            // Use temp ID if new patient
-            const pid = patientId || `temp-${Date.now()}`;
-            const scannedResult = await scannerService.scanAndExtractMedicalData(file, pid);
+            // Process multiple files
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                // Use temp ID if new patient
+                const pid = patientId || `temp-${Date.now()}`;
 
-            // Auto-fill form fields if data was extracted
-            if (scannedResult) {
-                setFormData(prev => ({
-                    ...prev,
-                    knownConditions: prev.knownConditions ? `${prev.knownConditions}, ${scannedResult.medicalHistory || ''}` : (scannedResult.medicalHistory || ''),
-                    allergies: prev.allergies ? `${prev.allergies}, ${scannedResult.allergies || ''}` : (scannedResult.allergies || ''),
-                    currentMedications: prev.currentMedications ? `${prev.currentMedications}, ${scannedResult.medications || ''}` : (scannedResult.medications || '')
-                }));
+                try {
+                    const scannedResult = await scannerService.scanAndExtractMedicalData(file, pid, selectedDocumentType);
+
+                    // Auto-fill form fields if data was extracted
+                    if (scannedResult) {
+                        setFormData(prev => ({
+                            ...prev,
+                            knownConditions: prev.knownConditions ? `${prev.knownConditions}, ${scannedResult.medicalHistory || ''}` : (scannedResult.medicalHistory || ''),
+                            allergies: prev.allergies ? `${prev.allergies}, ${scannedResult.allergies || ''}` : (scannedResult.allergies || '')
+                        }));
+                    }
+
+                    setUploadedFiles(prev => [...prev, {
+                        file, 
+                        name: file.name, 
+                        scannedResult,
+                        verificationId: scannedResult.verificationId,
+                        requiresVerification: scannedResult.verificationRequired || false,
+                        documentType: selectedDocumentType
+                    }]);
+                } catch (fileError) {
+                    console.error(`Error processing ${file.name}:`, fileError);
+                    setUploadedFiles(prev => [...prev, { file, name: file.name, error: fileError.message }]);
+                }
             }
-
-            setUploadedFiles(prev => [...prev, { file, name: file.name, scannedResult }]);
         } catch (error) {
             console.error('File upload error:', error);
-            setScannerError(error.message || 'Failed to process document');
+            setScannerError(error.message || 'Failed to process documents');
         } finally {
             setUploading(false);
+            event.target.value = ''; // Reset input
         }
     };
 
     const removeUploadedFile = (index) => {
         setUploadedFiles(prev => prev.filter((_, i) => i !== index));
+    };
+
+    // State/City handler
+    const handleStateChange = (e) => {
+        const selectedState = e.target.value;
+        setFormData(prev => ({
+            ...prev,
+            state: selectedState,
+            city: '', // Reset city when state changes
+            pincode: ''
+        }));
+        setCities(INDIAN_STATES[selectedState] || []);
+    };
+
+    // Handle phone number input (only allow digits, max 10)
+    const handlePhoneChange = (e) => {
+        const value = e.target.value.replace(/\D/g, ''); // Remove non-digits
+        if (value.length <= 10) {
+            setPhoneNumber(value);
+            // Update formData with country code + phone
+            setFormData(prev => ({
+                ...prev,
+                phone: countryCode + value
+            }));
+        }
+    };
+
+    // Handle country code change
+    const handleCountryCodeChange = (e) => {
+        const newCode = e.target.value;
+        setCountryCode(newCode);
+        // Update formData with new country code + existing phone
+        setFormData(prev => ({
+            ...prev,
+            phone: newCode + phoneNumber
+        }));
     };
 
     const validateStep = () => {
@@ -266,7 +595,19 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
             if (!formData.age && !formData.dateOfBirth) newErrors.age = true;
         }
         if (currentStep === 1) {
-            if (!formData.phone.trim() || formData.phone.length < 10) newErrors.phone = 'Valid phone number required';
+            // Phone validation: Must be exactly 10 digits
+            const phoneDigits = phoneNumber.replace(/\D/g, ''); // Remove non-digits
+            if (!phoneDigits || phoneDigits.length !== 10) {
+                newErrors.phone = 'Phone number must be exactly 10 digits';
+            }
+        }
+        if (currentStep === 2) {
+            // Mandatory vitals during initial registration
+            if (!patientId) {
+                if (!formData.height || parseFloat(formData.height) <= 0) newErrors.height = 'Height is required';
+                if (!formData.weight || parseFloat(formData.weight) <= 0) newErrors.weight = 'Weight is required';
+                if (!formData.bp || !formData.bp.trim()) newErrors.bp = 'Blood Pressure is required';
+            }
         }
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -292,16 +633,18 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                 email: formData.email,
                 address: {
                     houseNo: formData.houseNo, street: formData.street,
-                    city: formData.city, state: formData.state,
-                    pincode: formData.pincode, country: formData.country,
-                    line1: `${formData.houseNo} ${formData.street} ${formData.city}`.trim()
+                    town: formData.town, city: formData.city, district: formData.district,
+                    state: formData.state, pincode: formData.pincode,
+                    country: formData.country,
+                    lat: formData.lat,
+                    lng: formData.lng,
+                    line1: `${formData.houseNo} ${formData.street} ${formData.town} ${formData.city}`.trim()
                 },
                 doctorId: formData.assignedDoctor || null,
                 metadata: {
                     emergencyContactName: formData.emergencyContactName,
                     emergencyContactPhone: formData.emergencyContactPhone,
                     medicalHistory: formData.knownConditions ? formData.knownConditions.split(',').map(s => s.trim()) : [],
-                    prescriptions: formData.currentMedications ? formData.currentMedications.split(',').map(s => s.trim()) : [],
                     allergies: formData.allergies ? formData.allergies.split(',').map(s => s.trim()) : [],
                     insuranceNumber: formData.insuranceNumber,
                     insuranceProvider: formData.insuranceProvider
@@ -309,7 +652,7 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                 // Flattened fields for some backward compatibility if needed
                 medicalHistory: formData.knownConditions ? formData.knownConditions.split(',').map(s => s.trim()) : [],
                 allergies: formData.allergies ? formData.allergies.split(',').map(s => s.trim()) : [],
-                currentMedications: formData.currentMedications,
+                town: formData.town,
 
                 vitals: {
                     heightCm: formData.height ? parseFloat(formData.height) : null,
@@ -381,7 +724,7 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                         animate={{ scale: 1, opacity: 1, y: 0 }}
                         exit={{ scale: 0.95, opacity: 0, y: 20 }}
                         transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                        className="relative w-[85%] max-w-[1280px] h-[85vh] bg-white rounded-[24px] shadow-2xl flex overflow-hidden ring-1 ring-white/20 z-10"
+                        className="add-patient-modal-container relative w-full flex overflow-hidden ring-1 ring-white/20 z-10"
                     >
 
                         {/* Sidebar - Modern Deep Blue */}
@@ -447,7 +790,7 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
 
                             {/* Static Header */}
                             <div className="px-8 py-5 md:px-10 md:py-6 border-b border-slate-100 bg-white z-20">
-                                <div className="max-w-4xl mx-auto">
+                                <div className="mx-auto">
                                     <motion.div
                                         key={`header-${currentStep}`}
                                         initial={{ opacity: 0, x: -20 }}
@@ -476,7 +819,7 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                                         <p>Loading patient record...</p>
                                     </div>
                                 ) : (
-                                    <div className="max-w-4xl mx-auto space-y-10 pb-20">
+                                    <div className="mx-auto space-y-10 pb-20">
 
                                         <AnimatePresence mode='wait'>
                                             <motion.div
@@ -543,8 +886,30 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                                                 {currentStep === 1 && (
                                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                                         <PremiumInput label="Phone Number" error={errors.phone} required icon={<MdPhone />} className="md:col-span-2">
-                                                            <input name="phone" value={formData.phone} onChange={handleInputChange}
-                                                                className="w-full outline-none text-[#0f3e61] placeholder-slate-300 font-bold text-lg bg-transparent" placeholder="+91 99999 00000" />
+                                                            <div className="flex items-center gap-2 w-full">
+                                                                <select
+                                                                    value={countryCode}
+                                                                    onChange={handleCountryCodeChange}
+                                                                    className="outline-none text-[#0f3e61] font-bold text-base bg-transparent border-r border-slate-200 pr-2"
+                                                                >
+                                                                    {COUNTRY_CODES.map(item => (
+                                                                        <option key={item.code} value={item.code}>
+                                                                            {item.flag} {item.code}
+                                                                        </option>
+                                                                    ))}
+                                                                </select>
+                                                                <input
+                                                                    type="tel"
+                                                                    value={phoneNumber}
+                                                                    onChange={handlePhoneChange}
+                                                                    maxLength={10}
+                                                                    className="flex-1 outline-none text-[#0f3e61] placeholder-slate-300 font-bold text-lg bg-transparent"
+                                                                    placeholder="9999900000"
+                                                                />
+                                                                <span className="text-xs text-slate-400 font-medium">
+                                                                    {phoneNumber.length}/10
+                                                                </span>
+                                                            </div>
                                                         </PremiumInput>
 
                                                         <PremiumInput label="Email Address" icon={<MdEmail />} className="md:col-span-2">
@@ -567,37 +932,329 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                                                         </PremiumInput>
 
                                                         <div className="md:col-span-2 pt-4 pb-2 border-t border-slate-100 mt-2">
-                                                            <h3 className="text-sm font-extrabold uppercase text-slate-400 flex items-center gap-2">
-                                                                <MdLocationOn /> Address Details
-                                                            </h3>
+                                                            <div className="flex justify-between items-center pr-2">
+                                                                <h3 className="text-sm font-extrabold uppercase text-slate-400 flex items-center gap-2">
+                                                                    <MdLocationOn /> Address Details
+                                                                </h3>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={handleDetectLocation}
+                                                                    disabled={isDetectingLocation}
+                                                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 text-[#207DC0] text-[10px] font-black uppercase tracking-wider hover:bg-blue-100 transition-all border border-blue-100/50 group"
+                                                                >
+                                                                    {isDetectingLocation ? (
+                                                                        <FiLoader className="animate-spin" />
+                                                                    ) : (
+                                                                        <FiTarget className="group-hover:scale-110 transition-transform" />
+                                                                    )}
+                                                                    {isDetectingLocation ? 'Detecting...' : 'Detect My Location'}
+                                                                </button>
+                                                            </div>
                                                         </div>
+
+                                                        <PremiumInput label="State *">
+                                                            <div className="relative flex items-center w-full">
+                                                                <select name="state" value={formData.state} onChange={handleInputChange} className="w-full outline-none bg-transparent text-[#0f3e61] font-bold cursor-pointer appearance-none pr-8">
+                                                                    <option value="">Select State</option>
+                                                                    {STATES.map(s => <option key={s} value={s}>{s}</option>)}
+                                                                </select>
+                                                                <FiChevronDown className="absolute right-0 text-slate-400 pointer-events-none" />
+                                                            </div>
+                                                        </PremiumInput>
+
+                                                        <PremiumInput label="District *">
+                                                            <div className="relative flex items-center w-full">
+                                                                <select name="district" value={formData.district} onChange={handleInputChange} disabled={!formData.state} className="w-full outline-none bg-transparent text-[#0f3e61] font-bold cursor-pointer appearance-none disabled:opacity-50 pr-8">
+                                                                    <option value="">Select District</option>
+                                                                    {formData.state && (LOCATION_DATA[formData.state] || []).map(d => (
+                                                                        <option key={d} value={d}>{d}</option>
+                                                                    ))}
+                                                                    {formData.district && formData.state && LOCATION_DATA[formData.state] && !LOCATION_DATA[formData.state].includes(formData.district) && (
+                                                                        <option value={formData.district}>{formData.district}</option>
+                                                                    )}
+                                                                </select>
+                                                                <FiChevronDown className="absolute right-0 text-slate-400 pointer-events-none" />
+                                                            </div>
+                                                        </PremiumInput>
+
+                                                        <PremiumInput label="Pincode *">
+                                                            <div className="relative flex items-center w-full">
+                                                                {pincodeList.length > 0 ? (
+                                                                    <div className="w-full relative">
+                                                                        <select
+                                                                            name="pincode"
+                                                                            value={formData.pincode}
+                                                                            onChange={handleInputChange}
+                                                                            disabled={!formData.district || isPincodeLoading}
+                                                                            className="w-full outline-none bg-transparent text-[#0f3e61] font-bold cursor-pointer appearance-none disabled:opacity-50 pr-8"
+                                                                        >
+                                                                            <option value="">{isPincodeLoading ? 'Loading...' : 'Select Pincode'}</option>
+                                                                            {pincodeList.map(p => (
+                                                                                <option key={p} value={p}>{p}</option>
+                                                                            ))}
+                                                                            <option value="manual">Enter Manually</option>
+                                                                        </select>
+                                                                        <FiChevronDown className="absolute right-0 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                                                                    </div>
+                                                                ) : (
+                                                                    <input
+                                                                        type="text"
+                                                                        name="pincode"
+                                                                        value={formData.pincode === 'manual' ? '' : formData.pincode}
+                                                                        onChange={handleInputChange}
+                                                                        placeholder={isPincodeLoading ? 'Loading...' : 'Enter Pincode'}
+                                                                        disabled={!formData.district || isPincodeLoading}
+                                                                        className="w-full outline-none text-[#0f3e61] font-bold bg-transparent placeholder:font-normal"
+                                                                    />
+                                                                )}
+                                                                {isPincodeLoading && (
+                                                                    <FiLoader className="absolute right-0 text-[#207DC0] animate-spin" />
+                                                                )}
+                                                            </div>
+                                                        </PremiumInput>
+
+                                                        <PremiumInput label="Town / Locality *">
+                                                            <div className="relative flex items-center w-full">
+                                                                {localityList.length > 0 ? (
+                                                                    <div className="w-full relative">
+                                                                        <select
+                                                                            name="city"
+                                                                            value={formData.city}
+                                                                            onChange={handleInputChange}
+                                                                            disabled={!formData.pincode || isLocalityLoading}
+                                                                            className="w-full outline-none bg-transparent text-[#0f3e61] font-bold cursor-pointer appearance-none disabled:opacity-50 pr-8"
+                                                                        >
+                                                                            <option value="">{isLocalityLoading ? 'Loading...' : 'Select Locality'}</option>
+                                                                            {localityList.map(l => (
+                                                                                <option key={l.name} value={l.name}>{l.name}</option>
+                                                                            ))}
+                                                                            <option value="manual">Enter Manually</option>
+                                                                        </select>
+                                                                        <FiChevronDown className="absolute right-0 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                                                                    </div>
+                                                                ) : (
+                                                                    <input
+                                                                        type="text"
+                                                                        name="city"
+                                                                        value={formData.city === 'manual' ? '' : formData.city}
+                                                                        onChange={handleInputChange}
+                                                                        placeholder={isLocalityLoading ? 'Loading...' : 'Village/Town Name'}
+                                                                        disabled={!formData.pincode || isLocalityLoading}
+                                                                        className="w-full outline-none text-[#0f3e61] font-bold bg-transparent placeholder:font-normal"
+                                                                    />
+                                                                )}
+                                                                {isLocalityLoading && (
+                                                                    <FiLoader className="absolute right-0 text-[#207DC0] animate-spin" />
+                                                                )}
+                                                            </div>
+                                                        </PremiumInput>
 
                                                         <PremiumInput label="House / Flat No.">
                                                             <input name="houseNo" value={formData.houseNo} onChange={handleInputChange} className="w-full outline-none text-[#0f3e61] font-semibold bg-transparent" placeholder="A-101" />
                                                         </PremiumInput>
+
                                                         <PremiumInput label="Street / Colony">
                                                             <input name="street" value={formData.street} onChange={handleInputChange} className="w-full outline-none text-[#0f3e61] font-semibold bg-transparent" placeholder="Main Street" />
                                                         </PremiumInput>
 
-                                                        <PremiumInput label="City">
-                                                            <input name="city" value={formData.city} onChange={handleInputChange} className="w-full outline-none text-[#0f3e61] font-semibold bg-transparent" placeholder="City" />
-                                                        </PremiumInput>
-                                                        <PremiumInput label="State">
-                                                            <input name="state" value={formData.state} onChange={handleInputChange} className="w-full outline-none text-[#0f3e61] font-semibold bg-transparent" placeholder="State" />
+                                                        <PremiumInput label="Latitude">
+                                                            <input name="lat" value={formData.lat} onChange={handleInputChange} className="w-full outline-none text-[#0f3e61] font-semibold bg-transparent" placeholder="e.g. 12.9716" />
                                                         </PremiumInput>
 
-                                                        <PremiumInput label="Pincode">
-                                                            <input name="pincode" value={formData.pincode} onChange={handleInputChange} className="w-full outline-none text-[#0f3e61] font-semibold bg-transparent" placeholder="000000" />
+                                                        <PremiumInput label="Longitude">
+                                                            <input name="lng" value={formData.lng} onChange={handleInputChange} className="w-full outline-none text-[#0f3e61] font-semibold bg-transparent" placeholder="e.g. 77.5946" />
                                                         </PremiumInput>
+
                                                         <PremiumInput label="Country">
-                                                            <input name="country" value={formData.country} onChange={handleInputChange} className="w-full outline-none text-[#0f3e61] font-semibold bg-transparent" />
+                                                            <input name="country" value={formData.country} onChange={handleInputChange} className="w-full outline-none text-[#0f3e61] font-semibold bg-transparent opacity-50" readOnly />
                                                         </PremiumInput>
+
+                                                        {/* Location Preview & Map Section */}
+                                                        {(formData.city || formData.pincode || formData.district || formData.state) && (
+                                                            <motion.div
+                                                                initial={{ opacity: 0, scale: 0.95 }}
+                                                                animate={{ opacity: 1, scale: 1 }}
+                                                                className="md:col-span-2 mt-6 p-6 rounded-3xl bg-white border-2 border-slate-200/60 shadow-2xl shadow-slate-200/50 overflow-hidden"
+                                                            >
+                                                                <div className="flex flex-col md:flex-row gap-8">
+                                                                    {/* Premium Summary Card (Matches User Reference Image) */}
+                                                                    <div className="flex-1 space-y-4">
+                                                                        <div className="flex justify-between items-center pb-2 border-b-2 border-slate-100">
+                                                                            <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-widest">TOWN / LOCALITY</span>
+                                                                            <span className="text-[#0f3e61] font-bold text-sm text-right">{formData.town || formData.city || '---'}</span>
+                                                                        </div>
+                                                                        <div className="flex justify-between items-center pb-2 border-b-2 border-slate-100">
+                                                                            <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-widest">DISTRICT</span>
+                                                                            <span className="text-[#0f3e61] font-bold text-sm text-right">{formData.district || '---'}</span>
+                                                                        </div>
+                                                                        <div className="flex justify-between items-center pb-2 border-b-2 border-slate-100">
+                                                                            <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-widest">STATE</span>
+                                                                            <span className="text-[#0f3e61] font-bold text-sm text-right">{formData.state || '---'}</span>
+                                                                        </div>
+                                                                        <div className="flex justify-between items-center pb-2 border-b-2 border-slate-100">
+                                                                            <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-widest">PINCODE</span>
+                                                                            <span className="text-[#0f3e61] font-bold text-sm text-right">{formData.pincode || '---'}</span>
+                                                                        </div>
+                                                                        <div className="flex justify-between items-center pb-2 border-b-2 border-slate-100">
+                                                                            <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-widest">LATITUDE</span>
+                                                                            <span className="text-[#0f3e61] font-bold text-sm text-right">{formData.lat || '---'}</span>
+                                                                        </div>
+                                                                        <div className="flex justify-between items-center pb-2 border-b-2 border-slate-100">
+                                                                            <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-widest">LONGITUDE</span>
+                                                                            <span className="text-[#0f3e61] font-bold text-sm text-right">{formData.lng || '---'}</span>
+                                                                        </div>
+                                                                        <div className="flex justify-between items-center">
+                                                                            <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-widest">COUNTRY</span>
+                                                                            <span className="text-[#0f3e61] font-bold text-sm text-right">{formData.country || 'India'}</span>
+                                                                        </div>
+
+                                                                        {formData.city && formData.pincode && (
+                                                                            <div className="pt-4">
+                                                                                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 text-emerald-600 border-2 border-emerald-100">
+                                                                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                                                                    <span className="text-[10px] font-bold uppercase tracking-wider">Location Verified</span>
+                                                                                </div>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+
+                                                                    {/* Interactive Map Preview */}
+                                                                    <div className="flex-[1.5] h-56 rounded-2xl overflow-hidden border-2 border-slate-200 bg-slate-50 shadow-inner relative group">
+                                                                        {formData.state ? (
+                                                                            <iframe
+                                                                                title="Location Map"
+                                                                                width="100%"
+                                                                                height="100%"
+                                                                                style={{ border: 0 }}
+                                                                                loading="lazy"
+                                                                                allowFullScreen
+                                                                                src={formData.lat && formData.lng ? (
+                                                                                    `https://maps.google.com/maps?q=${formData.lat},${formData.lng}&t=&z=15&ie=UTF8&iwloc=&output=embed`
+                                                                                ) : (
+                                                                                    `https://maps.google.com/maps?q=${encodeURIComponent(
+                                                                                        `${formData.pincode || ''}, ${formData.district || ''}, ${formData.state}, India`
+                                                                                    )}&t=&z=14&ie=UTF8&iwloc=&output=embed`
+                                                                                )}
+                                                                            ></iframe>
+                                                                        ) : (
+                                                                            <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 p-4 text-center">
+                                                                                <MdLocationOn className="text-3xl mb-2 opacity-20" />
+                                                                                <p className="text-xs font-semibold">Select an address to see the map</p>
+                                                                            </div>
+                                                                        )}
+                                                                        {/* External Map Link Overlay */}
+                                                                        {formData.state && (
+                                                                            <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                                <a
+                                                                                    href={formData.lat && formData.lng ? (
+                                                                                        `https://www.google.com/maps/search/?api=1&query=${formData.lat},${formData.lng}`
+                                                                                    ) : (
+                                                                                        `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                                                                                            `${formData.city || ''} ${formData.district || ''} ${formData.state} ${formData.pincode} India`
+                                                                                        )}`
+                                                                                    )}
+                                                                                    target="_blank"
+                                                                                    rel="noopener noreferrer"
+                                                                                    className="bg-white/90 backdrop-blur-sm text-[#207DC0] p-2 rounded-lg shadow-lg hover:bg-[#207DC0] hover:text-white transition-all flex items-center gap-2 text-[10px] font-black uppercase tracking-tighter"
+                                                                                >
+                                                                                    <MdLocationOn className="text-sm" /> View on Maps
+                                                                                </a>
+                                                                            </div>
+                                                                        )}
+                                                                        {/* Visual Overlay for 'Outer Lines' effect */}
+                                                                        <div className="absolute inset-0 pointer-events-none ring-2 ring-inset ring-slate-400/20 rounded-2xl" />
+                                                                    </div>
+                                                                </div>
+                                                            </motion.div>
+                                                        )}
                                                     </div>
                                                 )}
 
                                                 {/* Step 2: Medical & Vitals */}
                                                 {currentStep === 2 && (
                                                     <div className="space-y-8">
+
+                                                        {/* Document Type Selector */}
+                                                        <div className="bg-white border border-[#207DC0]/20 rounded-xl p-5">
+                                                            <h4 className="text-[#0f3e61] font-bold mb-3 flex items-center gap-2 text-sm">
+                                                                <MdDescription className="text-[#207DC0]" />
+                                                                Select Document Type
+                                                            </h4>
+                                                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                                                {[
+                                                                    { 
+                                                                        type: 'PRESCRIPTION', 
+                                                                        label: 'Prescription', 
+                                                                        icon: MdLocalPharmacy,
+                                                                        color: '#10b981',
+                                                                        bgColor: '#d1fae5',
+                                                                        description: 'Doctor\'s prescription with medicines'
+                                                                    },
+                                                                    { 
+                                                                        type: 'LAB_REPORT', 
+                                                                        label: 'Lab Report', 
+                                                                        icon: MdScience,
+                                                                        color: '#3b82f6',
+                                                                        bgColor: '#dbeafe',
+                                                                        description: 'Laboratory test results'
+                                                                    },
+                                                                    { 
+                                                                        type: 'MEDICAL_HISTORY', 
+                                                                        label: 'Medical History', 
+                                                                        icon: MdMedicalServices,
+                                                                        color: '#8b5cf6',
+                                                                        bgColor: '#ede9fe',
+                                                                        description: 'Hospital discharge or medical history'
+                                                                    }
+                                                                ].map((docType) => {
+                                                                    const Icon = docType.icon;
+                                                                    const isSelected = selectedDocumentType === docType.type;
+                                                                    
+                                                                    return (
+                                                                        <button
+                                                                            key={docType.type}
+                                                                            type="button"
+                                                                            onClick={() => setSelectedDocumentType(docType.type)}
+                                                                            className={`relative p-4 rounded-lg border-2 transition-all duration-300 text-left group hover:scale-105 ${
+                                                                                isSelected 
+                                                                                    ? 'border-[#207DC0] bg-[#ecf6ff] shadow-lg' 
+                                                                                    : 'border-slate-200 bg-white hover:border-[#207DC0]/50 hover:bg-[#ecf6ff]/30'
+                                                                            }`}
+                                                                        >
+                                                                            {/* Selection Indicator */}
+                                                                            {isSelected && (
+                                                                                <div className="absolute top-2 right-2 w-6 h-6 bg-[#207DC0] rounded-full flex items-center justify-center">
+                                                                                    <MdCheck className="text-white text-sm" />
+                                                                                </div>
+                                                                            )}
+                                                                            
+                                                                            {/* Icon */}
+                                                                            <div 
+                                                                                className="w-10 h-10 rounded-lg flex items-center justify-center mb-3 transition-all duration-300"
+                                                                                style={{ 
+                                                                                    backgroundColor: isSelected ? docType.color + '20' : docType.bgColor,
+                                                                                    color: docType.color
+                                                                                }}
+                                                                            >
+                                                                                <Icon size={22} />
+                                                                            </div>
+                                                                            
+                                                                            {/* Label */}
+                                                                            <h5 className={`font-bold text-sm mb-1 ${
+                                                                                isSelected ? 'text-[#207DC0]' : 'text-[#0f3e61]'
+                                                                            }`}>
+                                                                                {docType.label}
+                                                                            </h5>
+                                                                            
+                                                                            {/* Description */}
+                                                                            <p className="text-xs text-slate-500 leading-tight">
+                                                                                {docType.description}
+                                                                            </p>
+                                                                        </button>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        </div>
 
                                                         {/* Scanner Section */}
                                                         <div className="bg-[#ecf6ff] border-2 border-dashed border-[#207DC0]/30 rounded-xl p-6 text-center hover:bg-[#207DC0]/10 transition-colors cursor-pointer relative group">
@@ -606,6 +1263,7 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                                                                 onChange={handleFileUpload}
                                                                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                                                                 accept="image/*,.pdf"
+                                                                multiple
                                                                 disabled={uploading}
                                                             />
                                                             {uploading ? (
@@ -627,12 +1285,63 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                                                         {uploadedFiles.length > 0 && (
                                                             <div className="space-y-2">
                                                                 <p className="text-xs font-bold uppercase text-slate-400">Uploaded Documents</p>
-                                                                {uploadedFiles.map((file, idx) => (
-                                                                    <div key={idx} className="flex items-center justify-between bg-white border border-slate-100 p-3 rounded-lg text-sm shadow-sm">
-                                                                        <span className="truncate flex-1 font-bold text-[#0f3e61]">{file.name}</span>
-                                                                        <button onClick={() => removeUploadedFile(idx)} className="text-red-400 hover:text-red-600 p-1"><MdDelete /></button>
-                                                                    </div>
-                                                                ))}
+                                                                {uploadedFiles.map((file, idx) => {
+                                                                    // Get document type badge styling
+                                                                    const getDocTypeBadge = (type) => {
+                                                                        const badges = {
+                                                                            'PRESCRIPTION': { label: 'Prescription', color: '#10b981', bgColor: '#d1fae5', icon: MdLocalPharmacy },
+                                                                            'LAB_REPORT': { label: 'Lab Report', color: '#3b82f6', bgColor: '#dbeafe', icon: MdScience },
+                                                                            'MEDICAL_HISTORY': { label: 'Medical History', color: '#8b5cf6', bgColor: '#ede9fe', icon: MdMedicalServices }
+                                                                        };
+                                                                        return badges[type] || badges['PRESCRIPTION'];
+                                                                    };
+                                                                    
+                                                                    const badge = getDocTypeBadge(file.documentType);
+                                                                    const BadgeIcon = badge.icon;
+                                                                    
+                                                                    return (
+                                                                        <div key={`uploaded-file-${idx}-${file.name || 'unnamed'}`} className="flex items-center justify-between bg-white border border-slate-100 p-3 rounded-lg text-sm shadow-sm gap-3">
+                                                                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                                                {/* Document Type Badge */}
+                                                                                <div 
+                                                                                    className="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-semibold whitespace-nowrap"
+                                                                                    style={{ 
+                                                                                        backgroundColor: badge.bgColor,
+                                                                                        color: badge.color
+                                                                                    }}
+                                                                                >
+                                                                                    <BadgeIcon size={14} />
+                                                                                    {badge.label}
+                                                                                </div>
+                                                                                
+                                                                                {/* File Name */}
+                                                                                <span className="truncate font-bold text-[#0f3e61]">{file.name}</span>
+                                                                            </div>
+                                                                            
+                                                                            <div className="flex items-center gap-2">
+                                                                                {file.requiresVerification && file.verificationId && (
+                                                                                    <button
+                                                                                        onClick={() => {
+                                                                                            setCurrentVerificationId(file.verificationId);
+                                                                                            setVerificationModalOpen(true);
+                                                                                        }}
+                                                                                        className="flex items-center gap-1 px-3 py-1.5 bg-blue-50 text-[#207DC0] rounded-lg hover:bg-blue-100 transition-all font-bold text-xs whitespace-nowrap"
+                                                                                        title="View and verify extracted data"
+                                                                                    >
+                                                                                        <MdInfo className="text-base" /> Verify Data
+                                                                                    </button>
+                                                                                )}
+                                                                                <button 
+                                                                                    onClick={() => removeUploadedFile(idx)} 
+                                                                                    className="text-red-400 hover:text-red-600 p-1"
+                                                                                    title="Remove file"
+                                                                                >
+                                                                                    <MdDelete />
+                                                                                </button>
+                                                                            </div>
+                                                                        </div>
+                                                                    );
+                                                                })}
                                                             </div>
                                                         )}
 
@@ -644,16 +1353,16 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
 
                                                         <div className="bg-[#ecf6ff] rounded-2xl p-6 border border-blue-100/50">
                                                             <h3 className="text-[#0f3e61] font-extrabold mb-4 flex items-center gap-2 text-lg tracking-tight">
-                                                                <FiActivity className="text-xl text-[#207DC0]" /> Critical Vitals
+                                                                <FiActivity className="text-xl text-[#207DC0]" /> Critical Vitals {!patientId && <span className="text-red-500 text-xs">(Required for new patients)</span>}
                                                             </h3>
                                                             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                                                                <PremiumInput label="Height (cm)" icon={<MdHeight className="rotate-90" />}>
-                                                                    <input type="text" name="height" value={formData.height} onChange={handleInputChange} className="w-full outline-none bg-transparent font-bold text-[#0f3e61]" placeholder="0" />
+                                                                <PremiumInput label="Height (cm)" required={!patientId} error={errors.height} icon={<MdHeight className="rotate-90" />}>
+                                                                    <input type="number" name="height" value={formData.height} onChange={handleInputChange} className="w-full outline-none bg-transparent font-bold text-[#0f3e61]" placeholder="170" min="0" />
                                                                 </PremiumInput>
-                                                                <PremiumInput label="Weight (kg)" icon={<MdMonitorWeight />}>
-                                                                    <input type="text" name="weight" value={formData.weight} onChange={handleInputChange} className="w-full outline-none bg-transparent font-bold text-[#0f3e61]" placeholder="0" />
+                                                                <PremiumInput label="Weight (kg)" required={!patientId} error={errors.weight} icon={<MdMonitorWeight />}>
+                                                                    <input type="number" name="weight" value={formData.weight} onChange={handleInputChange} className="w-full outline-none bg-transparent font-bold text-[#0f3e61]" placeholder="70" min="0" />
                                                                 </PremiumInput>
-                                                                <PremiumInput label="BP (mmHg)" icon={<FiHeart />}>
+                                                                <PremiumInput label="BP (mmHg)" required={!patientId} error={errors.bp} icon={<FiHeart />}>
                                                                     <input name="bp" value={formData.bp} onChange={handleInputChange} className="w-full outline-none bg-transparent font-bold text-[#0f3e61]" placeholder="120/80" />
                                                                 </PremiumInput>
                                                                 <PremiumInput label="BMI" className={formData.bmi > 25 ? 'bg-orange-50' : ''}>
@@ -673,11 +1382,6 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                                                             <PremiumInput label="Known Conditions / History">
                                                                 <textarea name="knownConditions" value={formData.knownConditions} onChange={handleInputChange} rows={2}
                                                                     className="w-full outline-none bg-transparent resize-none text-[#0f3e61] font-semibold" placeholder="e.g. Diabetes, Hypertension..." />
-                                                            </PremiumInput>
-
-                                                            <PremiumInput label="Current Medications">
-                                                                <textarea name="currentMedications" value={formData.currentMedications} onChange={handleInputChange} rows={2}
-                                                                    className="w-full outline-none bg-transparent resize-none text-[#0f3e61] font-semibold" placeholder="e.g. Metformin 500mg..." />
                                                             </PremiumInput>
 
                                                             <PremiumInput label="Assigned Doctor" icon={<MdPerson />}>
@@ -785,6 +1489,20 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                     </style>
                 </div>
             )}
+            
+            {/* Data Verification Modal */}
+            <DataVerificationModal
+                isOpen={verificationModalOpen}
+                onClose={() => {
+                    setVerificationModalOpen(false);
+                    setCurrentVerificationId(null);
+                }}
+                verificationId={currentVerificationId}
+                onConfirm={(result) => {
+                    console.log('Data verified and saved:', result);
+                    // Optionally refresh or update UI after confirmation
+                }}
+            />
         </AnimatePresence>
     );
 };

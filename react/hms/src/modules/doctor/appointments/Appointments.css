@@ -59,7 +59,7 @@ body {
   /* Prevent horizontal scroll only */
 }
 
-.dashboard-container {
+.appointments-page.dashboard-container {
   max-width: 100%;
   padding: 16px 24px;
   /* Reduced padding */
@@ -142,38 +142,48 @@ body {
 }
 
 /* --- HEADER --- */
-.appointments-header {
+.appointments-page .appointments-header {
   background: transparent !important;
   background-color: transparent !important;
   background-image: none !important;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
   /* Center align for compactness */
-  margin-bottom: var(--space-3);
-  flex-shrink: 0;
+  margin-bottom: var(--space-3) !important;
+  flex-shrink: 0 !important;
   /* Don't shrink header */
-  min-height: 60px;
-  position: relative;
-  z-index: 5;
+  min-height: 60px !important;
+  position: relative !important;
+  z-index: 5 !important;
   padding: 0 !important;
   border-radius: 0 !important;
   box-shadow: none !important;
 }
 
-.main-title {
-  font-size: 22px;
-  /* Smaller title */
-  font-weight: 700;
-  color: #0F172A !important;
-  margin: 0;
-  letter-spacing: -0.01em;
+.appointments-page .appointments-header .header-content {
+  display: flex !important;
+  flex-direction: column !important;
 }
 
-.main-subtitle {
-  font-size: 13px;
-  color: #9CA3AF !important;
-  margin: 2px 0 0 0;
+.appointments-page .appointments-header .appointments-main-title {
+  font-size: 28px !important;
+  font-weight: 800 !important;
+  color: #0F172A !important;
+  margin: 0 !important;
+  letter-spacing: -0.04em !important;
+  line-height: 1.1 !important;
+  text-transform: uppercase !important;
+}
+
+.appointments-page .appointments-header .appointments-main-subtitle {
+  font-size: 14px !important;
+  color: #64748B !important;
+  margin: 4px 0 0 0 !important;
+  font-weight: 500 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
 }
 
 .btn-new-appointment {
@@ -774,6 +784,8 @@ body {
 .action-buttons-group {
   display: flex;
   gap: 6px;
+  align-items: center;
+  justify-content: flex-start;
 }
 
 .btn-action {
@@ -788,6 +800,9 @@ body {
   justify-content: center;
   color: var(--text-muted);
   transition: all 0.2s;
+  padding: 0;
+  margin: 0;
+  flex-shrink: 0;
 }
 
 .btn-action:hover {

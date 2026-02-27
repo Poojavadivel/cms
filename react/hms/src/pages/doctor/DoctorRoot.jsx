@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useApp } from '../../provider';
+import LogoutConfirmModal from '../../components/common/LogoutConfirmModal';
 import './DoctorRoot.css';
 import {
   MdDashboard,
@@ -22,6 +23,7 @@ const DoctorRoot = () => {
   const { user, signOut } = useApp();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   const navItems = useMemo(() => [
     { icon: <MdDashboard />, label: 'Dashboard', path: '/doctor/dashboard' },
@@ -46,6 +48,7 @@ const DoctorRoot = () => {
 
   const handleLogout = async () => {
     await signOut();
+    setShowLogoutModal(false);
     navigate('/login');
   };
 
@@ -97,7 +100,7 @@ const DoctorRoot = () => {
               </div>
               <button
                 className="logout-btn-collapsed"
-                onClick={handleLogout}
+                onClick={() => setShowLogoutModal(true)}
                 title="Logout"
               >
                 <MdLogout size={20} />
@@ -114,7 +117,7 @@ const DoctorRoot = () => {
               </div>
               <button
                 className="logout-btn"
-                onClick={handleLogout}
+                onClick={() => setShowLogoutModal(true)}
                 title="Logout"
               >
                 <MdLogout size={20} />
@@ -130,6 +133,14 @@ const DoctorRoot = () => {
 
       {/* Chatbot - Functional Medical Assistant */}
       <ChatbotFloatingButton userRole="doctor" />
+
+      {/* Logout Confirmation Modal */}
+      <LogoutConfirmModal
+        isOpen={showLogoutModal}
+        onClose={() => setShowLogoutModal(false)}
+        onConfirm={handleLogout}
+        userName={user?.fullName || user?.firstName}
+      />
     </div>
   );
 };

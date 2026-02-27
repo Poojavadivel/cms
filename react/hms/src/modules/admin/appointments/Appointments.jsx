@@ -710,8 +710,7 @@ const Appointments = () => {
       );
     }
 
-    // Sort alphabetically by patient name
-    result.sort((a, b) => a.patientName.localeCompare(b.patientName));
+    // result.sort((a, b) => a.patientName.localeCompare(b.patientName));
 
     setFilteredAppointments(result);
     setCurrentPage(1);
@@ -1192,6 +1191,7 @@ const Appointments = () => {
             console.log('Staff updated:', updatedStaff);
             // Optionally refresh appointments if needed
           }}
+          showUpdate={false}
         />
       )}
     </div>

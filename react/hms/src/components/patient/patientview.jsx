@@ -129,18 +129,18 @@ const PatientView = ({ isOpen, onClose, patientId, patient: patientProp, onEdit,
 
         // Location: prioritize street, then district/city
         let location = 'Location not set';
-        if (patient.address?.street) {
-            location = patient.address.street;
-        } else if (patient.street) {
+        if (patient.street) {
             location = patient.street;
-        } else if (patient.address?.city) {
-            location = patient.address.city;
+        } else if (patient.town) {
+            location = patient.town;
         } else if (patient.city) {
             location = patient.city;
-        } else if (patient.address?.state) {
-            location = patient.address.state;
+        } else if (patient.district) {
+            location = patient.district;
         } else if (patient.state) {
             location = patient.state;
+        } else if (patient.address && typeof patient.address === 'string') {
+            location = patient.address;
         }
 
         let occupation = patient.profession || patient.metadata?.profession || 'Not specified';
@@ -402,7 +402,7 @@ const PatientView = ({ isOpen, onClose, patientId, patient: patientProp, onEdit,
                         {/* 3. TAB CONTENT (Scrollable) */}
                         <div className="patient-tab-content">
                             {activeTab === 'profile' && <ProfileTab patient={patient} copyToClipboard={copyToClipboard} />}
-                            {activeTab === 'medical-history' && <MedicalHistoryTab patientId={patientId || patient?._id} />}
+                            {activeTab === 'medical-history' && <MedicalHistoryTab patientId={patientId || patient?._id} patient={patient} />}
                             {activeTab === 'prescription' && <PrescriptionTab patientId={patientId || patient?._id} />}
                             {activeTab === 'lab-results' && <LabResultTab patientId={patientId || patient?._id} />}
                             {activeTab === 'billings' && <BillingsTab patientId={patientId || patient?._id} />}
@@ -432,6 +432,9 @@ const ProfileTab = ({ patient, copyToClipboard }) => {
         if (address.city) {
             addressParts.push(address.city);
         }
+        if (address.district) {
+            addressParts.push(address.district);
+        }
         if (address.state) {
             addressParts.push(address.state);
         }
@@ -447,6 +450,7 @@ const ProfileTab = ({ patient, copyToClipboard }) => {
             if (patient.houseNo) addressParts.push(patient.houseNo);
             if (patient.street) addressParts.push(patient.street);
             if (patient.city) addressParts.push(patient.city);
+            if (patient.district) addressParts.push(patient.district);
             if (patient.state) addressParts.push(patient.state);
             if (patient.pincode) addressParts.push(patient.pincode);
             if (patient.country) addressParts.push(patient.country);
@@ -457,7 +461,14 @@ const ProfileTab = ({ patient, copyToClipboard }) => {
     };
 
     const openMaps = () => {
-        // Try to build address from multiple possible field locations
+        // PRIORITY 1: Precise Coordinates
+        if (patient.lat && patient.lng) {
+            const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${patient.lat},${patient.lng}`;
+            window.open(mapsUrl, '_blank');
+            return;
+        }
+
+        // PRIORITY 2: Address String Search
         let addressParts = [];
 
         // Check address object first
@@ -469,6 +480,9 @@ const ProfileTab = ({ patient, copyToClipboard }) => {
         }
         if (address.city) {
             addressParts.push(address.city);
+        }
+        if (address.district) {
+            addressParts.push(address.district);
         }
         if (address.state) {
             addressParts.push(address.state);
@@ -482,6 +496,7 @@ const ProfileTab = ({ patient, copyToClipboard }) => {
             if (patient.houseNo) addressParts.push(patient.houseNo);
             if (patient.street) addressParts.push(patient.street);
             if (patient.city) addressParts.push(patient.city);
+            if (patient.district) addressParts.push(patient.district);
             if (patient.state) addressParts.push(patient.state);
             if (patient.pincode) addressParts.push(patient.pincode);
         }
@@ -489,11 +504,11 @@ const ProfileTab = ({ patient, copyToClipboard }) => {
         const fullAddr = addressParts.join(', ').trim();
 
         if (!fullAddr || fullAddr === '') {
-            alert('No address information available to open in maps');
+            alert('No address or coordinate information available to open in maps');
             return;
         }
 
-        // Open Google Maps with the address
+        // Open Google Maps with the address query
         const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddr)}`;
         window.open(mapsUrl, '_blank');
     };
@@ -522,12 +537,17 @@ const ProfileTab = ({ patient, copyToClipboard }) => {
 
                     </div>
                     <div className="pv-info-row">
-                        <span className="pv-label">CITY</span>
+                        <span className="pv-label">TOWN / LOCALITY</span>
                         <span className="pv-value">
-                            <strong>{patient.city || patient.address?.city || 'Not Provided'}</strong>
+                            <strong>{patient.town || patient.city || 'Not Provided'}</strong>
                         </span>
+                    </div>
 
-
+                    <div className="pv-info-row">
+                        <span className="pv-label">DISTRICT</span>
+                        <span className="pv-value">
+                            <strong>{patient.district || patient.address?.district || 'Not Provided'}</strong>
+                        </span>
                     </div>
                     <div className="pv-info-row">
                         <span className="pv-label">STATE</span>
@@ -548,8 +568,30 @@ const ProfileTab = ({ patient, copyToClipboard }) => {
                         <span className="pv-value">
                             <strong>{patient.country || patient.address?.country || 'Not Provided'}</strong>
                         </span>
-
                     </div>
+
+                    {(patient.lat || patient.lng) && (
+                        <>
+                            <div className="pv-info-row mt-2 pt-2 border-t border-slate-100">
+                                <span className="pv-label uppercase tracking-widest text-[10px] opacity-70">LATITUDE</span>
+                                <span className="pv-value text-[#207DC0] font-bold">
+                                    {patient.lat || '—'}
+                                </span>
+                            </div>
+                            <div className="pv-info-row">
+                                <span className="pv-label uppercase tracking-widest text-[10px] opacity-70">LONGITUDE</span>
+                                <span className="pv-value text-[#207DC0] font-bold">
+                                    {patient.lng || '—'}
+                                </span>
+                            </div>
+                        </>
+                    )}
+
+                    {(!patient.lat || !patient.lng) && (
+                        <div className="pv-info-row mt-2 pt-2 border-t border-slate-100">
+                            <span className="pv-label uppercase tracking-widest text-[10px] opacity-70 italic text-amber-600">Note: Coordinates not stored. Map will use address search.</span>
+                        </div>
+                    )}
 
                     <div className="pv-action-buttons">
                         <button className="pv-btn-outline" onClick={copyAddress}>
@@ -591,7 +633,7 @@ const ProfileTab = ({ patient, copyToClipboard }) => {
 };
 
 // --- MEDICAL HISTORY TAB ---
-const MedicalHistoryTab = ({ patientId }) => {
+const MedicalHistoryTab = ({ patientId, patient }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [historyData, setHistoryData] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -602,7 +644,6 @@ const MedicalHistoryTab = ({ patientId }) => {
         if (patientId) {
             fetchHistory();
         } else {
-            // No patient ID available, stop loading
             setLoading(false);
             setHistoryData([]);
         }
@@ -612,56 +653,33 @@ const MedicalHistoryTab = ({ patientId }) => {
     const fetchHistory = async () => {
         setLoading(true);
         try {
-            // Fetch both appointments and scanned medical history
-            const [appointments, scannedHistory] = await Promise.all([
-                patientsService.fetchPatientAppointments(patientId),
-                prescriptionService.fetchMedicalHistory(patientId)
-            ]);
-
-            // Map backend appointments to UI fields
-            const mappedAppointments = (Array.isArray(appointments) ? appointments : []).map(apt => ({
-                id: apt._id || apt.id,
-                title: apt.condition || apt.title || apt.reason || 'Medical Checkup',
-                date: apt.startAt || (apt.appointmentDate ? `${apt.appointmentDate} ${apt.appointmentTime || ''}` : apt.date),
-                reason: apt.notes || apt.reason || '',
-                category: apt.appointmentType || apt.type || 'Consultation',
-                notes: apt.notes || '',
-                status: apt.status || 'Scheduled',
-                pdfId: apt.pdfId || (apt.metadata && apt.metadata.pdfId),
-                type: 'appointment'
-            }));
-
-            // Map scanned history records
-            const mappedScanned = (Array.isArray(scannedHistory) ? scannedHistory : []).map(record => ({
-                id: record._id || record.id,
-                title: record.title || 'Scanned Record',
-                date: record.recordDate || record.reportDate || record.uploadDate,
-                reason: record.diagnosis || record.notes || '',
-                category: record.category || record.intent || 'Medical History',
-                notes: record.notes || record.diagnosis || '',
-                pdfId: record.pdfId,
-                type: 'scanned'
-            }));
-
-            // Combine and sort by date descending
-            const combined = [...mappedAppointments, ...mappedScanned].sort((a, b) => {
-                const dateA = new Date(a.date || 0);
-                const dateB = new Date(b.date || 0);
-                return dateB - dateA;
-            });
-
-            setHistoryData(combined);
+            console.log('[MEDICAL_HISTORY_TAB] 🔍 Fetching medical history for:', patientId);
+            const data = await prescriptionService.fetchMedicalHistory(patientId);
+            console.log('[MEDICAL_HISTORY_TAB] ✅ Received:', data?.length || 0, 'records');
+            console.log('[MEDICAL_HISTORY_TAB] 📋 Sample data:', data?.[0]);
+            setHistoryData(Array.isArray(data) ? data : []);
         } catch (error) {
-            console.error('Failed to fetch medical history:', error);
+            console.error('[MEDICAL_HISTORY_TAB] ❌ Failed to fetch history:', error);
             setHistoryData([]);
         } finally {
             setLoading(false);
         }
     };
 
-    // Optional simple search (title / reason)
+    const formatDateTime = (date) => {
+        if (!date) return '—';
+        const d = new Date(date);
+        return d.toLocaleString('en-US', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    };
+
     const filteredData = historyData.filter(item =>
-        (item.reason || item.title || '')
+        (item.medicalHistory || item.hospitalName || item.doctorName || '')
             .toLowerCase()
             .includes(searchTerm.toLowerCase())
     );
@@ -702,10 +720,11 @@ const MedicalHistoryTab = ({ patientId }) => {
                 <table className="pv-table">
                     <thead>
                         <tr>
-                            <th>Title</th>
-                            <th>Date</th>
-                            <th>Category</th>
-                            <th>Notes</th>
+                            <th>S.No</th>
+                            <th>Date and Time</th>
+                            <th>Hospital</th>
+                            <th>Doctor</th>
+                            <th>Summary</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -714,7 +733,7 @@ const MedicalHistoryTab = ({ patientId }) => {
                         {/* Loading */}
                         {loading && (
                             <tr>
-                                <td colSpan="5" className="text-center">
+                                <td colSpan="6" className="text-center">
                                     Loading medical history...
                                 </td>
                             </tr>
@@ -723,7 +742,7 @@ const MedicalHistoryTab = ({ patientId }) => {
                         {/* No Data */}
                         {!loading && filteredData.length === 0 && (
                             <tr>
-                                <td colSpan="5" className="text-center">
+                                <td colSpan="6" className="text-center">
                                     No Records Found
                                 </td>
                             </tr>
@@ -733,47 +752,27 @@ const MedicalHistoryTab = ({ patientId }) => {
                         {!loading &&
                             filteredData.map((item, index) => (
                                 <tr key={index}>
-                                    <td>
-                                        {item.title || item.reason || 'General Checkup'}
+                                    <td>{index + 1}</td>
+                                    <td>{formatDateTime(item.recordDate || item.uploadDate)}</td>
+                                    <td>{item.hospitalName || '—'}</td>
+                                    <td>{item.doctorName || '—'}</td>
+                                    <td className="pv-td-notes" style={{ maxWidth: '300px', whiteSpace: 'normal', wordWrap: 'break-word' }}>
+                                        {item.medicalHistory || item.diagnosis || '—'}
                                     </td>
                                     <td>
-                                        {item.date
-                                            ? new Date(item.date).toLocaleDateString()
-                                            : item.createdAt
-                                                ? new Date(item.createdAt).toLocaleDateString()
-                                                : '—'}
-                                    </td>
-                                    <td>
-                                        {item.category || item.speciality || 'General'}
-                                    </td>
-                                    <td className="pv-td-notes">
-                                        {item.notes || item.description || '—'}
-                                    </td>
-                                    <td>
-                                        {item.pdfId ? (
-                                            <button
-                                                className="pv-btn-action-circle"
-                                                onClick={() => reportService.viewPdf(item.pdfId)}
-                                                title="View Document"
-                                            >
-                                                <MdPictureAsPdf className="icon-red" />
-                                            </button>
-                                        ) : (
-                                            <button
-                                                className="pv-btn-action-circle"
-                                                title="View Details"
-                                                onClick={() => handleViewDetails(item)}
-                                            >
-                                                <MdVisibility />
-                                            </button>
-                                        )}
+                                        <button
+                                            className="pv-btn-action-circle"
+                                            onClick={() => item.pdfId ? reportService.viewPdf(item.pdfId) : handleViewDetails(item)}
+                                            title="View Details"
+                                        >
+                                            <MdVisibility />
+                                        </button>
                                     </td>
                                 </tr>
                             ))}
                     </tbody>
                 </table>
             </div>
-
 
             {/* Medical History Detail Modal */}
             {showDetailModal && selectedItem && (
@@ -795,23 +794,12 @@ const MedicalHistoryTab = ({ patientId }) => {
                     onClick={handleCloseDetailModal}
                 >
                     <div
+                        className="actions-detail-modal"
                         onClick={(e) => e.stopPropagation()}
-                        style={{
-                            backgroundColor: 'white',
-                            borderRadius: '16px',
-                            width: '90%',
-                            maxWidth: '700px',
-                            maxHeight: '85vh',
-                            overflow: 'hidden',
-                            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            animation: 'slideUp 0.3s ease-out'
-                        }}
                     >
                         {/* Modal Header */}
                         <div style={{
-                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                            background: 'linear-gradient(135deg, #207DC0 0%, #165a8a 100%)',
                             padding: '24px 28px',
                             display: 'flex',
                             justifyContent: 'space-between',
@@ -828,14 +816,6 @@ const MedicalHistoryTab = ({ patientId }) => {
                                 }}>
                                     Medical History Details
                                 </h2>
-                                <p style={{
-                                    margin: '4px 0 0 0',
-                                    fontSize: '13px',
-                                    color: 'rgba(255, 255, 255, 0.85)',
-                                    fontWeight: '400'
-                                }}>
-                                    {selectedItem.type === 'appointment' ? 'Appointment Record' : 'Scanned Medical Record'}
-                                </p>
                             </div>
                             <button
                                 onClick={handleCloseDetailModal}
@@ -853,8 +833,6 @@ const MedicalHistoryTab = ({ patientId }) => {
                                     transition: 'all 0.2s',
                                     backdropFilter: 'blur(10px)'
                                 }}
-                                onMouseEnter={(e) => e.target.style.background = 'rgba(255, 255, 255, 0.3)'}
-                                onMouseLeave={(e) => e.target.style.background = 'rgba(255, 255, 255, 0.2)'}
                             >
                                 <MdClose size={24} />
                             </button>
@@ -866,28 +844,7 @@ const MedicalHistoryTab = ({ patientId }) => {
                             overflowY: 'auto',
                             flex: 1
                         }}>
-                            {/* Title Card */}
-                            <div style={{
-                                background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
-                                padding: '20px',
-                                borderRadius: '12px',
-                                marginBottom: '24px',
-                                border: '1px solid #e2e8f0'
-                            }}>
-                                <h3 style={{
-                                    margin: 0,
-                                    fontSize: '18px',
-                                    fontWeight: '600',
-                                    color: '#1e293b',
-                                    lineHeight: '1.4'
-                                }}>
-                                    {selectedItem.title || 'Medical Record'}
-                                </h3>
-                            </div>
-
-                            {/* Details Grid */}
                             <div style={{ display: 'grid', gap: '20px' }}>
-                                {/* Date */}
                                 <div style={{
                                     display: 'flex',
                                     alignItems: 'flex-start',
@@ -896,17 +853,6 @@ const MedicalHistoryTab = ({ patientId }) => {
                                     borderRadius: '10px',
                                     border: '1px solid #e2e8f0'
                                 }}>
-                                    <div style={{
-                                        background: '#207DC0',
-                                        borderRadius: '8px',
-                                        padding: '10px',
-                                        marginRight: '16px',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center'
-                                    }}>
-                                        <MdCalendarToday size={20} color="white" />
-                                    </div>
                                     <div style={{ flex: 1 }}>
                                         <div style={{
                                             fontSize: '12px',
@@ -923,8 +869,8 @@ const MedicalHistoryTab = ({ patientId }) => {
                                             fontWeight: '600',
                                             color: '#1e293b'
                                         }}>
-                                            {selectedItem.date
-                                                ? new Date(selectedItem.date).toLocaleDateString('en-US', {
+                                            {selectedItem.recordDate
+                                                ? new Date(selectedItem.recordDate).toLocaleDateString('en-US', {
                                                     weekday: 'long',
                                                     year: 'numeric',
                                                     month: 'long',
@@ -936,7 +882,6 @@ const MedicalHistoryTab = ({ patientId }) => {
                                     </div>
                                 </div>
 
-                                {/* Category */}
                                 <div style={{
                                     display: 'flex',
                                     alignItems: 'flex-start',
@@ -945,17 +890,6 @@ const MedicalHistoryTab = ({ patientId }) => {
                                     borderRadius: '10px',
                                     border: '1px solid #e2e8f0'
                                 }}>
-                                    <div style={{
-                                        background: '#207DC0',
-                                        borderRadius: '8px',
-                                        padding: '10px',
-                                        marginRight: '16px',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center'
-                                    }}>
-                                        <MdMedicalServices size={20} color="white" />
-                                    </div>
                                     <div style={{ flex: 1 }}>
                                         <div style={{
                                             fontSize: '12px',
@@ -965,53 +899,48 @@ const MedicalHistoryTab = ({ patientId }) => {
                                             letterSpacing: '0.5px',
                                             marginBottom: '4px'
                                         }}>
-                                            Category
+                                            Hospital
                                         </div>
                                         <div style={{
                                             fontSize: '15px',
                                             fontWeight: '600',
                                             color: '#1e293b'
                                         }}>
-                                            {selectedItem.category || 'General'}
+                                            {selectedItem.hospitalName || 'Not specified'}
                                         </div>
                                     </div>
                                 </div>
 
-                                {/* Reason (if available) */}
-                                {selectedItem.reason && (
-                                    <div style={{
-                                        padding: '16px',
-                                        background: '#fef3c7',
-                                        borderRadius: '10px',
-                                        border: '1px solid #fbbf24'
-                                    }}>
+                                <div style={{
+                                    display: 'flex',
+                                    alignItems: 'flex-start',
+                                    padding: '16px',
+                                    background: '#f8fafc',
+                                    borderRadius: '10px',
+                                    border: '1px solid #e2e8f0'
+                                }}>
+                                    <div style={{ flex: 1 }}>
                                         <div style={{
                                             fontSize: '12px',
                                             fontWeight: '600',
-                                            color: '#92400e',
+                                            color: '#64748b',
                                             textTransform: 'uppercase',
                                             letterSpacing: '0.5px',
-                                            marginBottom: '8px',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '6px'
+                                            marginBottom: '4px'
                                         }}>
-                                            <MdDescription size={16} />
-                                            Reason / Chief Complaint
+                                            Doctor
                                         </div>
                                         <div style={{
-                                            fontSize: '14px',
-                                            color: '#78350f',
-                                            lineHeight: '1.6',
-                                            fontWeight: '500'
+                                            fontSize: '15px',
+                                            fontWeight: '600',
+                                            color: '#1e293b'
                                         }}>
-                                            {selectedItem.reason}
+                                            {selectedItem.doctorName || 'Not specified'}
                                         </div>
                                     </div>
-                                )}
+                                </div>
 
-                                {/* Notes (if available) */}
-                                {selectedItem.notes && (
+                                {selectedItem.medicalHistory && (
                                     <div style={{
                                         padding: '16px',
                                         background: '#f0fdf4',
@@ -1024,13 +953,9 @@ const MedicalHistoryTab = ({ patientId }) => {
                                             color: '#166534',
                                             textTransform: 'uppercase',
                                             letterSpacing: '0.5px',
-                                            marginBottom: '8px',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '6px'
+                                            marginBottom: '8px'
                                         }}>
-                                            <MdDescription size={16} />
-                                            Clinical Notes
+                                            Medical Summary
                                         </div>
                                         <div style={{
                                             fontSize: '14px',
@@ -1039,41 +964,7 @@ const MedicalHistoryTab = ({ patientId }) => {
                                             whiteSpace: 'pre-wrap',
                                             fontWeight: '400'
                                         }}>
-                                            {selectedItem.notes}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Status (if available) */}
-                                {selectedItem.status && (
-                                    <div style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'space-between',
-                                        padding: '16px',
-                                        background: '#f8fafc',
-                                        borderRadius: '10px',
-                                        border: '1px solid #e2e8f0'
-                                    }}>
-                                        <div style={{
-                                            fontSize: '12px',
-                                            fontWeight: '600',
-                                            color: '#64748b',
-                                            textTransform: 'uppercase',
-                                            letterSpacing: '0.5px'
-                                        }}>
-                                            Status
-                                        </div>
-                                        <div style={{
-                                            padding: '6px 16px',
-                                            borderRadius: '20px',
-                                            fontSize: '13px',
-                                            fontWeight: '600',
-                                            background: selectedItem.status === 'Completed' ? '#dcfce7' : '#fef3c7',
-                                            color: selectedItem.status === 'Completed' ? '#166534' : '#92400e',
-                                            border: `1px solid ${selectedItem.status === 'Completed' ? '#86efac' : '#fbbf24'}`
-                                        }}>
-                                            {selectedItem.status}
+                                            {selectedItem.medicalHistory}
                                         </div>
                                     </div>
                                 )}
@@ -1103,36 +994,11 @@ const MedicalHistoryTab = ({ patientId }) => {
                                     boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
                                     transition: 'all 0.2s'
                                 }}
-                                onMouseEnter={(e) => {
-                                    e.target.style.transform = 'translateY(-2px)';
-                                    e.target.style.boxShadow = '0 10px 15px -3px rgba(0, 0, 0, 0.2)';
-                                }}
-                                onMouseLeave={(e) => {
-                                    e.target.style.transform = 'translateY(0)';
-                                    e.target.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1)';
-                                }}
                             >
                                 Close
                             </button>
                         </div>
                     </div>
-
-                    <style>{`
-                        @keyframes fadeIn {
-                            from { opacity: 0; }
-                            to { opacity: 1; }
-                        }
-                        @keyframes slideUp {
-                            from { 
-                                opacity: 0;
-                                transform: translateY(20px);
-                            }
-                            to { 
-                                opacity: 1;
-                                transform: translateY(0);
-                            }
-                        }
-                    `}</style>
                 </div>
             )}
         </div>
@@ -1144,6 +1010,7 @@ const MedicalHistoryTab = ({ patientId }) => {
 const PrescriptionTab = ({ patientId }) => {
     const [prescriptions, setPrescriptions] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState('');
 
     useEffect(() => {
         if (patientId) {
@@ -1159,40 +1026,36 @@ const PrescriptionTab = ({ patientId }) => {
     const fetchPrescriptionsData = async () => {
         setLoading(true);
         try {
-            const data = await patientsService.fetchPatientPrescriptions(patientId);
-
-            // Flatten PharmacyRecord items to individual prescription rows
-            const flattenedPrescriptions = [];
-            if (Array.isArray(data)) {
-                data.forEach(record => {
-                    if (record.items && Array.isArray(record.items)) {
-                        record.items.forEach(item => {
-                            flattenedPrescriptions.push({
-                                medicationName: item.name || item.Medicine || '',
-                                medicine: item.name || item.Medicine || '',
-                                dosage: item.dosage || item.Dosage || '',
-                                frequency: item.frequency || item.Frequency || '',
-                                duration: item.duration || item.Duration || '',
-                                instructions: item.notes || item.Notes || '',
-                                createdAt: record.createdAt || record.date,
-                                pdfId: record.pdfId || null,
-                                recordId: record._id || record.id,
-                                quantity: item.quantity,
-                                unitPrice: item.unitPrice
-                            });
-                        });
-                    }
-                });
-            }
-
-            setPrescriptions(flattenedPrescriptions);
+            console.log('[PRESCRIPTION_TAB] 🔍 Fetching prescriptions for:', patientId);
+            const data = await prescriptionService.fetchPrescriptions(patientId);
+            console.log('[PRESCRIPTION_TAB] ✅ Received:', data?.length || 0, 'prescriptions');
+            console.log('[PRESCRIPTION_TAB] 📋 Sample prescription:', data?.[0]);
+            setPrescriptions(Array.isArray(data) ? data : []);
         } catch (error) {
-            console.error('Failed to fetch prescriptions:', error);
+            console.error('[PRESCRIPTION_TAB] ❌ Failed to fetch prescriptions:', error);
             setPrescriptions([]);
         } finally {
             setLoading(false);
         }
     };
+
+    const formatDateTime = (date) => {
+        if (!date) return '—';
+        const d = new Date(date);
+        return d.toLocaleString('en-US', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    };
+
+    const filteredPrescriptions = prescriptions.filter(item =>
+        (item.doctorName || item.hospitalName || item.diagnosis || '')
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase())
+    );
 
     return (
         <div className="pv-tab-container">
@@ -1205,7 +1068,12 @@ const PrescriptionTab = ({ patientId }) => {
                     </button>
                     <div className="pv-search-box">
                         <MdSearch />
-                        <input type="text" placeholder="Search..." />
+                        <input 
+                            type="text" 
+                            placeholder="Search..." 
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
                     </div>
                 </div>
             </div>
@@ -1215,13 +1083,12 @@ const PrescriptionTab = ({ patientId }) => {
                 <table className="pv-table">
                     <thead>
                         <tr>
-                            <th>Medicine</th>
-                            <th>Dosage</th>
-                            <th>Frequency</th>
-                            <th>Duration</th>
-                            <th>Instructions</th>
-                            <th>Date</th>
-                            <th>Actions</th>
+                            <th>S.No</th>
+                            <th>Date and Time</th>
+                            <th>Hospital</th>
+                            <th>Doctor</th>
+                            <th>Reason</th>
+                            <th>Action</th>
                         </tr>
                     </thead>
 
@@ -1229,16 +1096,16 @@ const PrescriptionTab = ({ patientId }) => {
                         {/* Loading */}
                         {loading && (
                             <tr>
-                                <td colSpan="7" className="text-center">
+                                <td colSpan="6" className="text-center">
                                     Loading prescriptions...
                                 </td>
                             </tr>
                         )}
 
                         {/* No Data */}
-                        {!loading && prescriptions.length === 0 && (
+                        {!loading && filteredPrescriptions.length === 0 && (
                             <tr>
-                                <td colSpan="7" className="text-center">
+                                <td colSpan="6" className="text-center">
                                     No Prescriptions Found
                                 </td>
                             </tr>
@@ -1246,37 +1113,24 @@ const PrescriptionTab = ({ patientId }) => {
 
                         {/* Data Rows */}
                         {!loading &&
-                            prescriptions.map((item, idx) => (
+                            filteredPrescriptions.map((item, idx) => (
                                 <tr key={idx}>
-                                    <td>
-                                        <strong>
-                                            {item.medicationName || item.medicine || '—'}
-                                        </strong>
-                                    </td>
-                                    <td>{item.dosage || '—'}</td>
-                                    <td>{item.frequency || '—'}</td>
-                                    <td>{item.duration ? `${item.duration} days` : '—'}</td>
-
-                                    <td>{item.instructions || '—'}</td>
-                                    <td>
-                                        {item.createdAt
-                                            ? new Date(item.createdAt).toLocaleDateString()
-                                            : '—'}
+                                    <td>{idx + 1}</td>
+                                    <td>{formatDateTime(item.prescriptionDate || item.uploadDate)}</td>
+                                    <td>{item.hospitalName || '—'}</td>
+                                    <td>{item.doctorName || '—'}</td>
+                                    <td style={{ maxWidth: '300px', whiteSpace: 'normal', wordWrap: 'break-word' }}>
+                                        {item.prescriptionSummary || item.diagnosis || '—'}
                                     </td>
                                     <td>
-                                        {item.pdfId ? (
-                                            <button
-                                                className="pv-btn-action-circle"
-                                                onClick={() => reportService.viewPdf(item.pdfId)}
-                                                title="View Prescription"
-                                            >
-                                                <MdPictureAsPdf className="icon-red" />
-                                            </button>
-                                        ) : (
-                                            <button className="pv-btn-action-circle" title="View Details">
-                                                <MdVisibility />
-                                            </button>
-                                        )}
+                                        <button
+                                            className="pv-btn-action-circle"
+                                            onClick={() => item.pdfId ? reportService.viewPdf(item.pdfId) : null}
+                                            disabled={!item.pdfId}
+                                            title="View Prescription"
+                                        >
+                                            <MdVisibility />
+                                        </button>
                                     </td>
                                 </tr>
                             ))}
@@ -1424,19 +1278,9 @@ const LabResultTab = ({ patientId }) => {
                                                     className="pv-btn-action-circle"
                                                     onClick={() => reportService.viewPdf(item.pdfId || item.fileRef)}
                                                     title="View Report"
-                                                    style={{ color: '#7c3aed' }}
-                                                >
-                                                    <MdVisibility size={18} />
-                                                </button>
-                                            )}
-                                            {(item.fileRef || item._id || item.id) && (
-                                                <button
-                                                    className="pv-btn-action-circle"
-                                                    onClick={() => pathologyService.downloadReport(item._id || item.id, item.testName || 'LabReport')}
-                                                    title="Download Lab Report"
                                                     style={{ color: '#207DC0' }}
                                                 >
-                                                    <MdPictureAsPdf size={18} />
+                                                    <MdVisibility size={18} />
                                                 </button>
                                             )}
                                             {!(item.pdfId || item.fileRef || item._id || item.id) && (

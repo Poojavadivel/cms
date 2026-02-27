@@ -53,7 +53,7 @@ const PharmacistDashboard = () => {
     try {
       // Load medicines
       const medicinesResponse = await authService.get('/pharmacy/medicines?limit=100');
-      
+
       // Normalize medicines response
       let medicinesData = [];
       if (Array.isArray(medicinesResponse)) {
@@ -61,7 +61,7 @@ const PharmacistDashboard = () => {
       } else if (medicinesResponse && typeof medicinesResponse === 'object') {
         medicinesData = medicinesResponse.medicines || medicinesResponse.data || [];
       }
-      
+
       // Load batches
       const batchResponse = await authService.get('/pharmacy/batches?limit=100');
       let batchList = [];
@@ -70,23 +70,23 @@ const PharmacistDashboard = () => {
       } else if (batchResponse && typeof batchResponse === 'object') {
         batchList = batchResponse.batches || batchResponse.data || [];
       }
-      
+
       // Calculate stats
       let lowStock = 0;
       let outOfStock = 0;
       let totalValue = 0.0;
-      
+
       for (const med of medicinesData) {
         const stock = toInt(med.availableQty || med.stock || 0);
         const reorderLevel = toInt(med.reorderLevel || 20);
-        
+
         if (stock === 0) {
           outOfStock++;
         } else if (stock <= reorderLevel) {
           lowStock++;
         }
       }
-      
+
       // Count expiring batches (within 90 days)
       let expiringBatches = 0;
       const now = new Date();
@@ -99,7 +99,7 @@ const PharmacistDashboard = () => {
             if (daysUntilExpiry > 0 && daysUntilExpiry <= 90) {
               expiringBatches++;
             }
-            
+
             // Calculate total value
             const quantity = toInt(batch.quantity || 0);
             const salePrice = toDouble(batch.salePrice || 0);
@@ -109,7 +109,7 @@ const PharmacistDashboard = () => {
           }
         }
       }
-      
+
       setMedicines(medicinesData);
       setBatches(batchList);
       setStats({
@@ -119,7 +119,7 @@ const PharmacistDashboard = () => {
         expiringBatches,
         totalValue,
       });
-      
+
     } catch (error) {
       console.error('❌ Error loading dashboard:', error);
     } finally {
@@ -190,68 +190,68 @@ const PharmacistDashboard = () => {
 
   return (
     <div className="pharmacist-dashboard">
-      {/* Header */}
-      <div className="dashboard-header">
-        <div className="header-info">
-          <h1 className="header-title">Good {getTimeOfDay()}, Pharmacist</h1>
-          <p className="header-date">{formatDate(new Date())}</p>
+      {/* Dashboard Header Premium */}
+      <div className="dashboard-header-premium">
+        <div className="header-title-section">
+          <div className="header-icon-box">
+            <MdLocalPharmacy size={32} />
+          </div>
+          <div className="header-text">
+            <h1>Good {getTimeOfDay()}, <span>Pharmacist</span></h1>
+            <p>{formatDate(new Date())} — HOSPITAL PHARMACY HUB</p>
+          </div>
         </div>
         <div className="header-actions">
-          <button className="header-btn" onClick={loadDashboardData}>
-            <MdRefresh size={18} />
-            <span>Refresh</span>
+          <button onClick={loadDashboardData} className="btn-refresh-premium" disabled={isLoading}>
+            <MdRefresh size={20} className={isLoading ? 'spinning' : ''} />
+            <span>Sync Data</span>
           </button>
-          <button className="header-btn notification-btn">
-            <MdNotifications size={18} />
-            <span>Alerts</span>
-            {alertCount > 0 && <span className="badge">{alertCount > 99 ? '99+' : alertCount}</span>}
-          </button>
+          <div className="alerts-indicator">
+            <MdNotifications size={22} />
+            {alertCount > 0 && <span className="alert-badge">{alertCount}</span>}
+          </div>
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="stats-grid">
-        <div className="stat-card stat-primary">
-          <div className="stat-icon-container stat-icon-blue">
-            <MdLocalPharmacy size={24} />
+      {/* Stats Cards Premium */}
+      <div className="stats-grid-premium">
+        <div className="stat-card-premium">
+          <div className="stat-icon-wrapper blue">
+            <MdInventory size={24} />
           </div>
-          <div className="stat-content">
-            <h2 className="stat-value">{stats.totalMedicines}</h2>
-            <p className="stat-label">Total Medicines</p>
-            <p className="stat-subtitle">{medicines.length} items</p>
+          <div className="stat-info-premium">
+            <span className="stat-label">TOTAL MEDICINES</span>
+            <span className="stat-value">{stats.totalMedicines}</span>
           </div>
         </div>
 
-        <div className="stat-card stat-warning">
-          <div className="stat-icon-container stat-icon-orange">
+        <div className="stat-card-premium">
+          <div className="stat-icon-wrapper orange">
             <MdWarning size={24} />
           </div>
-          <div className="stat-content">
-            <h2 className="stat-value">{stats.lowStock}</h2>
-            <p className="stat-label">Low Stock</p>
-            <p className="stat-subtitle">Need reorder</p>
+          <div className="stat-info-premium">
+            <span className="stat-label">LOW STOCK ITEMS</span>
+            <span className="stat-value">{stats.lowStock}</span>
           </div>
         </div>
 
-        <div className="stat-card stat-danger">
-          <div className="stat-icon-container stat-icon-red">
+        <div className="stat-card-premium">
+          <div className="stat-icon-wrapper red">
             <MdBlock size={24} />
           </div>
-          <div className="stat-content">
-            <h2 className="stat-value">{stats.outOfStock}</h2>
-            <p className="stat-label">Out of Stock</p>
-            <p className="stat-subtitle">Urgent action</p>
+          <div className="stat-info-premium">
+            <span className="stat-label">OUT OF STOCK</span>
+            <span className="stat-value">{stats.outOfStock}</span>
           </div>
         </div>
 
-        <div className="stat-card stat-alert">
-          <div className="stat-icon-container stat-icon-yellow">
-            <MdCalendarToday size={24} />
+        <div className="stat-card-premium">
+          <div className="stat-icon-wrapper yellow">
+            <MdEventBusy size={24} />
           </div>
-          <div className="stat-content">
-            <h2 className="stat-value">{stats.expiringBatches}</h2>
-            <p className="stat-label">Expiring Soon</p>
-            <p className="stat-subtitle">Within 90 days</p>
+          <div className="stat-info-premium">
+            <span className="stat-label">EXPIRING SOON</span>
+            <span className="stat-value">{stats.expiringBatches}</span>
           </div>
         </div>
       </div>
@@ -260,136 +260,113 @@ const PharmacistDashboard = () => {
       <div className="dashboard-content">
         {/* Left Column */}
         <div className="content-left">
-          {/* Low Stock Alert */}
-          <div className="info-card">
-            <div className="card-header">
-              <div className="card-header-left">
-                <MdWarning className="card-icon warning-icon" size={24} />
-                <h3 className="card-title">Low Stock Alert</h3>
-              </div>
-              <span className="badge badge-warning">{lowStockMedicines.length} items</span>
+          <div className="premium-alert-card">
+            <div className="alert-card-header">
+              <div className="header-icon warning"><MdWarning /></div>
+              <h3>Low Stock Alert</h3>
+              <span className="count-pill warning">{stats.lowStock} Items</span>
             </div>
-            <div className="card-body">
-              {lowStockMedicines.length === 0 ? (
-                <div className="empty-state">
-                  <p>No low stock items</p>
-                </div>
-              ) : (
-                <div className="items-list">
-                  {lowStockMedicines.map((med, index) => {
-                    const stock = toInt(med.availableQty || med.stock || 0);
-                    return (
-                      <div key={index} className="alert-item alert-item-warning">
-                        <div className="alert-item-icon">
-                          <MdLocalPharmacy size={20} />
-                        </div>
-                        <div className="alert-item-content">
-                          <p className="alert-item-name">{med.name || 'Unknown'}</p>
-                          <p className="alert-item-sku">SKU: {med.sku || 'N/A'}</p>
-                        </div>
-                        <span className="alert-item-badge badge-warning">{stock} units</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+            <div className="alert-table-wrapper">
+              <table className="premium-small-table">
+                <thead>
+                  <tr>
+                    <th>MEDICINE NAME</th>
+                    <th>SKU</th>
+                    <th>STOCK</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {lowStockMedicines.length === 0 ? (
+                    <tr><td colSpan="3" className="empty-row">No low stock items</td></tr>
+                  ) : (
+                    lowStockMedicines.map((med, idx) => (
+                      <tr key={idx}>
+                        <td><strong>{med.name}</strong></td>
+                        <td>{med.sku}</td>
+                        <td><span className="stock-alert-badge">{toInt(med.availableQty || med.stock || 0)} Units</span></td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
 
-          {/* Expiring Batches */}
-          <div className="info-card">
-            <div className="card-header">
-              <div className="card-header-left">
-                <MdCalendarToday className="card-icon danger-icon" size={24} />
-                <h3 className="card-title">Expiring Batches</h3>
-              </div>
-              <span className="badge badge-danger">{expiringBatches.length} batches</span>
+          <div className="premium-alert-card">
+            <div className="alert-card-header">
+              <div className="header-icon danger"><MdEventBusy /></div>
+              <h3>Expiring Batches</h3>
+              <span className="count-pill danger">{stats.expiringBatches} Batches</span>
             </div>
-            <div className="card-body">
-              {expiringBatches.length === 0 ? (
-                <div className="empty-state">
-                  <p>No expiring batches</p>
-                </div>
-              ) : (
-                <div className="items-list">
-                  {expiringBatches.map((batch, index) => {
-                    const daysLeft = getDaysUntilExpiry(batch.expiryDate);
-                    return (
-                      <div key={index} className="alert-item alert-item-danger">
-                        <div className="alert-item-icon">
-                          <MdInventory size={20} />
-                        </div>
-                        <div className="alert-item-content">
-                          <p className="alert-item-name">{batch.medicineName || 'Unknown'}</p>
-                          <p className="alert-item-sku">Batch: {batch.batchNumber || 'N/A'}</p>
-                        </div>
-                        <span className="alert-item-badge badge-danger">{daysLeft} days</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+            <div className="alert-table-wrapper">
+              <table className="premium-small-table">
+                <thead>
+                  <tr>
+                    <th>MEDICINE</th>
+                    <th>BATCH #</th>
+                    <th>REMAINING</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {expiringBatches.length === 0 ? (
+                    <tr><td colSpan="3" className="empty-row">No expiring batches</td></tr>
+                  ) : (
+                    expiringBatches.map((batch, idx) => (
+                      <tr key={idx}>
+                        <td><strong>{batch.medicineName}</strong></td>
+                        <td>{batch.batchNumber}</td>
+                        <td className="expiry-td">
+                          <span className={`expiry-pill ${getDaysUntilExpiry(batch.expiryDate) < 30 ? 'critical' : ''}`}>
+                            {getDaysUntilExpiry(batch.expiryDate)} Days
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
 
         {/* Right Column */}
         <div className="content-right">
-          {/* Quick Actions */}
-          <div className="info-card">
-            <h3 className="card-title">Quick Actions</h3>
-            <div className="card-body">
-              <div className="quick-actions">
-                <button className="quick-action-btn action-primary">
-                  <MdAddCircle size={20} />
-                  <span>Add Medicine</span>
-                  <MdArrowForward size={16} className="action-arrow" />
-                </button>
-                <button className="quick-action-btn action-success">
-                  <MdInventory size={20} />
-                  <span>Add Batch</span>
-                  <MdArrowForward size={16} className="action-arrow" />
-                </button>
-                <button className="quick-action-btn action-warning">
-                  <MdDescription size={20} />
-                  <span>New Prescription</span>
-                  <MdArrowForward size={16} className="action-arrow" />
-                </button>
-                <button className="quick-action-btn action-info">
-                  <MdSearch size={20} />
-                  <span>Search Medicine</span>
-                  <MdArrowForward size={16} className="action-arrow" />
-                </button>
-              </div>
+          <div className="quick-actions-premium">
+            <h3 className="section-title-premium">Quick Actions</h3>
+            <div className="tile-grid">
+              <button className="tile-btn primary">
+                <div className="tile-icon"><MdAddCircle /></div>
+                <span>Add Medicine</span>
+              </button>
+              <button className="tile-btn success">
+                <div className="tile-icon"><MdInventory /></div>
+                <span>Add Batch</span>
+              </button>
+              <button className="tile-btn warning">
+                <div className="tile-icon"><MdDescription /></div>
+                <span>Prescriptions</span>
+              </button>
+              <button className="tile-btn info">
+                <div className="tile-icon"><MdSearch /></div>
+                <span>Search Hub</span>
+              </button>
             </div>
           </div>
 
-          {/* System Status */}
-          <div className="info-card">
-            <h3 className="card-title">System Status</h3>
-            <div className="card-body">
-              <div className="status-items">
-                <div className="status-item status-success">
-                  <MdCheckCircle size={20} />
-                  <div className="status-content">
-                    <span className="status-label">Database</span>
-                    <span className="status-value">Connected</span>
-                  </div>
-                </div>
-                <div className="status-item status-success">
-                  <MdCheckCircle size={20} />
-                  <div className="status-content">
-                    <span className="status-label">API Status</span>
-                    <span className="status-value">Operational</span>
-                  </div>
-                </div>
-                <div className="status-item status-primary">
-                  <MdAttachMoney size={20} />
-                  <div className="status-content">
-                    <span className="status-label">Inventory Value</span>
-                    <span className="status-value">₹{stats.totalValue.toFixed(2)}</span>
-                  </div>
-                </div>
+          <div className="system-status-premium">
+            <h3 className="section-title-premium">Operational Status</h3>
+            <div className="status-grid-mini">
+              <div className="mini-status-item">
+                <div className="dot pulse green"></div>
+                <div className="mini-label">Database <span>Operational</span></div>
+              </div>
+              <div className="mini-status-item">
+                <div className="dot pulse green"></div>
+                <div className="mini-label">API <span>Stable</span></div>
+              </div>
+              <div className="mini-status-item value-indicator">
+                <MdAttachMoney />
+                <div className="mini-label">Inv. Value: <span>₹{stats.totalValue.toLocaleString()}</span></div>
               </div>
             </div>
           </div>

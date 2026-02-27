@@ -1,0 +1,14 @@
+.add-staff-dialog-modal-container {
+  max-width: 1050px !important;
+  max-height: 90vh !important;
+  width: 90vw !important;
+  height: 90vh !important;
+  border-radius: 20px !important;
+  box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1) !important;
+  background: #fff !important;
+  overflow: hidden !important;
+  position: relative !important;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: stretch !important;
+}

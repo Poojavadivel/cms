@@ -736,6 +736,7 @@ const Staff = () => {
             initial={selectedStaff}
             onClose={handleDetailClose}
             onUpdate={handleDetailUpdate}
+            showUpdate={true}
           />
         )
       }

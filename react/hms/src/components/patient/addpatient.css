@@ -1,3 +1,17 @@
+/* Force modal size for AddPatientModal */
+.add-patient-modal-container {
+    max-width: 1050px !important;
+    max-height: 90vh !important;
+    border-radius: 20px !important;
+    width: 90vw;
+    height: 90vh;
+    box-shadow: 0 25px 70px rgba(0,0,0,0.25), 0 10px 25px rgba(0,0,0,0.15);
+    background: #fff;
+    overflow: hidden;
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+}
 /* AddPatientModal.css */
 
 /* Custom Animations */

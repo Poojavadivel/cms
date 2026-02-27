@@ -448,8 +448,9 @@ body {
   background: white;
   border-radius: 16px;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
-  width: 90%;
-  max-width: 500px;
+  width: 90vw;
+  max-width: 1050px;
+  height: 90vh;
   max-height: 90vh;
   overflow: hidden;
   display: flex;
@@ -457,7 +458,7 @@ body {
 }
 
 .dialog-content.large {
-  max-width: 900px;
+  max-width: 1050px;
 }
 
 .dialog-header {
@@ -500,22 +501,30 @@ body {
 }
 
 .close-btn {
+  position: fixed;
+  top: 24px;
+  right: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  background: transparent;
-  border: none;
-  border-radius: 8px;
-  color: #64748B;
+  width: 44px;
+  height: 44px;
+  background: #FFFFFF;
+  border: 2px solid #E5E7EB;
+  border-radius: 50%;
+  color: #374151;
   cursor: pointer;
+  z-index: 11000;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.25);
   transition: all 0.2s;
 }
 
 .close-btn:hover {
-  background: #F8FAFC;
-  color: #0F172A;
+  background: #FEE2E2;
+  border-color: #DC2626;
+  color: #DC2626;
+  transform: scale(1.1);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
 }
 
 .dialog-form {

@@ -25,7 +25,8 @@ app.use(cors({
   exposedHeaders: ['Content-Disposition']
 }));
 app.use(express.json());
-const webAppPath = path.join(__dirname, 'web');
+// Updated to serve Mobile HMS app build (Expo web export)
+const webAppPath = path.join(__dirname, '..', 'mobile', 'dist');
 
 // --- API Route Definitions ---
 app.use('/api/auth', authRoutes);
@@ -42,6 +43,8 @@ app.use('/api/card', require('./routes/card'));
 app.use('/api/payroll', require('./routes/payroll'));
 app.use('/api/reports', require('./routes/enterpriseReports'));
 app.use('/api/reports-proper', require('./routes/properReports'));
+app.use('/api/beds', require('./routes/beds'));
+app.use('/api/dashboard', require('./routes/dashboard'));
 
 // --- Telegram Bot ---
 app.use('/api/telegram', require('./routes/telegram'));

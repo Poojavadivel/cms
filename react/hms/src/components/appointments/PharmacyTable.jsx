@@ -176,12 +176,11 @@ const PharmacyTable = ({ rows, onRowsChanged, onStockWarnings }) => {
           <thead>
             <tr>
               <th style={{ width: '25%' }}>Medicine</th>
-              <th style={{ width: '10%' }}>Dosage</th>
-              <th style={{ width: '12%' }}>Frequency</th>
+              <th style={{ width: '12%' }}>Dosage</th>
+              <th style={{ width: '15%' }}>Frequency</th>
               <th style={{ width: '10%' }}>Duration</th>
               <th style={{ width: '8%', textAlign: 'center' }}>Qty</th>
-              <th style={{ width: '15%' }}>Instructions</th>
-              <th style={{ width: '10%', textAlign: 'center' }}>Total (₹)</th>
+              <th style={{ width: '20%' }}>Instructions</th>
               <th style={{ width: '10%' }}>Actions</th>
             </tr>
 
@@ -274,9 +273,6 @@ const PharmacyTable = ({ rows, onRowsChanged, onStockWarnings }) => {
                       className="pharmacy-input"
                     />
                   </td>
-                  <td style={{ textAlign: 'center' }}>
-                    <strong>₹{row.total}</strong>
-                  </td>
 
                   <td style={{ textAlign: 'center' }}>
                     <button
@@ -299,11 +295,6 @@ const PharmacyTable = ({ rows, onRowsChanged, onStockWarnings }) => {
           <MdAdd size={20} />
           Add Medicine
         </button>
-
-        <div className="pharmacy-grand-total">
-          <span className="grand-total-label">Grand Total:</span>
-          <span className="grand-total-amount">₹{calculateGrandTotal()}</span>
-        </div>
       </div>
     </div>
   );

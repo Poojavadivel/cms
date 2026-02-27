@@ -1082,7 +1082,7 @@ class ProperPdfGenerator {
   }
 
   // Generate Pathology Report
-  generatePathologyReport(report, patient) {
+  generatePathologyReport(report, patient, imageArtifact = null, publicUrl = null) {
     const patientName = `${patient.firstName} ${patient.lastName || ''}`.trim();
     const reportDate = report.reportDate ? new Date(report.reportDate).toLocaleDateString('en-IN', {
       day: '2-digit',
@@ -1090,111 +1090,200 @@ class ProperPdfGenerator {
       year: 'numeric'
     }) : 'N/A';
 
+    const content = [
+      {
+        columns: [
+          {
+            width: '*',
+            stack: [
+              this._sectionHeader('Patient Details'),
+              this._infoRow('Patient Name', patientName),
+              this._infoRow('Patient ID', patient.patientCode || 'N/A'),
+              this._infoRow('Age / Gender', `${patient.age || 'N/A'} / ${patient.gender || 'N/A'}`),
+              this._infoRow('Phone', patient.phone || 'N/A'),
+            ]
+          },
+          {
+            width: '*',
+            stack: [
+              this._sectionHeader('Report Summary'),
+              this._infoRow('Report Date', reportDate),
+              this._infoRow('Test Name', report.testName || 'N/A'),
+              this._infoRow('Test Type', report.testType || 'General'),
+              this._infoRow('Status', (report.status || 'Reported').toUpperCase()),
+            ]
+          }
+        ],
+        columnGap: 20
+      },
+      { text: '', margin: [0, 20] },
+      (() => {
+        // Build parameter/results table
+        const results = report.results;
+        const hasResults = results && typeof results === 'object' && Object.keys(results).length > 0;
+
+        // Check if results is an array of parameter objects
+        const resultsArray = Array.isArray(results) ? results :
+          (hasResults && Array.isArray(results.parameters) ? results.parameters : null);
+
+        if (resultsArray && resultsArray.length > 0) {
+          // Render structured results table
+          const tableBody = [
+            [
+              { text: 'Parameter', style: 'tableHeader' },
+              { text: 'Result', style: 'tableHeader' },
+              { text: 'Unit', style: 'tableHeader' },
+              { text: 'Reference Range', style: 'tableHeader' },
+              { text: 'Flag', style: 'tableHeader' }
+            ]
+          ];
+
+          resultsArray.forEach(row => {
+            const flag = row.flag || row.status || '';
+            const flagColor = flag === 'High' || flag === 'H' ? '#ef4444' :
+              flag === 'Low' || flag === 'L' ? '#3b82f6' : '#1f2937';
+            tableBody.push([
+              { text: row.parameter || row.name || row.test || '-', style: 'tableCell' },
+              { text: String(row.result || row.value || '-'), style: 'tableCell', bold: true },
+              { text: row.unit || '-', style: 'tableCell' },
+              { text: row.referenceRange || row.reference || row.normalRange || '-', style: 'tableCell' },
+              { text: flag || '-', style: 'tableCell', color: flagColor, bold: !!flag }
+            ]);
+          });
+
+          return {
+            stack: [
+              this._sectionHeader('Test Results'),
+              {
+                table: {
+                  headerRows: 1,
+                  widths: ['30%', '15%', '13%', '30%', '12%'],
+                  body: tableBody
+                },
+                layout: {
+                  fillColor: (rowIndex) => rowIndex === 0 ? '#1a365d' : (rowIndex % 2 === 0 ? '#f9fafb' : null)
+                },
+                margin: [0, 0, 0, 10]
+              }
+            ]
+          };
+        } else {
+          // No structured results — show fallback message referencing attached file
+          return {
+            stack: [
+              this._sectionHeader('Test Results'),
+              {
+                table: {
+                  widths: ['*'],
+                  body: [[
+                    {
+                      stack: [
+                        { text: report.testName || 'Lab Test', fontSize: 14, bold: true, color: '#1e3a8a', margin: [0, 0, 0, 8] },
+                        {
+                          text: report.remarks
+                            ? `Remarks: ${report.remarks}`
+                            : (publicUrl
+                              ? 'Detailed results are available in the attached document. Use the link below to view the complete report.'
+                              : 'Detailed results are available in the original attachment uploaded with this report.'),
+                          fontSize: 11,
+                          italics: true,
+                          color: '#334155',
+                          lineHeight: 1.5,
+                          margin: [0, 0, 0, publicUrl ? 12 : 0]
+                        },
+                        publicUrl ? { text: 'View Attached Document', fontSize: 10, color: '#2563eb', decoration: 'underline', link: publicUrl } : {}
+                      ],
+                      margin: [16, 16, 16, 16],
+                      fillColor: '#f8fafc'
+                    }
+                  ]]
+                },
+                layout: {
+                  hLineWidth: () => 1,
+                  vLineWidth: () => 1,
+                  hLineColor: () => '#e2e8f0',
+                  vLineColor: () => '#e2e8f0'
+                }
+              }
+            ]
+          };
+        }
+      })(),
+      { text: '', margin: [0, 20] },
+      {
+        stack: [
+          this._sectionHeader('Medical Staff'),
+          {
+            columns: [
+              this._infoRow('Doctor', report.doctorName || 'N/A'),
+              this._infoRow('Technician', report.technician || 'N/A'),
+            ]
+          }
+        ]
+      },
+      { text: '', margin: [0, 30] },
+
+      { text: '', margin: [0, 50] },
+      {
+        columns: [
+          {
+            width: '*',
+            stack: [
+              { text: '__________________________', margin: [0, 20, 0, 5] },
+              { text: 'Pathologist Signature', fontSize: 10, color: '#6b7280' }
+            ],
+            alignment: 'center'
+          },
+          {
+            width: '*',
+            stack: [
+              { text: '__________________________', margin: [0, 20, 0, 5] },
+              { text: 'Authorized Signatory', fontSize: 10, color: '#6b7280' }
+            ],
+            alignment: 'center'
+          }
+        ]
+      }
+    ];
+
+    // Add Second Page for Image Artifact or Document Link if provided
+    if (imageArtifact) {
+      content.push({ text: '', pageBreak: 'before' });
+      content.push(this._sectionHeader('Artifact Evidence - Scan / Result Image'));
+      content.push({ text: 'The following visual data was captured during the diagnostic procedure.', style: 'noData', margin: [0, 0, 0, 10] });
+      content.push({
+        image: imageArtifact,
+        fit: [500, 650], // Resize to fit on A4 page
+        alignment: 'center',
+        margin: [0, 10, 0, 10]
+      });
+      content.push({
+        text: 'Visual alignment verified. This artifact is part of the electronic health record.',
+        fontSize: 8,
+        color: '#94a3b8',
+        alignment: 'center',
+        margin: [0, 20, 0, 0]
+      });
+    } else if (publicUrl) {
+      content.push({ text: '', pageBreak: 'before' });
+      content.push(this._sectionHeader('Artifact Evidence - Digital Document'));
+      content.push({ text: 'This report is associated with an uploaded digital document (PDF).', style: 'noData', margin: [0, 0, 0, 20] });
+      content.push({
+        stack: [
+          { text: 'The original diagnostic document is available via the secure web link below:', margin: [0, 0, 0, 15], fontSize: 11, color: '#334155' },
+          { text: publicUrl, fontSize: 12, color: '#2563eb', decoration: 'underline', link: publicUrl }
+        ],
+        alignment: 'center',
+        margin: [0, 50, 0, 50]
+      });
+    }
+
     const docDefinition = {
       pageSize: 'A4',
       pageMargins: [50, 60, 50, 60],
       header: this._buildHeader('Pathology Lab Report', patientName),
       footer: this._buildFooter(),
-      content: [
-        {
-          columns: [
-            {
-              width: '*',
-              stack: [
-                this._sectionHeader('Patient Details'),
-                this._infoRow('Patient Name', patientName),
-                this._infoRow('Patient ID', patient.patientCode || 'N/A'),
-                this._infoRow('Age / Gender', `${patient.age || 'N/A'} / ${patient.gender || 'N/A'}`),
-                this._infoRow('Phone', patient.phone || 'N/A'),
-              ]
-            },
-            {
-              width: '*',
-              stack: [
-                this._sectionHeader('Report Summary'),
-                this._infoRow('Report Date', reportDate),
-                this._infoRow('Test Name', report.testName || 'N/A'),
-                this._infoRow('Test Type', report.testType || 'General'),
-                this._infoRow('Status', (report.status || 'Reported').toUpperCase()),
-              ]
-            }
-          ],
-          columnGap: 20
-        },
-        { text: '', margin: [0, 20] },
-        {
-          stack: [
-            this._sectionHeader('Medical Staff'),
-            {
-              columns: [
-                this._infoRow('Doctor', report.doctorName || 'N/A'),
-                this._infoRow('Technician', report.technician || 'N/A'),
-              ]
-            }
-          ]
-        },
-        { text: '', margin: [0, 20] },
-        {
-          table: {
-            headerRows: 1,
-            widths: ['*', 'auto', 'auto', 'auto', 'auto'],
-            body: [
-              [
-                { text: 'Parameter', style: 'tableHeader' },
-                { text: 'Result', style: 'tableHeader', alignment: 'center' },
-                { text: 'Unit', style: 'tableHeader', alignment: 'center' },
-                { text: 'Reference Range', style: 'tableHeader', alignment: 'center' },
-                { text: 'Flag', style: 'tableHeader', alignment: 'center' }
-              ],
-              ...(report.testResults && report.testResults.length > 0 ?
-                report.testResults.map(res => [
-                  { text: res.parameter || 'N/A', margin: [0, 5] },
-                  { text: res.value || 'N/A', alignment: 'center', bold: true, margin: [0, 5] },
-                  { text: res.unit || '-', alignment: 'center', margin: [0, 5] },
-                  { text: res.referenceRange || '-', alignment: 'center', margin: [0, 5] },
-                  {
-                    text: res.status || 'Normal',
-                    alignment: 'center',
-                    color: (res.status?.toLowerCase() === 'high' || res.status?.toLowerCase() === 'low') ? '#ef4444' : '#10b981',
-                    bold: (res.status?.toLowerCase() === 'high' || res.status?.toLowerCase() === 'low'),
-                    margin: [0, 5]
-                  }
-                ]) :
-                [[{ text: 'Detailed results available in original attachment', colSpan: 5, alignment: 'center', italics: true, color: '#6b7280', margin: [0, 20] }, {}, {}, {}, {}]]
-              )
-            ]
-          },
-          layout: 'lightHorizontalLines'
-        },
-        { text: '', margin: [0, 30] },
-        {
-          stack: [
-            { text: 'REMARKS', style: 'sectionHeader' },
-            { text: report.remarks || 'No clinical remarks provided.', fontSize: 10, italics: true, color: '#4b5563' }
-          ]
-        },
-        { text: '', margin: [0, 50] },
-        {
-          columns: [
-            {
-              width: '*',
-              stack: [
-                { text: '__________________________', margin: [0, 20, 0, 5] },
-                { text: 'Pathologist Signature', fontSize: 10, color: '#6b7280' }
-              ],
-              alignment: 'center'
-            },
-            {
-              width: '*',
-              stack: [
-                { text: '__________________________', margin: [0, 20, 0, 5] },
-                { text: 'Authorized Signatory', fontSize: 10, color: '#6b7280' }
-              ],
-              alignment: 'center'
-            }
-          ]
-        }
-      ],
+      content: content,
       styles: this._getStyles()
     };
 

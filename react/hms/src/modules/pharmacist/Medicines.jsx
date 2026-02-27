@@ -43,11 +43,8 @@ const PharmacistMedicines = () => {
     setErrorMessage(null);
 
     try {
-      console.log('🔄 [Pharmacist] Loading medicines from API...');
       const response = await authService.get('/pharmacy/medicines?limit=100');
-      console.log('✅ [Pharmacist] Received response:', response);
 
-      // Normalize response: support plain list OR { medicines: [...] } OR { data: [...] }
       let medicinesData = [];
       if (Array.isArray(response)) {
         medicinesData = response;
@@ -55,20 +52,8 @@ const PharmacistMedicines = () => {
         medicinesData = response.medicines || response.data || [];
       }
 
-      console.log('✅ [Pharmacist] Extracted medicines:', medicinesData.length);
-
-      // Log first medicine to see structure
-      if (medicinesData.length > 0) {
-        console.log('📋 [Pharmacist] Sample medicine data:', medicinesData[0]);
-      }
-
-      // Normalize the data
       const normalizedMedicines = medicinesData.map(med => {
-        // Try multiple fields for stock
         const stock = toInt(med.availableQty || med.stock || med.quantity || 0);
-
-        console.log(`📦 [Medicine] ${med.name}: availableQty=${med.availableQty}, stock=${med.stock}, quantity=${med.quantity}, normalized=${stock}`);
-
         return {
           _id: med._id || '',
           name: med.name || 'Unknown',
@@ -85,8 +70,6 @@ const PharmacistMedicines = () => {
         };
       });
 
-      console.log('✅ [Pharmacist] Normalized medicines with stock:', normalizedMedicines.map(m => `${m.name}: ${m.stock}`));
-
       setMedicines(normalizedMedicines);
       setFilteredMedicines(normalizedMedicines);
     } catch (error) {
@@ -100,7 +83,6 @@ const PharmacistMedicines = () => {
   const filterMedicinesData = () => {
     let filtered = [...medicines];
 
-    // Search filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(med => {
@@ -116,7 +98,6 @@ const PharmacistMedicines = () => {
       });
     }
 
-    // Stock status filter
     if (filterStatus !== 'All') {
       filtered = filtered.filter(med => {
         const stock = med.stock || 0;
@@ -159,6 +140,15 @@ const PharmacistMedicines = () => {
       color: 'success',
       icon: <MdCheckCircle size={16} />,
     };
+  };
+
+  const getHeaderDate = () => {
+    return new Intl.DateTimeFormat('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    }).format(new Date());
   };
 
   const getStats = () => {
@@ -219,57 +209,92 @@ const PharmacistMedicines = () => {
 
   return (
     <div className="pharmacist-medicines">
-      {/* Header */}
-      <div className="medicines-header">
-        <div className="header-left">
-          <MdLocalPharmacy className="header-icon" size={28} />
-          <h1 className="header-title">Medicine Inventory</h1>
+      {/* Premium Dashboard Header */}
+      <div className="dashboard-header-premium">
+        <div className="header-title-section">
+          <div className="header-icon-box">
+            <MdLocalPharmacy size={28} />
+          </div>
+          <div className="header-text">
+            <h1>Medicine <span>Inventory</span></h1>
+            <p>{getHeaderDate()} — BROWSE AND ANALYZE GLOBAL PHARMACY STOCK</p>
+          </div>
         </div>
-        <div className="header-stats">
-          <div className="stat-item">
-            <span className="stat-value stat-primary">{stats.total}</span>
-            <span className="stat-label">Total</span>
+        <div className="header-actions">
+          <button onClick={loadMedicines} className="btn-refresh-premium" disabled={isLoading}>
+            <MdRefresh size={20} className={isLoading ? 'spinning' : ''} />
+            <span>Sync Hub</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Premium Stats Grid */}
+      <div className="stats-dashboard-premium">
+        <div className="stat-card-premium">
+          <div className="stat-icon-wrapper blue">
+            <MdLocalPharmacy size={24} />
           </div>
-          <div className="stat-divider"></div>
-          <div className="stat-item">
-            <span className="stat-value stat-warning">{stats.lowStock}</span>
-            <span className="stat-label">Low</span>
+          <div className="stat-info-premium">
+            <span className="stat-label">TOTAL STOCK ITEMS</span>
+            <span className="stat-value">{stats.total}</span>
           </div>
-          <div className="stat-divider"></div>
-          <div className="stat-item">
-            <span className="stat-value stat-danger">{stats.outOfStock}</span>
-            <span className="stat-label">Out</span>
+        </div>
+
+        <div className="stat-card-premium">
+          <div className="stat-icon-wrapper orange">
+            <MdWarning size={24} />
+          </div>
+          <div className="stat-info-premium">
+            <span className="stat-label">LOW STOCK ALERTS</span>
+            <span className="stat-value">{stats.lowStock}</span>
+          </div>
+        </div>
+
+        <div className="stat-card-premium">
+          <div className="stat-icon-wrapper red">
+            <MdBlock size={24} />
+          </div>
+          <div className="stat-info-premium">
+            <span className="stat-label">OUT OF STOCK</span>
+            <span className="stat-value">{stats.outOfStock}</span>
+          </div>
+        </div>
+
+        <div className="stat-card-premium">
+          <div className="stat-icon-wrapper blue">
+            <MdCheckCircle size={24} />
+          </div>
+          <div className="stat-info-premium">
+            <span className="stat-label">FILTERED RESULTS</span>
+            <span className="stat-value">{filteredMedicines.length}</span>
           </div>
         </div>
       </div>
 
-      {/* Search and Filter Bar */}
-      <div className="medicines-toolbar">
-        <div className="search-box">
-          <MdSearch size={20} className="search-icon" />
+      {/* Modern Toolbar */}
+      <div className="inventory-toolbar-premium">
+        <div className="search-group-premium">
+          <MdSearch className="search-icon" />
           <input
             type="text"
             placeholder="Search by name, SKU, or category..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="search-input"
           />
         </div>
 
-        <select
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
-          className="filter-select"
-        >
-          <option value="All">All</option>
-          <option value="In Stock">In Stock</option>
-          <option value="Low Stock">Low Stock</option>
-          <option value="Out of Stock">Out of Stock</option>
-        </select>
-
-        <button onClick={loadMedicines} className="btn-refresh" title="Refresh">
-          <MdRefresh size={20} />
-        </button>
+        <div className="filter-group-premium">
+          <MdFilterList className="filter-icon" />
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+          >
+            <option value="All">All Stocks</option>
+            <option value="In Stock">In Stock</option>
+            <option value="Low Stock">Low Stock</option>
+            <option value="Out of Stock">Out of Stock</option>
+          </select>
+        </div>
       </div>
 
       {/* Medicines Table */}
@@ -280,43 +305,40 @@ const PharmacistMedicines = () => {
           <p>Try adjusting your search or filter</p>
         </div>
       ) : (
-        <div className="medicines-table-container">
-          <table className="medicines-table">
+        <div className="premium-table-wrapper">
+          <table className="premium-table">
             <thead>
               <tr>
-                <th>Medicine Name</th>
-                <th>Category</th>
-                <th>SKU</th>
-                <th className="text-center">Stock</th>
-                <th className="text-center">Status</th>
+                <th>MEDICINE DETAILS</th>
+                <th>CATEGORY</th>
+                <th>SKU ID</th>
+                <th>STOCK LEVEL</th>
+                <th>STATUS</th>
               </tr>
             </thead>
             <tbody>
               {paginatedMedicines.map((medicine, index) => {
                 const status = getStockStatus(medicine.stock, medicine.reorderLevel);
-                const isEven = index % 2 === 0;
-
                 return (
-                  <tr key={medicine._id || index} className={isEven ? 'row-even' : 'row-odd'}>
+                  <tr key={medicine._id || index}>
                     <td>
-                      <div className="medicine-name-cell">
-                        <div className="medicine-name">{medicine.name}</div>
-                        {medicine.strength && (
-                          <div className="medicine-strength">{medicine.strength}</div>
-                        )}
+                      <div className="medicine-identity-cell">
+                        <span className="medicine-primary-name">{medicine.name}</span>
+                        <span className="medicine-secondary-info">{medicine.strength || 'No Strength Info'} • {medicine.form}</span>
                       </div>
                     </td>
-                    <td className="medicine-category">{medicine.category || 'N/A'}</td>
-                    <td className="medicine-sku">{medicine.sku || 'N/A'}</td>
-                    <td className="text-center">
-                      <span className={`stock-badge stock-badge-${status.color}`}>
-                        {medicine.stock}
-                      </span>
+                    <td><span className="text-category">{medicine.category || 'GENERAL'}</span></td>
+                    <td><span className="text-sku">{medicine.sku || 'N/A'}</span></td>
+                    <td>
+                      <div className="stock-level-cell">
+                        <span className={`stock-count-indicator ${status.color}`}>{medicine.stock}</span>
+                        <span className="stock-unit">{medicine.unit || 'pcs'}</span>
+                      </div>
                     </td>
-                    <td className="text-center">
-                      <span className={`status-badge status-badge-${status.color}`}>
+                    <td>
+                      <span className={`status-badge-premium ${status.color}`}>
                         {status.icon}
-                        <span>{status.label}</span>
+                        {status.label}
                       </span>
                     </td>
                   </tr>
