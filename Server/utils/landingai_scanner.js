@@ -365,45 +365,85 @@ const LabReportDocumentSchema = {
 
 const MedicalHistoryDocumentSchema = {
   type: 'object',
-  required: ['medical_summary', 'date_time', 'hospital', 'doctor'],
+  required: ['medical_type', 'date', 'hospital_name', 'doctor_name'],
   properties: {
-    medical_summary: {
+    medical_type: {
       type: 'string',
-      description: 'Appointment summary or discharge summary of the patient',
-      title: 'Medical Summary',
+      description: 'Type of medical record: appointment_summary or discharge_summary',
+      title: 'Medical Type',
+      enum: ['appointment_summary', 'discharge_summary'],
+      default: 'appointment_summary'
+    },
+    appointment_summary: {
+      type: ['string', 'null'],
+      description: 'Summary of appointment visit and consultation',
+      title: 'Appointment Summary',
       default: ''
     },
-    date_time: {
-      type: 'string',
-      description: 'Date and time of appointment or discharge',
-      title: 'Date and Time',
+    discharge_summary: {
+      type: ['string', 'null'],
+      description: 'Summary of hospital discharge including treatment and follow-up',
+      title: 'Discharge Summary',
       default: ''
     },
-    hospital: {
+    date: {
+      type: 'string',
+      description: 'Date of appointment or discharge in DD/MM/YYYY format',
+      title: 'Date',
+      default: ''
+    },
+    time: {
+      type: ['string', 'null'],
+      description: 'Time of appointment or discharge',
+      title: 'Time',
+      default: ''
+    },
+    hospital_name: {
       type: 'string',
       description: 'Name of the hospital or clinic',
-      title: 'Hospital',
+      title: 'Hospital Name',
       default: ''
     },
-    doctor: {
+    hospital_location: {
+      type: ['string', 'null'],
+      description: 'Location or address of the hospital',
+      title: 'Hospital Location',
+      default: ''
+    },
+    doctor_name: {
       type: 'string',
-      description: 'Doctor who handled the case',
-      title: 'Doctor',
+      description: 'Name of the doctor who handled the case',
+      title: 'Doctor Name',
+      default: ''
+    },
+    department: {
+      type: ['string', 'null'],
+      description: 'Department or specialization of the doctor',
+      title: 'Department/Specialization',
       default: ''
     },
     services: {
-      type: ['array', 'null'],
-      items: {
-        type: 'string'
-      },
-      description: 'Medical services provided (consultation, lab tests, surgery, etc.)',
-      title: 'Services',
-      default: []
-    },
-    medical_notes: {
       type: ['string', 'null'],
-      description: 'Additional medical notes or observations',
-      title: 'Medical Notes',
+      description: 'Medical services provided during visit (e.g., "Consultation, Blood Test, X-Ray, Medication")',
+      title: 'Services',
+      default: ''
+    },
+    doctor_notes: {
+      type: ['string', 'null'],
+      description: 'Notes written by the doctor',
+      title: 'Doctor Notes',
+      default: ''
+    },
+    observations: {
+      type: ['string', 'null'],
+      description: 'Clinical observations and findings',
+      title: 'Observations',
+      default: ''
+    },
+    remarks: {
+      type: ['string', 'null'],
+      description: 'Additional remarks or follow-up instructions',
+      title: 'Remarks',
       default: ''
     }
   }

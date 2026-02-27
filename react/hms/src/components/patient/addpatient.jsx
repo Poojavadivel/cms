@@ -531,6 +531,15 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                         requiresVerification: scannedResult.verificationRequired || false,
                         documentType: selectedDocumentType
                     }]);
+                    
+                    // Debug log
+                    console.log('[UPLOAD] File added to uploadedFiles:', {
+                        name: file.name,
+                        documentType: selectedDocumentType,
+                        verificationId: scannedResult.verificationId,
+                        requiresVerification: scannedResult.verificationRequired,
+                        hasVerificationButton: !!(scannedResult.verificationRequired && scannedResult.verificationId)
+                    });
                 } catch (fileError) {
                     console.error(`Error processing ${file.name}:`, fileError);
                     setUploadedFiles(prev => [...prev, { file, name: file.name, error: fileError.message }]);
@@ -1319,9 +1328,11 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                                                                             </div>
                                                                             
                                                                             <div className="flex items-center gap-2">
-                                                                                {file.requiresVerification && file.verificationId && (
+                                                                                {/* Show Verify button for ALL documents with verificationId */}
+                                                                                {file.verificationId && (
                                                                                     <button
                                                                                         onClick={() => {
+                                                                                            console.log('[VERIFY_BUTTON] Clicked for:', file.name, 'VerificationID:', file.verificationId);
                                                                                             setCurrentVerificationId(file.verificationId);
                                                                                             setVerificationModalOpen(true);
                                                                                         }}

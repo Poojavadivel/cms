@@ -12,9 +12,24 @@ const MedicalHistoryDocumentSchema = new Schema({
   patientId: { type: String, ref: 'Patient', required: true, index: true },
   pdfId: { type: String, ref: 'PatientPDF', required: true, index: true }, // Reference to binary storage
   
-  // Extracted medical history data
+  // New Landing AI extracted fields (as per prescription pattern)
+  medicalType: { type: String, enum: ['appointment_summary', 'discharge_summary'], default: 'appointment_summary' },
+  appointmentSummary: { type: String, default: '' },
+  dischargeSummary: { type: String, default: '' },
+  date: { type: String, default: '' }, // Date in original format (DD/MM/YYYY)
+  time: { type: String, default: '' },
+  hospitalName: { type: String, default: '' },
+  hospitalLocation: { type: String, default: '' },
+  doctorName: { type: String, default: '' },
+  department: { type: String, default: '' },
+  services: { type: String, default: '' }, // Changed from object to string (comma-separated)
+  doctorNotes: { type: String, default: '' },
+  observations: { type: String, default: '' },
+  remarks: { type: String, default: '' },
+  
+  // Legacy fields (kept for backward compatibility)
   title: { type: String, default: 'Medical History Record' },
-  category: { type: String, enum: ['General', 'Chronic', 'Acute', 'Surgical', 'Family', 'Other'], default: 'General' },
+  category: { type: String, enum: ['General', 'Chronic', 'Acute', 'Surgical', 'Family', 'Other', 'Discharge'], default: 'General' },
   medicalHistory: { type: String, default: '' },
   diagnosis: { type: String, default: '' },
   allergies: { type: String, default: '' },
@@ -27,9 +42,7 @@ const MedicalHistoryDocumentSchema = new Schema({
   recordDate: { type: Date, default: null }, // Date of the medical record/visit
   reportDate: { type: Date, default: null }, // Date when report was created
   
-  // Provider information
-  doctorName: { type: String, default: '' },
-  hospitalName: { type: String, default: '' },
+  // Provider information (legacy - kept for compatibility)
   specialty: { type: String, default: '' },
   
   // OCR data

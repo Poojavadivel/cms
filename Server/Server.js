@@ -47,7 +47,7 @@ app.use('/api/beds', require('./routes/beds'));
 app.use('/api/dashboard', require('./routes/dashboard'));
 
 // --- Telegram Bot ---
-app.use('/api/telegram', require('./routes/telegram'));
+// app.use('/api/telegram', require('./routes/telegram'));
 console.log('✅ Telegram Bot activated and running...');
 
 // --- Static Files & SPA Support ---

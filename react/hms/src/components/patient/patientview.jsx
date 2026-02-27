@@ -753,11 +753,11 @@ const MedicalHistoryTab = ({ patientId, patient }) => {
                             filteredData.map((item, index) => (
                                 <tr key={index}>
                                     <td>{index + 1}</td>
-                                    <td>{formatDateTime(item.recordDate || item.uploadDate)}</td>
+                                    <td>{item.date || formatDateTime(item.recordDate || item.uploadDate)}</td>
                                     <td>{item.hospitalName || '—'}</td>
                                     <td>{item.doctorName || '—'}</td>
                                     <td className="pv-td-notes" style={{ maxWidth: '300px', whiteSpace: 'normal', wordWrap: 'break-word' }}>
-                                        {item.medicalHistory || item.diagnosis || '—'}
+                                        {item.appointmentSummary || item.dischargeSummary || item.medicalHistory || item.diagnosis || '—'}
                                     </td>
                                     <td>
                                         <button
@@ -940,7 +940,333 @@ const MedicalHistoryTab = ({ patientId, patient }) => {
                                     </div>
                                 </div>
 
-                                {selectedItem.medicalHistory && (
+                                {/* Medical Type Badge */}
+                                {selectedItem.medicalType && (
+                                    <div style={{
+                                        display: 'inline-block',
+                                        padding: '8px 16px',
+                                        background: selectedItem.medicalType === 'discharge_summary' ? '#fef3c7' : '#dbeafe',
+                                        color: selectedItem.medicalType === 'discharge_summary' ? '#92400e' : '#1e40af',
+                                        borderRadius: '20px',
+                                        fontWeight: '600',
+                                        fontSize: '12px',
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '0.5px',
+                                        marginBottom: '12px'
+                                    }}>
+                                        {selectedItem.medicalType === 'discharge_summary' ? '📋 Discharge Summary' : '🏥 Appointment Summary'}
+                                    </div>
+                                )}
+
+                                {/* Date and Time */}
+                                {(selectedItem.date || selectedItem.time) && (
+                                    <div style={{
+                                        display: 'grid',
+                                        gridTemplateColumns: selectedItem.time ? '1fr 1fr' : '1fr',
+                                        gap: '12px',
+                                        marginBottom: '12px'
+                                    }}>
+                                        {selectedItem.date && (
+                                            <div style={{
+                                                padding: '16px',
+                                                background: '#f8fafc',
+                                                borderRadius: '10px',
+                                                border: '1px solid #e2e8f0'
+                                            }}>
+                                                <div style={{
+                                                    fontSize: '12px',
+                                                    fontWeight: '600',
+                                                    color: '#64748b',
+                                                    textTransform: 'uppercase',
+                                                    letterSpacing: '0.5px',
+                                                    marginBottom: '4px'
+                                                }}>
+                                                    📅 Date
+                                                </div>
+                                                <div style={{
+                                                    fontSize: '15px',
+                                                    fontWeight: '600',
+                                                    color: '#1e293b'
+                                                }}>
+                                                    {selectedItem.date}
+                                                </div>
+                                            </div>
+                                        )}
+                                        {selectedItem.time && (
+                                            <div style={{
+                                                padding: '16px',
+                                                background: '#f8fafc',
+                                                borderRadius: '10px',
+                                                border: '1px solid #e2e8f0'
+                                            }}>
+                                                <div style={{
+                                                    fontSize: '12px',
+                                                    fontWeight: '600',
+                                                    color: '#64748b',
+                                                    textTransform: 'uppercase',
+                                                    letterSpacing: '0.5px',
+                                                    marginBottom: '4px'
+                                                }}>
+                                                    🕐 Time
+                                                </div>
+                                                <div style={{
+                                                    fontSize: '15px',
+                                                    fontWeight: '600',
+                                                    color: '#1e293b'
+                                                }}>
+                                                    {selectedItem.time}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* Hospital Location */}
+                                {selectedItem.hospitalLocation && (
+                                    <div style={{
+                                        padding: '16px',
+                                        background: '#f8fafc',
+                                        borderRadius: '10px',
+                                        border: '1px solid #e2e8f0',
+                                        marginBottom: '12px'
+                                    }}>
+                                        <div style={{
+                                            fontSize: '12px',
+                                            fontWeight: '600',
+                                            color: '#64748b',
+                                            textTransform: 'uppercase',
+                                            letterSpacing: '0.5px',
+                                            marginBottom: '4px'
+                                        }}>
+                                            📍 Hospital Location
+                                        </div>
+                                        <div style={{
+                                            fontSize: '15px',
+                                            fontWeight: '600',
+                                            color: '#1e293b'
+                                        }}>
+                                            {selectedItem.hospitalLocation}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Department */}
+                                {selectedItem.department && (
+                                    <div style={{
+                                        padding: '16px',
+                                        background: '#f8fafc',
+                                        borderRadius: '10px',
+                                        border: '1px solid #e2e8f0',
+                                        marginBottom: '12px'
+                                    }}>
+                                        <div style={{
+                                            fontSize: '12px',
+                                            fontWeight: '600',
+                                            color: '#64748b',
+                                            textTransform: 'uppercase',
+                                            letterSpacing: '0.5px',
+                                            marginBottom: '4px'
+                                        }}>
+                                            🏢 Department
+                                        </div>
+                                        <div style={{
+                                            fontSize: '15px',
+                                            fontWeight: '600',
+                                            color: '#1e293b'
+                                        }}>
+                                            {selectedItem.department}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Appointment Summary */}
+                                {selectedItem.appointmentSummary && (
+                                    <div style={{
+                                        padding: '16px',
+                                        background: '#f0fdf4',
+                                        borderRadius: '10px',
+                                        border: '1px solid #86efac',
+                                        marginBottom: '12px'
+                                    }}>
+                                        <div style={{
+                                            fontSize: '12px',
+                                            fontWeight: '600',
+                                            color: '#166534',
+                                            textTransform: 'uppercase',
+                                            letterSpacing: '0.5px',
+                                            marginBottom: '8px'
+                                        }}>
+                                            📝 Appointment Summary
+                                        </div>
+                                        <div style={{
+                                            fontSize: '14px',
+                                            color: '#14532d',
+                                            lineHeight: '1.7',
+                                            whiteSpace: 'pre-wrap',
+                                            fontWeight: '400'
+                                        }}>
+                                            {selectedItem.appointmentSummary}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Discharge Summary */}
+                                {selectedItem.dischargeSummary && (
+                                    <div style={{
+                                        padding: '16px',
+                                        background: '#fef3c7',
+                                        borderRadius: '10px',
+                                        border: '1px solid #fbbf24',
+                                        marginBottom: '12px'
+                                    }}>
+                                        <div style={{
+                                            fontSize: '12px',
+                                            fontWeight: '600',
+                                            color: '#92400e',
+                                            textTransform: 'uppercase',
+                                            letterSpacing: '0.5px',
+                                            marginBottom: '8px'
+                                        }}>
+                                            📋 Discharge Summary
+                                        </div>
+                                        <div style={{
+                                            fontSize: '14px',
+                                            color: '#78350f',
+                                            lineHeight: '1.7',
+                                            whiteSpace: 'pre-wrap',
+                                            fontWeight: '400'
+                                        }}>
+                                            {selectedItem.dischargeSummary}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Services */}
+                                {selectedItem.services && (
+                                    <div style={{
+                                        padding: '16px',
+                                        background: '#ede9fe',
+                                        borderRadius: '10px',
+                                        border: '1px solid #c4b5fd',
+                                        marginBottom: '12px'
+                                    }}>
+                                        <div style={{
+                                            fontSize: '12px',
+                                            fontWeight: '600',
+                                            color: '#5b21b6',
+                                            textTransform: 'uppercase',
+                                            letterSpacing: '0.5px',
+                                            marginBottom: '8px'
+                                        }}>
+                                            🔧 Services Provided
+                                        </div>
+                                        <div style={{
+                                            fontSize: '14px',
+                                            color: '#4c1d95',
+                                            lineHeight: '1.7',
+                                            whiteSpace: 'pre-wrap',
+                                            fontWeight: '400'
+                                        }}>
+                                            {selectedItem.services}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Doctor Notes */}
+                                {selectedItem.doctorNotes && (
+                                    <div style={{
+                                        padding: '16px',
+                                        background: '#fef3c7',
+                                        borderRadius: '10px',
+                                        border: '1px solid #fcd34d',
+                                        marginBottom: '12px'
+                                    }}>
+                                        <div style={{
+                                            fontSize: '12px',
+                                            fontWeight: '600',
+                                            color: '#92400e',
+                                            textTransform: 'uppercase',
+                                            letterSpacing: '0.5px',
+                                            marginBottom: '8px'
+                                        }}>
+                                            👨‍⚕️ Doctor Notes
+                                        </div>
+                                        <div style={{
+                                            fontSize: '14px',
+                                            color: '#78350f',
+                                            lineHeight: '1.7',
+                                            whiteSpace: 'pre-wrap',
+                                            fontWeight: '400'
+                                        }}>
+                                            {selectedItem.doctorNotes}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Observations */}
+                                {selectedItem.observations && (
+                                    <div style={{
+                                        padding: '16px',
+                                        background: '#dbeafe',
+                                        borderRadius: '10px',
+                                        border: '1px solid #60a5fa',
+                                        marginBottom: '12px'
+                                    }}>
+                                        <div style={{
+                                            fontSize: '12px',
+                                            fontWeight: '600',
+                                            color: '#1e40af',
+                                            textTransform: 'uppercase',
+                                            letterSpacing: '0.5px',
+                                            marginBottom: '8px'
+                                        }}>
+                                            🔬 Observations
+                                        </div>
+                                        <div style={{
+                                            fontSize: '14px',
+                                            color: '#1e3a8a',
+                                            lineHeight: '1.7',
+                                            whiteSpace: 'pre-wrap',
+                                            fontWeight: '400'
+                                        }}>
+                                            {selectedItem.observations}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Remarks */}
+                                {selectedItem.remarks && (
+                                    <div style={{
+                                        padding: '16px',
+                                        background: '#fce7f3',
+                                        borderRadius: '10px',
+                                        border: '1px solid #f9a8d4',
+                                        marginBottom: '12px'
+                                    }}>
+                                        <div style={{
+                                            fontSize: '12px',
+                                            fontWeight: '600',
+                                            color: '#9f1239',
+                                            textTransform: 'uppercase',
+                                            letterSpacing: '0.5px',
+                                            marginBottom: '8px'
+                                        }}>
+                                            💬 Remarks
+                                        </div>
+                                        <div style={{
+                                            fontSize: '14px',
+                                            color: '#831843',
+                                            lineHeight: '1.7',
+                                            whiteSpace: 'pre-wrap',
+                                            fontWeight: '400'
+                                        }}>
+                                            {selectedItem.remarks}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Legacy Medical History (fallback for old records) */}
+                                {!selectedItem.appointmentSummary && !selectedItem.dischargeSummary && selectedItem.medicalHistory && (
                                     <div style={{
                                         padding: '16px',
                                         background: '#f0fdf4',
@@ -955,7 +1281,7 @@ const MedicalHistoryTab = ({ patientId, patient }) => {
                                             letterSpacing: '0.5px',
                                             marginBottom: '8px'
                                         }}>
-                                            Medical Summary
+                                            📝 Medical Summary
                                         </div>
                                         <div style={{
                                             fontSize: '14px',

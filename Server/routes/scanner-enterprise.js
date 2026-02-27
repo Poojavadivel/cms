@@ -191,99 +191,215 @@ function convertExtractedDataToRows(extractedData, documentType) {
   } else if (documentType === 'MEDICAL_HISTORY') {
     console.log('[CONVERT] Processing MEDICAL_HISTORY document');
     
-    // ✅ FIX: Read from extraction object (LandingAI returns nested structure)
     const historyData = extractedData.extraction || extractedData;
     console.log('[CONVERT] Medical history data keys:', Object.keys(historyData));
     
-    // Simplified Medical History Schema Fields
-    if (historyData.medical_summary) {
-      console.log('[CONVERT] ✅ Found medical_summary:', historyData.medical_summary.substring(0, 100) + '...');
+    // Medical Type (required)
+    if (historyData.medical_type) {
+      console.log('[CONVERT] ✅ Found medical_type:', historyData.medical_type);
       rows.push({
-        fieldName: 'medical_summary', 
-        displayLabel: 'Medical Summary', 
-        originalValue: historyData.medical_summary, 
-        currentValue: historyData.medical_summary, 
+        fieldName: 'medical_type', 
+        displayLabel: 'Medical Type', 
+        originalValue: historyData.medical_type, 
+        currentValue: historyData.medical_type, 
         dataType: 'string', 
-        category: 'diagnosis',  // ✅ Valid enum: diagnosis for medical summary
+        category: 'diagnosis',
         confidence: 0.95
       });
     } else {
-      console.log('[CONVERT] ❌ Missing medical_summary');
+      console.log('[CONVERT] ❌ Missing medical_type');
     }
 
-    if (historyData.date_time) {
-      console.log('[CONVERT] ✅ Found date_time:', historyData.date_time);
+    // Appointment Summary
+    if (historyData.appointment_summary) {
+      console.log('[CONVERT] ✅ Found appointment_summary:', historyData.appointment_summary.substring(0, 100) + '...');
+      rows.push({
+        fieldName: 'appointment_summary', 
+        displayLabel: 'Appointment Summary', 
+        originalValue: historyData.appointment_summary, 
+        currentValue: historyData.appointment_summary, 
+        dataType: 'string', 
+        category: 'diagnosis',
+        confidence: 0.95
+      });
+    } else {
+      console.log('[CONVERT] ⚠️ Missing appointment_summary (optional)');
+    }
+
+    // Discharge Summary
+    if (historyData.discharge_summary) {
+      console.log('[CONVERT] ✅ Found discharge_summary:', historyData.discharge_summary.substring(0, 100) + '...');
+      rows.push({
+        fieldName: 'discharge_summary', 
+        displayLabel: 'Discharge Summary', 
+        originalValue: historyData.discharge_summary, 
+        currentValue: historyData.discharge_summary, 
+        dataType: 'string', 
+        category: 'diagnosis',
+        confidence: 0.95
+      });
+    } else {
+      console.log('[CONVERT] ⚠️ Missing discharge_summary (optional)');
+    }
+
+    // Date (required)
+    if (historyData.date) {
+      console.log('[CONVERT] ✅ Found date:', historyData.date);
       rows.push({ 
-        fieldName: 'date_time', 
-        displayLabel: 'Date and Time', 
-        originalValue: historyData.date_time, 
-        currentValue: historyData.date_time, 
+        fieldName: 'date', 
+        displayLabel: 'Date', 
+        originalValue: historyData.date, 
+        currentValue: historyData.date, 
         dataType: 'string', 
-        category: 'other',  // ✅ Valid enum: other for date/time metadata
+        category: 'other',
         confidence: 0.95
       });
     } else {
-      console.log('[CONVERT] ❌ Missing date_time');
+      console.log('[CONVERT] ❌ Missing date');
     }
 
-    if (historyData.hospital) {
-      console.log('[CONVERT] ✅ Found hospital:', historyData.hospital);
+    // Time (optional)
+    if (historyData.time) {
+      console.log('[CONVERT] ✅ Found time:', historyData.time);
       rows.push({ 
-        fieldName: 'hospital', 
-        displayLabel: 'Hospital', 
-        originalValue: historyData.hospital, 
-        currentValue: historyData.hospital, 
+        fieldName: 'time', 
+        displayLabel: 'Time', 
+        originalValue: historyData.time, 
+        currentValue: historyData.time, 
         dataType: 'string', 
-        category: 'other',  // ✅ Valid enum: other for hospital metadata
+        category: 'other',
         confidence: 0.95
       });
     } else {
-      console.log('[CONVERT] ❌ Missing hospital');
+      console.log('[CONVERT] ⚠️ Missing time (optional)');
     }
 
-    if (historyData.doctor) {
-      console.log('[CONVERT] ✅ Found doctor:', historyData.doctor);
+    // Hospital Name (required)
+    if (historyData.hospital_name) {
+      console.log('[CONVERT] ✅ Found hospital_name:', historyData.hospital_name);
       rows.push({ 
-        fieldName: 'doctor', 
-        displayLabel: 'Doctor', 
-        originalValue: historyData.doctor, 
-        currentValue: historyData.doctor, 
+        fieldName: 'hospital_name', 
+        displayLabel: 'Hospital Name', 
+        originalValue: historyData.hospital_name, 
+        currentValue: historyData.hospital_name, 
         dataType: 'string', 
-        category: 'patient_details',  // ✅ Valid enum: patient_details for doctor info
+        category: 'other',
         confidence: 0.95
       });
     } else {
-      console.log('[CONVERT] ❌ Missing doctor');
+      console.log('[CONVERT] ❌ Missing hospital_name');
     }
 
-    if (historyData.services && Array.isArray(historyData.services)) {
+    // Hospital Location (optional)
+    if (historyData.hospital_location) {
+      console.log('[CONVERT] ✅ Found hospital_location:', historyData.hospital_location);
+      rows.push({ 
+        fieldName: 'hospital_location', 
+        displayLabel: 'Hospital Location', 
+        originalValue: historyData.hospital_location, 
+        currentValue: historyData.hospital_location, 
+        dataType: 'string', 
+        category: 'other',
+        confidence: 0.90
+      });
+    } else {
+      console.log('[CONVERT] ⚠️ Missing hospital_location (optional)');
+    }
+
+    // Doctor Name (required)
+    if (historyData.doctor_name) {
+      console.log('[CONVERT] ✅ Found doctor_name:', historyData.doctor_name);
+      rows.push({ 
+        fieldName: 'doctor_name', 
+        displayLabel: 'Doctor Name', 
+        originalValue: historyData.doctor_name, 
+        currentValue: historyData.doctor_name, 
+        dataType: 'string', 
+        category: 'patient_details',
+        confidence: 0.95
+      });
+    } else {
+      console.log('[CONVERT] ❌ Missing doctor_name');
+    }
+
+    // Department/Specialization (optional)
+    if (historyData.department) {
+      console.log('[CONVERT] ✅ Found department:', historyData.department);
+      rows.push({ 
+        fieldName: 'department', 
+        displayLabel: 'Department/Specialization', 
+        originalValue: historyData.department, 
+        currentValue: historyData.department, 
+        dataType: 'string', 
+        category: 'patient_details',
+        confidence: 0.90
+      });
+    } else {
+      console.log('[CONVERT] ⚠️ Missing department (optional)');
+    }
+
+    // Services (text string)
+    if (historyData.services) {
       console.log('[CONVERT] ✅ Found services:', historyData.services);
       rows.push({
         fieldName: 'services', 
         displayLabel: 'Services', 
         originalValue: historyData.services, 
         currentValue: historyData.services, 
-        dataType: 'array', 
-        category: 'other',  // ✅ Valid enum: other for services metadata
+        dataType: 'string', 
+        category: 'other',
         confidence: 0.90
       });
     } else {
       console.log('[CONVERT] ⚠️ Missing services (optional)');
     }
 
-    if (historyData.medical_notes !== null && historyData.medical_notes !== undefined && historyData.medical_notes !== '') {
-      console.log('[CONVERT] ✅ Found medical_notes:', historyData.medical_notes);
+    // Doctor Notes (optional)
+    if (historyData.doctor_notes) {
+      console.log('[CONVERT] ✅ Found doctor_notes:', historyData.doctor_notes);
       rows.push({ 
-        fieldName: 'medical_notes', 
-        displayLabel: 'Medical Notes', 
-        originalValue: historyData.medical_notes, 
-        currentValue: historyData.medical_notes, 
+        fieldName: 'doctor_notes', 
+        displayLabel: 'Doctor Notes', 
+        originalValue: historyData.doctor_notes, 
+        currentValue: historyData.doctor_notes, 
         dataType: 'string', 
-        category: 'other',  // ✅ Valid enum: other for additional notes
+        category: 'other',
         confidence: 0.90
       });
     } else {
-      console.log('[CONVERT] ⚠️ Missing medical_notes (optional field, null or empty)');
+      console.log('[CONVERT] ⚠️ Missing doctor_notes (optional)');
+    }
+
+    // Observations (optional)
+    if (historyData.observations) {
+      console.log('[CONVERT] ✅ Found observations:', historyData.observations);
+      rows.push({ 
+        fieldName: 'observations', 
+        displayLabel: 'Observations', 
+        originalValue: historyData.observations, 
+        currentValue: historyData.observations, 
+        dataType: 'string', 
+        category: 'other',
+        confidence: 0.90
+      });
+    } else {
+      console.log('[CONVERT] ⚠️ Missing observations (optional)');
+    }
+
+    // Remarks (optional)
+    if (historyData.remarks) {
+      console.log('[CONVERT] ✅ Found remarks:', historyData.remarks);
+      rows.push({ 
+        fieldName: 'remarks', 
+        displayLabel: 'Remarks', 
+        originalValue: historyData.remarks, 
+        currentValue: historyData.remarks, 
+        dataType: 'string', 
+        category: 'other',
+        confidence: 0.90
+      });
+    } else {
+      console.log('[CONVERT] ⚠️ Missing remarks (optional)');
     }
     
     console.log(`[CONVERT] ✅ Created ${rows.length} rows for MEDICAL_HISTORY`);
@@ -1016,23 +1132,40 @@ router.post('/verification/:verificationId/confirm', auth, async (req, res) => {
       logh(batchId, `🧪 Created LabReportDocument: ${reportId}`);
 
     } else if (verification.documentType === 'MEDICAL_HISTORY') {
-      // ✅ FIX: Read from extraction object if it exists
+      console.log('[CONFIRM] 📋 Processing MEDICAL_HISTORY document');
+      
       const rawData = verification.extractedData;
       const historyData = rawData.extraction || rawData;
       
-      // Get values from verified rows (new simplified schema)
-      const medicalSummary = verifiedRows.find(r => r.fieldName === 'medical_summary')?.currentValue || historyData.medical_summary || '';
-      const dateTime = verifiedRows.find(r => r.fieldName === 'date_time')?.currentValue || historyData.date_time || '';
-      const hospital = verifiedRows.find(r => r.fieldName === 'hospital')?.currentValue || historyData.hospital || '';
-      const doctor = verifiedRows.find(r => r.fieldName === 'doctor')?.currentValue || historyData.doctor || '';
-      const services = verifiedRows.find(r => r.fieldName === 'services')?.currentValue || historyData.services || [];
-      const medicalNotes = verifiedRows.find(r => r.fieldName === 'medical_notes')?.currentValue || historyData.medical_notes || '';
+      // Get values from verified rows (new schema)
+      const medicalType = verifiedRows.find(r => r.fieldName === 'medical_type')?.currentValue || historyData.medical_type || 'appointment_summary';
+      const appointmentSummary = verifiedRows.find(r => r.fieldName === 'appointment_summary')?.currentValue || historyData.appointment_summary || '';
+      const dischargeSummary = verifiedRows.find(r => r.fieldName === 'discharge_summary')?.currentValue || historyData.discharge_summary || '';
+      const date = verifiedRows.find(r => r.fieldName === 'date')?.currentValue || historyData.date || '';
+      const time = verifiedRows.find(r => r.fieldName === 'time')?.currentValue || historyData.time || '';
+      const hospitalName = verifiedRows.find(r => r.fieldName === 'hospital_name')?.currentValue || historyData.hospital_name || '';
+      const hospitalLocation = verifiedRows.find(r => r.fieldName === 'hospital_location')?.currentValue || historyData.hospital_location || '';
+      const doctorName = verifiedRows.find(r => r.fieldName === 'doctor_name')?.currentValue || historyData.doctor_name || '';
+      const department = verifiedRows.find(r => r.fieldName === 'department')?.currentValue || historyData.department || '';
+      const services = verifiedRows.find(r => r.fieldName === 'services')?.currentValue || historyData.services || '';
+      const doctorNotes = verifiedRows.find(r => r.fieldName === 'doctor_notes')?.currentValue || historyData.doctor_notes || '';
+      const observations = verifiedRows.find(r => r.fieldName === 'observations')?.currentValue || historyData.observations || '';
+      const remarks = verifiedRows.find(r => r.fieldName === 'remarks')?.currentValue || historyData.remarks || '';
 
-      // ✅ FIX: Parse date properly (handle DD/MM/YY format)
+      console.log('[CONFIRM] 📊 Extracted Values:');
+      console.log(`[CONFIRM]   - Medical Type: ${medicalType}`);
+      console.log(`[CONFIRM]   - Appointment Summary: ${appointmentSummary ? (appointmentSummary.substring(0, 50) + '...') : 'EMPTY'}`);
+      console.log(`[CONFIRM]   - Discharge Summary: ${dischargeSummary ? (dischargeSummary.substring(0, 50) + '...') : 'EMPTY'}`);
+      console.log(`[CONFIRM]   - Date: ${date || 'EMPTY'}`);
+      console.log(`[CONFIRM]   - Time: ${time || 'EMPTY'}`);
+      console.log(`[CONFIRM]   - Hospital: ${hospitalName || 'EMPTY'}`);
+      console.log(`[CONFIRM]   - Doctor: ${doctorName || 'EMPTY'}`);
+
+      // Parse date properly (handle DD/MM/YY or DD/MM/YYYY format)
       let parsedDate = new Date();
-      if (dateTime) {
+      if (date) {
         try {
-          const dateStr = dateTime.trim();
+          const dateStr = date.trim();
           
           // Handle DD/MM/YY or DD/MM/YYYY format
           if (dateStr.match(/^\d{1,2}\/\d{1,2}\/\d{2,4}$/)) {
@@ -1055,22 +1188,39 @@ router.post('/verification/:verificationId/confirm', auth, async (req, res) => {
         }
       }
 
+      // Determine which summary to use based on medical_type
+      const mainSummary = medicalType === 'discharge_summary' ? dischargeSummary : appointmentSummary;
+      const title = medicalType === 'discharge_summary' ? 'Discharge Summary' : 'Appointment Summary';
+
+      console.log('[CONFIRM] 💾 Creating MedicalHistoryDocument...');
       const medicalHistoryDoc = new MedicalHistoryDocument({
         patientId: verification.patientId,
         pdfId: verification.pdfId,
-        title: 'Medical History Record',
-        category: 'General',
-        medicalHistory: medicalSummary,
-        diagnosis: medicalSummary, // Store summary as diagnosis too
-        allergies: '',
-        chronicConditions: Array.isArray(services) ? services : [],
-        surgicalHistory: [],
-        familyHistory: '',
-        medications: '',
+        
+        // New fields
+        medicalType: medicalType,
+        appointmentSummary: appointmentSummary,
+        dischargeSummary: dischargeSummary,
+        date: date,
+        time: time,
+        hospitalName: hospitalName,
+        hospitalLocation: hospitalLocation,
+        doctorName: doctorName,
+        department: department,
+        services: services,
+        doctorNotes: doctorNotes,
+        observations: observations,
+        remarks: remarks,
+        
+        // Legacy fields for compatibility
+        title: title,
+        category: medicalType === 'discharge_summary' ? 'Discharge' : 'General',
+        medicalHistory: mainSummary,
+        diagnosis: mainSummary,
         recordDate: parsedDate,
         reportDate: parsedDate,
-        doctorName: doctor,
-        hospitalName: hospital,
+        
+        // Metadata
         ocrText: verification.metadata.markdown || '',
         ocrEngine: 'landingai-ade',
         ocrConfidence: verification.metadata.ocrConfidence || 0.95,
@@ -1082,15 +1232,8 @@ router.post('/verification/:verificationId/confirm', auth, async (req, res) => {
 
       await medicalHistoryDoc.save();
       reportId = medicalHistoryDoc._id.toString();
+      console.log(`[CONFIRM] ✅ MedicalHistoryDocument created: ${reportId}`);
       logh(batchId, `📋 Created MedicalHistoryDocument: ${reportId}`);
-      console.log('[CONFIRM] 📋 MedicalHistoryDocument saved:', {
-        _id: reportId,
-        patientId: verification.patientId,
-        title: medicalHistoryDoc.title,
-        medicalHistory: medicalHistoryDoc.medicalHistory?.substring(0, 100),
-        recordDate: medicalHistoryDoc.recordDate,
-        pdfId: medicalHistoryDoc.pdfId
-      });
     }
 
     // Update patient record
