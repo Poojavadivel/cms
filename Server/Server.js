@@ -43,6 +43,8 @@ app.use('/api/card', require('./routes/card'));
 app.use('/api/payroll', require('./routes/payroll'));
 app.use('/api/reports', require('./routes/enterpriseReports'));
 app.use('/api/reports-proper', require('./routes/properReports'));
+app.use('/api/beds', require('./routes/beds'));
+app.use('/api/dashboard', require('./routes/dashboard'));
 
 // --- Telegram Bot ---
 app.use('/api/telegram', require('./routes/telegram'));

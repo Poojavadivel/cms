@@ -191,7 +191,7 @@ const LoginPage = () => {
     setIsLoading(true);
 
     try {
-      const authResult = await authService.signIn(email.trim(), password);
+      const authResult = await authService.signIn(email.trim(), password.trim());
 
       // Save remember me preference
       localStorage.setItem(PREFS_REMEMBER_ME_KEY, rememberMe.toString());
