@@ -40,6 +40,7 @@ const AdminPharmacy = lazy(() => import('../modules/admin/pharmacy/Pharmacy'));
 const AdminInvoice = lazy(() => import('../modules/admin/invoice/Invoice'));
 const AdminPathology = lazy(() => import('../modules/admin/pathology/Pathology'));
 const AdminSettings = lazy(() => import('../modules/admin/settings/Settings'));
+const AdminWardMap = lazy(() => import('../modules/admin/ward-map/WardMap'));
 
 // Doctor module pages (from modules folder)
 const DoctorDashboard = lazy(() => import('../modules/doctor/dashboard/Dashboard'));
@@ -121,6 +122,7 @@ const AppRoutes = () => {
           <Route path="pharmacy" element={<AdminPharmacy />} />
           <Route path="invoice" element={<AdminInvoice />} />
           <Route path="pathology" element={<AdminPathology />} />
+          <Route path="ward-map" element={<AdminWardMap />} />
           <Route path="settings" element={<AdminSettings />} />
           <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
         </Route>

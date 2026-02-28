@@ -27,7 +27,7 @@ const LANDINGAI_CONFIG = {
 
 // ❌ Strongly recommended: fail fast if key missing
 if (!LANDINGAI_CONFIG.API_KEY) {
-  throw new Error('LANDINGAI_API_KEY is not set in environment');
+  console.warn('LANDINGAI_API_KEY is not set in environment. Disabling landingai module.');
 }
 
 // ============================================================================

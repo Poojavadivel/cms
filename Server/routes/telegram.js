@@ -11,16 +11,27 @@ const PatientPDF = require('../Models/PatientPDF');
 
 const router = express.Router();
 
-// Initialize Telegram Bot with improved polling configuration
-const bot = new TelegramBot(process.env.Telegram_API, {
-  polling: {
-    interval: 1000,
-    autoStart: true,
-    params: {
-      timeout: 10
+let bot;
+try {
+  bot = new TelegramBot(process.env.Telegram_API, {
+    polling: {
+      interval: 1000,
+      autoStart: true,
+      params: {
+        timeout: 10
+      }
     }
-  }
-});
+  });
+  console.log('✅ Telegram Bot initialized successfully');
+} catch (error) {
+  console.error('⚠️ Telegram Bot failed to initialize:', error.message);
+  // Create a dummy bot object to prevent further crashes in this file
+  bot = {
+    onText: () => { },
+    on: () => { },
+    sendMessage: () => { }
+  };
+}
 
 // Initialize Gemini AI
 const genAI = new GoogleGenerativeAI(process.env.Gemi_Api_Key);
@@ -183,38 +194,38 @@ async function getOrCreatePatient(telegramUserId, telegramUsername, telegramFirs
 async function createAppointment(chatId, telegramUserId, patientData) {
   try {
     const doctor = await getDefaultDoctor();
-    
+
     // Helper function to generate patient code
     const generatePatientCode = () => {
       const timestamp = Date.now().toString(36).toUpperCase();
       const random = Math.random().toString(36).substring(2, 6).toUpperCase();
       return `PAT-TG-${timestamp}-${random}`;
     };
-    
+
     let patient;
-    
+
     if (patientData.isExisting && patientData.patientId) {
       // Use existing patient
       patient = await Patient.findById(patientData.patientId);
-      
+
       if (!patient) {
         return { success: false, error: 'Patient record not found' };
       }
-      
+
       // Update telegram info if not set
       if (!patient.telegramUserId) {
         patient.telegramUserId = telegramUserId.toString();
         patient.telegramUsername = conversationState.get(chatId)?.username;
         await patient.save();
       }
-      
+
       console.log(`✅ Using existing patient: ${patient.firstName} ${patient.lastName}`);
     } else {
       // Create new patient
       const nameParts = patientData.fullName.trim().split(' ');
       const firstName = nameParts[0];
       const lastName = nameParts.slice(1).join(' ') || 'User';
-      
+
       patient = new Patient({
         patientCode: generatePatientCode(),
         firstName,
@@ -251,7 +262,7 @@ async function createAppointment(chatId, telegramUserId, patientData) {
 
     // Check for duplicates
     const isDuplicate = await checkDuplicateAppointment(
-      telegramUserId.toString(), 
+      telegramUserId.toString(),
       patientData.dateTime
     );
     if (isDuplicate) {
@@ -348,15 +359,15 @@ bot.onText(/\/cancel/, async (msg) => {
 bot.onText(/\/reports/, async (msg) => {
   const chatId = msg.chat.id;
   const telegramUserId = msg.from.id;
-  
+
   try {
     // Find patient by telegram user ID
-    const patient = await Patient.findOne({ 
-      telegramUserId: telegramUserId.toString() 
+    const patient = await Patient.findOne({
+      telegramUserId: telegramUserId.toString()
     });
-    
+
     if (!patient) {
-      await bot.sendMessage(chatId, 
+      await bot.sendMessage(chatId,
         '❌ *No Patient Record Found*\n\n' +
         'You need to book an appointment first to access reports.\n\n' +
         '📅 Use /book to schedule your first appointment.\n\n' +
@@ -365,12 +376,12 @@ bot.onText(/\/reports/, async (msg) => {
       );
       return;
     }
-    
+
     // Check if patient has any appointments (verify they're a real patient)
     const hasAppointments = await Appointment.countDocuments({
       patientId: patient._id
     });
-    
+
     if (hasAppointments === 0) {
       await bot.sendMessage(chatId,
         '📋 *No Appointments Yet*\n\n' +
@@ -381,15 +392,15 @@ bot.onText(/\/reports/, async (msg) => {
       );
       return;
     }
-    
+
     // Find all reports for this patient
-    const reports = await PatientPDF.find({ 
-      patientId: patient._id 
+    const reports = await PatientPDF.find({
+      patientId: patient._id
     })
-    .sort({ uploadedAt: -1 })
-    .limit(10)
-    .lean();
-    
+      .sort({ uploadedAt: -1 })
+      .limit(10)
+      .lean();
+
     if (!reports || reports.length === 0) {
       await bot.sendMessage(chatId,
         '📋 *No Medical Reports Found*\n\n' +
@@ -399,7 +410,7 @@ bot.onText(/\/reports/, async (msg) => {
       );
       return;
     }
-    
+
     // Create inline keyboard with report list
     const reportButtons = reports.map((report, index) => {
       const date = new Date(report.uploadedAt).toLocaleDateString('en-IN', {
@@ -409,13 +420,13 @@ bot.onText(/\/reports/, async (msg) => {
       });
       const title = report.title || 'Medical Report';
       const size = report.size ? `(${(report.size / 1024).toFixed(1)}KB)` : '';
-      
+
       return [{
         text: `${index + 1}. ${title} - ${date} ${size}`,
         callback_data: `download_${report._id}`
       }];
     });
-    
+
     await bot.sendMessage(chatId,
       '📋 *Your Medical Reports*\n\n' +
       `Found ${reports.length} report(s). Select one to download:`,
@@ -426,9 +437,9 @@ bot.onText(/\/reports/, async (msg) => {
         }
       }
     );
-    
+
     console.log(`✅ Listed ${reports.length} reports for patient ${patient._id}`);
-    
+
   } catch (error) {
     console.error('Error fetching reports:', error);
     await bot.sendMessage(chatId,
@@ -492,9 +503,9 @@ bot.on('message', async (msg) => {
       case 'waiting_patient_id':
         // For existing patients, verify their patient ID or phone number
         const patientIdentifier = userMessage.trim();
-        
+
         await bot.sendMessage(chatId, '🔍 Searching for your record...');
-        
+
         // Try to find patient by phone number or ID
         let patient = await Patient.findOne({
           $or: [
@@ -502,7 +513,7 @@ bot.on('message', async (msg) => {
             { _id: patientIdentifier.match(/^[0-9a-fA-F]{24}$/) ? patientIdentifier : null }
           ]
         });
-        
+
         if (!patient) {
           await bot.sendMessage(chatId,
             `❌ Patient record not found.\n\n` +
@@ -511,7 +522,7 @@ bot.on('message', async (msg) => {
           );
           break;
         }
-        
+
         // Store patient data temporarily
         state.data.patientId = patient._id;
         state.data.age = patient.age;
@@ -522,7 +533,7 @@ bot.on('message', async (msg) => {
         state.data.isExisting = true;
         state.step = 'waiting_patient_name';
         state.lastActivity = Date.now();
-        
+
         await bot.sendMessage(chatId,
           `✅ *Patient Record Found!*\n\n` +
           `📱 *Phone:* ${state.data.phone}\n\n` +
@@ -535,7 +546,7 @@ bot.on('message', async (msg) => {
         state.data.fullName = userMessage.trim();
         state.step = 'waiting_reason';
         state.lastActivity = Date.now();
-        
+
         await bot.sendMessage(chatId,
           `Thanks, ${state.data.fullName}!\n\n` +
           `What is the *reason for your visit*?\n\n` +
@@ -549,7 +560,7 @@ bot.on('message', async (msg) => {
         state.data.isExisting = false;
         state.step = 'waiting_phone';
         state.lastActivity = Date.now();
-        
+
         await bot.sendMessage(chatId, `Thanks, ${state.data.fullName}!\n\nNow, please provide your *phone number*:`, { parse_mode: 'Markdown' });
         break;
 
@@ -562,8 +573,8 @@ bot.on('message', async (msg) => {
         state.data.phone = phone;
         state.step = 'waiting_blood_group';
         state.lastActivity = Date.now();
-        
-        await bot.sendMessage(chatId, 
+
+        await bot.sendMessage(chatId,
           `Perfect! What is your *blood group*?`,
           {
             parse_mode: 'Markdown',
@@ -594,8 +605,8 @@ bot.on('message', async (msg) => {
         state.data.address = userMessage.trim();
         state.step = 'waiting_emergency_name';
         state.lastActivity = Date.now();
-        
-        await bot.sendMessage(chatId, 
+
+        await bot.sendMessage(chatId,
           `Great! Now, please provide your *emergency contact name*:`,
           { parse_mode: 'Markdown' }
         );
@@ -605,8 +616,8 @@ bot.on('message', async (msg) => {
         state.data.emergencyContactName = userMessage.trim();
         state.step = 'waiting_emergency_phone';
         state.lastActivity = Date.now();
-        
-        await bot.sendMessage(chatId, 
+
+        await bot.sendMessage(chatId,
           `Thanks! Now, please provide the *emergency contact phone number*:`,
           { parse_mode: 'Markdown' }
         );
@@ -621,8 +632,8 @@ bot.on('message', async (msg) => {
         state.data.emergencyPhone = emergencyPhone;
         state.step = 'waiting_reason';
         state.lastActivity = Date.now();
-        
-        await bot.sendMessage(chatId, 
+
+        await bot.sendMessage(chatId,
           `Excellent! What is the *reason for your visit*?\n\n` +
           `(e.g., "Regular checkup", "Stomach pain", "Follow-up consultation", etc.)`,
           { parse_mode: 'Markdown' }
@@ -633,7 +644,7 @@ bot.on('message', async (msg) => {
         state.data.reason = userMessage.trim();
         state.step = 'waiting_datetime';
         state.lastActivity = Date.now();
-        
+
         await bot.sendMessage(chatId,
           `📅 Thank you! When would you like to schedule your appointment?\n\n` +
           `Please provide the date and time in natural language.\n\n` +
@@ -686,14 +697,14 @@ bot.on('message', async (msg) => {
         let confirmationMsg = `✅ *Perfect! Please review your appointment details:*\n\n` +
           `👤 *Name:* ${state.data.fullName}\n` +
           `📱 *Phone:* ${state.data.phone}\n`;
-        
+
         // Add additional fields for new patients
         if (!state.data.isExisting) {
           confirmationMsg += `🩸 *Blood Group:* ${state.data.bloodGroup || 'N/A'}\n` +
             `📍 *Address:* ${state.data.address}\n` +
             `🚨 *Emergency Contact:* ${state.data.emergencyContactName} (${state.data.emergencyPhone})\n`;
         }
-        
+
         confirmationMsg += `📝 *Reason:* ${state.data.reason}\n\n` +
           `📅 *Date:* ${state.data.dateStr}\n` +
           `🕐 *Time:* ${state.data.timeStr}\n` +
@@ -789,11 +800,11 @@ bot.on('callback_query', async (query) => {
     // Report download handler
     if (data.startsWith('download_')) {
       const reportId = data.replace('download_', '');
-      
+
       try {
         // Fetch the report from database
         const report = await PatientPDF.findById(reportId);
-        
+
         if (!report) {
           await bot.answerCallbackQuery(query.id, {
             text: '❌ Report not found',
@@ -801,13 +812,13 @@ bot.on('callback_query', async (query) => {
           });
           return;
         }
-        
+
         // Verify patient access (security check)
         const patient = await Patient.findOne({
           _id: report.patientId,
           telegramUserId: query.from.id.toString()
         });
-        
+
         if (!patient) {
           await bot.answerCallbackQuery(query.id, {
             text: '⚠️ Access denied - not your report',
@@ -816,16 +827,16 @@ bot.on('callback_query', async (query) => {
           console.warn(`⚠️ Unauthorized download attempt: User ${query.from.id} tried to access report ${reportId}`);
           return;
         }
-        
+
         // Send "preparing" message
         await bot.answerCallbackQuery(query.id, {
           text: '⏳ Preparing your report...'
         });
-        
+
         await bot.sendMessage(chatId, '⏳ *Downloading your report...*\nPlease wait...', {
           parse_mode: 'Markdown'
         });
-        
+
         // Check file size (Telegram limit is 50MB)
         const fileSizeMB = report.size / (1024 * 1024);
         if (fileSizeMB > 50) {
@@ -837,15 +848,15 @@ bot.on('callback_query', async (query) => {
           );
           return;
         }
-        
+
         // Send the document
         await bot.sendDocument(chatId, report.data, {
-          caption: 
+          caption:
             `📄 *${report.title || 'Medical Report'}*\n\n` +
-            `📅 *Uploaded:* ${new Date(report.uploadedAt).toLocaleDateString('en-IN', { 
-              day: '2-digit', 
-              month: 'long', 
-              year: 'numeric' 
+            `📅 *Uploaded:* ${new Date(report.uploadedAt).toLocaleDateString('en-IN', {
+              day: '2-digit',
+              month: 'long',
+              year: 'numeric'
             })}\n` +
             `📊 *Size:* ${(report.size / 1024).toFixed(2)} KB\n` +
             `📝 *File:* ${report.fileName}`,
@@ -854,16 +865,16 @@ bot.on('callback_query', async (query) => {
         }, {
           contentType: report.mimeType || 'application/pdf'
         });
-        
+
         await bot.sendMessage(chatId,
           '✅ *Report sent successfully!*\n\n' +
           '💡 You can download it from the file above.\n' +
           'Use /reports to view more reports.',
           { parse_mode: 'Markdown' }
         );
-        
+
         console.log(`✅ Report downloaded: ${reportId} by patient ${patient._id}`);
-        
+
       } catch (downloadError) {
         console.error('Error downloading report:', downloadError);
         await bot.answerCallbackQuery(query.id, {
@@ -877,14 +888,14 @@ bot.on('callback_query', async (query) => {
           { parse_mode: 'Markdown' }
         );
       }
-      
+
       return; // Exit early for download handler
     }
-    
+
     // Patient type selection
     if (data.startsWith('patient_type_')) {
       const patientType = data.replace('patient_type_', '');
-      
+
       await bot.answerCallbackQuery(query.id);
       await bot.editMessageReplyMarkup(
         { inline_keyboard: [] },
@@ -893,12 +904,12 @@ bot.on('callback_query', async (query) => {
           message_id: query.message.message_id
         }
       );
-      
+
       if (patientType === 'new') {
         // New patient - ask for full name
         state.step = 'waiting_full_name';
         state.lastActivity = Date.now();
-        
+
         await bot.sendMessage(chatId,
           `✅ *New Patient Registration*\n\n` +
           `Please provide your *full name*:`,
@@ -908,7 +919,7 @@ bot.on('callback_query', async (query) => {
         // Existing patient - ask for patient ID or phone
         state.step = 'waiting_patient_id';
         state.lastActivity = Date.now();
-        
+
         await bot.sendMessage(chatId,
           `✅ *Existing Patient*\n\n` +
           `Please provide your *phone number* or *patient ID* to look up your record:`,
@@ -916,14 +927,14 @@ bot.on('callback_query', async (query) => {
         );
       }
     }
-    
+
     // Blood group selection (for new patients)
     else if (data.startsWith('blood_')) {
       const bloodGroup = data.replace('blood_', '');
       state.data.bloodGroup = bloodGroup === 'unknown' ? 'Unknown' : bloodGroup;
       state.step = 'waiting_address';
       state.lastActivity = Date.now();
-      
+
       await bot.answerCallbackQuery(query.id);
       await bot.editMessageText(
         `✅ Blood Group: ${state.data.bloodGroup}`,
@@ -932,12 +943,12 @@ bot.on('callback_query', async (query) => {
           message_id: query.message.message_id
         }
       );
-      await bot.sendMessage(chatId, 
+      await bot.sendMessage(chatId,
         `Great! Now, please provide your *address*:`,
         { parse_mode: 'Markdown' }
       );
     }
-    
+
     // Appointment confirmation
     else if (data === 'confirm_appointment') {
       await bot.answerCallbackQuery(query.id, { text: 'Booking your appointment...' });
@@ -948,7 +959,7 @@ bot.on('callback_query', async (query) => {
           message_id: query.message.message_id
         }
       );
-      
+
       await bot.sendMessage(chatId, '⏳ Creating your appointment...');
 
       const result = await createAppointment(
@@ -966,7 +977,7 @@ bot.on('callback_query', async (query) => {
           `🕐 *Time:* ${state.data.timeStr}\n` +
           `👨‍⚕️ *Doctor:* Dr. ${result.doctorName}\n` +
           `📍 *Location:* Movi Innovations\n\n` +
-          `💡 Please save your appointment code for reference.\n`+
+          `💡 Please save your appointment code for reference.\n` +
           `We'll see you at your appointment!\n\n` +
           `Use /book to schedule another appointment.`,
           { parse_mode: 'Markdown' }
@@ -981,7 +992,7 @@ bot.on('callback_query', async (query) => {
         resetState(chatId);
       }
     }
-    
+
     // Appointment cancellation
     else if (data === 'cancel_appointment') {
       await bot.answerCallbackQuery(query.id, { text: 'Booking cancelled' });
@@ -998,7 +1009,7 @@ bot.on('callback_query', async (query) => {
       );
       resetState(chatId);
     }
-    
+
   } catch (error) {
     console.error('Error handling callback query:', error);
     await bot.answerCallbackQuery(query.id, { text: 'An error occurred' });

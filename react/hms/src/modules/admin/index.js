@@ -25,5 +25,8 @@ export { default as Invoice } from './invoice/Invoice';
 // Settings
 export { default as Settings } from './settings/Settings';
 
+// Ward Map (Bed Allocation & Occupancy)
+export { default as WardMap } from './ward-map/WardMap';
+
 // Help & Support
 export { default as Help } from './help/Help';

@@ -17,6 +17,7 @@ import {
   MdLogout,
   MdAdminPanelSettings,
   MdLocalHospital,
+  MdKingBed,
 } from 'react-icons/md';
 import { ChatbotFloatingButton } from '../../components/chatbot';
 import MoviLogo from '../../components/common/Logo';
@@ -37,6 +38,7 @@ const AdminRoot = () => {
     { icon: <MdReceipt />, label: 'Payroll', path: '/admin/invoice' },
     { icon: <MdBiotech />, label: 'Pathology', path: '/admin/pathology' },
     { icon: <MdLocalPharmacy />, label: 'Pharmacy', path: '/admin/pharmacy' },
+    { icon: <MdKingBed />, label: 'Ward Map', path: '/admin/ward-map' },
     { icon: <MdSettings />, label: 'Settings', path: '/admin/settings' },
   ], []);
 

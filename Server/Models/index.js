@@ -24,6 +24,8 @@ const MedicalHistoryDocument = require('./MedicalHistoryDocument');
 const ScannedDataVerification = require('./ScannedDataVerification');
 const Payroll = require('./Payroll');
 const APILog = require('./APILog');
+const Ward = require('./Ward');
+const Bed = require('./Bed');
 
 // Export all models
 module.exports = {
@@ -47,6 +49,8 @@ module.exports = {
   ScannedDataVerification,
   Payroll,
   APILog,
+  Ward,
+  Bed,
   // Helper function for transactions
   startSession: () => mongoose.startSession()
 };
