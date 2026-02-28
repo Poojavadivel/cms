@@ -5,15 +5,21 @@ const API_BASE_URL = process.env.REACT_APP_API_URL ||
     ? 'http://localhost:5000/api'
     : 'https://hms-dev.onrender.com/api');
 
-const getAuthToken = () => localStorage.getItem('auth_token');
+const getAuthToken = () =>
+  localStorage.getItem('auth_token') ||
+  localStorage.getItem('x-auth-token') ||
+  localStorage.getItem('authToken');
 
-const createAxiosInstance = () => axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-    'x-auth-token': getAuthToken(),
-  },
-});
+const createAxiosInstance = () => {
+  const token = getAuthToken();
+  return axios.create({
+    baseURL: API_BASE_URL,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { 'x-auth-token': token } : {}),
+    },
+  });
+};
 
 /**
  * Fetch all beds grouped by ward + summary stats
