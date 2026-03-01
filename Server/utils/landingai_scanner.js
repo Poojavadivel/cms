@@ -104,13 +104,13 @@ const PatientDetailsSchema = {
       default: ''
     },
     phone: {
-      type: 'string',
+      type: ['string', 'null'],
       description: "Patient's contact phone number.",
       title: 'Phone Number',
       default: ''
     },
     email: {
-      type: 'string',
+      type: ['string', 'null'],
       description: "Patient's email address.",
       title: 'Email',
       default: ''
@@ -140,13 +140,13 @@ const AddressSchema = {
       default: ''
     },
     state: {
-      type: 'string',
+      type: ['string', 'null'],
       description: 'The state or province.',
       title: 'State',
       default: ''
     },
     pincode: {
-      type: 'string',
+      type: ['string', 'null'],
       description: 'The postal/ZIP code.',
       title: 'Pincode',
       default: ''
@@ -236,7 +236,7 @@ const TestResultSchema = {
       default: 'Normal'
     },
     notes: {
-      type: 'string',
+      type: ['string', 'null'],
       description: 'Additional notes about this test.',
       title: 'Notes',
       default: ''
@@ -266,19 +266,19 @@ const LabReportSchema = {
       default: ''
     },
     reportDate: {
-      type: 'string',
+      type: ['string', 'null'],
       description: 'Date when report was issued.',
       title: 'Report Date',
       default: ''
     },
     testDate: {
-      type: 'string',
+      type: ['string', 'null'],
       description: 'Date when test was performed.',
       title: 'Test Date',
       default: ''
     },
     doctorName: {
-      type: 'string',
+      type: ['string', 'null'],
       description: 'Referring doctor name.',
       title: 'Doctor Name',
       default: ''
@@ -291,13 +291,13 @@ const LabReportSchema = {
       default: []
     },
     interpretation: {
-      type: 'string',
+      type: ['string', 'null'],
       description: 'Clinical interpretation or notes.',
       title: 'Interpretation',
       default: ''
     },
     notes: {
-      type: 'string',
+      type: ['string', 'null'],
       description: 'General notes or observations.',
       title: 'Notes',
       default: ''

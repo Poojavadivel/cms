@@ -2112,9 +2112,15 @@ class _LabsTableState extends State<_LabsTable> {
       final date = report['reportDate'] ?? report['uploadDate'] ?? report['date'] ?? report['createdAt'] ?? report['uploadedAt'];
       if (date == null) return '—';
       
+      // Debug logging
+      if (report['reportDate'] != null && report['uploadDate'] != null) {
+        print('[LAB DATE DEBUG] reportDate: ${report['reportDate']}, uploadDate: ${report['uploadDate']}');
+      }
+      
       final dateTime = DateTime.parse(date.toString());
       return DateFormat('dd MMM yyyy').format(dateTime);
     } catch (e) {
+      print('[LAB DATE ERROR] Failed to parse date: $e, report keys: ${report.keys.toList()}');
       return '—';
     }
   }

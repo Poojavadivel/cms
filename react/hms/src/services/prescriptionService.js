@@ -131,24 +131,32 @@ export const fetchLabReports = async (patientId) => {
     throw new Error('patientId is required');
   }
 
+  console.log('[LAB_REPORTS] 🔍 Starting fetch for patient:', patientId);
+
   try {
     // FIRST: Try pathology reports endpoint (for real lab reports)
     const pathologyEndpoint = `/pathology/reports?patientId=${patientId}&limit=100`;
     logger.apiRequest('GET', pathologyEndpoint);
     logger.info('LAB_REPORTS', `Fetching from pathology reports: ${pathologyEndpoint}`);
+    console.log('[LAB_REPORTS] 📡 Trying pathology endpoint:', pathologyEndpoint);
 
     const axiosInstance = createAxiosInstance();
     const response = await axiosInstance.get(pathologyEndpoint);
 
     logger.apiResponse('GET', pathologyEndpoint, response.status);
+    console.log('[LAB_REPORTS] ✅ Pathology response:', response.status, response.data);
 
-    if (response.data && response.data.success && response.data.reports) {
+    if (response.data && response.data.success && response.data.reports && response.data.reports.length > 0) {
       logger.success('LAB_REPORTS', `Found ${response.data.reports.length} pathology reports`);
+      console.log('[LAB_REPORTS] ✅ Returning', response.data.reports.length, 'pathology reports');
       return response.data.reports;
+    } else {
+      console.log('[LAB_REPORTS] ⚠️ Pathology response has no reports, trying scanner endpoint...');
     }
 
   } catch (pathologyError) {
     logger.warning('LAB_REPORTS', `Pathology endpoint failed: ${pathologyError.message}`);
+    console.log('[LAB_REPORTS] ⚠️ Pathology endpoint failed:', pathologyError.message);
   }
 
   try {
@@ -156,22 +164,36 @@ export const fetchLabReports = async (patientId) => {
     const endpoint = ScannerEndpoints.getLabReports(patientId);
     logger.apiRequest('GET', endpoint);
     logger.info('LAB_REPORTS', `Trying scanned lab reports: ${endpoint}`);
+    console.log('[LAB_REPORTS] 📡 Trying scanner endpoint:', endpoint);
 
     const axiosInstance = createAxiosInstance();
     const response = await axiosInstance.get(endpoint);
 
     logger.apiResponse('GET', endpoint, response.status);
+    console.log('[LAB_REPORTS] ✅ Scanner response:', response.status, response.data);
 
     if (response.data && response.data.success && response.data.labReports) {
       logger.success('LAB_REPORTS', `Found ${response.data.labReports.length} scanned lab reports`);
+      console.log('[LAB_REPORTS] ✅ Returning', response.data.labReports.length, 'scanned lab reports');
       return response.data.labReports;
+    } else if (response.data && response.data.labReports) {
+      // Handle case where success field might be missing but data exists
+      console.log('[LAB_REPORTS] ✅ Found labReports without success flag:', response.data.labReports.length);
+      return response.data.labReports;
+    } else {
+      console.log('[LAB_REPORTS] ⚠️ Scanner response structure:', JSON.stringify(response.data, null, 2));
     }
 
   } catch (error) {
     logger.apiError('GET', ScannerEndpoints.getLabReports(patientId), error);
+    console.error('[LAB_REPORTS] ❌ Scanner endpoint error:', error.message);
+    if (error.response) {
+      console.error('[LAB_REPORTS] ❌ Error response:', error.response.status, error.response.data);
+    }
   }
 
   logger.warning('LAB_REPORTS', 'No lab reports found from any endpoint');
+  console.log('[LAB_REPORTS] ⚠️ No lab reports found from any endpoint');
   return [];
 };
 

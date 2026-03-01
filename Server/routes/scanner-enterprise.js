@@ -169,15 +169,50 @@ function convertExtractedDataToRows(extractedData, documentType) {
 
   } else if (documentType === 'LAB_REPORT') {
     console.log('[CONVERT] Processing LAB_REPORT document');
-    const labData = extractedData.labReport || {};
+    
+    // ✅ FIX: Read from extraction object (LandingAI returns nested structure)
+    const labData = extractedData.extraction?.labReport || extractedData.labReport || {};
+    console.log('[CONVERT] Lab data keys:', Object.keys(labData));
+    console.log('[CONVERT] Lab results count:', labData.results?.length || 0);
 
-    if (labData.testType) rows.push({ fieldName: 'testType', displayLabel: 'Test Type', originalValue: labData.testType, currentValue: labData.testType, dataType: 'string', category: 'lab_results', confidence: 0.95 });
-    if (labData.labName) rows.push({ fieldName: 'labName', displayLabel: 'Lab Name', originalValue: labData.labName, currentValue: labData.labName, dataType: 'string', category: 'other', confidence: 0.95 });
-    if (labData.reportDate) rows.push({ fieldName: 'reportDate', displayLabel: 'Report Date', originalValue: labData.reportDate, currentValue: labData.reportDate, dataType: 'date', category: 'other', confidence: 0.95 });
+    if (labData.testType) {
+      console.log('[CONVERT] ✅ Found testType:', labData.testType);
+      rows.push({ fieldName: 'testType', displayLabel: 'Test Type', originalValue: labData.testType, currentValue: labData.testType, dataType: 'string', category: 'lab_results', confidence: 0.95 });
+    } else {
+      console.log('[CONVERT] ⚠️ Missing testType');
+    }
+    
+    if (labData.testCategory) {
+      console.log('[CONVERT] ✅ Found testCategory:', labData.testCategory);
+      rows.push({ fieldName: 'testCategory', displayLabel: 'Test Category', originalValue: labData.testCategory, currentValue: labData.testCategory, dataType: 'string', category: 'lab_results', confidence: 0.95 });
+    }
+    
+    if (labData.labName) {
+      console.log('[CONVERT] ✅ Found labName:', labData.labName);
+      rows.push({ fieldName: 'labName', displayLabel: 'Lab Name', originalValue: labData.labName, currentValue: labData.labName, dataType: 'string', category: 'other', confidence: 0.95 });
+    } else {
+      console.log('[CONVERT] ⚠️ Missing labName');
+    }
+    
+    // Check for date fields with various names
+    const dateValue = labData.reportDate || labData.testDate || labData.date || labData.sid_date || labData.sample_date;
+    if (dateValue) {
+      console.log('[CONVERT] ✅ Found date:', dateValue);
+      rows.push({ fieldName: 'reportDate', displayLabel: 'Report Date', originalValue: dateValue, currentValue: dateValue, dataType: 'date', category: 'other', confidence: 0.95 });
+    } else {
+      console.log('[CONVERT] ⚠️ Missing reportDate (checked: reportDate, testDate, date, sid_date, sample_date)');
+    }
+    
+    if (labData.doctorName) {
+      console.log('[CONVERT] ✅ Found doctorName:', labData.doctorName);
+      rows.push({ fieldName: 'doctorName', displayLabel: 'Doctor Name', originalValue: labData.doctorName, currentValue: labData.doctorName, dataType: 'string', category: 'patient_details', confidence: 0.95 });
+    }
 
-    // Lab results
+    // Lab results array
     if (labData.results && Array.isArray(labData.results)) {
+      console.log(`[CONVERT] ✅ Processing ${labData.results.length} test results`);
       labData.results.forEach((result, idx) => {
+        console.log(`[CONVERT]   Result ${idx + 1}: ${result.testName || 'Unknown'} = ${result.value || 'N/A'}`);
         rows.push({
           fieldName: `labResult_${idx}`,
           displayLabel: `Test ${idx + 1}: ${result.testName || 'Result'}`,
@@ -188,107 +223,140 @@ function convertExtractedDataToRows(extractedData, documentType) {
           confidence: 0.95
         });
       });
+    } else {
+      console.log('[CONVERT] ⚠️ No lab results array found or empty');
+    }
+    
+    if (labData.interpretation) {
+      console.log('[CONVERT] ✅ Found interpretation');
+      rows.push({ fieldName: 'interpretation', displayLabel: 'Interpretation', originalValue: labData.interpretation, currentValue: labData.interpretation, dataType: 'string', category: 'diagnosis', confidence: 0.95 });
+    }
+    
+    if (labData.notes) {
+      console.log('[CONVERT] ✅ Found notes');
+      rows.push({ fieldName: 'notes', displayLabel: 'Notes', originalValue: labData.notes, currentValue: labData.notes, dataType: 'string', category: 'other', confidence: 0.90 });
     }
 
-    console.log(`[CONVERT] ✅ Created ${rows.length} rows for LAB_REPORT`);
+    console.log(`[CONVERT] ✅ Created ${rows.length} rows for LAB_REPORT (including ${labData.results?.length || 0} test results)`);
 
   } else if (documentType === 'MEDICAL_HISTORY') {
     console.log('[CONVERT] Processing MEDICAL_HISTORY document');
 
-    // ✅ FIX: Read from extraction object (LandingAI returns nested structure)
-    const historyData = extractedData.extraction || extractedData;
-    console.log('[CONVERT] Medical history data keys:', Object.keys(historyData));
+    const ex = extractedData.extraction || extractedData;
+    console.log('[CONVERT] Medical history data keys:', Object.keys(ex));
 
-    // Simplified Medical History Schema Fields
-    if (historyData.medical_summary) {
-      console.log('[CONVERT] ✅ Found medical_summary:', historyData.medical_summary.substring(0, 100) + '...');
+    if (!ex || Object.keys(ex).length === 0) {
+      throw new Error('Missing extraction data for MEDICAL_HISTORY');
+    }
+
+    // Medical type
+    if (ex.medical_type) {
+      console.log('[CONVERT] ✅ Found medical_type:', ex.medical_type);
+      rows.push({
+        fieldName: 'medical_type',
+        displayLabel: 'Medical Type',
+        originalValue: ex.medical_type,
+        currentValue: ex.medical_type,
+        dataType: 'string',
+        category: 'other',
+        confidence: 0.95
+      });
+    }
+
+    // Medical summary (pick whichever exists)
+    const summary = ex.appointment_summary || ex.discharge_summary || ex.doctor_notes || ex.observations;
+    if (summary) {
+      console.log('[CONVERT] ✅ Found medical_summary:', summary.substring(0, 100) + '...');
       rows.push({
         fieldName: 'medical_summary',
         displayLabel: 'Medical Summary',
-        originalValue: historyData.medical_summary,
-        currentValue: historyData.medical_summary,
+        originalValue: summary,
+        currentValue: summary,
         dataType: 'string',
-        category: 'diagnosis',  // ✅ Valid enum: diagnosis for medical summary
+        category: 'diagnosis',
         confidence: 0.95
       });
-    } else {
-      console.log('[CONVERT] ❌ Missing medical_summary');
     }
 
-    if (historyData.date_time) {
-      console.log('[CONVERT] ✅ Found date_time:', historyData.date_time);
+    // Date
+    if (ex.date) {
+      console.log('[CONVERT] ✅ Found date:', ex.date);
       rows.push({
-        fieldName: 'date_time',
-        displayLabel: 'Date and Time',
-        originalValue: historyData.date_time,
-        currentValue: historyData.date_time,
+        fieldName: 'date',
+        displayLabel: 'Date',
+        originalValue: ex.date,
+        currentValue: ex.date,
         dataType: 'string',
-        category: 'other',  // ✅ Valid enum: other for date/time metadata
+        category: 'other',
         confidence: 0.95
       });
-    } else {
-      console.log('[CONVERT] ❌ Missing date_time');
     }
 
-    if (historyData.hospital) {
-      console.log('[CONVERT] ✅ Found hospital:', historyData.hospital);
+    // Time (optional)
+    if (ex.time) {
+      console.log('[CONVERT] ✅ Found time:', ex.time);
+      rows.push({
+        fieldName: 'time',
+        displayLabel: 'Time',
+        originalValue: ex.time,
+        currentValue: ex.time,
+        dataType: 'string',
+        category: 'other',
+        confidence: 0.95
+      });
+    }
+
+    // Hospital
+    if (ex.hospital_name) {
+      console.log('[CONVERT] ✅ Found hospital:', ex.hospital_name);
       rows.push({
         fieldName: 'hospital',
         displayLabel: 'Hospital',
-        originalValue: historyData.hospital,
-        currentValue: historyData.hospital,
+        originalValue: ex.hospital_name,
+        currentValue: ex.hospital_name,
         dataType: 'string',
-        category: 'other',  // ✅ Valid enum: other for hospital metadata
+        category: 'other',
         confidence: 0.95
       });
-    } else {
-      console.log('[CONVERT] ❌ Missing hospital');
     }
 
-    if (historyData.doctor) {
-      console.log('[CONVERT] ✅ Found doctor:', historyData.doctor);
+    // Doctor
+    if (ex.doctor_name) {
+      console.log('[CONVERT] ✅ Found doctor:', ex.doctor_name);
       rows.push({
         fieldName: 'doctor',
         displayLabel: 'Doctor',
-        originalValue: historyData.doctor,
-        currentValue: historyData.doctor,
+        originalValue: ex.doctor_name,
+        currentValue: ex.doctor_name,
         dataType: 'string',
-        category: 'patient_details',  // ✅ Valid enum: patient_details for doctor info
+        category: 'patient_details',
         confidence: 0.95
       });
-    } else {
-      console.log('[CONVERT] ❌ Missing doctor');
     }
 
-    if (historyData.services && Array.isArray(historyData.services)) {
-      console.log('[CONVERT] ✅ Found services:', historyData.services);
-      rows.push({
-        fieldName: 'services',
-        displayLabel: 'Services',
-        originalValue: historyData.services,
-        currentValue: historyData.services,
-        dataType: 'array',
-        category: 'other',  // ✅ Valid enum: other for services metadata
-        confidence: 0.90
-      });
-    } else {
-      console.log('[CONVERT] ⚠️ Missing services (optional)');
-    }
+    // Optional fields
+    const optionalFields = [
+      ['department', 'Department'],
+      ['services', 'Services'],
+      ['doctor_notes', 'Doctor Notes'],
+      ['observations', 'Observations'],
+      ['remarks', 'Remarks']
+    ];
 
-    if (historyData.medical_notes !== null && historyData.medical_notes !== undefined && historyData.medical_notes !== '') {
-      console.log('[CONVERT] ✅ Found medical_notes:', historyData.medical_notes);
-      rows.push({
-        fieldName: 'medical_notes',
-        displayLabel: 'Medical Notes',
-        originalValue: historyData.medical_notes,
-        currentValue: historyData.medical_notes,
-        dataType: 'string',
-        category: 'other',  // ✅ Valid enum: other for additional notes
-        confidence: 0.90
-      });
-    } else {
-      console.log('[CONVERT] ⚠️ Missing medical_notes (optional field, null or empty)');
-    }
+    optionalFields.forEach(([key, label]) => {
+      if (ex[key] !== null && ex[key] !== undefined && ex[key] !== '') {
+        console.log(`[CONVERT] ✅ Found ${key}:`, typeof ex[key] === 'string' ? ex[key].substring(0, 50) : ex[key]);
+        rows.push({
+          fieldName: key,
+          displayLabel: label,
+          originalValue: ex[key],
+          currentValue: ex[key],
+          dataType: Array.isArray(ex[key]) ? 'array' : 'string',
+          category: 'other',
+          confidence: 0.90
+        });
+      }
+    });
 
     console.log(`[CONVERT] ✅ Created ${rows.length} rows for MEDICAL_HISTORY`);
   }
@@ -980,30 +1048,81 @@ router.post('/verification/:verificationId/confirm', auth, async (req, res) => {
       logh(batchId, `💊 Created PrescriptionDocument: ${reportId}`);
 
     } else if (verification.documentType === 'LAB_REPORT') {
-      const labData = verification.extractedData.labReport || {};
+      console.log('[CONFIRM] 🧪 Processing LAB_REPORT document');
+      
+      // ✅ FIX: Read from extraction object if it exists (same pattern as PRESCRIPTION)
+      const rawData = verification.extractedData;
+      const labData = rawData.extraction?.labReport || rawData.labReport || {};
+      
+      console.log('[CONFIRM] Lab data keys:', Object.keys(labData));
+      console.log('[CONFIRM] Lab results in extraction:', labData.results?.length || 0);
 
       // Build results array from verified rows
       const results = verifiedRows
         .filter(r => r.category === 'lab_results' && r.fieldName.startsWith('labResult_'))
         .map(r => {
           const result = r.currentValue;
+          
+          // Normalize flag value to match enum
+          let normalizedFlag = result.flag || '';
+          if (normalizedFlag) {
+            normalizedFlag = normalizedFlag.toLowerCase().replace(/abnormal\s*/i, '').trim();
+            if (!['normal', 'high', 'low', ''].includes(normalizedFlag)) {
+              normalizedFlag = '';
+            }
+          }
+          
           return {
             testName: result.testName || '',
             value: result.value?.toString() || '',
             unit: result.unit || '',
-            referenceRange: result.normalRange || '',
-            flag: result.flag || 'Normal'
+            referenceRange: result.normalRange || result.referenceRange || '',
+            flag: normalizedFlag
           };
         });
+      
+      console.log(`[CONFIRM] 📊 Reconstructed ${results.length} lab results from verified rows`);
+
+      // Parse report date properly
+      let reportDate = new Date();
+      const reportDateValue = verifiedRows.find(r => r.fieldName === 'reportDate')?.currentValue || labData.reportDate;
+      if (reportDateValue) {
+        try {
+          const dateStr = reportDateValue.toString().trim();
+          // Handle DD-MM-YYYY format
+          if (dateStr.match(/^\d{1,2}-\d{1,2}-\d{4}$/)) {
+            const [day, month, year] = dateStr.split('-');
+            reportDate = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`);
+            console.log(`[CONFIRM] 📅 Parsed report date: ${dateStr} → ${reportDate.toISOString()}`);
+          } else if (dateStr.match(/^\d{1,2}\/\d{1,2}\/\d{2,4}$/)) {
+            // Handle DD/MM/YY or DD/MM/YYYY format
+            const [day, month, year] = dateStr.split('/');
+            const fullYear = year.length === 2 ? `20${year}` : year;
+            reportDate = new Date(`${fullYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`);
+            console.log(`[CONFIRM] 📅 Parsed report date: ${dateStr} → ${reportDate.toISOString()}`);
+          } else {
+            reportDate = new Date(dateStr);
+            console.log(`[CONFIRM] 📅 Standard date parse: ${dateStr} → ${reportDate.toISOString()}`);
+          }
+          
+          if (isNaN(reportDate.getTime())) {
+            console.log(`[CONFIRM] ⚠️ Invalid report date, using current date`);
+            reportDate = new Date();
+          }
+        } catch (err) {
+          console.log(`[CONFIRM] ⚠️ Report date parse error: ${err.message}, using current date`);
+          reportDate = new Date();
+        }
+      }
 
       const labReportDoc = new LabReportDocument({
         patientId: verification.patientId,
         pdfId: verification.pdfId,
         testType: verifiedRows.find(r => r.fieldName === 'testType')?.currentValue || labData.testType || 'GENERAL',
-        testCategory: labData.testCategory || 'General',
+        testCategory: verifiedRows.find(r => r.fieldName === 'testCategory')?.currentValue || labData.testCategory || 'General',
         intent: labData.testType || 'GENERAL',
         labName: verifiedRows.find(r => r.fieldName === 'labName')?.currentValue || labData.labName || '',
-        reportDate: verifiedRows.find(r => r.fieldName === 'reportDate')?.currentValue || labData.reportDate || new Date(),
+        reportDate: reportDate,
         results: results,
         ocrText: verification.metadata.markdown || '',
         ocrEngine: 'landingai-ade',
@@ -1017,32 +1136,53 @@ router.post('/verification/:verificationId/confirm', auth, async (req, res) => {
 
       await labReportDoc.save();
       reportId = labReportDoc._id.toString();
-      logh(batchId, `🧪 Created LabReportDocument: ${reportId}`);
+      console.log(`[CONFIRM] ✅ LabReportDocument created: ${reportId}`);
+      console.log(`[CONFIRM]   - Test Type: ${labReportDoc.testType}`);
+      console.log(`[CONFIRM]   - Lab Name: ${labReportDoc.labName}`);
+      console.log(`[CONFIRM]   - Results Count: ${labReportDoc.results.length}`);
+      logh(batchId, `🧪 Created LabReportDocument: ${reportId} with ${results.length} test results`);
 
     } else if (verification.documentType === 'MEDICAL_HISTORY') {
-      // ✅ FIX: Read from extraction object if it exists
-      const rawData = verification.extractedData;
-      const historyData = rawData.extraction || rawData;
+      console.log('[CONFIRM] 📋 Processing MEDICAL_HISTORY document');
+      
+      const ex = verification.extractedData.extraction || verification.extractedData;
+      
+      // Get values from verified rows (using correct field names)
+      const medicalSummary = verifiedRows.find(r => r.fieldName === 'medical_summary')?.currentValue || 
+                             ex.appointment_summary || ex.discharge_summary || ex.doctor_notes || ex.observations || '';
+      const dateValue = verifiedRows.find(r => r.fieldName === 'date')?.currentValue || ex.date || '';
+      const timeValue = verifiedRows.find(r => r.fieldName === 'time')?.currentValue || ex.time || '';
+      const hospital = verifiedRows.find(r => r.fieldName === 'hospital')?.currentValue || ex.hospital_name || '';
+      const doctor = verifiedRows.find(r => r.fieldName === 'doctor')?.currentValue || ex.doctor_name || '';
+      const services = verifiedRows.find(r => r.fieldName === 'services')?.currentValue || ex.services || [];
+      const doctorNotes = verifiedRows.find(r => r.fieldName === 'doctor_notes')?.currentValue || ex.doctor_notes || '';
+      const observations = verifiedRows.find(r => r.fieldName === 'observations')?.currentValue || ex.observations || '';
+      const remarks = verifiedRows.find(r => r.fieldName === 'remarks')?.currentValue || ex.remarks || '';
+      const department = verifiedRows.find(r => r.fieldName === 'department')?.currentValue || ex.department || '';
 
-      // Get values from verified rows (new simplified schema)
-      const medicalSummary = verifiedRows.find(r => r.fieldName === 'medical_summary')?.currentValue || historyData.medical_summary || '';
-      const dateTime = verifiedRows.find(r => r.fieldName === 'date_time')?.currentValue || historyData.date_time || '';
-      const hospital = verifiedRows.find(r => r.fieldName === 'hospital')?.currentValue || historyData.hospital || '';
-      const doctor = verifiedRows.find(r => r.fieldName === 'doctor')?.currentValue || historyData.doctor || '';
-      const services = verifiedRows.find(r => r.fieldName === 'services')?.currentValue || historyData.services || [];
-      const medicalNotes = verifiedRows.find(r => r.fieldName === 'medical_notes')?.currentValue || historyData.medical_notes || '';
+      console.log('[CONFIRM] 📊 Extracted Values:');
+      console.log(`[CONFIRM]   - Summary: ${medicalSummary ? (medicalSummary.substring(0, 50) + '...') : 'EMPTY'}`);
+      console.log(`[CONFIRM]   - Date: ${dateValue || 'EMPTY'}`);
+      console.log(`[CONFIRM]   - Time: ${timeValue || 'EMPTY'}`);
+      console.log(`[CONFIRM]   - Hospital: ${hospital || 'EMPTY'}`);
+      console.log(`[CONFIRM]   - Doctor: ${doctor || 'EMPTY'}`);
 
-      // ✅ FIX: Parse date properly (handle DD/MM/YY format)
+      // Parse date properly
       let parsedDate = new Date();
-      if (dateTime) {
+      if (dateValue) {
         try {
-          const dateStr = dateTime.trim();
+          const dateStr = dateValue.trim();
 
           // Handle DD/MM/YY or DD/MM/YYYY format
           if (dateStr.match(/^\d{1,2}\/\d{1,2}\/\d{2,4}$/)) {
             const [day, month, year] = dateStr.split('/');
             const fullYear = year.length === 2 ? `20${year}` : year;
             parsedDate = new Date(`${fullYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`);
+            console.log(`[CONFIRM] 📅 Parsed date: ${dateStr} → ${parsedDate.toISOString()}`);
+          } else if (dateStr.match(/^\d{1,2}-\d{1,2}-\d{4}$/)) {
+            // Handle DD-MM-YYYY format
+            const [day, month, year] = dateStr.split('-');
+            parsedDate = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`);
             console.log(`[CONFIRM] 📅 Parsed date: ${dateStr} → ${parsedDate.toISOString()}`);
           } else {
             parsedDate = new Date(dateStr);
@@ -1059,13 +1199,36 @@ router.post('/verification/:verificationId/confirm', auth, async (req, res) => {
         }
       }
 
+      // Combine all notes/observations
+      const combinedNotes = [doctorNotes, observations, remarks].filter(n => n).join('\n\n');
+
+      // Map department to valid category enum
+      const validCategories = ['General', 'Chronic', 'Acute', 'Surgical', 'Family', 'Other', 'Discharge'];
+      let category = 'General';
+      if (department) {
+        const deptLower = department.toLowerCase();
+        if (deptLower.includes('surgery') || deptLower.includes('surgical')) {
+          category = 'Surgical';
+        } else if (deptLower.includes('chronic')) {
+          category = 'Chronic';
+        } else if (deptLower.includes('discharge')) {
+          category = 'Discharge';
+        } else if (deptLower.includes('family')) {
+          category = 'Family';
+        } else {
+          category = 'Other';
+        }
+      }
+
+      console.log('[CONFIRM] 💾 Creating MedicalHistoryDocument...');
       const medicalHistoryDoc = new MedicalHistoryDocument({
         patientId: verification.patientId,
         pdfId: verification.pdfId,
-        title: 'Medical History Record',
-        category: 'General',
+        title: ex.medical_type || 'Medical History Record',
+        category: category,
+        department: department,
         medicalHistory: medicalSummary,
-        diagnosis: medicalSummary, // Store summary as diagnosis too
+        diagnosis: medicalSummary,
         allergies: '',
         chronicConditions: Array.isArray(services) ? services : [],
         surgicalHistory: [],
@@ -1224,9 +1387,19 @@ router.get('/lab-reports/:patientId', auth, async (req, res) => {
       .lean();
 
     console.log(`[LAB_REPORTS] ✅ Found ${labReports.length} lab report records`);
+    
+    // Log first report to debug date fields
+    if (labReports.length > 0) {
+      console.log('[LAB_REPORTS] Sample report dates:', {
+        reportDate: labReports[0].reportDate,
+        uploadDate: labReports[0].uploadDate,
+        testType: labReports[0].testType
+      });
+    }
 
     return res.json({
       success: true,
+      reports: labReports,
       labReports: labReports
     });
 

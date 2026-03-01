@@ -1513,12 +1513,13 @@ const LabResultTab = ({ patientId }) => {
         }
     };
 
-    // Simple search by test name
-    const filteredLabs = labs.filter(item =>
-        (item.testName || item.name || '')
-            .toLowerCase()
-            .includes(searchTerm.toLowerCase())
-    );
+    // Simple search by test name (supports both scanned and manual lab reports)
+    const filteredLabs = labs.filter(item => {
+        const testName = item.testType || item.testName || item.name || '';
+        const labName = item.labName || '';
+        const searchText = `${testName} ${labName}`.toLowerCase();
+        return searchText.includes(searchTerm.toLowerCase());
+    });
 
     return (
         <div className="pv-tab-container">
@@ -1575,49 +1576,73 @@ const LabResultTab = ({ patientId }) => {
 
                         {/* Data Rows */}
                         {!loading &&
-                            filteredLabs.map((item, idx) => (
-                                <tr key={idx}>
-                                    <td>
-                                        {item.testName || item.name || '—'}
-                                    </td>
-                                    <td>
-                                        {item.result || item.summary || '—'}
-                                    </td>
-                                    <td>
-                                        {item.date
-                                            ? new Date(item.date).toLocaleDateString()
-                                            : item.createdAt
-                                                ? new Date(item.createdAt).toLocaleDateString()
+                            filteredLabs.map((item, idx) => {
+                                // Support both scanned lab reports (LabReportDocument) and manual lab reports
+                                const testName = item.testType || item.testName || item.name || '—';
+                                const labName = item.labName || '—';
+                                const resultsCount = item.results?.length || 0;
+                                const displayResult = resultsCount > 0 
+                                    ? `${resultsCount} test${resultsCount > 1 ? 's' : ''} - ${labName}`
+                                    : item.result || item.summary || labName;
+                                const displayDate = item.reportDate || item.date || item.createdAt;
+                                
+                                return (
+                                    <tr key={idx}>
+                                        <td>
+                                            <div style={{ fontWeight: '500' }}>{testName}</div>
+                                            {item.testCategory && (
+                                                <div style={{ fontSize: '0.85em', color: '#6b7280', marginTop: '2px' }}>
+                                                    {item.testCategory}
+                                                </div>
+                                            )}
+                                        </td>
+                                        <td>
+                                            {displayResult}
+                                        </td>
+                                        <td>
+                                            {displayDate
+                                                ? new Date(displayDate).toLocaleDateString()
                                                 : '—'}
-                                    </td>
-                                    <td>
-                                        <span
-                                            className={`pv-badge status-${(item.status || 'completed').toLowerCase()}`}
-                                        >
-                                            {item.status || 'Completed'}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <div style={{ display: 'flex', gap: '8px' }}>
-                                            {(item.pdfId || item.fileRef) && (
-                                                <button
-                                                    className="pv-btn-action-circle"
-                                                    onClick={() => reportService.viewPdf(item.pdfId || item.fileRef)}
-                                                    title="View Report"
-                                                    style={{ color: '#207DC0' }}
-                                                >
-                                                    <MdVisibility size={18} />
-                                                </button>
-                                            )}
-                                            {!(item.pdfId || item.fileRef || item._id || item.id) && (
-                                                <button className="pv-btn-action-circle" disabled title="No PDF available">
-                                                    <MdVisibility />
-                                                </button>
-                                            )}
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
+                                        </td>
+                                        <td>
+                                            <span
+                                                className={`pv-badge status-${(item.status || 'completed').toLowerCase()}`}
+                                            >
+                                                {item.status || 'Completed'}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <div style={{ display: 'flex', gap: '8px' }}>
+                                                {(item.pdfId || item.fileRef) && (
+                                                    <button
+                                                        className="pv-btn-action-circle"
+                                                        onClick={() => reportService.viewPdf(item.pdfId || item.fileRef)}
+                                                        title="View Report"
+                                                        style={{ color: '#207DC0' }}
+                                                    >
+                                                        <MdVisibility size={18} />
+                                                    </button>
+                                                )}
+                                                {resultsCount > 0 && (
+                                                    <button
+                                                        className="pv-btn-action-circle"
+                                                        onClick={() => alert(`Results:\n\n${item.results.map(r => `${r.testName}: ${r.value} ${r.unit} (${r.referenceRange}) ${r.flag ? '- ' + r.flag.toUpperCase() : ''}`).join('\n')}`)}
+                                                        title={`View ${resultsCount} Test Results`}
+                                                        style={{ color: '#10b981' }}
+                                                    >
+                                                        <MdScience size={18} />
+                                                    </button>
+                                                )}
+                                                {!(item.pdfId || item.fileRef || item._id || item.id) && (
+                                                    <button className="pv-btn-action-circle" disabled title="No PDF available">
+                                                        <MdVisibility />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
                     </tbody>
                 </table>
             </div>
