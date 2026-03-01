@@ -313,28 +313,16 @@
     letter-spacing: 0.06em;
 }
 
-/* Scrollable content */
 .edit-panel-content {
     flex: 1;
     overflow-y: auto;
     padding: 24px 28px 100px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
 }
 
 .edit-panel-content::-webkit-scrollbar {
-    width: 5px;
-}
-
-.edit-panel-content::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.edit-panel-content::-webkit-scrollbar-thumb {
-    background: #d1d5db;
-    border-radius: 10px;
-}
-
-.edit-panel-content::-webkit-scrollbar-thumb:hover {
-    background: #9ca3af;
+    display: none;
 }
 
 /* Section titles */

@@ -338,32 +338,32 @@ const PatientView = ({ isOpen, onClose, patientId, patient: patientProp, onEdit,
                                             </div>
                                         )}
                                     </div>
-
-                                    <div className="pv-metrics-row">
-                                        <div className="pv-metric-card">
-                                            <span className="pv-metric-val">{patientData.bmi || '—'}</span>
-                                            <span className="pv-metric-lbl">BMI</span>
-                                        </div>
-                                        <div className="pv-metric-card">
-                                            <span className="pv-metric-val">{patientData.weightKg || '—'} <small>kg</small></span>
-                                            <span className="pv-metric-lbl">Weight</span>
-                                        </div>
-                                        <div className="pv-metric-card">
-                                            <span className="pv-metric-val">{patientData.heightCm || '—'} <small>Cm</small></span>
-                                            <span className="pv-metric-lbl">Height</span>
-                                        </div>
-                                        <div className="pv-metric-card">
-                                            <span className="pv-metric-val">{patientData.bp}</span>
-                                            <span className="pv-metric-lbl">Blood Pressure</span>
-                                        </div>
-                                    </div>
                                 </div>
 
-                                {/* Right Actions */}
+                                {/* Right — Edit + Vitals */}
                                 <div className="pv-header-right">
                                     <button className="pv-edit-btn" onClick={() => onEdit && onEdit(patient)}>
                                         <MdEdit size={14} /> Edit
                                     </button>
+
+                                    <div className="pv-metrics-grid">
+                                        <div className="pv-metric-card pv-metric-height">
+                                            <span className="pv-metric-val">{patientData.heightCm || '—'} <small>Cm</small></span>
+                                            <span className="pv-metric-lbl">Height</span>
+                                        </div>
+                                        <div className="pv-metric-card pv-metric-weight">
+                                            <span className="pv-metric-val">{patientData.weightKg || '—'} <small>kg</small></span>
+                                            <span className="pv-metric-lbl">Weight</span>
+                                        </div>
+                                        <div className="pv-metric-card pv-metric-bmi">
+                                            <span className="pv-metric-val">{patientData.bmi || '—'}</span>
+                                            <span className="pv-metric-lbl">BMI</span>
+                                        </div>
+                                        <div className="pv-metric-card pv-metric-bp">
+                                            <span className="pv-metric-val">{patientData.bp}</span>
+                                            <span className="pv-metric-lbl">Blood Pressure</span>
+                                        </div>
+                                    </div>
 
                                     {patientData.diagnosis.length > 0 && (
                                         <div className="pv-diagnosis-section">
@@ -522,76 +522,44 @@ const ProfileTab = ({ patient, copyToClipboard }) => {
                     <h3>Address</h3>
                 </div>
                 <div className="pv-card-body">
+                    {/* Father's Name */}
                     <div className="pv-info-row">
-                        <span className="pv-label">HOUSE NO</span>
+                        <span className="pv-label">FATHER'S NAME</span>
                         <span className="pv-value">
-                            <strong>{patient.houseNo || patient.address?.houseNo || 'Not Provided'}</strong>
-                        </span>
-
-                    </div>
-                    <div className="pv-info-row">
-                        <span className="pv-label">STREET</span>
-                        <span className="pv-value">
-                            <strong>{patient.street || patient.address?.street || 'Not Provided'}</strong>
-                        </span>
-
-                    </div>
-                    <div className="pv-info-row">
-                        <span className="pv-label">TOWN / LOCALITY</span>
-                        <span className="pv-value">
-                            <strong>{patient.town || patient.city || 'Not Provided'}</strong>
+                            <strong>{patient.fatherName || patient.metadata?.fatherName || '—'}</strong>
                         </span>
                     </div>
 
+                    {/* Combined Address */}
                     <div className="pv-info-row">
-                        <span className="pv-label">DISTRICT</span>
+                        <span className="pv-label">ADDRESS</span>
                         <span className="pv-value">
-                            <strong>{patient.district || patient.address?.district || 'Not Provided'}</strong>
+                            <strong>
+                                {[
+                                    patient.houseNo || patient.address?.houseNo,
+                                    patient.street || patient.address?.street,
+                                    patient.town || patient.city,
+                                    patient.pincode || patient.address?.pincode
+                                ].filter(Boolean).join(', ') || 'Not Provided'}
+                            </strong>
                         </span>
                     </div>
+
+                    {/* State */}
                     <div className="pv-info-row">
                         <span className="pv-label">STATE</span>
                         <span className="pv-value">
-                            <strong>{patient.state || patient.address?.state || 'Not Provided'}</strong>
+                            <strong>{patient.state || patient.address?.state || '—'}</strong>
                         </span>
-
                     </div>
-                    <div className="pv-info-row">
-                        <span className="pv-label">PINCODE</span>
-                        <span className="pv-value">
-                            <strong>{patient.pincode || patient.address?.pincode || 'Not Provided'}</strong>
-                        </span>
 
-                    </div>
+                    {/* Country */}
                     <div className="pv-info-row">
                         <span className="pv-label">COUNTRY</span>
                         <span className="pv-value">
-                            <strong>{patient.country || patient.address?.country || 'Not Provided'}</strong>
+                            <strong>{patient.country || patient.address?.country || '—'}</strong>
                         </span>
                     </div>
-
-                    {(patient.lat || patient.lng) && (
-                        <>
-                            <div className="pv-info-row mt-2 pt-2 border-t border-slate-100">
-                                <span className="pv-label uppercase tracking-widest text-[10px] opacity-70">LATITUDE</span>
-                                <span className="pv-value text-[#207DC0] font-bold">
-                                    {patient.lat || '—'}
-                                </span>
-                            </div>
-                            <div className="pv-info-row">
-                                <span className="pv-label uppercase tracking-widest text-[10px] opacity-70">LONGITUDE</span>
-                                <span className="pv-value text-[#207DC0] font-bold">
-                                    {patient.lng || '—'}
-                                </span>
-                            </div>
-                        </>
-                    )}
-
-                    {(!patient.lat || !patient.lng) && (
-                        <div className="pv-info-row mt-2 pt-2 border-t border-slate-100">
-                            <span className="pv-label uppercase tracking-widest text-[10px] opacity-70 italic text-amber-600">Note: Coordinates not stored. Map will use address search.</span>
-                        </div>
-                    )}
 
                     <div className="pv-action-buttons">
                         <button className="pv-btn-outline" onClick={copyAddress}>
@@ -1394,9 +1362,9 @@ const PrescriptionTab = ({ patientId }) => {
                     </button>
                     <div className="pv-search-box">
                         <MdSearch />
-                        <input 
-                            type="text" 
-                            placeholder="Search..." 
+                        <input
+                            type="text"
+                            placeholder="Search..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
@@ -1581,11 +1549,11 @@ const LabResultTab = ({ patientId }) => {
                                 const testName = item.testType || item.testName || item.name || '—';
                                 const labName = item.labName || '—';
                                 const resultsCount = item.results?.length || 0;
-                                const displayResult = resultsCount > 0 
+                                const displayResult = resultsCount > 0
                                     ? `${resultsCount} test${resultsCount > 1 ? 's' : ''} - ${labName}`
                                     : item.result || item.summary || labName;
                                 const displayDate = item.reportDate || item.date || item.createdAt;
-                                
+
                                 return (
                                     <tr key={idx}>
                                         <td>

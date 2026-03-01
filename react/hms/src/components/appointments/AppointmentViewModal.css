@@ -12,12 +12,13 @@
   justify-content: center;
   z-index: 10000;
   padding: 2.5vh 2.5vw;
+  backdrop-filter: blur(6px);
   animation: fadeIn 0.2s ease-out;
 }
 
 .appointment-view-container {
   background: #FFFFFF;
-  border-radius: 16px;
+  border-radius: 20px;
   width: 90vw;
   height: 90vh;
   max-width: 1050px;
@@ -25,7 +26,7 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.28), 0 8px 24px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(226, 232, 240, 0.8);
   animation: slideUp 0.3s ease-out;
   overflow: hidden;
 }
@@ -53,17 +54,18 @@
 }
 
 .appointment-close-floating:hover {
-  background: rgba(255, 255, 255, 0.3);
-  transform: scale(1.1);
+  background: rgba(255, 255, 255, 0.35);
+  transform: scale(1.1) rotate(90deg);
   border-color: #ffffff;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
 }
 
 /* Header Section (Restored & Enhanced) */
 .appointment-view-header-new {
-  background: #f8fafc;
+  background: linear-gradient(to bottom, #EEF5FF, #F8FAFC);
   padding: 24px 32px;
   flex-shrink: 0;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid #D6E6F7;
 }
 
 .header-main-content {
@@ -369,11 +371,16 @@
   border-bottom-color: #165a8a;
 }
 
-/* Tab Content */
 .tabs-content {
   flex: 1;
   overflow-y: auto;
-  background: #FFFFFF;
+  background: linear-gradient(to bottom, #EAF3FF, #F4F8FF);
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.tabs-content::-webkit-scrollbar {
+  display: none;
 }
 
 .tab-content-wrapper {
@@ -389,12 +396,13 @@
 .appointments-filter-bar {
   display: flex;
   gap: 16px;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
   background: #f8fafc;
-  padding: 12px;
+  padding: 10px 14px;
   border-radius: 12px;
   border: 1px solid #e2e8f0;
   width: fit-content;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04);
 }
 
 .appointments-filter-bar.simple {
@@ -418,21 +426,31 @@
 .search-box input {
   width: 100%;
   padding: 10px 16px 10px 40px;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
   font-size: 14px;
   outline: none;
+  background: #ffffff;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
 
 .search-box input:focus {
   border-color: #207DC0;
+  box-shadow: 0 0 0 3px rgba(32, 125, 192, 0.10);
 }
 
 /* Table */
 .appointments-list-container {
   overflow-x: auto;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
+  border: 1px solid #C7DFF2;
+  border-radius: 14px;
+  box-shadow: 0 2px 10px rgba(32, 125, 192, 0.09);
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.appointments-list-container::-webkit-scrollbar {
+  display: none;
 }
 
 .appointments-table {
@@ -441,21 +459,35 @@
 }
 
 .appointments-table th {
-  background: #f8fafc;
+  background: linear-gradient(to bottom, #EEF5FF, #F0F4FA);
   padding: 14px 20px;
   text-align: left;
   font-size: 12px;
-  font-weight: 600;
-  color: #64748b;
+  font-weight: 700;
+  color: #334155;
   text-transform: uppercase;
-  border-bottom: 1px solid #e2e8f0;
+  letter-spacing: 0.04em;
+  border-bottom: 2px solid #C7DFF2;
+}
+
+.appointments-table tbody tr:hover td {
+  background: #F5F9FF;
 }
 
 .appointments-table td {
   padding: 16px 20px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid #F0F5FB;
   font-size: 14px;
   color: #0f172a;
+  transition: background 0.12s;
+}
+
+.appointments-table tbody tr:nth-child(even) td {
+  background-color: #F7FAFF;
+}
+
+.appointments-table tbody tr:hover td {
+  background: #EEF5FF;
 }
 
 .appt-date {
