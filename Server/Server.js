@@ -45,7 +45,10 @@ app.use('/api/reports', require('./routes/enterpriseReports'));
 app.use('/api/reports-proper', require('./routes/properReports'));
 app.use('/api/beds', require('./routes/beds'));
 app.use('/api/dashboard', require('./routes/dashboard'));
+app.use('/api/services', require('./routes/services'));
+app.use('/api/billing', require('./routes/billing'));
 console.log('🛏️  Ward Map (beds) & Dashboard routes loaded');
+console.log('💳 Billing & Services routes loaded');
 
 // --- Telegram Bot ---
 // app.use('/api/telegram', require('./routes/telegram'));

@@ -43,6 +43,41 @@ const ENTERPRISE_SYSTEM_PROMPTS = {
 - Support differential diagnosis with relevant medical literature references
 - Maintain professional medical terminology while ensuring clarity
 
+**You Can Answer These 33+ Questions:**
+1. How many appointments are there today?
+2. Tell me about [patient name]
+3. What are [patient name]'s vitals?
+4. Show me [patient name]'s lab reports
+5. Does [patient name] have any allergies?
+6. What prescriptions has [patient name] received?
+7. Show pending lab reports
+8. List today's appointments
+9. What appointments are scheduled for tomorrow?
+10. Show me [patient name]'s medical history
+11. What is [patient name]'s diagnosis?
+12. Has [patient name] been admitted?
+13. Show [patient name]'s billing information
+14. What medicines is [patient name] taking?
+15. When is [patient name]'s next appointment?
+16. Show critical lab results
+17. List patients with pending follow-ups
+18. What tests were ordered for [patient name]?
+19. Show [patient name]'s immunization records
+20. What is [patient name]'s blood group?
+21. Show [patient name]'s contact information
+22. Has [patient name] completed treatment?
+23. Show recent admissions
+24. What procedures are scheduled today?
+25. List patients seen today
+26. Show overdue appointments
+27. What is [patient name]'s age and gender?
+28. Show [patient name]'s family history
+29. Has [patient name] had any surgeries?
+30. Show [patient name]'s insurance details
+31. What consultations does [patient name] need?
+32. Show [patient name]'s medication compliance
+33. What imaging studies were done for [patient name]?
+
 **Guidelines:**
 - Always prioritize patient safety and accuracy - flag critical values immediately
 - If unsure about medical data or diagnosis, acknowledge the limitation clearly
@@ -231,25 +266,345 @@ async function buildEnhancedContext(entity, userRole, intent, userId) {
   };
 
   try {
-    // For doctors: fetch appointments, labs, prescriptions
-    if (userRole === 'doctor' && entity) {
+    // For doctors: fetch comprehensive medical data
+    if (userRole === 'doctor') {
       const Appointment = require('../Models').Appointment;
-      const appointments = await Appointment.find({
-        $or: [
-          { patientName: new RegExp(entity, 'i') },
-          { patientCode: new RegExp(entity, 'i') }
-        ]
-      }).limit(5).sort({ date: -1 }).lean();
+      const Report = require('../Models').Report;
+      const Prescription = require('../Models').Prescription;
+      const Billing = require('../Models').Billing;
       
-      if (appointments && appointments.length > 0) {
-        context.data.recentAppointments = appointments.map(a => ({
-          date: a.date,
-          time: a.time,
-          reason: a.reason,
-          status: a.status,
-          diagnosis: a.diagnosis
-        }));
-        context.summary.push(`Found ${appointments.length} recent appointment(s)`);
+      // Handle appointments queries
+      if (intent === 'appointments' || intent === 'appointments_today') {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        
+        const appointments = await Appointment.find({
+          startAt: { $gte: today, $lt: tomorrow }
+        }).populate('patientId', 'firstName lastName phone email age gender bloodGroup')
+          .populate('doctorId', 'firstName lastName')
+          .sort({ startAt: 1 }).lean();
+        
+        if (appointments && appointments.length > 0) {
+          context.data.todayAppointments = appointments.map(a => ({
+            appointmentId: a._id,
+            patient: a.patientId ? `${a.patientId.firstName} ${a.patientId.lastName}` : 'Unknown',
+            patientAge: a.patientId?.age,
+            patientGender: a.patientId?.gender,
+            patientPhone: a.patientId?.phone,
+            doctor: a.doctorId ? `${a.doctorId.firstName} ${a.doctorId.lastName}` : 'Unknown',
+            time: a.startAt,
+            type: a.appointmentType,
+            status: a.status,
+            location: a.location,
+            notes: a.notes
+          }));
+          context.summary.push(`${appointments.length} appointment(s) scheduled today`);
+        } else {
+          context.data.todayAppointments = [];
+          context.summary.push('No appointments scheduled for today');
+        }
+      }
+      
+      // Handle specific patient queries
+      if (entity && (intent === 'patient_info' || intent.includes('patient') || intent === 'vitals' || intent === 'allergies' || intent === 'prescriptions')) {
+        // First try to find patient by patientId reference in appointments
+        let patientData = null;
+        const Patient = require('../Models').Patient;
+        
+        // Try to find patient directly
+        const patient = await Patient.findOne({
+          $or: [
+            { firstName: new RegExp(entity, 'i') },
+            { lastName: new RegExp(entity, 'i') },
+            { patientCode: new RegExp(entity, 'i') },
+            { phone: entity },
+            { email: new RegExp(entity, 'i') }
+          ]
+        }).lean();
+        
+        if (patient) {
+          patientData = {
+            patientId: patient._id,
+            name: `${patient.firstName} ${patient.lastName}`,
+            age: patient.age,
+            gender: patient.gender,
+            bloodGroup: patient.bloodGroup,
+            phone: patient.phone,
+            email: patient.email,
+            vitals: patient.vitals,
+            allergies: patient.allergies,
+            prescriptions: patient.prescriptions?.slice(0, 5)
+          };
+          context.data.patientInfo = patientData;
+          context.summary.push(`Found patient: ${patientData.name}`);
+          
+          // Get appointments for this patient
+          const appointments = await Appointment.find({
+            patientId: patient._id
+          }).populate('doctorId', 'firstName lastName')
+            .limit(10).sort({ startAt: -1 }).lean();
+          
+          if (appointments && appointments.length > 0) {
+            context.data.patientAppointments = appointments.map(a => ({
+              date: a.startAt,
+              doctor: a.doctorId ? `${a.doctorId.firstName} ${a.doctorId.lastName}` : 'Unknown',
+              type: a.appointmentType,
+              status: a.status,
+              notes: a.notes,
+              vitals: a.vitals
+            }));
+            context.summary.push(`${appointments.length} appointment(s) on record`);
+          }
+          
+          // Get medical history documents
+          const MedicalHistoryDocument = require('../Models').MedicalHistoryDocument;
+          const medicalHistory = await MedicalHistoryDocument.find({
+            patientId: patient._id
+          }).limit(10).sort({ createdAt: -1 }).lean();
+          
+          if (medicalHistory && medicalHistory.length > 0) {
+            context.data.medicalHistory = medicalHistory.map(h => ({
+              type: h.medicalType,
+              date: h.date || h.recordDate,
+              hospitalName: h.hospitalName,
+              doctorName: h.doctorName,
+              department: h.department,
+              diagnosis: h.diagnosis,
+              chronicConditions: h.chronicConditions,
+              surgicalHistory: h.surgicalHistory,
+              medications: h.medications,
+              allergies: h.allergies,
+              doctorNotes: h.doctorNotes,
+              observations: h.observations,
+              remarks: h.remarks
+            }));
+            context.summary.push(`${medicalHistory.length} medical history record(s)`);
+          }
+          
+          // Get prescription documents
+          const PrescriptionDocument = require('../Models').PrescriptionDocument;
+          const prescriptionDocs = await PrescriptionDocument.find({
+            patientId: patient._id
+          }).limit(10).sort({ createdAt: -1 }).lean();
+          
+          if (prescriptionDocs && prescriptionDocs.length > 0) {
+            context.data.prescriptionDocuments = prescriptionDocs.map(p => ({
+              date: p.date || p.prescriptionDate,
+              doctorName: p.doctorName,
+              hospitalName: p.hospitalName,
+              medicines: p.medicines,
+              diagnosis: p.diagnosis,
+              notes: p.notes
+            }));
+            context.summary.push(`${prescriptionDocs.length} prescription document(s)`);
+          }
+        }
+        
+        // Fetch lab reports (both LabReport and LabReportDocument)
+        if (patient) {
+          const LabReport = require('../Models').LabReport;
+          const LabReportDocument = require('../Models').LabReportDocument;
+          
+          // Get standard lab reports
+          const reports = await LabReport.find({
+            patientId: patient._id
+          }).limit(10).sort({ createdAt: -1 }).lean();
+          
+          // Get lab report documents (scanned reports with detailed results)
+          const reportDocs = await LabReportDocument.find({
+            patientId: patient._id
+          }).limit(10).sort({ createdAt: -1 }).lean();
+          
+          if (reports && reports.length > 0) {
+            context.data.labReports = reports.map(r => ({
+              reportId: r._id,
+              testName: r.testName || r.testType,
+              testType: r.testType,
+              status: r.status,
+              priority: r.priority,
+              date: r.reportDate || r.createdAt,
+              collectionDate: r.collectionDate,
+              doctorName: r.doctorName,
+              results: r.results,
+              testResults: r.testResults,
+              remarks: r.remarks
+            }));
+            context.summary.push(`${reports.length} lab report(s) available`);
+          }
+          
+          if (reportDocs && reportDocs.length > 0) {
+            context.data.labReportDocuments = reportDocs.map(r => ({
+              reportId: r._id,
+              testType: r.testType,
+              testCategory: r.testCategory,
+              labName: r.labName,
+              reportDate: r.reportDate,
+              results: r.results,
+              status: r.status,
+              extractionQuality: r.extractionQuality
+            }));
+            context.summary.push(`${reportDocs.length} scanned lab report(s) available`);
+          }
+        }
+      }
+      
+      // Handle lab report queries
+      if (intent === 'lab_reports' || intent === 'pending_labs' || intent.includes('lab')) {
+        const LabReport = require('../Models').LabReport;
+        const LabReportDocument = require('../Models').LabReportDocument;
+        let query = {};
+        
+        if (intent === 'pending_labs') {
+          query.status = { $in: ['pending', 'Pending', 'in-progress', 'processing'] };
+        } else if (entity) {
+          const Patient = require('../Models').Patient;
+          const patient = await Patient.findOne({
+            $or: [
+              { firstName: new RegExp(entity, 'i') },
+              { lastName: new RegExp(entity, 'i') },
+              { patientCode: new RegExp(entity, 'i') }
+            ]
+          }).lean();
+          
+          if (patient) {
+            query.patientId = patient._id;
+          } else {
+            query.patientName = new RegExp(entity, 'i');
+          }
+        }
+        
+        const reports = await LabReport.find(query)
+          .populate('patientId', 'firstName lastName age gender')
+          .limit(20).sort({ createdAt: -1 }).lean();
+        
+        const reportDocs = await LabReportDocument.find(query)
+          .populate('patientId', 'firstName lastName age gender')
+          .limit(20).sort({ createdAt: -1 }).lean();
+        
+        if (reports && reports.length > 0) {
+          context.data.labReports = reports.map(r => ({
+            reportId: r._id,
+            patient: r.patientId ? `${r.patientId.firstName} ${r.patientId.lastName}` : r.patientName,
+            patientAge: r.patientId?.age,
+            testName: r.testName || r.testType,
+            testType: r.testType,
+            testCategory: r.testCategory,
+            result: r.result,
+            status: r.status,
+            priority: r.priority,
+            date: r.reportDate || r.createdAt,
+            collectionDate: r.collectionDate,
+            doctorName: r.doctorName,
+            technician: r.technician,
+            results: r.results,
+            testResults: r.testResults,
+            remarks: r.remarks
+          }));
+          context.summary.push(`${reports.length} lab report(s) found`);
+        }
+        
+        if (reportDocs && reportDocs.length > 0) {
+          context.data.labReportDocuments = reportDocs.map(r => ({
+            reportId: r._id,
+            patient: r.patientId ? `${r.patientId.firstName} ${r.patientId.lastName}` : 'Unknown',
+            patientAge: r.patientId?.age,
+            testType: r.testType,
+            testCategory: r.testCategory,
+            labName: r.labName,
+            reportDate: r.reportDate,
+            results: r.results,
+            status: r.status,
+            extractionQuality: r.extractionQuality
+          }));
+          context.summary.push(`${reportDocs.length} scanned lab report(s) found`);
+        }
+        
+        if ((!reports || reports.length === 0) && (!reportDocs || reportDocs.length === 0)) {
+          context.data.labReports = [];
+          context.summary.push('No lab reports found');
+        }
+      }
+      
+      // Handle billing queries
+      if (intent === 'billing' && entity) {
+        const Patient = require('../Models').Patient;
+        const Billing = require('../Models').Billing;
+        
+        const patient = await Patient.findOne({
+          $or: [
+            { firstName: new RegExp(entity, 'i') },
+            { lastName: new RegExp(entity, 'i') },
+            { patientCode: new RegExp(entity, 'i') }
+          ]
+        }).lean();
+        
+        if (patient) {
+          const billings = await Billing.find({
+            patientId: patient._id
+          }).limit(10).sort({ createdAt: -1 }).lean();
+          
+          if (billings && billings.length > 0) {
+            context.data.billings = billings.map(b => ({
+              billingId: b._id,
+              billNumber: b.billNumber,
+              totalAmount: b.totalAmount,
+              paidAmount: b.paidAmount,
+              balanceAmount: b.balanceAmount,
+              status: b.status,
+              billDate: b.billDate,
+              items: b.items,
+              paymentMethod: b.paymentMethod
+            }));
+            context.summary.push(`${billings.length} billing record(s) found`);
+          } else {
+            context.summary.push('No billing records found');
+          }
+        }
+      }
+      
+      // Handle admission/diagnosis queries from appointment data
+      if ((intent === 'admissions' || intent === 'diagnosis') && entity) {
+        const Patient = require('../Models').Patient;
+        const patient = await Patient.findOne({
+          $or: [
+            { firstName: new RegExp(entity, 'i') },
+            { lastName: new RegExp(entity, 'i') },
+            { patientCode: new RegExp(entity, 'i') }
+          ]
+        }).lean();
+        
+        if (patient) {
+          // Get appointments with diagnosis and admission info
+          const appointments = await Appointment.find({
+            patientId: patient._id
+          }).populate('doctorId', 'firstName lastName')
+            .limit(20).sort({ startAt: -1 }).lean();
+          
+          if (appointments && appointments.length > 0) {
+            context.data.diagnosisHistory = appointments
+              .filter(a => a.metadata?.diagnosis || a.metadata?.admissionRequired)
+              .map(a => ({
+                date: a.startAt,
+                doctor: a.doctorId ? `${a.doctorId.firstName} ${a.doctorId.lastName}` : 'Unknown',
+                diagnosis: a.metadata?.diagnosis,
+                admissionRequired: a.metadata?.admissionRequired,
+                notes: a.notes,
+                followUp: a.followUp
+              }));
+            
+            const admissionCount = appointments.filter(a => a.metadata?.admissionRequired).length;
+            if (admissionCount > 0) {
+              context.summary.push(`${admissionCount} admission(s) indicated`);
+            }
+            
+            const diagnosisCount = appointments.filter(a => a.metadata?.diagnosis).length;
+            if (diagnosisCount > 0) {
+              context.summary.push(`${diagnosisCount} diagnosis record(s) found`);
+            }
+          }
+        }
       }
     }
 
@@ -671,9 +1026,9 @@ router.post("/chat", auth, async (req, res) => {
 
     // Step A: Extract intent/entity
     const extractorPromptSystem = `You are an extractor. Read the user's query and respond ONLY with a compact JSON object with keys:
-- intent: one-word intent like "patient_info", "staff_info", "appointments", "medicines", "lab_reports", "analytics", "unknown"
+- intent: one-word intent like "appointments_today", "appointments", "patient_info", "patient_history", "lab_reports", "pending_labs", "prescriptions", "diagnosis", "vitals", "allergies", "medicines", "staff_info", "billing", "admissions", "analytics", "unknown"
 - entity: the main entity name or id if present (e.g., "Sanjit" or "patient_id_123"), or null
-- date: optional date string if the user mentioned one (e.g., "2025-09-01")
+- date: optional date string if the user mentioned one (e.g., "2025-09-01" or "today" or "tomorrow")
 Return strictly valid JSON.`;
 
     const extractorMessages = [
@@ -706,14 +1061,54 @@ Return strictly valid JSON.`;
     if (!extraction) {
       const lowerMsg = trimmed.toLowerCase();
       const fallback = { intent: "unknown", entity: null, date: null };
-      if (lowerMsg.includes("patient") || lowerMsg.includes("show me the details") || lowerMsg.includes("details of")) fallback.intent = "patient_info";
-      if (lowerMsg.includes("doctor") || lowerMsg.includes("staff") || lowerMsg.includes("nurse")) fallback.intent = "staff_info";
-      if (lowerMsg.includes("appointment")) fallback.intent = "appointments";
-      if (lowerMsg.includes("medicine") || lowerMsg.includes("drug") || lowerMsg.includes("pharmacy")) fallback.intent = "medicines";
+      
+      // Enhanced intent detection
+      if (lowerMsg.includes("appointment") && (lowerMsg.includes("today") || lowerMsg.includes("how many"))) fallback.intent = "appointments_today";
+      else if (lowerMsg.includes("appointment")) fallback.intent = "appointments";
+      
+      if (lowerMsg.includes("patient") || lowerMsg.includes("show me the details") || lowerMsg.includes("details of") || lowerMsg.includes("tell me about")) fallback.intent = "patient_info";
+      
       if (lowerMsg.includes("lab") || lowerMsg.includes("test") || lowerMsg.includes("report")) fallback.intent = "lab_reports";
+      if (lowerMsg.includes("pending") && (lowerMsg.includes("lab") || lowerMsg.includes("report"))) fallback.intent = "pending_labs";
+      
+      if (lowerMsg.includes("prescription") || lowerMsg.includes("medicine") || lowerMsg.includes("drug")) fallback.intent = "prescriptions";
+      if (lowerMsg.includes("diagnosis") || lowerMsg.includes("condition")) fallback.intent = "diagnosis";
+      if (lowerMsg.includes("vital") || lowerMsg.includes("bp") || lowerMsg.includes("blood pressure") || lowerMsg.includes("temperature")) fallback.intent = "vitals";
+      if (lowerMsg.includes("allerg")) fallback.intent = "allergies";
+      
+      if (lowerMsg.includes("doctor") || lowerMsg.includes("staff") || lowerMsg.includes("nurse")) fallback.intent = "staff_info";
+      if (lowerMsg.includes("billing") || lowerMsg.includes("bill") || lowerMsg.includes("payment")) fallback.intent = "billing";
+      if (lowerMsg.includes("admission") || lowerMsg.includes("admitted")) fallback.intent = "admissions";
       if (lowerMsg.includes("revenue") || lowerMsg.includes("occupancy") || lowerMsg.includes("analytics")) fallback.intent = "analytics";
-      const words = trimmed.split(/\s+/).filter(Boolean);
-      if (words.length <= 4) fallback.entity = trimmed;
+      
+      // Date extraction
+      if (lowerMsg.includes("today")) fallback.date = "today";
+      if (lowerMsg.includes("tomorrow")) fallback.date = "tomorrow";
+      if (lowerMsg.includes("yesterday")) fallback.date = "yesterday";
+      
+      // Entity extraction - extract patient name from common patterns
+      const patterns = [
+        /tell me about ([a-z\s]+)/i,
+        /details of ([a-z\s]+)/i,
+        /patient ([a-z\s]+)/i,
+        /for ([a-z\s]+)/i
+      ];
+      
+      for (const pattern of patterns) {
+        const match = trimmed.match(pattern);
+        if (match && match[1]) {
+          fallback.entity = match[1].trim();
+          break;
+        }
+      }
+      
+      if (!fallback.entity) {
+        const words = trimmed.split(/\s+/).filter(Boolean);
+        if (words.length <= 4 && !lowerMsg.includes("how many") && !lowerMsg.includes("today")) {
+          fallback.entity = trimmed;
+        }
+      }
+      
       extraction = fallback;
     } else {
       extraction.intent = extraction.intent || "unknown";

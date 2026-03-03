@@ -773,12 +773,112 @@ const LabTab = ({ patient }) => {
   );
 };
 
-const BillingTab = () => (
-  <div className="pd-tab-inner">
-    <h3 className="pd-section-title-flutter">Billing & Payments</h3>
-    <EmptyState title="No Invoices Found" />
-  </div>
-);
+const BillingTab = ({ patient }) => {
+  const [bills, setBills] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchBills = async () => {
+      try {
+        setLoading(true);
+        const patientId = patient._id || patient.id;
+        const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000/api'}/billing/patient/${patientId}`, {
+          headers: {
+            'x-auth-token': localStorage.getItem('x-auth-token') || localStorage.getItem('auth_token') || localStorage.getItem('authToken'),
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setBills(data.bills || []);
+        } else {
+          console.error('Failed to fetch bills:', response.status);
+          setBills([]);
+        }
+      } catch (error) {
+        console.error('Error fetching bills:', error);
+        setBills([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (patient) {
+      fetchBills();
+    }
+  }, [patient]);
+
+  return (
+    <div className="pd-tab-inner">
+      <h3 className="pd-section-title-flutter">Billing & Payments</h3>
+      
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
+          Loading bills...
+        </div>
+      ) : bills.length > 0 ? (
+        <div className="pd-items-list">
+          {bills.map((bill) => (
+            <div key={bill._id} className="pd-prescription-item">
+              <div className="pd-item-header">
+                <h4 style={{ margin: 0, fontSize: '1rem', color: '#333' }}>
+                  {bill.billNumber}
+                </h4>
+                <span style={{ fontSize: '0.875rem', color: '#666' }}>
+                  {new Date(bill.date).toLocaleDateString('en-GB', { 
+                    day: 'numeric', 
+                    month: 'short', 
+                    year: 'numeric' 
+                  })}
+                </span>
+              </div>
+              
+              <div style={{ marginTop: '0.75rem', display: 'grid', gap: '0.5rem' }}>
+                <p style={{ margin: 0, fontSize: '0.875rem' }}>
+                  <strong>Total Amount:</strong> ₹{bill.totalAmount?.toFixed(2) || '0.00'}
+                </p>
+                <p style={{ margin: 0, fontSize: '0.875rem' }}>
+                  <strong>Paid:</strong> ₹{bill.paidAmount?.toFixed(2) || '0.00'}
+                </p>
+                <p style={{ margin: 0, fontSize: '0.875rem' }}>
+                  <strong>Balance:</strong> ₹{bill.balanceAmount?.toFixed(2) || '0.00'}
+                </p>
+                {bill.paymentMethod && (
+                  <p style={{ margin: 0, fontSize: '0.875rem' }}>
+                    <strong>Payment Method:</strong> {bill.paymentMethod}
+                  </p>
+                )}
+              </div>
+
+              {bill.items && bill.items.length > 0 && (
+                <div style={{ marginTop: '0.75rem' }}>
+                  <strong style={{ fontSize: '0.875rem' }}>Items:</strong>
+                  <div style={{ marginTop: '0.5rem', paddingLeft: '0.5rem', borderLeft: '2px solid #e0e0e0' }}>
+                    {bill.items.slice(0, 3).map((item, idx) => (
+                      <div key={idx} style={{ fontSize: '0.8rem', color: '#666', marginBottom: '0.25rem' }}>
+                        • {item.description} - ₹{item.amount?.toFixed(2)} ({item.quantity}x)
+                      </div>
+                    ))}
+                    {bill.items.length > 3 && (
+                      <p className="pd-notes-small">+{bill.items.length - 3} more items</p>
+                    )}
+                  </div>
+                </div>
+              )}
+              
+              <span className={`pd-status-badge ${bill.status?.toLowerCase().replace(' ', '-') || 'pending'}`}>
+                {bill.status || 'Pending'}
+              </span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <EmptyState title="No Invoices Found" />
+      )}
+    </div>
+  );
+};
 
 // Helper Components
 const InfoRow = ({ label, value }) => (

@@ -35,21 +35,27 @@ module.exports = async function authFull(req, res, next) {
       return res.status(401).json({ message: `Invalid or expired token: ${err.message}` });
     }
 
-    // Attach minimal info
-    req.user = { id: payload.id, role: payload.role };
+    // Attach minimal info from token
+    req.user = { 
+      id: payload.id || payload.userId || payload.user?.id, 
+      role: payload.role || payload.user?.role,
+      email: payload.email || payload.user?.email
+    };
     console.log('🔐 [AUTH] User attached to request:', req.user);
 
-    // Load fresh user from DB (exclude password)
-    const userDoc = await User.findById(payload.id).select('-password').lean();
-    if (!userDoc) {
-      console.warn('🔐 [AUTH] User not found in database:', payload.id);
-      return res.status(401).json({ message: 'User not found or deactivated' });
+    // Try to load fresh user from DB (optional - don't fail if not found)
+    try {
+      const userDoc = await User.findById(req.user.id).select('-password').lean();
+      if (userDoc) {
+        req.userDoc = userDoc;
+        req.user = { id: userDoc._id, role: userDoc.role, email: userDoc.email };
+        console.log('🔐 [AUTH] Full user loaded from DB');
+      } else {
+        console.warn('🔐 [AUTH] User not in DB, using token data only');
+      }
+    } catch (dbError) {
+      console.warn('🔐 [AUTH] DB lookup failed, continuing with token data:', dbError.message);
     }
-
-    // Attach full user doc and convenience fields
-    req.userDoc = userDoc;
-    // keep req.user for lightweight checks too
-    req.user = { id: userDoc._id, role: userDoc.role, email: userDoc.email };
 
     return next();
   } catch (err) {
