@@ -421,17 +421,18 @@
   transition: all 0.2s;
 }
 
-/* View - Gray */
-.btn-action.view svg {
-  stroke: #6B7280;
+/* View - Gray (REMOVED - now billing) */
+/* Billing - Blue */
+.btn-action.billing svg {
+  stroke: #3B82F6;
 }
 
-.btn-action.view:hover {
-  background: #F1F5F9;
+.btn-action.billing:hover {
+  background: #EFF6FF;
 }
 
-.btn-action.view:hover svg {
-  stroke: #374151;
+.btn-action.billing:hover svg {
+  stroke: #2563EB;
 }
 
 /* Edit - Green */

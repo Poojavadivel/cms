@@ -1081,6 +1081,31 @@
   color: #2563eb;
 }
 
+/* Billing Status Badges */
+.pd-status-badge.paid,
+.pd-status-badge.Paid {
+  background: #d1fae5;
+  color: #059669;
+}
+
+.pd-status-badge.partially-paid,
+.pd-status-badge.Partially-Paid {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.pd-status-badge.cancelled,
+.pd-status-badge.Cancelled {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.pd-status-badge.refunded,
+.pd-status-badge.Refunded {
+  background: #e0e7ff;
+  color: #6366f1;
+}
+
 /* Prescription Table Styles */
 .pd-prescriptions-table-wrapper {
   overflow-x: auto;

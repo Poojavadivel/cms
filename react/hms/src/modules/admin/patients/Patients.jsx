@@ -15,6 +15,7 @@ import AddPatientModal from '../../../components/patient/addpatient';
 import EditPatientModal from '../../../components/patient/EditPatientModal';
 import PatientView from '../../../components/patient/patientview';
 import StaffDetailEnterprise from '../staff/StaffDetailEnterprise';
+import PatientBillingModal from '../../../components/billing/PatientBillingModal';
 import doctorFemaleIcon from '../../../assets/doctor-femaleicon.png';
 import doctorMaleIcon from '../../../assets/doctor-male icon.png';
 
@@ -43,10 +44,10 @@ const Icons = {
       <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path>
     </svg>
   ),
-  Eye: () => (
+  Billing: () => (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-      <circle cx="12" cy="12" r="3"></circle>
+      <rect x="2" y="5" width="20" height="14" rx="2"></rect>
+      <line x1="2" y1="10" x2="22" y2="10"></line>
     </svg>
   ),
   Edit: () => (
@@ -377,6 +378,11 @@ const Patients = () => {
 
   const handleView = useCallback((patient) => {
     setActiveModal('view');
+    setModalData(patient);
+  }, []);
+
+  const handleBilling = useCallback((patient) => {
+    setActiveModal('billing');
     setModalData(patient);
   }, []);
 
@@ -959,7 +965,14 @@ const Patients = () => {
                           className="patient-avatar"
                         />
                         <div className="info-group">
-                          <span className="primary font-semibold">{patient.name}</span>
+                          <span 
+                            className="primary font-semibold"
+                            style={{ cursor: 'pointer', color: '#207DC0' }}
+                            onClick={() => handleView(patient)}
+                            title="Click to view patient details"
+                          >
+                            {patient.name}
+                          </span>
                           <span className="secondary opacity-60 text-xs">
                             {patient.patientCode || 'PAT-SYNCING...'}
                           </span>
@@ -1003,13 +1016,13 @@ const Patients = () => {
                     <td>
                       <div className="action-buttons-group">
                         <button
-                          className="btn-action view"
-                          title="View patient details"
-                          aria-label={`View details for ${patient.name}`}
-                          onClick={() => handleView(patient)}
+                          className="btn-action billing"
+                          title="View billing"
+                          aria-label={`View billing for ${patient.name}`}
+                          onClick={() => handleBilling(patient)}
                           disabled={loadingPatientId === patient.id}
                         >
-                          {loadingPatientId === patient.id ? '...' : <Icons.Eye />}
+                          {loadingPatientId === patient.id ? '...' : <Icons.Billing />}
                         </button>
                         <button
                           className="btn-action edit"
@@ -1112,6 +1125,15 @@ const Patients = () => {
           isOpen={true}
           onClose={handleCloseModal}
           onSuccess={handleModalSuccess}
+        />
+      )}
+
+      {activeModal === 'billing' && modalData && (
+        <PatientBillingModal
+          isOpen={true}
+          onClose={handleCloseModal}
+          patientId={modalData.id || modalData._id || modalData.patientId}
+          patientData={modalData}
         />
       )}
 

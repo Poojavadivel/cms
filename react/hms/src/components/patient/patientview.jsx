@@ -1648,9 +1648,21 @@ const BillingsTab = ({ patientId }) => {
     const fetchBills = async () => {
         setLoading(true);
         try {
-            // Use the safe method we added to invoiceService
-            const data = await invoiceService.fetchInvoicesByPatient(patientId);
-            setBills(Array.isArray(data) ? data : []);
+            // FIXED: Use billing API instead of invoice API
+            const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000/api'}/billing/patient/${patientId}`, {
+                headers: {
+                    'x-auth-token': localStorage.getItem('x-auth-token') || localStorage.getItem('auth_token') || localStorage.getItem('authToken'),
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                setBills(Array.isArray(data.bills) ? data.bills : []);
+            } else {
+                console.error('Failed to fetch bills:', response.status);
+                setBills([]);
+            }
         } catch (error) {
             console.error('Failed to fetch billing data:', error);
             setBills([]);
@@ -1659,9 +1671,9 @@ const BillingsTab = ({ patientId }) => {
         }
     };
 
-    // Simple search (invoice id / description)
-    const filteredBills = bills.filter(item =>
-        (item.invoiceId || item.invoiceNumber || item.description || '')
+    // Simple search (bill number / items)
+    const filteredBills = bills.filter(bill =>
+        (bill.billNumber || bill.patientName || bill.items?.map(i => i.description).join(' ') || '')
             .toLowerCase()
             .includes(searchTerm.toLowerCase())
     );
@@ -1692,16 +1704,15 @@ const BillingsTab = ({ patientId }) => {
                 <table className="pv-table">
                     <thead>
                         <tr>
-                            <th>Invoice ID</th>
+                            <th>Bill Number</th>
                             <th>Date</th>
-                            <th>Amount (₹)</th>
-                            <th>Payment Mode</th>
-                            <th>Due Date</th>
-                            <th>Description</th>
+                            <th>Total Amount</th>
+                            <th>Payment Method</th>
+                            <th>Balance Due</th>
+                            <th>Items</th>
                             <th>Status</th>
                             <th>Actions</th>
                         </tr>
-
                     </thead>
 
                     <tbody>
@@ -1725,47 +1736,70 @@ const BillingsTab = ({ patientId }) => {
 
                         {/* Data Rows */}
                         {!loading &&
-                            filteredBills.map((item, idx) => (
-                                <tr key={idx}>
+                            filteredBills.map((bill, idx) => (
+                                <tr key={bill._id || idx}>
                                     <td>
-                                        {item.invoiceId || item.invoiceNumber || '—'}
+                                        {bill.billNumber || '—'}
                                     </td>
                                     <td>
-                                        {item.date
-                                            ? new Date(item.date).toLocaleDateString()
+                                        {bill.date
+                                            ? new Date(bill.date).toLocaleDateString('en-GB', {
+                                                day: '2-digit',
+                                                month: 'short',
+                                                year: 'numeric'
+                                              })
                                             : '—'}
                                     </td>
                                     <td>
-                                        {item.amount || '—'}
+                                        ₹{bill.totalAmount?.toFixed(2) || '0.00'}
                                     </td>
                                     <td>
-                                        {item.paymentMode || item.mode || '—'}
+                                        {bill.paymentMethod || '—'}
                                     </td>
                                     <td>
-                                        {item.startDate
-                                            ? new Date(item.startDate).toLocaleDateString()
+                                        {bill.balanceAmount > 0 ? (
+                                            <span style={{ color: '#d97706', fontWeight: 600 }}>
+                                                ₹{bill.balanceAmount?.toFixed(2)}
+                                            </span>
+                                        ) : (
+                                            <span style={{ color: '#059669' }}>—</span>
+                                        )}
+                                    </td>
+                                    <td>
+                                        {bill.items?.length > 0 
+                                            ? `${bill.items[0].description}${bill.items.length > 1 ? ` +${bill.items.length - 1} more` : ''}` 
                                             : '—'}
-                                    </td>
-                                    <td>
-                                        {item.description || '—'}
                                     </td>
                                     <td>
                                         <span
-                                            className={`pv-badge status-${(item.status || 'paid').toLowerCase()}`}
+                                            className={`pv-badge status-${(bill.status || 'pending').toLowerCase().replace(' ', '-')}`}
+                                            style={{
+                                                backgroundColor: 
+                                                    bill.status === 'Paid' ? '#d1fae5' :
+                                                    bill.status === 'Partially Paid' ? '#fef3c7' :
+                                                    bill.status === 'Cancelled' ? '#fee2e2' : '#fef3c7',
+                                                color:
+                                                    bill.status === 'Paid' ? '#059669' :
+                                                    bill.status === 'Partially Paid' ? '#d97706' :
+                                                    bill.status === 'Cancelled' ? '#dc2626' : '#d97706'
+                                            }}
                                         >
-                                            {item.status || 'Paid'}
+                                            {bill.status || 'Pending'}
                                         </span>
                                     </td>
                                     <td>
                                         <div className="pv-action-group">
-                                            <button className="pv-btn-action-circle">
+                                            <button 
+                                                className="pv-btn-action-circle"
+                                                title="View Bill Details"
+                                            >
                                                 <MdVisibility />
                                             </button>
-                                            <button className="pv-btn-action-circle">
-                                                <MdEdit />
-                                            </button>
-                                            <button className="pv-btn-action-circle red-text">
-                                                <MdDelete />
+                                            <button 
+                                                className="pv-btn-action-circle"
+                                                title="Download PDF"
+                                            >
+                                                <MdPictureAsPdf />
                                             </button>
                                         </div>
                                     </td>

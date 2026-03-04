@@ -4,7 +4,7 @@ const express = require('express');
 const router = express.Router();
 const { Patient, User, Staff, Appointment, LabReport, Payroll } = require('../Models');
 const auth = require('../Middleware/Auth');
-const properPdfGen = require('../utils/properPdfGenerator');
+const properPdfGen = require('../utils/pdfGenerators');
 
 // Patient Medical Report
 router.get('/patient/:patientId', auth, async (req, res) => {
