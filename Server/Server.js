@@ -34,14 +34,14 @@ app.use('/api/appointments', appointmentRoutes);
 app.use('/api/staff', require('./routes/staff'));
 app.use('/api/patients', require('./routes/patients'));
 app.use('/api/doctors', require('./routes/doctors'));
-app.use('/api/pharmacy', require('./routes/pharmacy'));
+app.use('/api/pharmacy', require('./routes/pharmacy/routes'));
 app.use('/api/pathology', require('./routes/pathology'));
-app.use('/api/bot', require('./routes/bot'));
+app.use('/api/bot', require('./routes/bot/routes'));
 app.use('/api/intake', require('./routes/intake'));
-app.use('/api/scanner-enterprise', require('./routes/scanner-enterprise'));
+app.use('/api/scanner-enterprise', require('./routes/scanner/routes'));
 app.use('/api/card', require('./routes/card'));
 app.use('/api/payroll', require('./routes/payroll'));
-app.use('/api/reports', require('./routes/enterpriseReports'));
+app.use('/api/reports', require('./routes/reports/routes'));
 app.use('/api/reports-proper', require('./routes/properReports'));
 app.use('/api/beds', require('./routes/beds'));
 app.use('/api/dashboard', require('./routes/dashboard'));
@@ -51,7 +51,7 @@ console.log('🛏️  Ward Map (beds) & Dashboard routes loaded');
 console.log('💳 Billing & Services routes loaded');
 
 // --- Telegram Bot ---
-// app.use('/api/telegram', require('./routes/telegram'));
+app.use('/api/telegram', require('./routes/telegram/routes'));
 console.log('✅ Telegram Bot activated and running...');
 
 // --- Static Files & SPA Support ---

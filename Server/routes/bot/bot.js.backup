@@ -1,13 +1,13 @@
-// routes/bot.js
-// Updated to work with OpenAI-compatible API and Mongoose models: Bot, Patient, User
-const express = require("express");
-const { v4: uuidv4 } = require('uuid');
-const auth = require("../Middleware/Auth");
-const { Bot, Patient, User } = require("../Models");
-const mongoose = require("mongoose");
-const { createLogger, analytics } = require("../utils/apiLogger");
+/**
+ * routes/bot.js
+ * Main entry point for chatbot routes - delegates to modular bot folder
+ * Refactored for enterprise-grade maintainability and scalability
+ */
 
-const router = express.Router();
+const botRouter = require('./bot/routes');
+
+// Export the modular bot routes
+module.exports = botRouter;
 
 /* ---------------- CONFIG (OpenAI-compatible API) ---------------- */
 const API_KEY = process.env.OPENAI_API_KEY || "sk-do-e9Ea0Pjt1cSZ2HWIBarUzy4AD5i6OeMiA7pwooPIJOSD3oqdxby60s5ogW";
