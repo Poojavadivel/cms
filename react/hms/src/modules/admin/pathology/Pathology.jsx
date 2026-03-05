@@ -112,7 +112,7 @@ const Pathology = ({ initialSearchQuery = '' }) => {
         pathologyService.fetchReports({ limit: 100 }),
         pathologyService.fetchPendingTests({ limit: 50 })
       ]);
-      
+
       console.log('✅ Fetched completed reports:', completedReports.length);
       console.log('✅ Fetched pending tests:', pendingTests.length);
 
@@ -135,7 +135,7 @@ const Pathology = ({ initialSearchQuery = '' }) => {
 
       // Combine: Show pending tests first, then completed reports
       const allData = [...pendingWithStatus, ...completedWithStatus];
-      
+
       console.log('📊 Total items:', allData.length, '(Pending:', pendingWithStatus.length, ', Completed:', completedWithStatus.length, ')');
 
       setReports(allData);
@@ -226,10 +226,10 @@ const Pathology = ({ initialSearchQuery = '' }) => {
       intakeId: pendingTest._id, // Link back to intake
       pathologyItems: pendingTest.pathologyItems
     };
-    
+
     setEditingReport(prefilledData);
     setShowForm(true);
-    
+
     console.log('📝 Processing pending test:', prefilledData);
   };
 
@@ -495,7 +495,7 @@ const Pathology = ({ initialSearchQuery = '' }) => {
                   <td>
                     <span className="technician-badge">
                       {report.isPending ? (
-                        <span style={{ color: '#64748b', fontStyle: 'italic' }}>
+                        <span style={{ color: '#ffffff', fontStyle: 'italic' }}>
                           {report.doctorName || 'Dr. ' + (report.doctorId?.firstName || 'N/A')}
                         </span>
                       ) : (
@@ -519,9 +519,9 @@ const Pathology = ({ initialSearchQuery = '' }) => {
                         </>
                       )}
                       {report.isPending && (
-                        <button 
-                          className="btn-action" 
-                          title="Process Test" 
+                        <button
+                          className="btn-action"
+                          title="Process Test"
                           onClick={() => handleProcessPendingTest(report)}
                           style={{ background: '#dbeafe', color: '#1e40af' }}
                         >

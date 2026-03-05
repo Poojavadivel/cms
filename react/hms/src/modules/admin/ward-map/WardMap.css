@@ -507,11 +507,13 @@
 .modal-container {
   background: #fff;
   border-radius: 16px;
-  width: 92%;
-  max-width: 480px;
+  width: 480px;
+  min-width: 440px;
+  max-width: 92vw;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.22);
   animation: slideUp 0.2s ease;
   overflow: hidden;
+  box-sizing: border-box;
 }
 
 @keyframes slideUp {
@@ -773,8 +775,10 @@
   color: #374151;
   line-height: 1.6;
   text-align: center;
-  padding: 8px 0;
+  padding: 16px 8px;
   margin: 0;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 /* ─── Error ─── */
@@ -792,10 +796,12 @@
 .modal-footer {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
   gap: 10px;
   padding: 16px 24px;
   border-top: 1px solid #e5e7eb;
   background: #f9fafb;
+  flex-wrap: nowrap;
 }
 
 .modal-btn {
@@ -807,6 +813,8 @@
   border: none;
   transition: all 0.15s;
   font-family: inherit;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .modal-btn.cancel {

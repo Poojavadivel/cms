@@ -92,13 +92,17 @@ const fetchInvoices = async (params = {}) => {
       const staffCode = typeof staff === 'object' && staff !== null ? (staff.patientFacingId || staff.metadata?.staffCode || '') : '';
 
       const result = {
+        // Spread all raw payroll fields first so PayrollViewModal gets complete data
+        ...payroll,
+
+        // Then override/add the UI-specific mapped fields
         id: payroll._id || payroll.id,
         invoiceNumber: payroll.metadata?.payrollCode || staffCode || payroll._id,
-        staffName: staffName || 'Unknown',
+        staffName: staffName || payroll.staffName || 'Unknown',
         staffId: typeof staff === 'object' && staff !== null ? (staff._id || staff.id) : (payroll.staffId || ''),
-        staffCode: staffCode || '',
-        department: department || '',
-        designation: designation || '',
+        staffCode: staffCode || payroll.staffCode || '',
+        department: department || payroll.department || '',
+        designation: designation || payroll.designation || '',
         date: payroll.paymentDate || payroll.createdAt || '',
         month: payroll.payPeriodMonth,
         year: payroll.payPeriodYear,
