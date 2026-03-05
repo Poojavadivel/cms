@@ -25,7 +25,29 @@ const LabReportDocumentSchema = new Schema({
     value: { type: String, default: '' },
     unit: { type: String, default: '' },
     referenceRange: { type: String, default: '' },
-    flag: { type: String, enum: ['normal', 'high', 'low', 'Normal', 'High', 'Low', 'NORMAL', 'HIGH', 'LOW', 'abnormal', 'Abnormal', 'ABNORMAL', ''], default: '' }
+    referenceMin: { type: String, default: '' },
+    referenceMax: { type: String, default: '' },
+    status: { type: String, default: '' },
+    flag: { 
+      type: String, 
+      enum: [
+        // Basic flags
+        '', 'normal', 'Normal', 'NORMAL',
+        'high', 'High', 'HIGH',
+        'low', 'Low', 'LOW',
+        'abnormal', 'Abnormal', 'ABNORMAL',
+        'critical', 'Critical', 'CRITICAL',
+        // Risk levels
+        'LOW RISK', 'MODERATE RISK', 'HIGH RISK',
+        'Low Risk', 'Moderate Risk', 'High Risk',
+        // Arrows
+        'up arrow', 'down arrow', '↑', '↓',
+        // Other
+        'borderline', 'Borderline', 'BORDERLINE'
+      ], 
+      default: '' 
+    },
+    notes: { type: String, default: '' }
   }],
   
   // OCR data

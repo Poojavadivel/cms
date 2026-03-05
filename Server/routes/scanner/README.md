@@ -1,9 +1,59 @@
 # Scanner Module - Enterprise Architecture
 
 ## Overview
-Enterprise-grade document scanning system for medical documents. Refactored from monolithic 1,458-line `scanner-enterprise.js` into 13 modular components.
+Enterprise-grade document scanning system for medical documents with **SECTION-LEVEL PROCESSING** like Epic Systems and athenahealth. Refactored from monolithic 1,458-line `scanner-enterprise.js` into 14 modular components.
 
 **Note:** This module is directly imported in Server.js. All code resides within this scanner/ folder.
+
+## 🚀 NEW: Section-Level Document Processing
+
+### What is Section-Level Processing?
+
+Most basic systems process documents like this:
+```
+PDF → OCR → Extract fields (document-level)
+```
+
+**Professional systems** like Epic and athenahealth use:
+```
+PDF → Parse → Detect Sections → Extract per Section → Merge Results
+```
+
+### Why Section-Level Matters
+
+Medical documents often contain **multiple sections** in one PDF:
+- Consultation Notes
+- Prescription
+- Lab Results
+- Billing
+- Discharge Summary
+
+**Without section detection**, data gets mixed:
+- Lab results appear in prescriptions
+- Billing fields appear in medical history
+- Lower accuracy
+
+**With section detection**, each section is extracted separately with its appropriate schema.
+
+### Processing Versions
+
+#### V1 - Document-Level (Legacy)
+```
+POST /scan-medical
+```
+- Treats entire document as single type
+- Good for simple, single-purpose documents
+- Still available for backward compatibility
+
+#### V2 - Section-Level (Professional-Grade) ✨ NEW
+```
+POST /scan-medical-v2
+```
+- Detects sections automatically
+- Extracts each section with appropriate schema
+- Merges results intelligently
+- Higher accuracy
+- Better data organization
 
 ## Server.js Integration
 
@@ -19,10 +69,13 @@ scanner/
 ├── config.js                    # Configuration & environment variables
 ├── uploadMiddleware.js          # Multer file upload configuration
 ├── utils.js                     # Utility functions
+├── sectionDetector.js           # 🆕 Section-level detection
 ├── dataConverter.js             # Data conversion for verification
 ├── patientMatcher.js            # Patient matching logic
-├── scannerService.js            # LandingAI scanner service
-├── scanController.js            # Main scan endpoint controller
+├── scannerService.js            # LandingAI scanner service (V1)
+├── scannerServiceV2.js          # 🆕 Section-level scanner (V2)
+├── scanController.js            # Main scan endpoint controller (V1)
+├── scanControllerV2.js          # 🆕 Section-level controller (V2)
 ├── bulkController.js            # Bulk upload controller
 ├── verificationController.js    # Verification workflow controllers
 ├── documentController.js        # Document retrieval controllers

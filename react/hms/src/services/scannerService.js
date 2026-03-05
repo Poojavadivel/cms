@@ -20,15 +20,17 @@ const getAuthToken = () => {
  * @param {File} file - Image or PDF file
  * @param {string} patientId - Patient ID to associate the document with
  * @param {string} documentType - Type of document (PRESCRIPTION, LAB_REPORT, MEDICAL_HISTORY)
+ * @param {boolean} useSectionLevel - Use section-level processing (V2)
  * @returns {Promise<Object>} Scanned data with extracted medical information
  */
-export const scanAndExtractMedicalData = async (file, patientId, documentType = 'PRESCRIPTION') => {
+export const scanAndExtractMedicalData = async (file, patientId, documentType = 'PRESCRIPTION', useSectionLevel = true) => {
   console.log('[SCANNER-SERVICE] ========================================');
   console.log('[SCANNER-SERVICE] Starting scan request');
   console.log('[SCANNER-SERVICE] ========================================');
   console.log('[SCANNER-SERVICE] 📄 File:', file.name, '(' + file.size + ' bytes)');
   console.log('[SCANNER-SERVICE] 👤 Patient ID:', patientId || 'NOT PROVIDED');
   console.log('[SCANNER-SERVICE] 📋 Document Type:', documentType);
+  console.log('[SCANNER-SERVICE] 🚀 Section-Level:', useSectionLevel ? 'V2 (Enabled)' : 'V1 (Disabled)');
 
   try {
     const formData = new FormData();
@@ -43,7 +45,9 @@ export const scanAndExtractMedicalData = async (file, patientId, documentType = 
       documentType: documentType
     });
 
-    const endpoint = `${ScannerEndpoints.upload.replace('/upload', '/scan-medical')}`;
+    // Use V2 endpoint for section-level processing
+    const scanEndpoint = useSectionLevel ? '/scan-medical-v2' : '/scan-medical';
+    const endpoint = `${ScannerEndpoints.upload.replace('/upload', scanEndpoint)}`;
     console.log('[SCANNER-SERVICE] 🌐 Endpoint:', endpoint);
     logger.apiRequest('POST', endpoint);
 
@@ -64,51 +68,88 @@ export const scanAndExtractMedicalData = async (file, patientId, documentType = 
     const result = response.data;
     console.log('[SCANNER-SERVICE] 📊 Response Data:', {
       success: result.success,
-      intent: result.intent,
+      processingVersion: result.processingVersion,
+      primaryDocumentType: result.primaryDocumentType || result.intent,
+      sectionCount: result.sectionCount,
       verificationRequired: result.verificationRequired,
       verificationId: result.verificationId,
       hasExtractedData: !!result.extractedData
     });
 
-    logger.success('SCANNER', `✅ LandingAI scanned document for patient ${patientId} - Type: ${result.intent}`);
+    if (useSectionLevel && result.sectionCount > 0) {
+      console.log('[SCANNER-SERVICE] 📋 Sections detected:', result.sectionCount);
+      result.sections?.forEach((section, idx) => {
+        console.log(`[SCANNER-SERVICE]   ${idx + 1}. ${section.heading} (${section.sectionType})`);
+      });
+    }
 
-    // Handle LandingAI response format
+    logger.success('SCANNER', `✅ Document scanned for patient ${patientId} - Type: ${result.primaryDocumentType || result.intent}`);
+
+    // Handle section-level response format
     const extracted = result.extractedData || {};
     console.log('[SCANNER-SERVICE] 📦 Extracted Data Keys:', Object.keys(extracted));
     
-    const patientDetails = extracted.patient_details || {};
-    const labReport = extracted.labReport || {};
-    
-    // Format medications from LandingAI response
     let medications = '';
-    if (extracted.medications && Array.isArray(extracted.medications)) {
-      // Prescription format
-      medications = extracted.medications
-        .map(med => `${med.name} ${med.dose || ''} ${med.frequency || ''}`.trim())
-        .join(', ');
-      console.log('[SCANNER-SERVICE] 💊 Medications extracted:', medications);
-    } else if (extracted.patient_details?.currentMedications) {
-      // Medical history format
-      medications = Array.isArray(extracted.patient_details.currentMedications)
-        ? extracted.patient_details.currentMedications.join(', ')
-        : extracted.patient_details.currentMedications;
-      console.log('[SCANNER-SERVICE] 💊 Medications from history:', medications);
+    let medicalHistory = '';
+    let allergies = '';
+    let diagnosis = '';
+    let testResults = [];
+
+    if (useSectionLevel && extracted.sections) {
+      // Section-based extraction
+      console.log('[SCANNER-SERVICE] 🔍 Processing section-based data');
+      
+      // Extract from prescriptions
+      if (extracted.prescriptions?.length > 0) {
+        medications = extracted.prescriptions
+          .map(p => p.prescription_summary || '')
+          .filter(s => s)
+          .join('; ');
+      }
+      
+      // Extract from medical history
+      if (extracted.medicalHistory?.length > 0) {
+        medicalHistory = extracted.medicalHistory
+          .map(h => h.appointment_summary || h.discharge_summary || '')
+          .filter(s => s)
+          .join('; ');
+      }
+      
+      // Extract from lab reports
+      if (extracted.labReports?.length > 0) {
+        testResults = extracted.labReports.flatMap(lab => lab.labReport?.results || []);
+        diagnosis = extracted.labReports
+          .map(lab => lab.labReport?.interpretation || '')
+          .filter(s => s)
+          .join('; ');
+      }
+    } else {
+      // Legacy single-document extraction
+      const patientDetails = extracted.patient_details || {};
+      const labReport = extracted.labReport || {};
+      
+      if (extracted.medications && Array.isArray(extracted.medications)) {
+        medications = extracted.medications
+          .map(med => `${med.name} ${med.dose || ''} ${med.frequency || ''}`.trim())
+          .join(', ');
+      } else if (extracted.patient_details?.currentMedications) {
+        medications = Array.isArray(extracted.patient_details.currentMedications)
+          ? extracted.patient_details.currentMedications.join(', ')
+          : extracted.patient_details.currentMedications;
+      }
+
+      allergies = patientDetails.allergies || extracted.allergies || '';
+      medicalHistory = extracted.medicalHistory || 
+                      (patientDetails.medicalHistory ? patientDetails.medicalHistory.join(', ') : '') ||
+                      '';
+      diagnosis = extracted.diagnosis || labReport.interpretation || labReport.notes || '';
+      testResults = labReport.results || [];
     }
 
-    // Format allergies
-    const allergies = patientDetails.allergies || extracted.allergies || '';
+    console.log('[SCANNER-SERVICE] 💊 Medications:', medications || 'None');
     console.log('[SCANNER-SERVICE] ⚠️ Allergies:', allergies || 'None');
-
-    // Format medical history
-    const medicalHistory = extracted.medicalHistory || 
-                          (patientDetails.medicalHistory ? patientDetails.medicalHistory.join(', ') : '') ||
-                          '';
     console.log('[SCANNER-SERVICE] 📋 Medical History:', medicalHistory || 'None');
-
-    // Format diagnosis
-    const diagnosis = extracted.diagnosis || labReport.interpretation || labReport.notes || '';
     console.log('[SCANNER-SERVICE] 🩺 Diagnosis:', diagnosis || 'None');
-
     console.log('[SCANNER-SERVICE] ✅ Scan complete, returning data');
 
     return {
@@ -116,12 +157,16 @@ export const scanAndExtractMedicalData = async (file, patientId, documentType = 
       allergies: typeof allergies === 'string' ? allergies : (Array.isArray(allergies) ? allergies.join(', ') : ''),
       medications,
       diagnosis,
-      testResults: labReport.results || [],
-      // LandingAI metadata
-      documentType: result.intent || 'UNKNOWN',
+      testResults,
+      // Document metadata
+      documentType: result.primaryDocumentType || result.intent || 'UNKNOWN',
+      documentTypes: result.documentTypes || [],
+      sectionCount: result.sectionCount || 0,
+      sections: result.sections || [],
       ocrEngine: result.metadata?.ocrEngine || 'landingai-ade',
       confidence: result.metadata?.ocrConfidence || 0.95,
       processingTime: result.metadata?.processingTimeMs || 0,
+      processingVersion: result.processingVersion || 'v1',
       // Verification data
       verificationRequired: result.verificationRequired || false,
       verificationId: result.verificationId || null,

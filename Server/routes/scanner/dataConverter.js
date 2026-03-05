@@ -20,6 +20,8 @@ function convertExtractedDataToRows(extractedData, documentType) {
     rows.push(...convertLabReportData(extractedData));
   } else if (documentType === 'MEDICAL_HISTORY') {
     rows.push(...convertMedicalHistoryData(extractedData));
+  } else if (documentType === 'BILLING') {
+    rows.push(...convertBillingData(extractedData));
   }
 
   // Validation
@@ -116,6 +118,100 @@ function convertPrescriptionData(extractedData) {
     });
   }
 
+  // ENHANCEMENT: Structured medications array
+  if (prescData.medications && Array.isArray(prescData.medications) && prescData.medications.length > 0) {
+    console.log('[CONVERT] ✅ Found structured medications:', prescData.medications.length);
+    
+    prescData.medications.forEach((med, index) => {
+      // Medicine header
+      rows.push({
+        fieldName: `medication_${index}_header`,
+        displayLabel: `━━ Medication ${index + 1} ━━`,
+        originalValue: `Medicine ${index + 1}`,
+        currentValue: `Medicine ${index + 1}`,
+        dataType: 'medication_header',
+        category: 'medications',
+        confidence: 1.0,
+        isEditable: false
+      });
+      
+      // Medicine details
+      if (med.name) {
+        rows.push({
+          fieldName: `medication_${index}_name`,
+          displayLabel: `Medicine Name`,
+          originalValue: med.name,
+          currentValue: med.name,
+          dataType: 'string',
+          category: 'medications',
+          confidence: 0.95
+        });
+      }
+      
+      if (med.dose) {
+        rows.push({
+          fieldName: `medication_${index}_dose`,
+          displayLabel: `Dosage`,
+          originalValue: med.dose,
+          currentValue: med.dose,
+          dataType: 'string',
+          category: 'medications',
+          confidence: 0.95
+        });
+      }
+      
+      if (med.frequency) {
+        rows.push({
+          fieldName: `medication_${index}_frequency`,
+          displayLabel: `Frequency`,
+          originalValue: med.frequency,
+          currentValue: med.frequency,
+          dataType: 'string',
+          category: 'medications',
+          confidence: 0.95
+        });
+      }
+      
+      if (med.duration) {
+        rows.push({
+          fieldName: `medication_${index}_duration`,
+          displayLabel: `Duration`,
+          originalValue: med.duration,
+          currentValue: med.duration,
+          dataType: 'string',
+          category: 'medications',
+          confidence: 0.90
+        });
+      }
+      
+      if (med.instructions) {
+        rows.push({
+          fieldName: `medication_${index}_instructions`,
+          displayLabel: `Instructions`,
+          originalValue: med.instructions,
+          currentValue: med.instructions,
+          dataType: 'string',
+          category: 'medications',
+          confidence: 0.90
+        });
+      }
+    });
+  }
+
+  // Diagnosis
+  if (prescData.diagnosis) {
+    console.log('[CONVERT] ✅ Found diagnosis');
+    rows.push({
+      fieldName: 'diagnosis',
+      displayLabel: 'Diagnosis',
+      originalValue: prescData.diagnosis,
+      currentValue: prescData.diagnosis,
+      dataType: 'string',
+      category: 'diagnosis',
+      confidence: 0.90
+    });
+  }
+
   console.log(`[CONVERT] ✅ Created ${rows.length} rows for PRESCRIPTION`);
   return rows;
 }
@@ -132,6 +228,16 @@ function convertLabReportData(extractedData) {
   const labData = extractedData.extraction?.labReport || extractedData.labReport || {};
   console.log('[CONVERT] Lab data keys:', Object.keys(labData));
   console.log('[CONVERT] Lab results count:', labData.results?.length || 0);
+
+  // SKIP EMPTY LAB SECTIONS
+  const hasResults = labData.results && Array.isArray(labData.results) && labData.results.length > 0;
+  const hasInterpretation = labData.interpretation && labData.interpretation.trim().length > 0;
+  const hasTestType = labData.testType && labData.testType.trim().length > 0;
+  
+  if (!hasResults && !hasInterpretation && !hasTestType) {
+    console.log('[CONVERT] ⚠️ SKIPPING: Empty lab section (no results, no interpretation, no test type)');
+    throw new Error('No rows created for document type LAB_REPORT. Check if data structure matches expected schema.');
+  }
 
   // Test type
   if (labData.testType) {
@@ -204,10 +310,28 @@ function convertLabReportData(extractedData) {
     });
   }
 
-  // Lab results array
+  // Lab results array with DEDUPLICATION
   if (labData.results && Array.isArray(labData.results)) {
     console.log(`[CONVERT] ✅ Processing ${labData.results.length} test results`);
-    labData.results.forEach((result, idx) => {
+    
+    // PROFESSIONAL IMPROVEMENT: Deduplicate by testName + value
+    const seenTests = new Map(); // key: testName, value: result object
+    const uniqueResults = [];
+    
+    labData.results.forEach((result) => {
+      const testKey = `${result.testName || 'unknown'}_${result.value || ''}`.toLowerCase();
+      
+      if (!seenTests.has(testKey)) {
+        seenTests.set(testKey, result);
+        uniqueResults.push(result);
+      } else {
+        console.log(`[CONVERT]   ⚠️  Skipping duplicate: ${result.testName} = ${result.value}`);
+      }
+    });
+    
+    console.log(`[CONVERT] ✅ After deduplication: ${uniqueResults.length} unique tests (removed ${labData.results.length - uniqueResults.length} duplicates)`);
+    
+    uniqueResults.forEach((result, idx) => {
       console.log(`[CONVERT]   Result ${idx + 1}: ${result.testName || 'Unknown'} = ${result.value || 'N/A'}`);
       rows.push({
         fieldName: `labResult_${idx}`,
@@ -267,6 +391,59 @@ function convertMedicalHistoryData(extractedData) {
 
   if (!ex || Object.keys(ex).length === 0) {
     throw new Error('Missing extraction data for MEDICAL_HISTORY');
+  }
+
+  // Patient details (if present)
+  if (ex.patient_details) {
+    const patient = ex.patient_details;
+    
+    if (patient.name) {
+      rows.push({
+        fieldName: 'patient_name',
+        displayLabel: 'Patient Name',
+        originalValue: patient.name,
+        currentValue: patient.name,
+        dataType: 'string',
+        category: 'patient_details',
+        confidence: 0.95
+      });
+    }
+    
+    if (patient.age) {
+      rows.push({
+        fieldName: 'patient_age',
+        displayLabel: 'Patient Age',
+        originalValue: patient.age,
+        currentValue: patient.age,
+        dataType: 'string',
+        category: 'patient_details',
+        confidence: 0.95
+      });
+    }
+    
+    if (patient.gender) {
+      rows.push({
+        fieldName: 'patient_gender',
+        displayLabel: 'Patient Gender',
+        originalValue: patient.gender,
+        currentValue: patient.gender,
+        dataType: 'string',
+        category: 'patient_details',
+        confidence: 0.95
+      });
+    }
+    
+    if (patient.uhid_no) {
+      rows.push({
+        fieldName: 'uhid_no',
+        displayLabel: 'UHID Number',
+        originalValue: patient.uhid_no,
+        currentValue: patient.uhid_no,
+        dataType: 'string',
+        category: 'patient_details',
+        confidence: 0.95
+      });
+    }
   }
 
   // Medical type
@@ -378,7 +555,355 @@ function convertMedicalHistoryData(extractedData) {
     }
   });
 
+  // Clinic address
+  if (ex.clinic_address) {
+    const address = ex.clinic_address;
+    
+    if (address.street_address) {
+      rows.push({
+        fieldName: 'clinic_street_address',
+        displayLabel: 'Clinic Street Address',
+        originalValue: address.street_address,
+        currentValue: address.street_address,
+        dataType: 'string',
+        category: 'other',
+        confidence: 0.85
+      });
+    }
+    
+    if (address.city) {
+      rows.push({
+        fieldName: 'clinic_city',
+        displayLabel: 'Clinic City',
+        originalValue: address.city,
+        currentValue: address.city,
+        dataType: 'string',
+        category: 'other',
+        confidence: 0.85
+      });
+    }
+    
+    if (address.state) {
+      rows.push({
+        fieldName: 'clinic_state',
+        displayLabel: 'Clinic State',
+        originalValue: address.state,
+        currentValue: address.state,
+        dataType: 'string',
+        category: 'other',
+        confidence: 0.85
+      });
+    }
+    
+    if (address.pincode) {
+      rows.push({
+        fieldName: 'clinic_pincode',
+        displayLabel: 'Clinic Pincode',
+        originalValue: address.pincode,
+        currentValue: address.pincode,
+        dataType: 'string',
+        category: 'other',
+        confidence: 0.85
+      });
+    }
+  }
+
   console.log(`[CONVERT] ✅ Created ${rows.length} rows for MEDICAL_HISTORY`);
+  return rows;
+}
+
+/**
+ * PROFESSIONAL IMPROVEMENT: Convert billing data to rows with complete details
+ * @param {Object} extractedData - Extracted billing data
+ * @returns {Array} Data rows
+ */
+function convertBillingData(extractedData) {
+  console.log('[CONVERT] Processing BILLING document');
+  const rows = [];
+  
+  const ex = extractedData.extraction || extractedData;
+  console.log('[CONVERT] Billing data keys:', Object.keys(ex));
+
+  // Patient details (if present)
+  if (ex.patient_details) {
+    const patient = ex.patient_details;
+    
+    if (patient.name) {
+      rows.push({
+        fieldName: 'patient_name',
+        displayLabel: 'Patient Name',
+        originalValue: patient.name,
+        currentValue: patient.name,
+        dataType: 'string',
+        category: 'patient_details',
+        confidence: 0.95
+      });
+    }
+    
+    if (patient.age) {
+      rows.push({
+        fieldName: 'patient_age',
+        displayLabel: 'Patient Age',
+        originalValue: patient.age,
+        currentValue: patient.age,
+        dataType: 'string',
+        category: 'patient_details',
+        confidence: 0.95
+      });
+    }
+    
+    if (patient.gender) {
+      rows.push({
+        fieldName: 'patient_gender',
+        displayLabel: 'Patient Gender',
+        originalValue: patient.gender,
+        currentValue: patient.gender,
+        dataType: 'string',
+        category: 'patient_details',
+        confidence: 0.95
+      });
+    }
+    
+    if (patient.uhid_no) {
+      rows.push({
+        fieldName: 'uhid_no',
+        displayLabel: 'UHID Number',
+        originalValue: patient.uhid_no,
+        currentValue: patient.uhid_no,
+        dataType: 'string',
+        category: 'patient_details',
+        confidence: 0.95
+      });
+    }
+  }
+
+  // Bill number
+  if (ex.bill_number) {
+    rows.push({
+      fieldName: 'bill_number',
+      displayLabel: 'Bill Number',
+      originalValue: ex.bill_number,
+      currentValue: ex.bill_number,
+      dataType: 'string',
+      category: 'other',
+      confidence: 0.95
+    });
+  }
+  
+  // Bill date
+  if (ex.bill_date) {
+    rows.push({
+      fieldName: 'bill_date',
+      displayLabel: 'Bill Date',
+      originalValue: ex.bill_date,
+      currentValue: ex.bill_date,
+      dataType: 'date',
+      category: 'other',
+      confidence: 0.95
+    });
+  }
+  
+  // Hospital
+  if (ex.hospital) {
+    rows.push({
+      fieldName: 'hospital',
+      displayLabel: 'Hospital',
+      originalValue: ex.hospital,
+      currentValue: ex.hospital,
+      dataType: 'string',
+      category: 'other',
+      confidence: 0.95
+    });
+  }
+  
+  // Doctor name
+  if (ex.doctor_name) {
+    rows.push({
+      fieldName: 'doctor_name',
+      displayLabel: 'Doctor Name',
+      originalValue: ex.doctor_name,
+      currentValue: ex.doctor_name,
+      dataType: 'string',
+      category: 'patient_details',
+      confidence: 0.95
+    });
+  }
+  
+  // Department
+  if (ex.department) {
+    rows.push({
+      fieldName: 'department',
+      displayLabel: 'Department',
+      originalValue: ex.department,
+      currentValue: ex.department,
+      dataType: 'string',
+      category: 'other',
+      confidence: 0.90
+    });
+  }
+  
+  // Billed items
+  if (ex.items && Array.isArray(ex.items) && ex.items.length > 0) {
+    console.log('[CONVERT] ✅ Found billed items:', ex.items.length);
+    
+    ex.items.forEach((item, index) => {
+      rows.push({
+        fieldName: `item_${index}`,
+        displayLabel: `Item ${index + 1}: ${item.description || 'Service'}`,
+        originalValue: item,
+        currentValue: item,
+        dataType: 'object',
+        category: 'other',
+        confidence: 0.90
+      });
+    });
+  }
+  
+  // Total amount
+  if (ex.total_amount) {
+    rows.push({
+      fieldName: 'total_amount',
+      displayLabel: 'Total Amount',
+      originalValue: ex.total_amount,
+      currentValue: ex.total_amount,
+      dataType: 'string',
+      category: 'other',
+      confidence: 0.95
+    });
+  }
+  
+  // Paid amount
+  if (ex.paid_amount) {
+    rows.push({
+      fieldName: 'paid_amount',
+      displayLabel: 'Paid Amount',
+      originalValue: ex.paid_amount,
+      currentValue: ex.paid_amount,
+      dataType: 'string',
+      category: 'other',
+      confidence: 0.95
+    });
+  }
+  
+  // Balance
+  if (ex.balance) {
+    rows.push({
+      fieldName: 'balance',
+      displayLabel: 'Balance',
+      originalValue: ex.balance,
+      currentValue: ex.balance,
+      dataType: 'string',
+      category: 'other',
+      confidence: 0.90
+    });
+  }
+  
+  // Payment mode
+  if (ex.payment_mode) {
+    rows.push({
+      fieldName: 'payment_mode',
+      displayLabel: 'Payment Mode',
+      originalValue: ex.payment_mode,
+      currentValue: ex.payment_mode,
+      dataType: 'string',
+      category: 'other',
+      confidence: 0.90
+    });
+  }
+  
+  // CGST
+  if (ex.cgst) {
+    rows.push({
+      fieldName: 'cgst',
+      displayLabel: 'CGST',
+      originalValue: ex.cgst,
+      currentValue: ex.cgst,
+      dataType: 'string',
+      category: 'other',
+      confidence: 0.90
+    });
+  }
+  
+  // SGST
+  if (ex.sgst) {
+    rows.push({
+      fieldName: 'sgst',
+      displayLabel: 'SGST',
+      originalValue: ex.sgst,
+      currentValue: ex.sgst,
+      dataType: 'string',
+      category: 'other',
+      confidence: 0.90
+    });
+  }
+  
+  // Clinic address
+  if (ex.clinic_address) {
+    const address = ex.clinic_address;
+    
+    if (address.street_address) {
+      rows.push({
+        fieldName: 'clinic_street_address',
+        displayLabel: 'Clinic Street Address',
+        originalValue: address.street_address,
+        currentValue: address.street_address,
+        dataType: 'string',
+        category: 'other',
+        confidence: 0.85
+      });
+    }
+    
+    if (address.city) {
+      rows.push({
+        fieldName: 'clinic_city',
+        displayLabel: 'Clinic City',
+        originalValue: address.city,
+        currentValue: address.city,
+        dataType: 'string',
+        category: 'other',
+        confidence: 0.85
+      });
+    }
+    
+    if (address.state) {
+      rows.push({
+        fieldName: 'clinic_state',
+        displayLabel: 'Clinic State',
+        originalValue: address.state,
+        currentValue: address.state,
+        dataType: 'string',
+        category: 'other',
+        confidence: 0.85
+      });
+    }
+    
+    if (address.pincode) {
+      rows.push({
+        fieldName: 'clinic_pincode',
+        displayLabel: 'Clinic Pincode',
+        originalValue: address.pincode,
+        currentValue: address.pincode,
+        dataType: 'string',
+        category: 'other',
+        confidence: 0.85
+      });
+    }
+  }
+  
+  // Notes
+  if (ex.notes) {
+    rows.push({
+      fieldName: 'notes',
+      displayLabel: 'Notes',
+      originalValue: ex.notes,
+      currentValue: ex.notes,
+      dataType: 'string',
+      category: 'other',
+      confidence: 0.85
+    });
+  }
+
+  console.log(`[CONVERT] ✅ Created ${rows.length} rows for BILLING`);
   return rows;
 }
 
@@ -386,5 +911,6 @@ module.exports = {
   convertExtractedDataToRows,
   convertPrescriptionData,
   convertLabReportData,
-  convertMedicalHistoryData
+  convertMedicalHistoryData,
+  convertBillingData
 };

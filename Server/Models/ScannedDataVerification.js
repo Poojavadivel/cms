@@ -20,7 +20,7 @@ const ScannedDataVerificationSchema = new mongoose.Schema({
   },
   documentType: {
     type: String,
-    enum: ['PRESCRIPTION', 'LAB_REPORT', 'MEDICAL_HISTORY', 'GENERAL'],
+    enum: ['PRESCRIPTION', 'LAB_REPORT', 'MEDICAL_HISTORY', 'BILLING', 'VITALS', 'GENERAL', 'MULTI_SECTION_MEDICAL_RECORD'],
     required: true
   },
   pdfId: {
@@ -37,7 +37,7 @@ const ScannedDataVerificationSchema = new mongoose.Schema({
   },
   verificationStatus: {
     type: String,
-    enum: ['pending', 'verified', 'rejected', 'partially_verified'],
+    enum: ['pending', 'verified', 'rejected', 'partially_verified', 'confirmed'],
     default: 'pending'
   },
   dataRows: [{
@@ -45,22 +45,41 @@ const ScannedDataVerificationSchema = new mongoose.Schema({
     displayLabel: { type: String, required: true },
     originalValue: { type: mongoose.Schema.Types.Mixed },
     currentValue: { type: mongoose.Schema.Types.Mixed },
-    dataType: { type: String, enum: ['string', 'number', 'date', 'array', 'object'], default: 'string' },
+    dataType: { 
+      type: String, 
+      enum: ['string', 'number', 'date', 'array', 'object', 'section_header', 'medication_header'], 
+      default: 'string' 
+    },
     isModified: { type: Boolean, default: false },
     isDeleted: { type: Boolean, default: false },
     isVerified: { type: Boolean, default: false },
+    isEditable: { type: Boolean, default: true },
     confidence: { type: Number, default: 0.95 },
     category: { 
       type: String, 
-      enum: ['patient_details', 'medications', 'vitals', 'diagnosis', 'lab_results', 'other'],
+      enum: ['patient_details', 'medications', 'vitals', 'diagnosis', 'lab_results', 'section', 'other'],
       default: 'other'
-    }
+    },
+    sectionIndex: { type: Number },
+    sectionHeading: { type: String },
+    sectionType: { type: String }
   }],
   metadata: {
     ocrEngine: { type: String, default: 'landingai-ade' },
     ocrConfidence: { type: Number, default: 0.95 },
     processingTimeMs: { type: Number },
-    markdown: { type: String }
+    markdown: { type: String },
+    sectionCount: { type: Number, default: 0 },
+    sections: [{ 
+      heading: String,
+      sectionType: String,
+      schemaType: String,
+      startLine: Number,
+      endLine: Number,
+      confidence: Number,
+      detectionMethod: String
+    }],
+    documentTypes: [{ type: String }]
   },
   uploadedBy: {
     type: mongoose.Schema.Types.ObjectId,

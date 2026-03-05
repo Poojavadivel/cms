@@ -174,7 +174,7 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
     const [uploadedFiles, setUploadedFiles] = useState([]);
     const [uploading, setUploading] = useState(false);
     const [scannerError, setScannerError] = useState(null);
-    const [selectedDocumentType, setSelectedDocumentType] = useState('PRESCRIPTION');
+    const [uploadStartTime, setUploadStartTime] = useState(null);
     
     // Verification Modal State
     const [verificationModalOpen, setVerificationModalOpen] = useState(false);
@@ -503,6 +503,7 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
 
         setUploading(true);
         setScannerError(null);
+        setUploadStartTime(Date.now());  // Start timer
 
         try {
             // Process multiple files
@@ -512,7 +513,13 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                 const pid = patientId || `temp-${Date.now()}`;
 
                 try {
-                    const scannedResult = await scannerService.scanAndExtractMedicalData(file, pid, selectedDocumentType);
+                    // V2 auto-detects document type - no need to specify!
+                    const scannedResult = await scannerService.scanAndExtractMedicalData(
+                        file, 
+                        pid, 
+                        null,  // No document type needed - auto-detected!
+                        true   // Use V2 section-level processing
+                    );
 
                     // Auto-fill form fields if data was extracted
                     if (scannedResult) {
@@ -529,16 +536,20 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                         scannedResult,
                         verificationId: scannedResult.verificationId,
                         requiresVerification: scannedResult.verificationRequired || false,
-                        documentType: selectedDocumentType
+                        documentType: scannedResult.documentType,  // Auto-detected type
+                        documentTypes: scannedResult.documentTypes,  // All detected types
+                        sectionCount: scannedResult.sectionCount  // Number of sections
                     }]);
                     
                     // Debug log
-                    console.log('[UPLOAD] File added to uploadedFiles:', {
+                    console.log('[UPLOAD] File processed with auto-detection:', {
                         name: file.name,
-                        documentType: selectedDocumentType,
+                        documentType: scannedResult.documentType,
+                        documentTypes: scannedResult.documentTypes,
+                        sectionCount: scannedResult.sectionCount,
                         verificationId: scannedResult.verificationId,
                         requiresVerification: scannedResult.verificationRequired,
-                        hasVerificationButton: !!(scannedResult.verificationRequired && scannedResult.verificationId)
+                        processingVersion: scannedResult.processingVersion
                     });
                 } catch (fileError) {
                     console.error(`Error processing ${file.name}:`, fileError);
@@ -549,7 +560,10 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
             console.error('File upload error:', error);
             setScannerError(error.message || 'Failed to process documents');
         } finally {
+            const processingTime = ((Date.now() - uploadStartTime) / 1000).toFixed(1);
+            console.log(`[UPLOAD] Total processing time: ${processingTime}s`);
             setUploading(false);
+            setUploadStartTime(null);
             event.target.value = ''; // Reset input
         }
     };
@@ -1183,89 +1197,25 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                                                 {currentStep === 2 && (
                                                     <div className="space-y-8">
 
-                                                        {/* Document Type Selector */}
-                                                        <div className="bg-white border border-[#207DC0]/20 rounded-xl p-5">
-                                                            <h4 className="text-[#0f3e61] font-bold mb-3 flex items-center gap-2 text-sm">
-                                                                <MdDescription className="text-[#207DC0]" />
-                                                                Select Document Type
-                                                            </h4>
-                                                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                                                {[
-                                                                    { 
-                                                                        type: 'PRESCRIPTION', 
-                                                                        label: 'Prescription', 
-                                                                        icon: MdLocalPharmacy,
-                                                                        color: '#10b981',
-                                                                        bgColor: '#d1fae5',
-                                                                        description: 'Doctor\'s prescription with medicines'
-                                                                    },
-                                                                    { 
-                                                                        type: 'LAB_REPORT', 
-                                                                        label: 'Lab Report', 
-                                                                        icon: MdScience,
-                                                                        color: '#3b82f6',
-                                                                        bgColor: '#dbeafe',
-                                                                        description: 'Laboratory test results'
-                                                                    },
-                                                                    { 
-                                                                        type: 'MEDICAL_HISTORY', 
-                                                                        label: 'Medical History', 
-                                                                        icon: MdMedicalServices,
-                                                                        color: '#8b5cf6',
-                                                                        bgColor: '#ede9fe',
-                                                                        description: 'Hospital discharge or medical history'
-                                                                    }
-                                                                ].map((docType) => {
-                                                                    const Icon = docType.icon;
-                                                                    const isSelected = selectedDocumentType === docType.type;
-                                                                    
-                                                                    return (
-                                                                        <button
-                                                                            key={docType.type}
-                                                                            type="button"
-                                                                            onClick={() => setSelectedDocumentType(docType.type)}
-                                                                            className={`relative p-4 rounded-lg border-2 transition-all duration-300 text-left group hover:scale-105 ${
-                                                                                isSelected 
-                                                                                    ? 'border-[#207DC0] bg-[#ecf6ff] shadow-lg' 
-                                                                                    : 'border-slate-200 bg-white hover:border-[#207DC0]/50 hover:bg-[#ecf6ff]/30'
-                                                                            }`}
-                                                                        >
-                                                                            {/* Selection Indicator */}
-                                                                            {isSelected && (
-                                                                                <div className="absolute top-2 right-2 w-6 h-6 bg-[#207DC0] rounded-full flex items-center justify-center">
-                                                                                    <MdCheck className="text-white text-sm" />
-                                                                                </div>
-                                                                            )}
-                                                                            
-                                                                            {/* Icon */}
-                                                                            <div 
-                                                                                className="w-10 h-10 rounded-lg flex items-center justify-center mb-3 transition-all duration-300"
-                                                                                style={{ 
-                                                                                    backgroundColor: isSelected ? docType.color + '20' : docType.bgColor,
-                                                                                    color: docType.color
-                                                                                }}
-                                                                            >
-                                                                                <Icon size={22} />
-                                                                            </div>
-                                                                            
-                                                                            {/* Label */}
-                                                                            <h5 className={`font-bold text-sm mb-1 ${
-                                                                                isSelected ? 'text-[#207DC0]' : 'text-[#0f3e61]'
-                                                                            }`}>
-                                                                                {docType.label}
-                                                                            </h5>
-                                                                            
-                                                                            {/* Description */}
-                                                                            <p className="text-xs text-slate-500 leading-tight">
-                                                                                {docType.description}
-                                                                            </p>
-                                                                        </button>
-                                                                    );
-                                                                })}
+                                                        {/* Scanner Section - Auto-Detection Enabled */}
+                                                        <div className="bg-white border border-[#207DC0]/20 rounded-xl p-5 mb-5">
+                                                            <div className="flex items-center justify-between mb-2">
+                                                                <h4 className="text-[#0f3e61] font-bold flex items-center gap-2 text-sm">
+                                                                    <MdDescription className="text-[#207DC0]" />
+                                                                    Upload Medical Documents
+                                                                </h4>
+                                                                {uploading && (
+                                                                    <div className="flex items-center gap-2 text-xs">
+                                                                        <FiLoader className="animate-spin text-[#207DC0]" />
+                                                                        <span className="text-slate-600 font-semibold">
+                                                                            Processing... {uploadStartTime && `${((Date.now() - uploadStartTime) / 1000).toFixed(1)}s`}
+                                                                        </span>
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                         </div>
 
-                                                        {/* Scanner Section */}
+                                                        {/* Scanner Upload Area */}
                                                         <div className="bg-[#ecf6ff] border-2 border-dashed border-[#207DC0]/30 rounded-xl p-6 text-center hover:bg-[#207DC0]/10 transition-colors cursor-pointer relative group">
                                                             <input
                                                                 type="file"
@@ -1293,7 +1243,7 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
 
                                                         {uploadedFiles.length > 0 && (
                                                             <div className="space-y-2">
-                                                                <p className="text-xs font-bold uppercase text-slate-400">Uploaded Documents</p>
+                                                                <p className="text-xs font-bold uppercase text-slate-400">Uploaded Documents (Auto-Detected)</p>
                                                                 {uploadedFiles.map((file, idx) => {
                                                                     // Get document type badge styling
                                                                     const getDocTypeBadge = (type) => {
@@ -1325,6 +1275,20 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                                                                                 
                                                                                 {/* File Name */}
                                                                                 <span className="truncate font-bold text-[#0f3e61]">{file.name}</span>
+                                                                                
+                                                                                {/* Section Count Badge (if multi-section) */}
+                                                                                {file.sectionCount > 1 && (
+                                                                                    <span className="px-2 py-0.5 bg-indigo-100 text-indigo-600 rounded-full text-xs font-bold">
+                                                                                        {file.sectionCount} sections
+                                                                                    </span>
+                                                                                )}
+                                                                                
+                                                                                {/* Processing Version Badge */}
+                                                                                {file.scannedResult?.processingVersion === 'v2-section-level' && (
+                                                                                    <span className="px-2 py-0.5 bg-green-100 text-green-600 rounded-full text-xs font-bold">
+                                                                                        🤖 AI
+                                                                                    </span>
+                                                                                )}
                                                                             </div>
                                                                             
                                                                             <div className="flex items-center gap-2">

@@ -68,37 +68,37 @@ const PatientDetailsSchema = {
   type: 'object',
   properties: {
     name: {
-      type: 'string',
+      type: ['string', 'null'],
       description: 'The full name of the patient.',
       title: 'Patient Name',
       default: ''
     },
     firstName: {
-      type: 'string',
+      type: ['string', 'null'],
       description: 'First name of the patient.',
       title: 'First Name',
       default: ''
     },
     lastName: {
-      type: 'string',
+      type: ['string', 'null'],
       description: 'Last name of the patient.',
       title: 'Last Name',
       default: ''
     },
     uhid_no: {
-      type: 'string',
+      type: ['string', 'null'],
       description: 'Unique Hospital Identification Number for the patient.',
       title: 'UHID Number',
       default: ''
     },
     age: {
-      type: 'string',
+      type: ['string', 'null'],
       description: "The age of the patient, including units (e.g., '92 M').",
       title: 'Patient Age',
       default: ''
     },
     gender: {
-      type: 'string',
+      type: ['string', 'null'],
       description: "The gender of the patient (e.g., 'Male', 'Female', 'Other').",
       title: 'Patient Gender',
       default: ''
@@ -116,7 +116,7 @@ const PatientDetailsSchema = {
       default: ''
     },
     dateOfBirth: {
-      type: 'string',
+      type: ['string', 'null'],
       description: "Patient's date of birth in YYYY-MM-DD format.",
       title: 'Date of Birth',
       default: ''
@@ -225,15 +225,33 @@ const TestResultSchema = {
     },
     normalRange: {
       type: 'string',
-      description: 'Normal reference range.',
+      description: 'Normal reference range for this test.',
       title: 'Normal Range',
+      default: ''
+    },
+    referenceMin: {
+      type: ['string', 'null'],
+      description: 'Minimum reference value.',
+      title: 'Reference Min',
+      default: ''
+    },
+    referenceMax: {
+      type: ['string', 'null'],
+      description: 'Maximum reference value.',
+      title: 'Reference Max',
       default: ''
     },
     flag: {
       type: 'string',
-      description: 'Result flag: Normal, High, Low, Critical.',
+      description: 'Result flag: Normal, High, Low, Critical, Abnormal.',
       title: 'Flag',
       default: 'Normal'
+    },
+    status: {
+      type: ['string', 'null'],
+      description: 'Status indicator: NORMAL, ABNORMAL, HIGH, LOW, CRITICAL.',
+      title: 'Status',
+      default: 'NORMAL'
     },
     notes: {
       type: ['string', 'null'],
@@ -307,36 +325,170 @@ const LabReportSchema = {
 
 const PrescriptionDocumentSchema = {
   type: 'object',
-  required: ['prescription_summary', 'date_time', 'hospital', 'doctor'],
+  required: [],  // Make all fields optional since sections might be partial
   properties: {
-    prescription_summary: {
-      type: 'string',
-      description: 'Summary or main content of the prescription including medicines or instructions',
-      title: 'Prescription Summary',
-      default: ''
-    },
     date_time: {
-      type: 'string',
+      type: ['string', 'null'],
       description: 'Date and time when the prescription was issued',
       title: 'Date and Time',
       default: ''
     },
     hospital: {
-      type: 'string',
+      type: ['string', 'null'],
       description: 'Hospital or clinic name mentioned in the prescription',
       title: 'Hospital',
       default: ''
     },
     doctor: {
-      type: 'string',
+      type: ['string', 'null'],
       description: 'Doctor who issued the prescription',
       title: 'Doctor',
+      default: ''
+    },
+    medications: {
+      type: 'array',
+      items: MedicationSchema,
+      description: 'List of prescribed medications with detailed information',
+      title: 'Medications',
+      default: []
+    },
+    prescription_summary: {
+      type: ['string', 'null'],
+      description: 'Summary or main content of the prescription (fallback if medications array is empty)',
+      title: 'Prescription Summary',
       default: ''
     },
     medical_notes: {
       type: ['string', 'null'],
       description: 'Additional medical notes or instructions',
       title: 'Medical Notes',
+      default: ''
+    },
+    diagnosis: {
+      type: ['string', 'null'],
+      description: 'Diagnosis or reason for prescription',
+      title: 'Diagnosis',
+      default: ''
+    }
+  }
+};
+
+// PROFESSIONAL IMPROVEMENT: Complete Billing Schema with all details
+const BillingItemSchema = {
+  type: 'object',
+  properties: {
+    description: {
+      type: ['string', 'null'],
+      description: 'Service or item description',
+      title: 'Description',
+      default: ''
+    },
+    quantity: {
+      type: ['string', 'null'],
+      description: 'Quantity',
+      title: 'Quantity',
+      default: ''
+    },
+    amount: {
+      type: ['string', 'null'],
+      description: 'Amount in currency',
+      title: 'Amount',
+      default: ''
+    }
+  }
+};
+
+const BillingDocumentSchema = {
+  type: 'object',
+  required: [],
+  properties: {
+    patient_details: {
+      ...PatientDetailsSchema,
+      description: 'Information about the patient.',
+      title: 'Patient Details'
+    },
+    bill_number: {
+      type: ['string', 'null'],
+      description: 'Bill or receipt number',
+      title: 'Bill Number',
+      default: ''
+    },
+    bill_date: {
+      type: ['string', 'null'],
+      description: 'Date of the bill',
+      title: 'Bill Date',
+      default: ''
+    },
+    hospital: {
+      type: ['string', 'null'],
+      description: 'Hospital or clinic name',
+      title: 'Hospital',
+      default: ''
+    },
+    doctor_name: {
+      type: ['string', 'null'],
+      description: 'Doctor name if mentioned',
+      title: 'Doctor Name',
+      default: ''
+    },
+    department: {
+      type: ['string', 'null'],
+      description: 'Department if mentioned',
+      title: 'Department',
+      default: ''
+    },
+    items: {
+      type: 'array',
+      items: BillingItemSchema,
+      description: 'List of billed items or services',
+      title: 'Billed Items',
+      default: []
+    },
+    total_amount: {
+      type: ['string', 'null'],
+      description: 'Total amount',
+      title: 'Total Amount',
+      default: ''
+    },
+    paid_amount: {
+      type: ['string', 'null'],
+      description: 'Amount paid',
+      title: 'Paid Amount',
+      default: ''
+    },
+    balance: {
+      type: ['string', 'null'],
+      description: 'Balance or due amount',
+      title: 'Balance',
+      default: ''
+    },
+    payment_mode: {
+      type: ['string', 'null'],
+      description: 'Mode of payment (Cash, Card, Online, etc.)',
+      title: 'Payment Mode',
+      default: ''
+    },
+    cgst: {
+      type: ['string', 'null'],
+      description: 'CGST tax amount',
+      title: 'CGST',
+      default: ''
+    },
+    sgst: {
+      type: ['string', 'null'],
+      description: 'SGST tax amount',
+      title: 'SGST',
+      default: ''
+    },
+    clinic_address: {
+      ...AddressSchema,
+      description: 'Address of the hospital/clinic.',
+      title: 'Clinic Address'
+    },
+    notes: {
+      type: ['string', 'null'],
+      description: 'Additional notes or remarks',
+      title: 'Notes',
       default: ''
     }
   }
@@ -365,8 +517,13 @@ const LabReportDocumentSchema = {
 
 const MedicalHistoryDocumentSchema = {
   type: 'object',
-  required: ['medical_type', 'date', 'hospital_name', 'doctor_name'],
+  required: [],  // Make all fields optional
   properties: {
+    patient_details: {
+      ...PatientDetailsSchema,
+      description: 'Information about the patient.',
+      title: 'Patient Details'
+    },
     medical_type: {
       type: 'string',
       description: 'Type of medical record: appointment_summary or discharge_summary',
@@ -387,7 +544,7 @@ const MedicalHistoryDocumentSchema = {
       default: ''
     },
     date: {
-      type: 'string',
+      type: ['string', 'null'],
       description: 'Date of appointment or discharge in DD/MM/YYYY format',
       title: 'Date',
       default: ''
@@ -399,7 +556,7 @@ const MedicalHistoryDocumentSchema = {
       default: ''
     },
     hospital_name: {
-      type: 'string',
+      type: ['string', 'null'],
       description: 'Name of the hospital or clinic',
       title: 'Hospital Name',
       default: ''
@@ -411,7 +568,7 @@ const MedicalHistoryDocumentSchema = {
       default: ''
     },
     doctor_name: {
-      type: 'string',
+      type: ['string', 'null'],
       description: 'Name of the doctor who handled the case',
       title: 'Doctor Name',
       default: ''
@@ -445,6 +602,11 @@ const MedicalHistoryDocumentSchema = {
       description: 'Additional remarks or follow-up instructions',
       title: 'Remarks',
       default: ''
+    },
+    clinic_address: {
+      ...AddressSchema,
+      description: 'Address of the hospital/clinic.',
+      title: 'Clinic Address'
     }
   }
 };
@@ -611,6 +773,8 @@ class LandingAIScanner {
         return LabReportDocumentSchema;
       case 'MEDICAL_HISTORY':
         return MedicalHistoryDocumentSchema;
+      case 'BILLING':
+        return BillingDocumentSchema;
       default:
         return PrescriptionDocumentSchema; // Fallback
     }

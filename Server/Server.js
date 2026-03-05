@@ -51,7 +51,7 @@ console.log('🛏️  Ward Map (beds) & Dashboard routes loaded');
 console.log('💳 Billing & Services routes loaded');
 
 // --- Telegram Bot ---
-app.use('/api/telegram', require('./routes/telegram/routes'));
+// app.use('/api/telegram', require('./routes/telegram/routes'));
 console.log('✅ Telegram Bot activated and running...');
 
 // --- Static Files & SPA Support ---
