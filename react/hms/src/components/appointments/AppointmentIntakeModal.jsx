@@ -11,7 +11,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { MdClose, MdSave, MdMonitorHeart, MdNote, MdMedication, MdScience, MdEventNote } from 'react-icons/md';
+import { MdClose, MdSave, MdMonitorHeart, MdNote, MdMedication, MdScience, MdEventNote, MdFavorite } from 'react-icons/md';
 import PatientProfileHeaderCard from '../doctor/PatientProfileHeaderCard';
 import SectionCard from './SectionCard';
 import PharmacyTable from './PharmacyTable';
@@ -36,6 +36,7 @@ const AppointmentIntakeModal = ({ isOpen, onClose, appointmentId, onSuccess }) =
   const [weight, setWeight] = useState('');
   const [bmi, setBmi] = useState('');
   const [spo2, setSpo2] = useState('');
+  const [bp, setBp] = useState('');
   const [currentNotes, setCurrentNotes] = useState('');
 
   // Pharmacy rows (for future) - eslint-disable-next-line no-unused-vars
@@ -171,6 +172,7 @@ const AppointmentIntakeModal = ({ isOpen, onClose, appointmentId, onSuccess }) =
         }
         if (data.vitals.bmi) setBmi(data.vitals.bmi);
         if (data.vitals.spo2) setSpo2(data.vitals.spo2);
+        if (data.vitals.bp) setBp(data.vitals.bp);
       }
 
       // If we haven't set notes from intake, set from appointment
@@ -217,6 +219,7 @@ const AppointmentIntakeModal = ({ isOpen, onClose, appointmentId, onSuccess }) =
           weight_kg: weight || null,
           bmi: bmi || null,
           spo2: spo2 || null,
+          bp: bp || null,
         },
         currentNotes: currentNotes || null,
         pharmacy: pharmacyRows.map(row => ({
@@ -361,6 +364,50 @@ const AppointmentIntakeModal = ({ isOpen, onClose, appointmentId, onSuccess }) =
 
   const patientForHeader = convertToPatient();
 
+  // ── VitalCard helper ──────────────────────────────────────────────────
+  const getBmiStatus = (val) => {
+    const n = parseFloat(val);
+    if (!val || isNaN(n)) return null;
+    if (n < 18.5) return { label: 'Underweight', color: '#0ea5e9', bg: 'rgba(14,165,233,0.10)' };
+    if (n < 25) return { label: 'Normal', color: '#10b981', bg: 'rgba(16,185,129,0.10)' };
+    if (n < 30) return { label: 'Overweight', color: '#f59e0b', bg: 'rgba(245,158,11,0.10)' };
+    return { label: 'Obese', color: '#ef4444', bg: 'rgba(239,68,68,0.10)' };
+  };
+
+  const getSpo2Status = (val) => {
+    const n = parseFloat(val);
+    if (!val || isNaN(n)) return null;
+    if (n >= 95) return { label: 'Normal', color: '#10b981', bg: 'rgba(16,185,129,0.10)' };
+    if (n >= 90) return { label: 'Low', color: '#f59e0b', bg: 'rgba(245,158,11,0.10)' };
+    return { label: 'Critical', color: '#ef4444', bg: 'rgba(239,68,68,0.10)' };
+  };
+
+  const VitalCard = ({ icon, label, value, unit, status, accentColor = '#0d9488', emptyLabel = 'Not set' }) => (
+    <div className="vital-display-card" style={{ '--vc-accent': accentColor }}>
+      <div className="vc-top">
+        <span className="vc-icon" style={{ color: accentColor }}>{icon}</span>
+        <span className="vc-label">{label}</span>
+      </div>
+      <div className="vc-center">
+        {value ? (
+          <>
+            <span className="vc-value">{value}</span>
+            {unit && <span className="vc-unit">{unit}</span>}
+          </>
+        ) : (
+          <span className="vc-empty">{emptyLabel}</span>
+        )}
+      </div>
+      {status && (
+        <div className="vc-status" style={{ color: status.color, background: status.bg }}>{status.label}</div>
+      )}
+    </div>
+  );
+
+  const bmiStatus = getBmiStatus(bmi);
+  const spo2Status = getSpo2Status(spo2);
+  // ─────────────────────────────────────────────────────────────────────
+
   return (
     <div className="intake-modal-overlay">
       <div className="intake-modal-dialog">
@@ -376,7 +423,7 @@ const AppointmentIntakeModal = ({ isOpen, onClose, appointmentId, onSuccess }) =
                 {successNotification.details.map((detail, idx) => (
                   <div key={idx} className="success-detail">{detail}</div>
                 ))}
-                
+
                 {successNotification.hasPharmacy && (
                   <div className="success-navigation-hint pharmacy-hint">
                     <div className="hint-icon">💊</div>
@@ -386,7 +433,7 @@ const AppointmentIntakeModal = ({ isOpen, onClose, appointmentId, onSuccess }) =
                     </div>
                   </div>
                 )}
-                
+
                 {successNotification.hasPathology && (
                   <div className="success-navigation-hint pathology-hint">
                     <div className="hint-icon">🧪</div>
@@ -454,55 +501,95 @@ const AppointmentIntakeModal = ({ isOpen, onClose, appointmentId, onSuccess }) =
                   description="Record patient vitals and measurements"
                   initiallyExpanded={true}
                 >
-                  <div className="vitals-grid">
-                    <div className="vitals-row">
-                      <div className="input-group">
-                        <label htmlFor="height">Height (cm)</label>
-                        <input
-                          id="height"
-                          type="number"
-                          value={height}
-                          onChange={(e) => setHeight(e.target.value)}
-                          placeholder="Enter height in cm"
-                          className="intake-input"
-                        />
-                      </div>
-                      <div className="input-group">
-                        <label htmlFor="weight">Weight (kg)</label>
-                        <input
-                          id="weight"
-                          type="number"
-                          value={weight}
-                          onChange={(e) => setWeight(e.target.value)}
-                          placeholder="Enter weight in kg"
-                          className="intake-input"
-                        />
-                      </div>
+                  {/* ── Live Vitals Display Grid ───────────────────── */}
+                  <div className="vitals-display-grid">
+                    <VitalCard
+                      icon={<span className="vc-emoji">⚖️</span>}
+                      label="Weight"
+                      value={weight}
+                      unit="kg"
+                      accentColor="#0d9488"
+                    />
+                    <VitalCard
+                      icon={<span className="vc-emoji">📏</span>}
+                      label="Height"
+                      value={height}
+                      unit="cm"
+                      accentColor="#0369a1"
+                    />
+                    <VitalCard
+                      icon={<span className="vc-emoji">📉</span>}
+                      label="BMI"
+                      value={bmi}
+                      status={bmiStatus}
+                      accentColor={bmiStatus?.color || '#64748b'}
+                    />
+                    <VitalCard
+                      icon={<MdFavorite size={18} />}
+                      label="SpO₂"
+                      value={spo2}
+                      unit="%"
+                      status={spo2Status}
+                      accentColor={spo2Status?.color || '#ef4444'}
+                    />
+                  </div>
+
+                  {/* ── Input Form ────────────────────────────────── */}
+                  <div className="vitals-input-grid">
+                    <div className="input-group">
+                      <label htmlFor="height">Height <span className="unit-label">(cm)</span></label>
+                      <input
+                        id="height"
+                        type="number"
+                        value={height}
+                        onChange={(e) => setHeight(e.target.value)}
+                        placeholder="e.g. 175"
+                        className="intake-input"
+                      />
                     </div>
-                    <div className="vitals-row">
-                      <div className="input-group">
-                        <label htmlFor="bmi">BMI</label>
-                        <input
-                          id="bmi"
-                          type="number"
-                          value={bmi}
-                          onChange={(e) => setBmi(e.target.value)}
-                          placeholder="Auto-calculated"
-                          className="intake-input"
-                          readOnly
-                        />
-                      </div>
-                      <div className="input-group">
-                        <label htmlFor="spo2">SpO₂ (%)</label>
-                        <input
-                          id="spo2"
-                          type="number"
-                          value={spo2}
-                          onChange={(e) => setSpo2(e.target.value)}
-                          placeholder="Enter SpO₂ percentage"
-                          className="intake-input"
-                        />
-                      </div>
+                    <div className="input-group">
+                      <label htmlFor="weight">Weight <span className="unit-label">(kg)</span></label>
+                      <input
+                        id="weight"
+                        type="number"
+                        value={weight}
+                        onChange={(e) => setWeight(e.target.value)}
+                        placeholder="e.g. 72"
+                        className="intake-input"
+                      />
+                    </div>
+                    <div className="input-group">
+                      <label htmlFor="bmi">BMI <span className="unit-label">(auto)</span></label>
+                      <input
+                        id="bmi"
+                        type="number"
+                        value={bmi}
+                        placeholder="Auto-calculated"
+                        className="intake-input intake-input--readonly"
+                        readOnly
+                      />
+                    </div>
+                    <div className="input-group">
+                      <label htmlFor="spo2">SpO₂ <span className="unit-label">(%)</span></label>
+                      <input
+                        id="spo2"
+                        type="number"
+                        value={spo2}
+                        onChange={(e) => setSpo2(e.target.value)}
+                        placeholder="e.g. 98"
+                        className="intake-input"
+                      />
+                    </div>
+                    <div className="input-group">
+                      <label htmlFor="bp">Blood Pressure <span className="unit-label">(mmHg)</span></label>
+                      <input
+                        id="bp"
+                        type="text"
+                        value={bp}
+                        onChange={(e) => setBp(e.target.value)}
+                        placeholder="e.g. 120/80"
+                        className="intake-input"
+                      />
                     </div>
                   </div>
                 </SectionCard>

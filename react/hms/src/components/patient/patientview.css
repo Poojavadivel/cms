@@ -96,7 +96,8 @@
 .pv-header-content {
     display: flex;
     gap: 20px;
-    align-items: center;
+    align-items: flex-start;
+    width: 100%;
 }
 
 /* Avatar Section */
@@ -197,7 +198,6 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
-    /* Reduced gap */
     min-width: 0;
 }
 
@@ -314,30 +314,28 @@
     height: 12px;
 }
 
-/* Health Metrics */
+/* Health Metrics — 4-column inline row inside header */
 .pv-metrics-grid {
     display: grid;
-    grid-template-columns: repeat(2, auto);
-    grid-template-rows: auto auto;
-    gap: 6px;
-    margin-top: 4px;
-    width: fit-content;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-top: 8px;
+    width: 100%;
 }
 
 .pv-metric-card {
     background: #FFFFFF;
     border: 1px solid #E2E8F0;
-    border-radius: 8px;
-    padding: 7px 14px;
-    min-width: 90px;
-    max-width: 140px;
+    border-radius: 10px;
+    padding: 10px 14px;
     display: flex;
     flex-direction: column;
-    gap: 1px;
-    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.07);
+    gap: 2px;
+    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.07);
     transition: box-shadow 0.18s, transform 0.18s;
     position: relative;
     overflow: hidden;
+    min-width: 0;
 }
 
 .pv-metric-card::before {
@@ -430,7 +428,7 @@
     text-transform: capitalize;
 }
 
-/* Right Section */
+/* Right Section — compact actions only; metrics now live in pv-info-section */
 .pv-header-right {
     display: flex;
     flex-direction: column;
@@ -438,7 +436,7 @@
     align-items: flex-end;
     justify-content: flex-start;
     flex-shrink: 0;
-    min-width: 200px;
+    min-width: 120px;
 }
 
 .pv-edit-btn {
@@ -466,10 +464,9 @@
     transform: translateY(-2px);
 }
 
-/* Vitals grid inside right column — expand to fill column */
+/* Vitals grid is always a row now — this overrides nothing */
 .pv-header-right .pv-metrics-grid {
-    grid-template-columns: 1fr 1fr;
-    width: 100%;
+    display: none;
 }
 
 .pv-diagnosis-section,

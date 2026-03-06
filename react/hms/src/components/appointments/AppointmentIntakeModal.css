@@ -427,6 +427,7 @@
     justify-content: center;
   }
 }
+
 /* Success Notification Overlay */
 .intake-success-overlay {
   position: absolute;
@@ -455,6 +456,7 @@
     opacity: 0;
     transform: translateY(-20px) scale(0.95);
   }
+
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -476,8 +478,15 @@
 }
 
 @keyframes successBounce {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.2); }
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.2);
+  }
 }
 
 .success-header h3 {
@@ -519,6 +528,7 @@
     opacity: 0;
     transform: translateX(-10px);
   }
+
   to {
     opacity: 1;
     transform: translateX(0);
@@ -573,4 +583,158 @@
   color: #94A3B8;
   margin: 0;
   font-style: italic;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   VITALS DISPLAY GRID  (4-column live snapshot row)
+══════════════════════════════════════════════════════════════════ */
+.vitals-display-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+/* Individual vital display card */
+.vital-display-card {
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 14px 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  position: relative;
+  overflow: hidden;
+  transition: box-shadow 0.2s, transform 0.2s;
+  border-top: 3px solid var(--vc-accent, #0d9488);
+}
+
+.vital-display-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+/* top row: icon + label */
+.vc-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.vc-icon {
+  display: flex;
+  align-items: center;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.vc-emoji {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.vc-label {
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #64748b;
+}
+
+/* center: value + unit */
+.vc-center {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  min-height: 36px;
+}
+
+.vc-value {
+  font-family: 'Lexend', 'Inter', sans-serif;
+  font-size: 28px;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+.vc-unit {
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: #64748b;
+  align-self: flex-end;
+  margin-bottom: 3px;
+}
+
+.vc-empty {
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  color: #cbd5e1;
+  font-style: italic;
+  align-self: center;
+}
+
+/* status badge */
+.vc-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  width: fit-content;
+  margin-top: 2px;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   VITALS INPUT GRID  (2-column input form below display cards)
+══════════════════════════════════════════════════════════════════ */
+.vitals-input-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+/* Unit label inside input group label */
+.unit-label {
+  font-weight: 400;
+  color: #94a3b8;
+  font-size: 11px;
+  margin-left: 3px;
+}
+
+/* Read-only BMI input visual */
+.intake-input--readonly {
+  background: #f0fdf4 !important;
+  border-color: #a7f3d0 !important;
+  color: #065f46 !important;
+  font-weight: 600;
+  cursor: default;
+}
+
+/* Responsive: collapse on mobile */
+@media (max-width: 700px) {
+  .vitals-display-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .vitals-input-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 420px) {
+  .vc-value {
+    font-size: 22px;
+  }
 }

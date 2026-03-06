@@ -1,704 +1,413 @@
 /**
- * DoctorDashboard.jsx
- * Enterprise-grade Doctor Dashboard matching Flutter's EnterpriseDoctorDashboard
- * Professional medical color scheme, real-time stats, patient flow charts
+ * Dashboard.jsx — Complete Doctor Dashboard Overhaul
+ * Design: Medical Teal Theme, Bento Grid, 30/70 Layout
+ * Features: KPI cards, Active Queue with badges, ConsultationCanvas, Skeleton loaders, Toasts
  */
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  MdPeople,
-  MdCalendarToday,
-  MdAccessTime,
-  MdCheckCircle,
-  MdPlayArrow,
-  MdRemoveRedEye,
-  MdLocalHospital,
-  MdWarning,
-  MdNote,
-  MdMessage,
-  MdTrendingUp,
+  MdLocalHospital, MdCalendarToday, MdScience, MdBed,
+  MdTimelapse, MdSearch, MdNotifications, MdRefresh, MdTrendingUp,
 } from 'react-icons/md';
-import {
-  ResponsiveContainer,
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-} from 'recharts';
 import { useApp } from '../../../provider';
-import appointmentsService from '../../../services/appointmentsService';
-import patientsService from '../../../services/patientsService';
-import AppointmentViewModal from '../../../components/appointments/AppointmentViewModal';
-import AppointmentEditModal from '../../../components/appointments/AppointmentEditModal';
+import { apiGet } from '../../../services/apiService';
+import { ToastProvider, useToast } from './components/Toast';
+import SkeletonLoader from './components/SkeletonLoader';
+import ConsultationCanvas from './components/ConsultationCanvas';
 import './Dashboard.css';
 
-const DoctorDashboard = () => {
+// ─── Inner component so it can use the ToastProvider context ─────────────────
+const DashboardInner = () => {
   const { user } = useApp();
   const navigate = useNavigate();
+  const { showToast } = useToast();
+
+  // ─── State ────────────────────────────────────────────────────────────────
   const [loading, setLoading] = useState(true);
   const [appointments, setAppointments] = useState([]);
-  const [patients, setPatients] = useState([]);
-  const [selectedPeriod, setSelectedPeriod] = useState('Today');
+  const [selectedAppointment, setSelectedAppt] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
 
-  // Modal State
-  const [selectedItem, setSelectedItem] = useState(null);
-  const [showModal, setShowModal] = useState(false);
-  const [showAppointmentViewModal, setShowAppointmentViewModal] = useState(false);
-  const [selectedAppointment, setSelectedAppointment] = useState(null);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [selectedAppointmentId, setSelectedAppointmentId] = useState(null);
-
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
+  // ─── Data Loading ─────────────────────────────────────────────────────────
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [appointmentsData, patientsData] = await Promise.all([
-        appointmentsService.fetchAppointments({ limit: 100 }),
-        patientsService.fetchMyPatients(),
-      ]);
-
-      setAppointments(appointmentsData || []);
-      setPatients(patientsData || []);
-    } catch (error) {
-      console.error('Error loading dashboard data:', error);
+      const data = await apiGet('/appointments', { limit: 200 });
+      const list = Array.isArray(data) ? data : (data?.appointments || data?.data || []);
+      setAppointments(list);
+    } catch (err) {
+      showToast(err.message || 'Failed to load schedule. Please try again.', 'error');
+      setAppointments([]);
     } finally {
       setLoading(false);
     }
+  }, [showToast]);
+
+  useEffect(() => { loadData(); }, [loadData]);
+
+  // ─── Derived data ─────────────────────────────────────────────────────────
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const isToday = (d) => {
+    try {
+      const apd = new Date(d); apd.setHours(0, 0, 0, 0);
+      return apd.getTime() === today.getTime();
+    } catch { return false; }
   };
 
-  // Calculate metrics based on selected period
-  const getDateRange = () => {
-    const now = new Date();
-    const startDate = new Date();
-    
-    if (selectedPeriod === 'Today') {
-      startDate.setHours(0, 0, 0, 0);
-    } else if (selectedPeriod === 'Week') {
-      startDate.setDate(now.getDate() - 7);
-    } else if (selectedPeriod === 'Month') {
-      startDate.setDate(now.getDate() - 30);
-    }
-    
-    return { startDate, endDate: now };
-  };
+  const todayAppts = appointments.filter(a => isToday(a.startAt || a.date));
+  const pendingLabs = appointments.filter(a =>
+    (a.followUp?.labTests || []).some(l => l.ordered && !l.completed)
+  ).length;
+  const inPatients = appointments.filter(a =>
+    (a.status || '').toLowerCase() === 'admitted'
+  ).length;
 
-  const { startDate, endDate } = getDateRange();
+  // Avg wait time (mock — real data would come from a dedicated endpoint)
+  const avgWait = todayAppts.length > 0 ? Math.round(todayAppts.length * 4.5) : 0;
 
-  const totalPatients = patients.length;
-
-  const todayAppointments = appointments.filter(a => {
-    try {
-      const apptDate = new Date(a.startAt || a.date || a.appointmentDate);
-      return apptDate >= startDate && apptDate <= endDate;
-    } catch {
-      return false;
-    }
-  }).length;
-
-  const waitingNow = appointments.filter(a => {
-    try {
-      const apptDate = new Date(a.startAt || a.date || a.appointmentDate);
-      const isInRange = apptDate >= startDate && apptDate <= endDate;
-      const isScheduled = (a.status || '').toLowerCase() === 'scheduled';
-      return isInRange && isScheduled;
-    } catch {
-      return false;
-    }
-  }).length;
-
-  const completedToday = appointments.filter(a => {
-    try {
-      const apptDate = new Date(a.startAt || a.date || a.appointmentDate);
-      const isInRange = apptDate >= startDate && apptDate <= endDate;
-      const isCompleted = (a.status || '').toLowerCase() === 'completed';
-      return isInRange && isCompleted;
-    } catch {
-      return false;
-    }
-  }).length;
-
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Good Morning';
-    if (hour < 17) return 'Good Afternoon';
-    return 'Good Evening';
-  };
-
-  const patientQueue = appointments
-    .filter(a => {
-      try {
-        const apptDate = new Date(a.startAt || a.date || a.appointmentDate);
-        const today = new Date();
-        const isToday = apptDate.toDateString() === today.toDateString();
-        const isScheduled = (a.status || '').toLowerCase() === 'scheduled';
-        return isToday && isScheduled;
-      } catch {
-        return false;
-      }
-    })
+  // Active patient queue: today's scheduled/confirmed appointments
+  const statusOrder = { emergency: 0, 'vitals-done': 1, 'checked-in': 2, scheduled: 3 };
+  const patientQueue = todayAppts
+    .filter(a => !['completed', 'cancelled'].includes((a.status || '').toLowerCase()))
     .sort((a, b) => {
-      const timeA = a.time || a.appointmentTime || '';
-      const timeB = b.time || b.appointmentTime || '';
-      return timeA.localeCompare(timeB);
-    })
-    .slice(0, 5);
-
-  const upcomingAppointments = appointments
-    .filter(a => {
-      try {
-        const apptDate = new Date(a.startAt || a.date || a.appointmentDate);
-        const now = new Date();
-        const isFuture = apptDate > now;
-        const isScheduled = (a.status || '').toLowerCase() === 'scheduled';
-        return isFuture && isScheduled;
-      } catch {
-        return false;
-      }
-    })
-    .sort((a, b) => {
-      const dateA = new Date(a.date || a.appointmentDate);
-      const dateB = new Date(b.date || b.appointmentDate);
-      return dateA - dateB;
-    })
-    .slice(0, 4);
-
-  const statusCounts = {
-    scheduled: appointments.filter(a => (a.status || '').toLowerCase() === 'scheduled').length,
-    completed: appointments.filter(a => (a.status || '').toLowerCase() === 'completed').length,
-    cancelled: appointments.filter(a => (a.status || '').toLowerCase() === 'cancelled').length,
-    total: appointments.length,
-  };
-
-  const getChartData = () => {
-    const days = [];
-    let numDays = 7;
-    let dateFormat = { weekday: 'short' };
-
-    if (selectedPeriod === 'Week') {
-      numDays = 7;
-      dateFormat = { weekday: 'short' };
-    } else if (selectedPeriod === 'Month') {
-      numDays = 30;
-      dateFormat = { day: 'numeric' };
-    } else { // Today
-      numDays = 1;
-      dateFormat = { hour: '2-digit', minute: '2-digit' };
-    }
-
-    for (let i = numDays - 1; i >= 0; i--) {
-      const d = new Date();
-      if (selectedPeriod === 'Today') {
-        d.setHours(d.getHours() - i);
-        days.push({
-          date: d.toLocaleTimeString('en-US', dateFormat),
-          fullDate: d.toDateString(),
-          fullHour: d.getHours(),
-          scheduled: 0,
-          completed: 0,
-        });
-      } else {
-        d.setDate(d.getDate() - i);
-        const dateStr = d.toDateString();
-        days.push({
-          date: d.toLocaleDateString('en-US', dateFormat),
-          fullDate: dateStr,
-          scheduled: 0,
-          completed: 0,
-        });
-      }
-    }
-
-    appointments.forEach(a => {
-      try {
-        const apptDate = new Date(a.startAt || a.date || a.appointmentDate);
-        const apptDateStr = apptDate.toDateString();
-        
-        if (selectedPeriod === 'Today') {
-          const apptHour = apptDate.getHours();
-          const dayData = days.find(d => d.fullDate === apptDateStr && d.fullHour === apptHour);
-          if (dayData) {
-            const status = (a.status || '').toLowerCase();
-            if (status === 'scheduled') dayData.scheduled++;
-            else if (status === 'completed') dayData.completed++;
-          }
-        } else {
-          const dayData = days.find(d => d.fullDate === apptDateStr);
-          if (dayData) {
-            const status = (a.status || '').toLowerCase();
-            if (status === 'scheduled') dayData.scheduled++;
-            else if (status === 'completed') dayData.completed++;
-          }
-        }
-      } catch (e) { }
+      const ao = statusOrder[a.queueStatus?.toLowerCase()] ?? 3;
+      const bo = statusOrder[b.queueStatus?.toLowerCase()] ?? 3;
+      return ao - bo || new Date(a.startAt) - new Date(b.startAt);
     });
 
-    return days;
+  // Search + filter
+  const filteredQueue = patientQueue.filter(a => {
+    const name = (a.patientId?.fullName || a.patientId?.firstName || a.patientName || '').toLowerCase();
+    const code = (a.patientId?.patientCode || '').toLowerCase();
+    const matchSearch = !searchQuery || name.includes(searchQuery.toLowerCase()) || code.includes(searchQuery.toLowerCase());
+    const matchFilter = filterStatus === 'all' || (a.status || '').toLowerCase() === filterStatus;
+    return matchSearch && matchFilter;
+  });
+
+  // Greetings
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good Morning' : hour < 17 ? 'Good Afternoon' : 'Good Evening';
+
+  // ─── Queue badge color ────────────────────────────────────────────────────
+  const queueBadge = (appt) => {
+    const st = (appt.queueStatus || appt.status || '').toLowerCase();
+    if (st === 'emergency') return { label: 'Emergency', cls: 'badge--emergency' };
+    if (st === 'vitals-done' || st === 'vitals done') return { label: 'Vitals Done', cls: 'badge--vitals' };
+    if (st === 'confirmed' || st === 'checked-in') return { label: 'Checked In', cls: 'badge--checked' };
+    return { label: 'Waiting', cls: 'badge--waiting' };
   };
 
-  const chartData = getChartData();
+  const kpiCards = [
+    {
+      label: "Today's Appointments",
+      value: loading ? '—' : todayAppts.length,
+      icon: <MdCalendarToday />,
+      color: '#0d9488',
+      bg: '#f0fdfa',
+      onClick: () => navigate('/doctor/appointments'),
+    },
+    {
+      label: 'Pending Labs',
+      value: loading ? '—' : pendingLabs,
+      icon: <MdScience />,
+      color: '#d97706',
+      bg: '#fffbeb',
+      onClick: () => navigate('/doctor/patients'),
+    },
+    {
+      label: 'In-Patients (IPD)',
+      value: loading ? '—' : inPatients,
+      icon: <MdBed />,
+      color: '#7c3aed',
+      bg: '#f5f3ff',
+      onClick: () => navigate('/doctor/patients'),
+    },
+    {
+      label: 'Avg Wait Time',
+      value: loading ? '—' : `${avgWait}m`,
+      icon: <MdTimelapse />,
+      color: '#0369a1',
+      bg: '#eff6ff',
+    },
+  ];
 
-  const handleItemClick = (item) => {
-    setSelectedItem(item);
-    setShowModal(true);
-  };
-
-  const navigateToDetails = () => {
-    if (!selectedItem) return;
-    setShowModal(false);
-
-    // If it's a patient queue item or upcoming appointment
-    if (selectedItem.patientId?._id || selectedItem.patientId) {
-      navigate('/doctor/appointments');
-    } else {
-      navigate('/doctor/patients');
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="doctor-dashboard loading">
-        <div className="loading-spinner"></div>
-        <p>Loading Dashboard...</p>
-      </div>
-    );
-  }
-
+  // ─── Render ───────────────────────────────────────────────────────────────
   return (
-    <div className="doctor-dashboard">
-      {/* Header */}
-      <div className="dashboard-header">
-        <div className="header-icon">
-          <MdLocalHospital />
-        </div>
-        <div className="header-content">
-          <h1>{getGreeting()}, Dr. {user?.lastName || user?.fullName || 'Doctor'}</h1>
-          <p>You have {waitingNow} patients waiting</p>
-        </div>
-        <div className="header-controls">
-          <div className="period-selector">
-            {['Today', 'Week', 'Month'].map(period => (
-              <button
-                key={period}
-                className={selectedPeriod === period ? 'active' : ''}
-                onClick={() => setSelectedPeriod(period)}
-              >
-                {period}
-              </button>
-            ))}
+    <div className="flex flex-col h-screen bg-slate-50 font-sans overflow-hidden">
+
+      {/* ── Top Bar ── */}
+      <div className="flex items-center justify-between px-6 py-4 bg-white border-b border-slate-200 shrink-0 shadow-sm z-50">
+
+        {/* Left: Branding & Greeting */}
+        <div className="flex items-center gap-4 min-w-[300px]">
+          <div className="w-10 h-10 bg-primary-50 rounded-xl flex items-center justify-center text-primary-600">
+            <MdLocalHospital size={24} />
           </div>
-          <div className="current-date">
-            <MdCalendarToday />
-            <span>{new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+          <div>
+            <h1 className="text-sm font-bold text-slate-800 tracking-tight">
+              {greeting}, <span className="text-primary-700">Dr. {user?.lastName || user?.firstName || 'Doctor'}</span>
+            </h1>
+            <p className="text-[11px] font-medium text-slate-500 uppercase tracking-widest mt-0.5">
+              {new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+            </p>
           </div>
+        </div>
+
+        {/* Center: Search */}
+        <div className="flex-1 max-w-lg mx-4">
+          <div className="relative group">
+            <MdSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary-600 transition-colors" size={20} />
+            <input
+              type="text"
+              placeholder="Search patients by name or ID..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="w-full pl-11 pr-4 py-2.5 bg-slate-100/70 border border-slate-200 rounded-2xl text-sm font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
+            />
+            {/* Command shortcut hint */}
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-50 pointer-events-none">
+              <span className="text-[10px] font-bold border border-slate-300 rounded px-1.5 py-0.5 bg-white">⌘</span>
+              <span className="text-[10px] font-bold border border-slate-300 rounded px-1.5 py-0.5 bg-white">K</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Right: Actions */}
+        <div className="flex items-center gap-3 shrink-0">
+          <div className="flex items-center gap-2 pr-4 border-r border-slate-200">
+            <button
+              onClick={loadData}
+              className="p-2 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded-xl transition-colors"
+              title="Refresh Dashboard"
+            >
+              <MdRefresh size={22} className={loading ? "animate-spin" : ""} />
+            </button>
+            <button className="relative p-2 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded-xl transition-colors">
+              <MdNotifications size={22} />
+              {pendingLabs > 0 && (
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full ring-2 ring-white"></span>
+              )}
+            </button>
+          </div>
+
+          {/* Avatar Area */}
+          <button className="flex items-center gap-2 pl-2 hover:bg-slate-50 p-1.5 rounded-2xl transition-colors text-left group">
+            <div className="w-9 h-9 bg-gradient-to-br from-primary-600 to-primary-800 text-white rounded-xl shadow-sm flex items-center justify-center font-bold text-sm tracking-widest ring-2 ring-white group-hover:ring-primary-100 transition-all">
+              {(user?.firstName || 'D').charAt(0).toUpperCase()}
+            </div>
+            <div className="hidden md:block pr-2">
+              <div className="text-[12px] font-bold text-slate-700">Online</div>
+              <div className="text-[10px] text-emerald-500 font-semibold uppercase tracking-wider flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                Available
+              </div>
+            </div>
+          </button>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="dashboard-content">
-        {/* Left Section */}
-        <div className="content-left">
-          {/* Patient Flow Chart */}
-          <div className="chart-card">
-            <div className="card-header">
-              <div className="header-title">
-                <MdTrendingUp />
-                <h3>Patient Flow</h3>
-              </div>
-              <div className="chart-legend">
-                <div className="legend-item">
-                  <div className="legend-dot scheduled"></div>
-                  <span>Scheduled</span>
-                </div>
-                <div className="legend-item">
-                  <div className="legend-dot completed"></div>
-                  <span>Completed</span>
-                </div>
-              </div>
-            </div>
-            <div className="chart-content">
-              <ResponsiveContainer width="100%" height={200}>
-                <AreaChart data={chartData}>
-                  <defs>
-                    <linearGradient id="colorScheduled" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#0EA5E9" stopOpacity={0.1} />
-                      <stop offset="95%" stopColor="#0EA5E9" stopOpacity={0} />
-                    </linearGradient>
-                    <linearGradient id="colorCompleted" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#207DC0" stopOpacity={0.1} />
-                      <stop offset="95%" stopColor="#207DC0" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                  <XAxis
-                    dataKey="date"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 10, fill: '#64748B' }}
-                    dy={10}
-                  />
-                  <YAxis
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 10, fill: '#64748B' }}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      borderRadius: '8px',
-                      border: 'none',
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                      fontSize: '12px'
-                    }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="scheduled"
-                    stroke="#0EA5E9"
-                    strokeWidth={2}
-                    fillOpacity={1}
-                    fill="url(#colorScheduled)"
-                    animationDuration={1500}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="completed"
-                    stroke="#207DC0"
-                    strokeWidth={2}
-                    fillOpacity={1}
-                    fill="url(#colorCompleted)"
-                    animationDuration={1500}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
+      {/* ── Main Content Area ── */}
+      <div className="flex-1 overflow-y-auto overflow-x-hidden p-6">
+        <div className="max-w-[1600px] mx-auto space-y-6">
 
-          {/* Patient Queue */}
-          <div className="queue-card">
-            <div className="card-header">
-              <div className="header-title">
-                <MdPeople />
-                <h3>Patient Queue</h3>
-              </div>
-              <div className="queue-badge">{patientQueue.length} Waiting</div>
-            </div>
-            <div className="queue-list">
-              {patientQueue.length === 0 ? (
-                <div className="empty-state">
-                  <MdCheckCircle />
-                  <p>No patients in queue</p>
-                  <span>All caught up! 🎉</span>
+          {/* ── 1. KPI Widget Grid ── */}
+          {loading ? (
+            <SkeletonLoader variant="kpi" />
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {kpiCards.map((kpi, i) => (
+                <div
+                  key={i}
+                  onClick={kpi.onClick}
+                  className={`relative overflow-hidden bg-white/80 backdrop-blur-sm border border-slate-200 rounded-[1.25rem] p-5 flex items-center justify-between shadow-sm transition-all duration-300 ${kpi.onClick ? 'cursor-pointer hover:shadow-md hover:-translate-y-1 hover:border-slate-300 group' : ''}`}
+                >
+                  {/* Left Decoration Border */}
+                  <div className="absolute left-0 top-0 bottom-0 w-1.5 scale-y-75 group-hover:scale-y-100 rounded-r-md transition-transform duration-300" style={{ backgroundColor: kpi.color }}></div>
+
+                  <div>
+                    <h3 className="text-3xl font-extrabold text-slate-800 tracking-tight" style={{ color: kpi.color }}>
+                      {kpi.value}
+                    </h3>
+                    <p className="text-[12px] font-bold text-slate-500 uppercase tracking-widest mt-1">
+                      {kpi.label}
+                    </p>
+                  </div>
+
+                  <div
+                    className="w-12 h-12 rounded-2xl flex items-center justify-center transition-transform duration-300 group-hover:scale-110 shadow-sm"
+                    style={{ backgroundColor: kpi.bg, color: kpi.color }}
+                  >
+                    {React.cloneElement(kpi.icon, { size: 24 })}
+                  </div>
                 </div>
-              ) : (
-                patientQueue.map((appointment, index) => (
-                  <QueueItem
-                    key={appointment._id || appointment.id}
-                    appointment={appointment}
-                    position={index + 1}
-                    onClick={() => handleItemClick(appointment)}
-                  />
-                ))
+              ))}
+            </div>
+          )}
+
+          {/* ── Bento Grid Bottom (30/70 Split) ── */}
+          <div className="flex flex-col lg:flex-row gap-6 items-start">
+
+            {/* Left Column: Smart List Queue (30%) */}
+            <div className="w-full lg:w-[32%] flex flex-col gap-4">
+
+              {/* "Next Up" Prominent Card */}
+              {filteredQueue.length > 0 && !loading && (
+                <div className="bg-gradient-to-br from-primary-700 to-primary-900 rounded-[1.5rem] p-6 text-white shadow-lg overflow-hidden relative">
+                  {/* Decorative Elements */}
+                  <div className="absolute -top-12 -right-12 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
+                  <div className="absolute bottom-0 right-0 w-24 h-24 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMSIgY3k9IjEiIHI9IjEiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4xKSIvPjwvc3ZnPg==')] opacity-20 mix-blend-overlay"></div>
+
+                  <div className="relative z-10">
+                    <div className="flex items-center gap-2 mb-4">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                      <span className="text-[11px] font-bold uppercase tracking-widest text-primary-100">Up Next</span>
+                    </div>
+
+                    <h2 className="text-2xl font-extrabold mb-1">
+                      {filteredQueue[0].patientId?.fullName ||
+                        `${filteredQueue[0].patientId?.firstName || ''} ${filteredQueue[0].patientId?.lastName || ''}`.trim() ||
+                        filteredQueue[0].patientName || 'Patient'}
+                    </h2>
+
+                    <div className="flex items-center gap-3 text-sm text-primary-100/90 font-medium mb-6">
+                      <span className="flex items-center gap-1">
+                        <MdCalendarToday size={14} />
+                        {filteredQueue[0].appointmentType || 'Consultation'}
+                      </span>
+                      <span>•</span>
+                      <span className="flex items-center gap-1">
+                        <MdTimelapse size={14} />
+                        {new Date(filteredQueue[0].startAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+
+                    <button
+                      onClick={() => setSelectedAppt(filteredQueue[0])}
+                      className="w-full bg-white text-primary-800 hover:bg-primary-50 font-bold py-3 px-4 rounded-xl transition-all shadow-md flex items-center justify-center gap-2 group"
+                    >
+                      Start Consultation
+                      <MdTrendingUp className="group-hover:translate-x-1 transition-transform" />
+                    </button>
+                  </div>
+                </div>
               )}
-            </div>
-          </div>
-        </div>
 
-        {/* Right Section */}
-        <div className="content-right">
-          {/* Upcoming Appointments */}
-          <div className="upcoming-card">
-            <div className="card-header">
-              <div className="header-title">
-                <MdCalendarToday />
-                <h3>Upcoming</h3>
-              </div>
-              <div className="upcoming-badge">{upcomingAppointments.length}</div>
-            </div>
-            <div className="upcoming-list">
-              {upcomingAppointments.length === 0 ? (
-                <div className="empty-state">
-                  <MdCalendarToday />
-                  <p>No upcoming appointments</p>
+              {/* Standard Patient Queue List */}
+              <div className="bg-white border border-slate-200 rounded-[1.5rem] shadow-sm flex flex-col h-[600px] overflow-hidden">
+                <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center shrink-0">
+                  <h3 className="text-[15px] font-extrabold text-slate-800 tracking-tight flex items-center gap-2">
+                    <MdTrendingUp className="text-primary-600" size={18} />
+                    Active Queue
+                  </h3>
+                  <span className="bg-primary-100 text-primary-800 text-[11px] font-bold px-2.5 py-1 rounded-lg">
+                    {filteredQueue.length} Wait
+                  </span>
                 </div>
-              ) : (
-                upcomingAppointments.map(appointment => (
-                  <UpcomingItem
-                    key={appointment._id || appointment.id}
-                    appointment={appointment}
-                    onClick={() => {
-                      setSelectedAppointment(appointment);
-                      setShowAppointmentViewModal(true);
-                    }}
-                  />
-                ))
-              )}
+
+                {/* Filters */}
+                <div className="flex gap-2 p-3 border-b border-slate-100 shrink-0 bg-white">
+                  {['all', 'scheduled', 'confirmed'].map(f => (
+                    <button
+                      key={f}
+                      className={`px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-colors ${filterStatus === f
+                          ? 'bg-slate-800 text-white'
+                          : 'bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700'
+                        }`}
+                      onClick={() => setFilterStatus(f)}
+                    >
+                      {f}
+                    </button>
+                  ))}
+                </div>
+
+                {/* List Body */}
+                <div className="flex-1 overflow-y-auto p-3 space-y-2">
+                  {loading ? (
+                    <SkeletonLoader variant="queue" count={5} />
+                  ) : filteredQueue.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-full text-slate-400 space-y-3 p-6 text-center">
+                      <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center text-4xl mb-2">🎉</div>
+                      <p className="font-bold text-slate-600">Queue is clear!</p>
+                      <p className="text-xs font-medium">No pending patients {searchQuery ? 'matching your search' : 'today'}.</p>
+                    </div>
+                  ) : (
+                    // Skip the first item as it's shown in the "Next Up" card
+                    filteredQueue.slice(1).map((appt, idx) => {
+                      const badge = queueBadge(appt);
+                      const isActive = selectedAppointment?._id === appt._id;
+                      const name = appt.patientId?.fullName || `${appt.patientId?.firstName || ''} ${appt.patientId?.lastName || ''}`.trim() || appt.patientName || 'Unknown Patient';
+                      const time = appt.startAt ? new Date(appt.startAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '--:--';
+
+                      return (
+                        <button
+                          key={appt._id}
+                          onClick={() => setSelectedAppt(appt)}
+                          className={`w-full text-left p-3.5 rounded-2xl border transition-all duration-200 group flex items-start gap-3
+                            ${isActive
+                              ? 'bg-primary-50 border-primary-200 shadow-sm ring-1 ring-primary-500/20'
+                              : 'bg-white border-slate-100 hover:border-primary-300 hover:shadow-md hover:-translate-y-0.5'
+                            }
+                            ${badge.cls === 'badge--emergency' ? 'border-rose-200 bg-rose-50 hover:border-rose-300' : ''}
+                          `}
+                        >
+                          {/* Position Badge */}
+                          <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-[11px] font-extrabold shrink-0 
+                            ${badge.cls === 'badge--emergency' ? 'bg-rose-500 text-white shadow-sm shadow-rose-500/30' : 'bg-slate-100 text-slate-500 group-hover:bg-primary-100 group-hover:text-primary-700'}
+                            ${isActive ? 'bg-primary-600 text-white shadow-sm shadow-primary-600/30' : ''}
+                          `}>
+                            {idx + 2} {/* +2 because index 0 is in the NextUp card */}
+                          </div>
+
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-[13px] font-bold text-slate-800 truncate">{name}</h4>
+                            <p className="text-[11px] font-medium text-slate-500 mt-0.5 truncate">{appt.appointmentType || 'Consultation'}</p>
+                          </div>
+
+                          <div className="flex flex-col items-end gap-1.5 shrink-0">
+                            <span className="text-[11px] font-bold text-slate-700">{time}</span>
+                            <span className={`text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-md
+                              ${badge.cls === 'badge--emergency' ? 'bg-rose-100 text-rose-700' : ''}
+                              ${badge.cls === 'badge--vitals' ? 'bg-emerald-100 text-emerald-700' : ''}
+                              ${badge.cls === 'badge--checked' ? 'bg-primary-100 text-primary-700' : ''}
+                              ${badge.cls === 'badge--waiting' ? 'bg-amber-100 text-amber-700' : ''}
+                            `}>
+                              {badge.label}
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Right Column: Consultation Canvas (70%) */}
+            <div className="w-full lg:w-[68%]">
+              <ConsultationCanvas
+                appointment={selectedAppointment}
+                onConsultationSaved={() => {
+                  loadData();
+                  setSelectedAppt(null); // Optional: stay on patient or close. Closing for now.
+                }}
+              />
             </div>
           </div>
 
-          {/* Status Distribution */}
-          <div className="status-card">
-            <div className="card-header">
-              <div className="header-title">
-                <MdCheckCircle />
-                <h3>Status Overview</h3>
-              </div>
-            </div>
-            <div className="status-content">
-              <StatusBar
-                label="Scheduled"
-                count={statusCounts.scheduled}
-                total={statusCounts.total}
-                color="#0EA5E9"
-              />
-              <StatusBar
-                label="Completed"
-                count={statusCounts.completed}
-                total={statusCounts.total}
-                color="#207DC0"
-              />
-              <StatusBar
-                label="Cancelled"
-                count={statusCounts.cancelled}
-                total={statusCounts.total}
-                color="#EF4444"
-              />
-            </div>
-          </div>
         </div>
       </div>
-
-      {/* Quick Detail Modal */}
-      {showModal && selectedItem && (
-        <QuickDetailModal
-          item={selectedItem}
-          onClose={() => setShowModal(false)}
-          onNavigate={navigateToDetails}
-        />
-      )}
-
-      {/* Appointment View Modal */}
-      {showAppointmentViewModal && selectedAppointment && (
-        <AppointmentViewModal
-          isOpen={showAppointmentViewModal}
-          onClose={() => {
-            console.log('View modal closing');
-            setShowAppointmentViewModal(false);
-            setSelectedAppointment(null);
-          }}
-          appointmentData={selectedAppointment}
-          onEdit={(appointment) => {
-            console.log('Edit callback triggered');
-            console.log('Appointment object:', appointment);
-            console.log('Appointment keys:', Object.keys(appointment));
-            
-            // Try multiple possible ID fields
-            const appointmentId = appointment._id 
-              || appointment.id 
-              || appointment.appointmentId
-              || appointment.appointmentObjectId;
-              
-            console.log('Extracted appointment ID:', appointmentId);
-            
-            if (!appointmentId) {
-              console.error('No appointment ID found!');
-              console.error('Available fields:', Object.keys(appointment));
-              alert('Unable to edit: Appointment ID not found. Please try from the Appointments page.');
-              return;
-            }
-            
-            setSelectedAppointmentId(appointmentId);
-            setShowAppointmentViewModal(false);
-            // Use setTimeout to ensure the view modal closes before opening edit modal
-            setTimeout(() => {
-              console.log('Opening edit modal with ID:', appointmentId);
-              setShowEditModal(true);
-            }, 50);
-          }}
-        />
-      )}
-
-      {/* Appointment Edit Modal */}
-      {showEditModal && selectedAppointmentId && (
-        <AppointmentEditModal
-          isOpen={showEditModal}
-          onClose={() => {
-            setShowEditModal(false);
-            setSelectedAppointmentId(null);
-          }}
-          appointmentId={selectedAppointmentId}
-          onSuccess={() => {
-            setShowEditModal(false);
-            setSelectedAppointmentId(null);
-            loadData(); // Refresh dashboard data
-          }}
-        />
-      )}
     </div>
   );
 };
 
-// Helper Components
-const StatCard = ({ icon, label, value, color, onClick }) => (
-  <div className="stat-card" onClick={onClick} style={{ cursor: onClick ? 'pointer' : 'default' }}>
-    <div className="stat-icon" style={{ background: `${color}1A`, color }}>
-      {icon}
-    </div>
-    <div className="stat-content">
-      <div className="stat-value">{value}</div>
-      <div className="stat-label">{label}</div>
-    </div>
-  </div>
+// ─── Wrap with ToastProvider ──────────────────────────────────────────────────
+const DoctorDashboard = () => (
+  <ToastProvider>
+    <DashboardInner />
+  </ToastProvider>
 );
-
-const StatusBar = ({ label, count, total, color }) => {
-  const percentage = total > 0 ? Math.round((count / total) * 100) : 0;
-
-  return (
-    <div className="status-bar">
-      <div className="status-header">
-        <span className="status-label">{label}</span>
-        <span className="status-count" style={{ color }}>
-          {count} ({percentage}%)
-        </span>
-      </div>
-      <div className="status-progress">
-        <div
-          className="status-fill"
-          style={{
-            width: `${percentage}%`,
-            background: color,
-          }}
-        ></div>
-      </div>
-    </div>
-  );
-};
-
-const QuickDetailModal = ({ item, onClose, onNavigate }) => {
-  const patientName = item.patientName || item.patientId?.fullName || 'Unknown Patient';
-  const reason = item.reason || item.appointmentType || 'Consultation';
-  const time = item.time || item.appointmentTime || '--:--';
-  const date = item.date || item.appointmentDate ? new Date(item.date || item.appointmentDate).toLocaleDateString() : 'Today';
-  const status = item.status || 'Scheduled';
-
-  return (
-    <div className="dashboard-modal-overlay" onClick={onClose}>
-      <div className="dashboard-modal-content" onClick={e => e.stopPropagation()}>
-        <div className="modal-header">
-          <h3>Quick Details</h3>
-          <button className="close-btn" onClick={onClose}>×</button>
-        </div>
-        <div className="modal-body">
-          <div className="detail-row">
-            <div className="detail-label">Patient</div>
-            <div className="detail-value">{patientName}</div>
-          </div>
-          <div className="detail-row">
-            <div className="detail-label">Type</div>
-            <div className="detail-value">{reason}</div>
-          </div>
-          <div className="detail-row">
-            <div className="detail-label">Schedule</div>
-            <div className="detail-value">{date} • {time}</div>
-          </div>
-          <div className="detail-row">
-            <div className="detail-label">Status</div>
-            <div className="detail-value">
-              <span className={`status-pill ${status.toLowerCase()}`}>{status}</span>
-            </div>
-          </div>
-        </div>
-        <div className="modal-footer">
-          <button className="secondary-btn" onClick={onClose}>Close</button>
-          <button className="primary-btn" onClick={onNavigate}>View Full Page</button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const QueueItem = ({ appointment, position, onClick }) => {
-  const patientName = appointment.patientName || appointment.patientId?.fullName || 'Unknown Patient';
-  const reason = appointment.reason || appointment.appointmentType || 'General Consultation';
-  const time = appointment.time || appointment.appointmentTime || '--:--';
-
-  return (
-    <div className="queue-item" onClick={onClick} style={{ cursor: 'pointer' }}>
-      <div className="queue-position">#{position}</div>
-      <div className="queue-details">
-        <div className="queue-name">{patientName}</div>
-        <div className="queue-reason">{reason}</div>
-      </div>
-      <div className="queue-meta">
-        <div className="queue-time">{time}</div>
-        <div className="queue-status">Waiting</div>
-      </div>
-      <button className="queue-action" title="Start consultation" onClick={(e) => {
-        e.stopPropagation();
-        onClick();
-      }}>
-        <MdPlayArrow />
-      </button>
-    </div>
-  );
-};
-
-const UpcomingItem = ({ appointment, onClick }) => {
-  const patientName = appointment.patientName || appointment.patientId?.fullName || 'Unknown Patient';
-  
-  // Fix date and time formatting
-  let date = 'Invalid Date';
-  let time = '--:--';
-  
-  try {
-    const appointmentDate = new Date(appointment.startAt || appointment.date || appointment.appointmentDate);
-    if (!isNaN(appointmentDate.getTime())) {
-      date = appointmentDate.toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-      });
-      
-      // Extract time from date if not provided separately
-      if (appointment.time || appointment.appointmentTime) {
-        time = appointment.time || appointment.appointmentTime;
-      } else {
-        // Extract time from the date object
-        time = appointmentDate.toLocaleTimeString('en-US', {
-          hour: 'numeric',
-          minute: '2-digit',
-          hour12: true
-        });
-      }
-    }
-  } catch (e) {
-    console.error('Date parsing error:', e);
-  }
-  
-  const reason = appointment.reason || appointment.appointmentType || 'Consultation';
-
-  return (
-    <div className="upcoming-item" style={{ cursor: 'pointer' }}>
-      <div className="upcoming-icon">
-        <MdCalendarToday />
-      </div>
-      <div className="upcoming-details">
-        <div className="upcoming-name">{patientName}</div>
-        <div className="upcoming-datetime">{date} • {time}</div>
-        <div className="upcoming-reason">{reason}</div>
-      </div>
-      <button className="upcoming-action" title="View details" onClick={(e) => {
-        e.stopPropagation();
-        onClick();
-      }}>
-        <MdRemoveRedEye />
-      </button>
-    </div>
-  );
-};
 
 export default DoctorDashboard;

@@ -326,44 +326,45 @@ const PatientView = ({ isOpen, onClose, patientId, patient: patientProp, onEdit,
                                         <div className="pv-pill">
                                             {getGenderIcon(patientData.gender)} <span>{patientData.gender}</span>
                                         </div>
+                                        {patientData.age > 0 && (
+                                            <div className="pv-pill">
+                                                <MdCalendarToday size={14} /> <span>{patientData.age} yrs{patientData.dob && ` · ${patientData.dob}`}</span>
+                                            </div>
+                                        )}
                                         <div className="pv-pill">
                                             <MdLocationOn size={14} /> <span>{patientData.location}</span>
                                         </div>
                                         <div className="pv-pill">
                                             <MdWork size={14} /> <span>{patientData.occupation}</span>
                                         </div>
-                                        {patientData.dob && (
-                                            <div className="pv-pill">
-                                                <MdCalendarToday size={14} /> <span>{patientData.dob} ({patientData.age} years)</span>
-                                            </div>
-                                        )}
                                     </div>
-                                </div>
 
-                                {/* Right — Edit + Vitals */}
-                                <div className="pv-header-right">
-                                    <button className="pv-edit-btn" onClick={() => onEdit && onEdit(patient)}>
-                                        <MdEdit size={14} /> Edit
-                                    </button>
-
+                                    {/* Vitals — 4-column row, fills all available width */}
                                     <div className="pv-metrics-grid">
-                                        <div className="pv-metric-card pv-metric-height">
-                                            <span className="pv-metric-val">{patientData.heightCm || '—'} <small>Cm</small></span>
-                                            <span className="pv-metric-lbl">Height</span>
+                                        <div className="pv-metric-card pv-metric-bmi">
+                                            <span className="pv-metric-val">{patientData.bmi || '—'}</span>
+                                            <span className="pv-metric-lbl">BMI</span>
                                         </div>
                                         <div className="pv-metric-card pv-metric-weight">
                                             <span className="pv-metric-val">{patientData.weightKg || '—'} <small>kg</small></span>
                                             <span className="pv-metric-lbl">Weight</span>
                                         </div>
-                                        <div className="pv-metric-card pv-metric-bmi">
-                                            <span className="pv-metric-val">{patientData.bmi || '—'}</span>
-                                            <span className="pv-metric-lbl">BMI</span>
+                                        <div className="pv-metric-card pv-metric-height">
+                                            <span className="pv-metric-val">{patientData.heightCm || '—'} <small>cm</small></span>
+                                            <span className="pv-metric-lbl">Height</span>
                                         </div>
                                         <div className="pv-metric-card pv-metric-bp">
                                             <span className="pv-metric-val">{patientData.bp}</span>
                                             <span className="pv-metric-lbl">Blood Pressure</span>
                                         </div>
                                     </div>
+                                </div>
+
+                                {/* Right — Edit + Diagnosis/Barriers only */}
+                                <div className="pv-header-right">
+                                    <button className="pv-edit-btn" onClick={() => onEdit && onEdit(patient)}>
+                                        <MdEdit size={14} /> Edit
+                                    </button>
 
                                     {patientData.diagnosis.length > 0 && (
                                         <div className="pv-diagnosis-section">
@@ -514,85 +515,112 @@ const ProfileTab = ({ patient, copyToClipboard }) => {
     };
 
     return (
-        <div className="pv-profile-container">
-            {/* Address Card */}
-            <div className="pv-card">
-                <div className="pv-card-header">
-                    <div className="pv-icon-circle red"><MdLocationOn /></div>
-                    <h3>Address</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-7xl mx-auto items-stretch">
+            {/* Left Column: General & Address */}
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm flex flex-col h-full overflow-hidden">
+                {/* Header */}
+                <div className="flex items-center justify-between px-5 py-4 border-b border-gray-50 bg-gray-50/50">
+                    <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-teal-50 text-teal-600 flex items-center justify-center">
+                            <MdLocationOn size={18} />
+                        </div>
+                        <h3 className="font-semibold text-gray-800 m-0 text-base">Address & Details</h3>
+                    </div>
+                    {/* Action Buttons in Header */}
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={copyAddress}
+                            className="p-2 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-md transition-colors"
+                            title="Copy Address"
+                        >
+                            <MdContentCopy size={16} />
+                        </button>
+                        <button
+                            onClick={openMaps}
+                            className="p-2 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-md transition-colors"
+                            title="Open in Maps"
+                        >
+                            <MdMap size={16} />
+                        </button>
+                    </div>
                 </div>
-                <div className="pv-card-body">
+
+                {/* Body */}
+                <div className="p-5 flex flex-col gap-5 flex-1">
                     {/* Father's Name */}
-                    <div className="pv-info-row">
-                        <span className="pv-label">FATHER'S NAME</span>
-                        <span className="pv-value">
-                            <strong>{patient.fatherName || patient.metadata?.fatherName || '—'}</strong>
+                    <div className="flex flex-col gap-1">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Father/Spouse Name</span>
+                        <span className="text-sm font-medium text-slate-900">
+                            {patient.fatherName || patient.metadata?.fatherName || '—'}
                         </span>
                     </div>
 
-                    {/* Combined Address */}
-                    <div className="pv-info-row">
-                        <span className="pv-label">ADDRESS</span>
-                        <span className="pv-value">
-                            <strong>
-                                {[
-                                    patient.houseNo || patient.address?.houseNo,
-                                    patient.street || patient.address?.street,
-                                    patient.town || patient.city,
-                                    patient.pincode || patient.address?.pincode
-                                ].filter(Boolean).join(', ') || 'Not Provided'}
-                            </strong>
-                        </span>
-                    </div>
+                    {/* Formatted Address */}
+                    <div className="flex flex-col gap-1">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Address</span>
+                        <div className="text-sm font-medium text-slate-900 leading-relaxed">
+                            {/* Street Line */}
+                            {(() => {
+                                const line1 = [patient.houseNo || patient.address?.houseNo, patient.street || patient.address?.street].filter(Boolean).join(', ');
+                                const line2 = [patient.town || patient.city, patient.state || patient.address?.state].filter(Boolean).join(', ');
+                                const line3 = [patient.pincode || patient.address?.pincode, patient.country || patient.address?.country].filter(Boolean).join(' - ');
 
-                    {/* State */}
-                    <div className="pv-info-row">
-                        <span className="pv-label">STATE</span>
-                        <span className="pv-value">
-                            <strong>{patient.state || patient.address?.state || '—'}</strong>
-                        </span>
-                    </div>
+                                if (!line1 && !line2 && !line3) return <span className="text-slate-400 italic font-normal">Not Provided</span>;
 
-                    {/* Country */}
-                    <div className="pv-info-row">
-                        <span className="pv-label">COUNTRY</span>
-                        <span className="pv-value">
-                            <strong>{patient.country || patient.address?.country || '—'}</strong>
-                        </span>
-                    </div>
-
-                    <div className="pv-action-buttons">
-                        <button className="pv-btn-outline" onClick={copyAddress}>
-                            <MdContentCopy size={16} /> Copy
-                        </button>
-                        <button className="pv-btn-outline" onClick={openMaps}>
-                            <MdMap size={16} /> Open in Maps
-                        </button>
-                        <span className="pv-badge-updated">Updated: Recently</span>
+                                return (
+                                    <>
+                                        {line1 && <div>{line1}</div>}
+                                        {line2 && <div>{line2}</div>}
+                                        {line3 && <div>{line3}</div>}
+                                    </>
+                                );
+                            })()}
+                        </div>
                     </div>
                 </div>
             </div>
 
-            {/* Emergency Contact Card */}
-            <div className="pv-card">
-                <div className="pv-card-header">
-                    <div className="pv-icon-circle red"><MdPhone /></div>
-                    <h3>Emergency Contact</h3>
+            {/* Right Column: Emergency & Family */}
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm flex flex-col h-full overflow-hidden">
+                {/* Header */}
+                <div className="flex items-center justify-between px-5 py-4 border-b border-gray-50 bg-gray-50/50">
+                    <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-red-50 text-red-500 flex items-center justify-center">
+                            <MdPhone size={18} />
+                        </div>
+                        <h3 className="font-semibold text-gray-800 m-0 text-base">Emergency Contact</h3>
+                    </div>
                 </div>
-                <div className="pv-card-body">
-                    <div className="pv-info-row">
-                        <span className="pv-label">NAME</span>
-                        {patient.emergencyContactName || 'No contact on file'}
 
-                    </div>
-                    <div className="pv-info-row">
-                        <span className="pv-label">PHONE</span>
-                        {patient.emergencyContactPhone || 'No phone on file'}
-
+                {/* Body */}
+                <div className="p-5 flex flex-col gap-5 flex-1">
+                    <div className="flex flex-col gap-1">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Contact Name</span>
+                        <span className="text-sm font-medium text-slate-900">
+                            {patient.emergencyContactName || 'No contact on file'}
+                        </span>
                     </div>
 
-                    <div className="pv-update-badge-container">
-                        <span className="pv-badge-updated">Last Updated: Recently</span>
+                    <div className="flex flex-col gap-1">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Relationship</span>
+                        <span className="text-sm font-medium text-slate-900">
+                            {patient.emergencyContactRelation || patient.metadata?.emergencyContactRelation || '—'}
+                        </span>
+                    </div>
+
+                    <div className="flex flex-col gap-1">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Phone Number</span>
+                        {patient.emergencyContactPhone ? (
+                            <a
+                                href={`tel:${patient.emergencyContactPhone}`}
+                                className="text-sm font-medium text-teal-600 hover:text-teal-700 hover:underline flex items-center gap-1.5 w-fit"
+                            >
+                                <MdPhone size={14} />
+                                {patient.emergencyContactPhone}
+                            </a>
+                        ) : (
+                            <span className="text-sm font-medium text-slate-900">No phone on file</span>
+                        )}
                     </div>
                 </div>
             </div>
@@ -1655,7 +1683,7 @@ const BillingsTab = ({ patientId }) => {
                     'Content-Type': 'application/json'
                 }
             });
-            
+
             if (response.ok) {
                 const data = await response.json();
                 setBills(Array.isArray(data.bills) ? data.bills : []);
@@ -1747,7 +1775,7 @@ const BillingsTab = ({ patientId }) => {
                                                 day: '2-digit',
                                                 month: 'short',
                                                 year: 'numeric'
-                                              })
+                                            })
                                             : '—'}
                                     </td>
                                     <td>
@@ -1766,22 +1794,22 @@ const BillingsTab = ({ patientId }) => {
                                         )}
                                     </td>
                                     <td>
-                                        {bill.items?.length > 0 
-                                            ? `${bill.items[0].description}${bill.items.length > 1 ? ` +${bill.items.length - 1} more` : ''}` 
+                                        {bill.items?.length > 0
+                                            ? `${bill.items[0].description}${bill.items.length > 1 ? ` +${bill.items.length - 1} more` : ''}`
                                             : '—'}
                                     </td>
                                     <td>
                                         <span
                                             className={`pv-badge status-${(bill.status || 'pending').toLowerCase().replace(' ', '-')}`}
                                             style={{
-                                                backgroundColor: 
+                                                backgroundColor:
                                                     bill.status === 'Paid' ? '#d1fae5' :
-                                                    bill.status === 'Partially Paid' ? '#fef3c7' :
-                                                    bill.status === 'Cancelled' ? '#fee2e2' : '#fef3c7',
+                                                        bill.status === 'Partially Paid' ? '#fef3c7' :
+                                                            bill.status === 'Cancelled' ? '#fee2e2' : '#fef3c7',
                                                 color:
                                                     bill.status === 'Paid' ? '#059669' :
-                                                    bill.status === 'Partially Paid' ? '#d97706' :
-                                                    bill.status === 'Cancelled' ? '#dc2626' : '#d97706'
+                                                        bill.status === 'Partially Paid' ? '#d97706' :
+                                                            bill.status === 'Cancelled' ? '#dc2626' : '#d97706'
                                             }}
                                         >
                                             {bill.status || 'Pending'}
@@ -1789,13 +1817,13 @@ const BillingsTab = ({ patientId }) => {
                                     </td>
                                     <td>
                                         <div className="pv-action-group">
-                                            <button 
+                                            <button
                                                 className="pv-btn-action-circle"
                                                 title="View Bill Details"
                                             >
                                                 <MdVisibility />
                                             </button>
-                                            <button 
+                                            <button
                                                 className="pv-btn-action-circle"
                                                 title="Download PDF"
                                             >

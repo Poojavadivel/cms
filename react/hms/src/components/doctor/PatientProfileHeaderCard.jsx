@@ -119,24 +119,7 @@ const PatientProfileHeaderCardContent = ({ patient, latestIntake, onEdit }) => {
             </div>
           </div>
 
-          <div className="pv-metrics-row">
-            <div className="pv-metric-card">
-              <span className="pv-metric-val">{bmi}</span>
-              <span className="pv-metric-lbl">BMI</span>
-            </div>
-            <div className="pv-metric-card">
-              <span className="pv-metric-val">{weight.replace(' kg', '')} <small>kg</small></span>
-              <span className="pv-metric-lbl">Weight</span>
-            </div>
-            <div className="pv-metric-card">
-              <span className="pv-metric-val">{height.replace(' cm', '')} <small>Cm</small></span>
-              <span className="pv-metric-lbl">Height</span>
-            </div>
-            <div className="pv-metric-card">
-              <span className="pv-metric-val">{bp}</span>
-              <span className="pv-metric-lbl">Blood Pressure</span>
-            </div>
-          </div>
+
         </div>
 
         {/* Right Actions */}

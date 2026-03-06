@@ -1,18 +1,10 @@
-/**
- * LoginPage.jsx
- * EXACT replica of Flutter's LoginPage.dart
- * Enterprise Healthcare Management System Login
- * 
- * Handles login and redirects users back to where they were trying to go
- * Implements "Remember Me" functionality
- */
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useApp } from '../../provider';
 import { authService, logger } from '../../services';
 import './LoginPage.css';
 import MoviLogo from '../../components/common/Logo';
+import { MdVisibility, MdVisibilityOff, MdRefresh, MdArrowForward, MdErrorOutline } from 'react-icons/md';
 
 const PREFS_REMEMBER_ME_KEY = 'remember_me';
 const PREFS_EMAIL_KEY = 'saved_email';
@@ -35,7 +27,6 @@ const LoginPage = () => {
   const [rememberMe, setRememberMe] = useState(false);
   const [captchaText, setCaptchaText] = useState('');
   const [error, setError] = useState('');
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 800);
 
   // Initialize
   useEffect(() => {
@@ -43,13 +34,8 @@ const LoginPage = () => {
     refreshCaptcha();
     loadUserPreferences();
 
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 800);
-    };
-    window.addEventListener('resize', handleResize);
     return () => {
       logger.info('LOGIN_PAGE', 'Login page unmounted');
-      window.removeEventListener('resize', handleResize);
     };
   }, []);
 
@@ -98,30 +84,29 @@ const LoginPage = () => {
     // Clear canvas
     ctx.clearRect(0, 0, width, height);
 
-    // Clean subtle background - matching Flutter #F8F9FA
-    ctx.fillStyle = '#F8F9FA';
+    // Clean subtle background
+    ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, width, height);
 
-    // Minimal noise pattern - 8 subtle dots (matching Flutter)
-    ctx.fillStyle = 'rgba(209, 213, 219, 0.3)';
+    // Minimal noise pattern
+    ctx.fillStyle = 'rgba(209, 213, 219, 0.4)';
     for (let i = 0; i < 8; i++) {
       const x = seededRandom() * width;
       const y = seededRandom() * height;
       ctx.beginPath();
-      ctx.arc(x, y, 0.8, 0, Math.PI * 2);
+      ctx.arc(x, y, 1, 0, Math.PI * 2);
       ctx.fill();
     }
 
-    // Single subtle diagonal line (matching Flutter)
-    ctx.strokeStyle = 'rgba(209, 213, 219, 0.4)';
-    ctx.lineWidth = 0.5;
+    // Single subtle diagonal line
+    ctx.strokeStyle = 'rgba(209, 213, 219, 0.5)';
+    ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(0, height * 0.3);
     ctx.lineTo(width, height * 0.7);
     ctx.stroke();
 
-    // Calculate text positioning for proper centering
-    ctx.font = 'bold 20px "Roboto Mono", monospace';
+    ctx.font = 'bold 22px "Consolas", monospace';
     ctx.textBaseline = 'middle';
 
     // Calculate total width with spacing
@@ -132,29 +117,26 @@ const LoginPage = () => {
       charWidths.push(w);
       totalWidth += w;
     }
-    totalWidth += (captchaText.length - 1) * 2; // Add spacing between chars
+    totalWidth += (captchaText.length - 1) * 4;
 
-    // Start x position to center the text
     let x = (width - totalWidth) / 2;
 
-    // Draw each character with minimal rotation
     for (let i = 0; i < captchaText.length; i++) {
       const char = captchaText[i];
       const charWidth = charWidths[i];
       const y = height / 2 + (seededRandom() - 0.5) * 4;
-      const rotation = (seededRandom() - 0.5) * 0.15; // Minimal rotation
+      const rotation = (seededRandom() - 0.5) * 0.15;
 
       ctx.save();
       ctx.translate(x + charWidth / 2, y);
       ctx.rotate(rotation);
 
-      ctx.fillStyle = '#1F2937'; // grey-800 matching Flutter
-      ctx.font = 'bold 20px "Roboto Mono", monospace';
+      ctx.fillStyle = '#0f766e'; // teal-700
       ctx.fillText(char, -charWidth / 2, 0);
 
       ctx.restore();
 
-      x += charWidth + 2; // Move to next character position with spacing
+      x += charWidth + 4;
     }
   };
 
@@ -164,26 +146,21 @@ const LoginPage = () => {
 
     logger.userAction('Login form submitted', { email: email.trim() });
 
-    // Validation
     if (!email.trim()) {
       setError('Email is required');
-      logger.warn('LOGIN_PAGE', 'Login attempt with empty email');
       return;
     }
     if (!password) {
       setError('Password is required');
-      logger.warn('LOGIN_PAGE', 'Login attempt with empty password');
       return;
     }
     if (!captchaInput) {
       setError('CAPTCHA is required');
-      logger.warn('LOGIN_PAGE', 'Login attempt with empty CAPTCHA');
       return;
     }
 
     if (captchaInput.toUpperCase() !== captchaText.toUpperCase()) {
       setError('Invalid captcha. Please try again.');
-      logger.warn('LOGIN_PAGE', 'Invalid CAPTCHA entered');
       refreshCaptcha();
       return;
     }
@@ -193,57 +170,36 @@ const LoginPage = () => {
     try {
       const authResult = await authService.signIn(email.trim(), password.trim());
 
-      // Save remember me preference
       localStorage.setItem(PREFS_REMEMBER_ME_KEY, rememberMe.toString());
       if (rememberMe) {
         localStorage.setItem(PREFS_EMAIL_KEY, email.trim());
-        logger.info('LOGIN_PAGE', 'Remember me enabled');
       } else {
         localStorage.removeItem(PREFS_EMAIL_KEY);
       }
 
-      // Set user in context
       setUser(authResult.user, authResult.token);
 
-      console.log('✅ [Login] User authenticated:', authResult.user.fullName);
-      logger.success('LOGIN_PAGE', `User authenticated: ${authResult.user.fullName}`);
-
-      // If user was redirected from a protected route, send them back
       if (from) {
-        console.log('↩️ [Login] Redirecting back to:', from);
-        logger.navigate('/login', from, authResult.user);
         navigate(from, { replace: true });
         return;
       }
 
-      // Otherwise, navigate based on role
       const userRole = authResult.user.role.toLowerCase();
-      console.log('👤 [Login] User role:', userRole);
-
-      let targetPath = '/doctor'; // Default fallback
+      let targetPath = '/doctor';
 
       if (userRole === 'admin' || userRole === 'superadmin') {
-        console.log('➡️ [Login] Navigating to Admin dashboard');
         targetPath = '/admin';
       } else if (userRole === 'doctor') {
-        console.log('➡️ [Login] Navigating to Doctor dashboard');
         targetPath = '/doctor';
       } else if (userRole === 'pharmacist') {
-        console.log('➡️ [Login] Navigating to Pharmacist dashboard');
         targetPath = '/pharmacist';
       } else if (userRole === 'pathologist') {
-        console.log('➡️ [Login] Navigating to Pathologist dashboard');
         targetPath = '/pathologist';
-      } else {
-        console.warn('⚠️ [Login] Unknown role, falling back to Doctor');
-        logger.warn('LOGIN_PAGE', `Unknown role: ${userRole}, using fallback`);
       }
 
-      logger.navigate('/login', targetPath, authResult.user);
       navigate(targetPath, { replace: true });
     } catch (err) {
       setError(err.message || 'An unexpected error occurred. Please try again.');
-      logger.error('LOGIN_PAGE', `Login failed: ${err.message}`);
       refreshCaptcha();
     } finally {
       setIsLoading(false);
@@ -251,341 +207,228 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="login-page">
-      <div className="login-page-safe-area">
-        <div className="login-page-center">
-          <div className="login-page-container">
-            <div className="login-page-card">
-              {isMobile ? (
-                <MobileLayout
-                  email={email}
-                  setEmail={setEmail}
-                  password={password}
-                  setPassword={setPassword}
-                  captchaInput={captchaInput}
-                  setCaptchaInput={setCaptchaInput}
-                  obscurePassword={obscurePassword}
-                  setObscurePassword={setObscurePassword}
-                  rememberMe={rememberMe}
-                  setRememberMe={setRememberMe}
-                  isLoading={isLoading}
-                  error={error}
-                  handleLogin={handleLogin}
-                  canvasRef={canvasRef}
-                  refreshCaptcha={refreshCaptcha}
-                />
-              ) : (
-                <DesktopLayout
-                  email={email}
-                  setEmail={setEmail}
-                  password={password}
-                  setPassword={setPassword}
-                  captchaInput={captchaInput}
-                  setCaptchaInput={setCaptchaInput}
-                  obscurePassword={obscurePassword}
-                  setObscurePassword={setObscurePassword}
-                  rememberMe={rememberMe}
-                  setRememberMe={setRememberMe}
-                  isLoading={isLoading}
-                  error={error}
-                  handleLogin={handleLogin}
-                  canvasRef={canvasRef}
-                  refreshCaptcha={refreshCaptcha}
-                />
-              )}
+    <div className="min-h-screen relative flex items-center justify-center font-sans overflow-hidden bg-slate-50">
+
+      {/* Dynamic Background */}
+      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] rounded-full bg-primary-100/50 blur-[120px]"></div>
+        <div className="absolute top-[60%] -right-[10%] w-[60%] h-[60%] rounded-full bg-teal-100/40 blur-[150px]"></div>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:24px_24px] opacity-40"></div>
+      </div>
+
+      {/* Main Card Container */}
+      <div className="z-10 w-full max-w-[1100px] h-[650px] mx-4 sm:mx-8 md:mx-auto bg-white rounded-3xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] flex overflow-hidden border border-white/50 backdrop-blur-xl">
+
+        {/* Left Side: Brand Panel */}
+        <div className="hidden lg:flex w-[45%] relative bg-gradient-to-br from-primary-800 via-primary-700 to-teal-800 flex-col justify-between p-12 overflow-hidden text-white">
+          {/* Decorative overlays */}
+          <div className="absolute top-0 right-0 w-full h-full bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMSIgY3k9IjEiIHI9IjEiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4xKSIvPjwvc3ZnPg==')] opacity-30 mix-blend-overlay"></div>
+          <div className="absolute -bottom-32 -left-32 w-96 h-96 bg-primary-500 rounded-full blur-3xl opacity-40 mix-blend-screen"></div>
+          <div className="absolute -top-20 -right-20 w-80 h-80 bg-teal-400 rounded-full blur-3xl opacity-30 mix-blend-hard-light"></div>
+
+          <div className="relative z-10 animate-fade-in" style={{ animationDuration: '0.8s' }}>
+            <div className="flex items-center gap-3 mb-10">
+              <div className="bg-white/10 backdrop-blur-md p-3 rounded-2xl border border-white/20 shadow-lg">
+                <MoviLogo size={36} className="text-white drop-shadow-md" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold tracking-widest text-white/90 uppercase">Movi</h2>
+                <div className="text-[10px] font-semibold text-teal-200 tracking-[0.2em] uppercase">Enterprise</div>
+              </div>
+            </div>
+
+            <h1 className="text-4xl font-extrabold tracking-tight leading-[1.1] mb-6 text-transparent bg-clip-text bg-gradient-to-br from-white to-teal-100">
+              The Next Era of<br />Clinical Care.
+            </h1>
+            <p className="text-primary-100/90 text-[15px] leading-relaxed max-w-[85%] font-medium">
+              A deeply integrated, highly secure ecosystem built to optimize patient outcomes and streamline hospital operations.
+            </p>
+          </div>
+
+          {/* Social Proof / Trust Badge */}
+          <div className="relative z-10 mt-auto animate-slide-up" style={{ animationDelay: '0.3s', animationFillMode: 'both' }}>
+            <div className="bg-black/10 backdrop-blur-xl rounded-2xl p-5 border border-white/10 shadow-2xl relative overflow-hidden group hover:bg-black/20 transition-all duration-500">
+              <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-teal-300 to-primary-500"></div>
+              <div className="flex items-center gap-1 mb-2">
+                {[...Array(5)].map((_, i) => (
+                  <svg key={i} className="w-4 h-4 text-yellow-400 fill-current" viewBox="0 0 20 20">
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                  </svg>
+                ))}
+              </div>
+              <p className="text-[13px] font-medium text-white/90 leading-relaxed italic mb-3">
+                "We've reduced patient wait times by 40% since migrating our queue management to the Movi ecosystem."
+              </p>
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center font-bold text-xs text-white">DR</div>
+                <div>
+                  <div className="text-[11px] font-bold text-white tracking-wide">Dr. Sarah Jenkins</div>
+                  <div className="text-[10px] text-teal-200 uppercase tracking-widest font-semibold">Chief of Surgery, Metro General</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    </div>
-  );
-};
 
-// Desktop Layout Component
-const DesktopLayout = (props) => {
-  return (
-    <div className="desktop-layout">
-      {/* Left Hero Section */}
-      <div className="hero-section">
-        <div className="hero-gradient">
-          <div className="shimmer-overlay"></div>
-          <div className="hero-content">
-            {/* Top Section */}
-            <div className="hero-top">
-              <div className="brand-header">
-                <MoviLogo size={40} />
-                <div className="brand-text">
-                  <div className="brand-title">MOVI HOSPITAL</div>
-                  <div className="brand-subtitle">Healthcare Management</div>
+        {/* Right Side: Form Panel */}
+        <div className="w-full lg:w-[55%] bg-white flex flex-col justify-center px-8 sm:px-16 py-12 relative">
+
+          <div className="max-w-[420px] w-full mx-auto animate-fade-in" style={{ animationDuration: '0.6s' }}>
+
+            {/* Mobile Header (Hidden on Desktop) */}
+            <div className="lg:hidden flex flex-col items-center mb-10 text-center">
+              <div className="bg-gradient-to-br from-primary-700 to-primary-600 p-4 rounded-[1.25rem] shadow-lg shadow-primary-500/30 mb-5">
+                <MoviLogo size={36} className="text-white" />
+              </div>
+              <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Movi Hospital</h1>
+              <p className="text-slate-500 font-medium text-sm mt-1">Enterprise Management System</p>
+            </div>
+
+            {/* Desktop Header */}
+            <div className="hidden lg:block mb-10">
+              <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight mb-2">Welcome back</h2>
+              <p className="text-slate-500 font-medium tracking-wide text-sm">Sign in to your secure workspace.</p>
+            </div>
+
+            {/* Error Toast */}
+            {error && (
+              <div className="bg-rose-50 border border-rose-100 text-rose-700 px-4 py-3 rounded-2xl flex gap-3 text-[13px] mb-6 justify-center items-center shadow-sm animate-slide-up" style={{ animationDuration: '0.3s' }}>
+                <MdErrorOutline className="w-5 h-5 flex-shrink-0 text-rose-500" />
+                <span className="font-semibold leading-relaxed">{error}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleLogin} className="space-y-6">
+
+              {/* STAGGERED ANIMATIONS FOR FORM FIELDS */}
+              <div className="space-y-5">
+                {/* Email Field */}
+                <div className="relative group animate-slide-up" style={{ animationDelay: '0.1s', animationFillMode: 'both' }}>
+                  <input
+                    type="text"
+                    id="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="block px-5 pb-2.5 pt-7 w-full text-slate-900 bg-slate-50/80 rounded-2xl border border-transparent appearance-none focus:outline-none focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 focus:bg-white peer transition-all duration-300 font-medium sm:text-sm shadow-sm"
+                    placeholder=" "
+                    disabled={isLoading}
+                  />
+                  <label htmlFor="email" className="absolute text-slate-400 font-medium duration-300 transform -translate-y-[0.85rem] scale-[0.8] top-4 z-10 origin-[0] left-5 peer-focus:text-primary-600 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-[0.8] peer-focus:-translate-y-[0.85rem] cursor-text pointer-events-none">
+                    Email Address or User ID
+                  </label>
+                </div>
+
+                {/* Password Field */}
+                <div className="relative group animate-slide-up" style={{ animationDelay: '0.15s', animationFillMode: 'both' }}>
+                  <input
+                    type={obscurePassword ? 'password' : 'text'}
+                    id="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="block px-5 pb-2.5 pt-7 w-full text-slate-900 bg-slate-50/80 rounded-2xl border border-transparent appearance-none focus:outline-none focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 focus:bg-white peer transition-all duration-300 font-medium sm:text-sm shadow-sm pr-12"
+                    placeholder=" "
+                    disabled={isLoading}
+                  />
+                  <label htmlFor="password" className="absolute text-slate-400 font-medium duration-300 transform -translate-y-[0.85rem] scale-[0.8] top-4 z-10 origin-[0] left-5 peer-focus:text-primary-600 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-[0.8] peer-focus:-translate-y-[0.85rem] cursor-text pointer-events-none">
+                    Password
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setObscurePassword(!obscurePassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-primary-600 p-2 rounded-xl hover:bg-slate-100 transition-colors focus:outline-none"
+                    title={obscurePassword ? "Show Password" : "Hide Password"}
+                  >
+                    {obscurePassword ? <MdVisibilityOff size={20} /> : <MdVisibility size={20} />}
+                  </button>
+                </div>
+
+                {/* CAPTCHA Field */}
+                <div className="flex gap-3 items-center animate-slide-up" style={{ animationDelay: '0.2s', animationFillMode: 'both' }}>
+                  <div className="relative flex-1 group">
+                    <input
+                      type="text"
+                      id="captcha"
+                      value={captchaInput}
+                      onChange={(e) => setCaptchaInput(e.target.value.toUpperCase())}
+                      maxLength={5}
+                      className="block px-5 pb-2.5 pt-7 w-full text-slate-900 bg-slate-50/80 rounded-2xl border border-transparent appearance-none focus:outline-none focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 focus:bg-white peer tracking-[0.25em] font-mono font-bold uppercase transition-all duration-300 shadow-sm text-sm"
+                      placeholder=" "
+                      disabled={isLoading}
+                    />
+                    <label htmlFor="captcha" className="absolute text-slate-400 font-medium duration-300 transform -translate-y-[0.85rem] scale-[0.8] top-4 z-10 origin-[0] left-5 peer-focus:text-primary-600 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-[0.8] peer-focus:-translate-y-[0.85rem] cursor-text pointer-events-none">
+                      Security Code
+                    </label>
+                  </div>
+                  <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-2xl p-1.5 shrink-0 h-[60px] shadow-sm hover:border-slate-300 transition-colors">
+                    <canvas ref={canvasRef} width={120} height={46} className="rounded-xl bg-teal-50/40" />
+                    <button
+                      type="button"
+                      onClick={refreshCaptcha}
+                      className="p-2 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded-xl transition-colors shrink-0"
+                      title="Refresh CAPTCHA"
+                    >
+                      <MdRefresh size={22} className="rotate-0 hover:rotate-180 transition-transform duration-500 delay-75" />
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              <h1 className="hero-heading">
-                Enterprise Healthcare<br />Management System
-              </h1>
-
-              <p className="hero-description">
-                Secure, HIPAA-compliant platform with role-based access control,
-                comprehensive audit trails, and real-time analytics for modern healthcare operations.
-              </p>
-            </div>
-
-            {/* Middle Section - Features */}
-            <div className="hero-middle">
-              <div className="features-label">KEY FEATURES</div>
-              <div className="features-chips">
-                <FeatureChip icon="lock" text="Secure Access" />
-                <FeatureChip icon="shield" text="HIPAA Compliant" />
-                <FeatureChip icon="analytics" text="Real-time Analytics" />
-                <FeatureChip icon="backup" text="Auto Backup" />
+              {/* Options */}
+              <div className="flex items-center justify-between pt-2 pb-2 animate-slide-up" style={{ animationDelay: '0.25s', animationFillMode: 'both' }}>
+                <label className="flex items-center gap-2.5 cursor-pointer group">
+                  <div className="relative flex items-center justify-center">
+                    <input
+                      type="checkbox"
+                      checked={rememberMe}
+                      onChange={(e) => setRememberMe(e.target.checked)}
+                      className="w-5 h-5 text-primary-600 bg-slate-50 border-slate-300 rounded-md focus:ring-primary-500/30 focus:ring-2 cursor-pointer transition-colors peer"
+                      disabled={isLoading}
+                    />
+                  </div>
+                  <span className="text-[13px] font-semibold text-slate-500 group-hover:text-slate-700 transition-colors">Stay signed in</span>
+                </label>
+                <button type="button" className="text-[13px] font-bold text-primary-600 hover:text-primary-800 transition-colors">
+                  Forgot password?
+                </button>
               </div>
-            </div>
 
-            {/* Bottom Section */}
-            <div className="hero-bottom">
-              <div className="trust-badge">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+              {/* Submit Button */}
+              <div className="animate-slide-up" style={{ animationDelay: '0.3s', animationFillMode: 'both' }}>
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full relative group overflow-hidden bg-primary-700 hover:bg-primary-800 text-white font-bold py-[1.125rem] px-6 rounded-2xl transition-all duration-300 shadow-[0_8px_20px_-6px_rgba(15,118,110,0.5)] hover:shadow-[0_12px_24px_-8px_rgba(15,118,110,0.6)] flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed hover:-translate-y-1 active:translate-y-0"
+                >
+                  <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]"></div>
+                  {isLoading ? (
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  ) : (
+                    <>
+                      <span className="text-[15px] tracking-wide relative z-10">Sign In</span>
+                      <MdArrowForward size={18} className="relative z-10 group-hover:translate-x-1 transition-transform" />
+                    </>
+                  )}
+                </button>
+              </div>
+
+            </form>
+
+            {/* Footer */}
+            <div className="mt-12 pt-6 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4 animate-slide-up" style={{ animationDelay: '0.4s', animationFillMode: 'both' }}>
+              <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-full">
+                <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z" />
                 </svg>
-                <span>Trusted by 150+ Healthcare Institutions</span>
+                Encrypted Session
               </div>
-              <div className="support-text">
-                24/7 Support • ISO 27001 Certified • 99.9% Uptime
+              <div className="text-[11px] font-semibold text-slate-400 tracking-wider">
+                © 2024 MOVI HOSPITAL
               </div>
             </div>
+
           </div>
         </div>
       </div>
-
-      {/* Right Form Section */}
-      <div className="form-section">
-        <div className="form-scroll">
-          <LoginForm {...props} compact={false} />
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Mobile Layout Component
-const MobileLayout = (props) => {
-  return (
-    <div className="mobile-layout">
-      {/* Compact Hero */}
-      <div className="mobile-hero">
-        <MoviLogo size={60} />
-        <div className="mobile-brand-title">MOVI HOSPITAL</div>
-        <div className="mobile-brand-subtitle">Healthcare Management System</div>
-      </div>
-
-      {/* Form */}
-      <div className="mobile-form-scroll">
-        <LoginForm {...props} compact={true} />
-      </div>
-    </div>
-  );
-};
-
-// Login Form Component
-const LoginForm = ({
-  email,
-  setEmail,
-  password,
-  setPassword,
-  captchaInput,
-  setCaptchaInput,
-  obscurePassword,
-  setObscurePassword,
-  rememberMe,
-  setRememberMe,
-  isLoading,
-  error,
-  handleLogin,
-  canvasRef,
-  refreshCaptcha,
-  compact
-}) => {
-  return (
-    <form className="login-form" onSubmit={handleLogin}>
-      {/* Desktop Brand Header */}
-      {!compact && (
-        <div className="form-brand-header">
-          <MoviLogo size={32} />
-          <div className="form-brand-text">
-            <div className="form-brand-title">MOVI HOSPITAL</div>
-            <div className="form-brand-subtitle">Healthcare Management</div>
-          </div>
-        </div>
-      )}
-
-      {/* Welcome Text */}
-      <h2 className={`form-title ${compact ? 'compact' : ''}`}>Welcome Back</h2>
-      <p className="form-subtitle">Sign in to access your healthcare dashboard</p>
-
-      {/* Error Message */}
-      {error && (
-        <div className="error-message">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
-          </svg>
-          {error}
-        </div>
-      )}
-
-      {/* Email Field */}
-      <div className="form-field">
-        <label className="field-label">Email Address or Mobile</label>
-        <div className="input-wrapper">
-          <svg className="input-icon" width="19" height="19" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" />
-          </svg>
-          <input
-            type="text"
-            className="form-input"
-            placeholder="Enter your email or mobile number"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            disabled={isLoading}
-          />
-        </div>
-      </div>
-
-      {/* Password Field */}
-      <div className="form-field">
-        <label className="field-label">Password</label>
-        <div className="input-wrapper">
-          <svg className="input-icon" width="19" height="19" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z" />
-          </svg>
-          <input
-            type={obscurePassword ? 'password' : 'text'}
-            className="form-input"
-            placeholder="Enter your secure password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            disabled={isLoading}
-          />
-          <button
-            type="button"
-            className="toggle-password"
-            onClick={() => setObscurePassword(!obscurePassword)}
-            title={obscurePassword ? 'Show password' : 'Hide password'}
-          >
-            <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor">
-              {obscurePassword ? (
-                <path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z" />
-              ) : (
-                <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" />
-              )}
-            </svg>
-          </button>
-        </div>
-      </div>
-
-      {/* CAPTCHA Field */}
-      <div className="form-field">
-        <label className="field-label">Security Verification</label>
-        <div className="captcha-row">
-          <div className="captcha-input-wrapper">
-            <svg className="input-icon" width="19" height="19" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z" />
-            </svg>
-            <input
-              type="text"
-              className="form-input captcha-input"
-              placeholder="Enter code"
-              value={captchaInput}
-              onChange={(e) => setCaptchaInput(e.target.value.toUpperCase())}
-              maxLength={5}
-              disabled={isLoading}
-            />
-          </div>
-          <div className="captcha-display">
-            <canvas ref={canvasRef} width={160} height={44} />
-            <button
-              type="button"
-              className="captcha-refresh"
-              onClick={refreshCaptcha}
-              title="Refresh CAPTCHA"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z" />
-              </svg>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Remember Me + Forgot Password */}
-      <div className="form-options">
-        <label className="checkbox-label">
-          <input
-            type="checkbox"
-            checked={rememberMe}
-            onChange={(e) => setRememberMe(e.target.checked)}
-            disabled={isLoading}
-          />
-          <span>Remember me for 30 days</span>
-        </label>
-        <button type="button" className="forgot-link" onClick={() => { }}>
-          Forgot Password?
-        </button>
-      </div>
-
-      {/* Submit Button */}
-      <button
-        type="submit"
-        className="submit-button"
-        disabled={isLoading}
-      >
-        {isLoading ? (
-          <div className="loading-spinner"></div>
-        ) : (
-          <>
-            <span>Sign In to Dashboard</span>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z" />
-            </svg>
-          </>
-        )}
-      </button>
-
-      {/* Footer (Desktop only) */}
-      {!compact && (
-        <>
-          <div className="form-divider"></div>
-          <div className="form-footer">
-            <div className="security-badge">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z" />
-              </svg>
-              <span>Enterprise-grade Security</span>
-            </div>
-            <div className="copyright">
-              v1.0.0 • © 2024 MOVI HOSPITAL
-            </div>
-          </div>
-        </>
-      )}
-    </form>
-  );
-};
-
-// Feature Chip Component
-const FeatureChip = ({ icon, text }) => {
-  const iconMap = {
-    lock: <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zM15.1 8H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z" />,
-    shield: <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z" />,
-    analytics: <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z" />,
-    backup: <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z" />
-  };
-
-  return (
-    <div className="feature-chip">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
-        {iconMap[icon]}
-      </svg>
-      <span>{text}</span>
     </div>
   );
 };
