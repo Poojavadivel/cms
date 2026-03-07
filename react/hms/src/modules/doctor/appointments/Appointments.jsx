@@ -9,6 +9,7 @@ import AppointmentViewModal from '../../../components/appointments/AppointmentVi
 import AppointmentEditModal from '../../../components/appointments/AppointmentEditModal';
 import AppointmentIntakeModal from '../../../components/appointments/AppointmentIntakeModal';
 import PatientView from '../../../components/patient/patientview';
+import StatusBadge from '../../../components/common/StatusBadge';
 
 // --- MOCK DATA (KEPT FOR FALLBACK) ---
 const MOCK_APPOINTMENTS = [
@@ -235,7 +236,7 @@ const Icons = {
 const Header = () => (
   <div className="appointments-header">
     <div className="header-content">
-      <h1 
+      <h1
         className="appointments-main-title"
         style={{
           fontSize: '28px',
@@ -249,7 +250,7 @@ const Header = () => (
       >
         APPOINTMENTS
       </h1>
-      <p 
+      <p
         className="appointments-main-subtitle"
         style={{
           fontSize: '14px',
@@ -576,12 +577,12 @@ const Appointments = () => {
     const fetchData = async () => {
       try {
         setIsLoading(true);
-        
+
         // Fetch deleted appointments if on deleted tab, otherwise fetch regular appointments
-        const data = activeTab === 'deleted' 
+        const data = activeTab === 'deleted'
           ? await appointmentsService.fetchDeletedAppointments()
           : await appointmentsService.fetchAppointments();
-          
+
         console.log(`✅ Fetched ${activeTab === 'deleted' ? 'deleted ' : ''}appointments from API:`, data);
 
         // Log first appointment to see structure
@@ -623,7 +624,7 @@ const Appointments = () => {
     setSelectedDate(null);
     setCurrentPage(1);
     setShowCalendar(false);
-    
+
     return () => {
       // Cleanup: reset state when component unmounts
       setAllAppointments([]);
@@ -634,7 +635,7 @@ const Appointments = () => {
   // Filter appointments based on tab and search
   useEffect(() => {
     let result = allAppointments;
-    
+
     // Don't filter by status if we're on the deleted tab
     if (activeTab !== 'all' && activeTab !== 'deleted') {
       result = result.filter(a => a.status.toLowerCase() === activeTab.toLowerCase());
@@ -943,13 +944,10 @@ const Appointments = () => {
 
                     {/* STATUS */}
                     <td>
-                      <span
-                        className={`status-pill ${apt.status.toLowerCase()} status-editable clickable`}
+                      <StatusBadge
+                        status={apt.status}
                         onClick={() => handleStatusToggle(apt)}
-                        title="Click to change status"
-                      >
-                        {apt.status}
-                      </span>
+                      />
                     </td>
 
                     {/* ACTIONS */}

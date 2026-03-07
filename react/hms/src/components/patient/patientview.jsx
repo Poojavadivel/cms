@@ -1837,17 +1837,39 @@ const BillingsTab = ({ patientId }) => {
     );
 };
 
-// Reusable VitalCard component enforcing strict typographic hierarchy with Tailwind
-const VitalCard = ({ label, value, unit }) => (
-    <div className="flex flex-col w-full p-3.5 bg-white border border-slate-200 rounded-xl shadow-sm transition-shadow hover:shadow-md ring-1 ring-transparent hover:border-teal-200">
-        <span className="text-xs uppercase tracking-wider text-slate-400 font-bold mb-1">{label}</span>
-        <div className="flex items-baseline gap-1 mt-auto">
-            <span className="text-2xl font-bold text-slate-900">{value && value !== '—/—' ? value : '—'}</span>
-            {unit && value && value !== '—' && value !== '—/—' && (
-                <span className="text-sm font-medium text-slate-500">{unit}</span>
-            )}
+// Reusable VitalCard component enforcing strict typographic hierarchy and semantic color-coding
+const getVitalStatusColor = (label, value) => {
+    if (!value || value === '—' || value === '—/—') return 'bg-white border-slate-200 text-slate-900';
+    const num = parseFloat(value);
+
+    if (label.toLowerCase() === 'bmi' && !isNaN(num)) {
+        if (num < 18.5) return 'bg-amber-50 border-amber-200 text-amber-900'; // Underweight
+        if (num >= 25 && num < 30) return 'bg-amber-50 border-amber-200 text-amber-900'; // Overweight
+        if (num >= 30) return 'bg-red-50 border-red-200 text-red-900'; // Obese
+    }
+
+    if (label.toLowerCase() === 'blood pressure' && typeof value === 'string' && value.includes('/')) {
+        const [sys, dia] = value.split('/').map(Number);
+        if (sys >= 180 || dia >= 120) return 'bg-red-50 border-red-200 text-red-900'; // Crisis
+        if (sys >= 130 || dia >= 80) return 'bg-amber-50 border-amber-200 text-amber-900'; // High/Warning
+    }
+
+    return 'bg-white border-slate-200 text-slate-900'; // Normal default
+};
+
+const VitalCard = ({ label, value, unit }) => {
+    const colorClass = getVitalStatusColor(label, value);
+    return (
+        <div className={`flex flex-col w-full p-3.5 border rounded-xl shadow-sm transition-shadow hover:shadow-md ring-1 ring-transparent hover:border-teal-200 ${colorClass}`}>
+            <span className="text-xs uppercase tracking-wider opacity-60 font-bold mb-1">{label}</span>
+            <div className="flex items-baseline gap-1 mt-auto">
+                <span className="text-2xl font-bold">{value && value !== '—/—' ? value : '—'}</span>
+                {unit && value && value !== '—' && value !== '—/—' && (
+                    <span className="text-sm font-medium opacity-70">{unit}</span>
+                )}
+            </div>
         </div>
-    </div>
-);
+    );
+};
 
 export default PatientView;

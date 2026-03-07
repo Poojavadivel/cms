@@ -11,6 +11,7 @@ import appointmentsService from '../../../services/appointmentsService';
 import patientsService from '../../../services/patientsService';
 import { PatientProfileView } from '../../../components/doctor';
 import AppointmentIntakeModal from '../../../components/appointments/AppointmentIntakeModal';
+import StatusBadge from '../../../components/common/StatusBadge';
 import './Schedule.css';
 
 const DoctorSchedule = () => {
@@ -51,7 +52,12 @@ const DoctorSchedule = () => {
     const tm = target.getMonth();
     const td = target.getDate();
 
-    return appointments.filter(a => {
+    const filtered = appointments.filter(a => {
+      // 1. Exclude Cancelled
+      if (typeof a.status === 'string' && a.status.toUpperCase() === 'CANCELLED') {
+        return false;
+      }
+
       try {
         // Search through all possible date markers in the data
         const dates = [a.startAt, a.date, a.appointmentDate].filter(Boolean);
@@ -67,7 +73,33 @@ const DoctorSchedule = () => {
       } catch {
         return false;
       }
-    }).sort((a, b) => {
+    });
+
+    // 2. Deduplicate / Merge by patientId
+    const merged = {};
+    filtered.forEach(a => {
+      // Extract patient ID robustly
+      const pIdObj = a.patientId;
+      const pId = (pIdObj && typeof pIdObj === 'object') ? (pIdObj._id || pIdObj.id) : pIdObj;
+      // Fallback to name if ID is missing (better than nothing)
+      const key = pId || a.patientName || a.clientName || ('unknown_patient_' + Math.random());
+
+      if (!merged[key]) {
+        merged[key] = { ...a, _consultCount: 1 };
+      } else {
+        // Duplicate patient for the same day
+        merged[key]._consultCount += 1;
+
+        // Merge reasons for clarity if different
+        const currentReason = merged[key].reason || merged[key].appointmentType || 'Consultation';
+        const newReason = a.reason || a.appointmentType || 'Follow-up';
+        if (typeof currentReason === 'string' && typeof newReason === 'string' && !currentReason.includes(newReason)) {
+          merged[key].reason = `${currentReason} + ${newReason}`;
+        }
+      }
+    });
+
+    return Object.values(merged).sort((a, b) => {
       const timeA = a.startAt || a.time || '00:00';
       const timeB = b.startAt || b.time || '00:00';
       return String(timeA).localeCompare(String(timeB));
@@ -114,6 +146,21 @@ const DoctorSchedule = () => {
 
   const changeMonth = (delta) => {
     setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + delta, 1));
+  };
+
+  const getAppointmentsForCurrentMonth = () => {
+    if (!appointments) return 0;
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
+
+    return appointments.filter(a => {
+      if (typeof a.status === 'string' && a.status.toUpperCase() === 'CANCELLED') return false;
+      const dates = [a.startAt, a.date, a.appointmentDate].filter(Boolean);
+      return dates.some(d => {
+        const dObj = new Date(d);
+        return !isNaN(dObj.getTime()) && dObj.getFullYear() === year && dObj.getMonth() === month;
+      });
+    }).length;
   };
 
   const isToday = (date) => {
@@ -198,8 +245,8 @@ const DoctorSchedule = () => {
               <div className="header-left">
                 <h2>Schedule Calendar</h2>
               </div>
-              <div className="appointments-badge">
-                {appointments.length} Total
+              <div className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm font-medium border border-blue-200 shadow-sm">
+                {getAppointmentsForCurrentMonth()} Appointments This Month
               </div>
             </div>
 
@@ -327,9 +374,13 @@ const AppointmentCard = ({ appointment, onViewIntake, onViewPatient, onDelete, o
   const isPopulated = pId && typeof pId === 'object';
 
   // 1. Patient Name
-  const patientName = appointment.patientName ||
+  let patientName = appointment.patientName ||
     appointment.clientName ||
     (isPopulated ? (pId.fullName || `${pId.firstName || ''} ${pId.lastName || ''}`.trim()) : 'Unknown Patient');
+
+  if (appointment._consultCount > 1) {
+    patientName = `${patientName} (${appointment._consultCount} Consults)`;
+  }
 
   // 2. Gender
   const gender = appointment.gender ||
@@ -381,9 +432,9 @@ const AppointmentCard = ({ appointment, onViewIntake, onViewPatient, onDelete, o
     <div className={`appointment-card modern-shadow status-border-${status.toLowerCase()}`}>
       <div className="card-header">
         <div className="patient-avatar-box" data-gender={genderStr}>
-          <img 
-            src={avatarSrc} 
-            alt={gender} 
+          <img
+            src={avatarSrc}
+            alt={gender}
             className="patient-avatar-img"
             onError={(e) => { e.target.src = '/boyicon.png'; }}
           />
@@ -404,9 +455,7 @@ const AppointmentCard = ({ appointment, onViewIntake, onViewPatient, onDelete, o
             <span className="gender-text">{gender}</span>
           </div>
         </div>
-        <div className="status-chip" style={{ backgroundColor: `${getStatusColor(status)}15`, color: getStatusColor(status), borderColor: getStatusColor(status) }}>
-          {status}
-        </div>
+        <StatusBadge status={status} />
       </div>
 
       <div className="card-body-details">
