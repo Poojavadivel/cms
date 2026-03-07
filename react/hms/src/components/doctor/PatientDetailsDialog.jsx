@@ -268,23 +268,11 @@ const PatientDetailsDialog = ({ patient, isOpen, onClose, showBillingTab = true 
                   )}
                 </div>
 
-                <div className="pv-metrics-row">
-                  <div className="pv-metric-card">
-                    <span className="pv-metric-val">{patientData.bmi || '—'}</span>
-                    <span className="pv-metric-lbl">BMI</span>
-                  </div>
-                  <div className="pv-metric-card">
-                    <span className="pv-metric-val">{patientData.weightKg || '—'} <small>kg</small></span>
-                    <span className="pv-metric-lbl">Weight</span>
-                  </div>
-                  <div className="pv-metric-card">
-                    <span className="pv-metric-val">{patientData.heightCm || '—'} <small>cm</small></span>
-                    <span className="pv-metric-lbl">Height</span>
-                  </div>
-                  <div className="pv-metric-card">
-                    <span className="pv-metric-val">{patientData.bp}</span>
-                    <span className="pv-metric-lbl">Blood Pressure</span>
-                  </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-4">
+                  <VitalCard label="BMI" value={patientData.bmi} />
+                  <VitalCard label="Weight" value={patientData.weightKg} unit="kg" />
+                  <VitalCard label="Height" value={patientData.heightCm} unit="cm" />
+                  <VitalCard label="Blood Pressure" value={patientData.bp} unit="mmHg" />
                 </div>
               </div>
 
@@ -338,14 +326,16 @@ const PatientDetailsDialog = ({ patient, isOpen, onClose, showBillingTab = true 
   );
 };
 
-// Vital Card Component
-const VitalCard = ({ icon, label, value, type }) => (
-  <div className="pd-vital-card-flutter">
-    <div className={`pd-vital-icon-flutter ${type}`}>
-      {icon}
+// Reusable VitalCard component enforcing strict typographic hierarchy with Tailwind
+const VitalCard = ({ label, value, unit }) => (
+  <div className="flex flex-col w-full p-3.5 bg-white border border-slate-200 rounded-xl shadow-sm transition-shadow hover:shadow-md ring-1 ring-transparent hover:border-teal-200">
+    <span className="text-xs uppercase tracking-wider text-slate-400 font-bold mb-1">{label}</span>
+    <div className="flex items-baseline gap-1 mt-auto">
+      <span className="text-2xl font-bold text-slate-900">{value && value !== '—/—' ? value : '—'}</span>
+      {unit && value && value !== '—' && value !== '—/—' && (
+        <span className="text-sm font-medium text-slate-500">{unit}</span>
+      )}
     </div>
-    <span className="pd-vital-value-flutter">{value}</span>
-    <span className="pd-vital-label-flutter">{label}</span>
   </div>
 );
 
@@ -483,7 +473,7 @@ const HistoryTab = ({ patient }) => {
                     {item.medicalHistory || item.diagnosis || '—'}
                   </td>
                   <td>
-                    <button 
+                    <button
                       className="pd-prescription-action-btn"
                       onClick={() => item.pdfId ? reportService.viewPdf(item.pdfId) : handleViewDetails(item)}
                       title="View Medical History"
@@ -672,7 +662,7 @@ const PrescriptionsTab = ({ patient }) => {
                     {item.prescriptionSummary || item.diagnosis || '—'}
                   </td>
                   <td>
-                    <button 
+                    <button
                       className="pd-prescription-action-btn"
                       onClick={() => item.pdfId ? reportService.viewPdf(item.pdfId) : null}
                       disabled={!item.pdfId}
@@ -727,8 +717,8 @@ const LabTab = ({ patient }) => {
               <div className="pd-card-header-flex">
                 <h4 className="pd-card-title">{item.testType || 'Lab Test'}</h4>
                 {item.pdfId && (
-                  <button 
-                    className="pd-view-pdf-btn" 
+                  <button
+                    className="pd-view-pdf-btn"
                     onClick={() => reportService.viewPdf(item.pdfId)}
                     title="View Lab Report Image"
                   >
@@ -736,11 +726,11 @@ const LabTab = ({ patient }) => {
                   </button>
                 )}
               </div>
-              
+
               <p><strong>Lab:</strong> {item.labName || '—'}</p>
               <p><strong>Date:</strong> {item.reportDate ? new Date(item.reportDate).toLocaleDateString() : '—'}</p>
               <p><strong>Category:</strong> {item.testCategory || '—'}</p>
-              
+
               {item.results && item.results.length > 0 && (
                 <div className="pd-lab-results">
                   <strong>Test Results:</strong>
@@ -759,7 +749,7 @@ const LabTab = ({ patient }) => {
                   </div>
                 </div>
               )}
-              
+
               <span className={`pd-status-badge ${item.status || 'completed'}`}>
                 {item.status || 'Completed'}
               </span>
@@ -788,7 +778,7 @@ const BillingTab = ({ patient }) => {
             'Content-Type': 'application/json'
           }
         });
-        
+
         if (response.ok) {
           const data = await response.json();
           setBills(data.bills || []);
@@ -812,7 +802,7 @@ const BillingTab = ({ patient }) => {
   return (
     <div className="pd-tab-inner">
       <h3 className="pd-section-title-flutter">Billing & Payments</h3>
-      
+
       {loading ? (
         <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
           Loading bills...
@@ -826,14 +816,14 @@ const BillingTab = ({ patient }) => {
                   {bill.billNumber}
                 </h4>
                 <span style={{ fontSize: '0.875rem', color: '#666' }}>
-                  {new Date(bill.date).toLocaleDateString('en-GB', { 
-                    day: 'numeric', 
-                    month: 'short', 
-                    year: 'numeric' 
+                  {new Date(bill.date).toLocaleDateString('en-GB', {
+                    day: 'numeric',
+                    month: 'short',
+                    year: 'numeric'
                   })}
                 </span>
               </div>
-              
+
               <div style={{ marginTop: '0.75rem', display: 'grid', gap: '0.5rem' }}>
                 <p style={{ margin: 0, fontSize: '0.875rem' }}>
                   <strong>Total Amount:</strong> ₹{bill.totalAmount?.toFixed(2) || '0.00'}
@@ -866,7 +856,7 @@ const BillingTab = ({ patient }) => {
                   </div>
                 </div>
               )}
-              
+
               <span className={`pd-status-badge ${bill.status?.toLowerCase().replace(' ', '-') || 'pending'}`}>
                 {bill.status || 'Pending'}
               </span>

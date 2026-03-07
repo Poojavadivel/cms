@@ -10,6 +10,39 @@ const trendArrow = (trend) => {
     return <span className="ml-1 text-slate-400 font-extrabold text-xs">→</span>;
 };
 
+/**
+ * Safely formats a Blood Pressure value from various input shapes.
+ * Handles: string "120/80", string "112/", object { systolic, diastolic }, null, etc.
+ * Returns { display: string, isIncomplete: boolean }
+ */
+const formatBloodPressure = (rawValue) => {
+    if (!rawValue || rawValue === '--/--') return { display: '--/--', isIncomplete: false, isNotRecorded: true };
+
+    let sys = null;
+    let dia = null;
+
+    if (typeof rawValue === 'object' && !Array.isArray(rawValue)) {
+        sys = rawValue.systolic;
+        dia = rawValue.diastolic;
+    } else if (typeof rawValue === 'string') {
+        const parts = rawValue.split('/');
+        sys = parts[0]?.trim() || null;
+        dia = parts[1]?.trim() || null;
+    } else {
+        sys = rawValue;
+    }
+
+    // Normalize: treat '0', 'null', 'undefined', 'NaN', '–', empty string as missing
+    const isMissing = (v) => v == null || v === '' || v === 'null' || v === 'undefined' || v === 'NaN' || v === '–' || v === '-' || v === '0';
+    const sysClean = isMissing(sys) ? null : String(sys);
+    const diaClean = isMissing(dia) ? null : String(dia);
+
+    if (!sysClean && !diaClean) return { display: '--/--', isIncomplete: false, isNotRecorded: true };
+    if (!sysClean) return { display: `N/A / ${diaClean}`, isIncomplete: true, isNotRecorded: false };
+    if (!diaClean) return { display: `${sysClean} / N/A`, isIncomplete: true, isNotRecorded: false };
+    return { display: `${sysClean}/${diaClean}`, isIncomplete: false, isNotRecorded: false };
+};
+
 const statusClass = (status) => {
     if (status === 'critical') return 'bg-rose-50 border-rose-200 text-rose-800 ring-rose-500/10 shadow-rose-900/5';
     if (status === 'warning') return 'bg-amber-50 border-amber-200 text-amber-800 ring-amber-500/10 shadow-amber-900/5';
@@ -44,20 +77,53 @@ const VitalsWidget = ({ vitals = {} }) => {
                 </span>
             </div>
 
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                {cards.map((card, i) => (
-                    <div key={i} className={`flex flex-col gap-2 p-3.5 rounded-2xl border transition-all hover:-translate-y-0.5 hover:shadow-md ring-1 ring-transparent ${statusClass(card.status)}`}>
-                        <div className="flex items-center gap-2">
-                            <span className="text-lg">{card.icon}</span>
-                            <span className="text-[10px] font-bold uppercase tracking-widest opacity-70 truncate">{card.label}</span>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 w-full">
+                {cards.map((card, i) => {
+                    // Special BP handling
+                    const isBP = card.label === 'Blood Pressure';
+                    const bpFormatted = isBP ? formatBloodPressure(card.value) : null;
+                    const displayValue = isBP ? bpFormatted.display : card.value;
+                    const isIncomplete = isBP && bpFormatted.isIncomplete;
+                    const isNotRecorded = isBP ? bpFormatted.isNotRecorded : (card.value == null || card.value === '--' || card.value === '--/--' || card.value === '');
+
+                    return (
+                        <div key={i} className={`flex flex-row items-center justify-between gap-3 p-4 rounded-2xl border transition-all hover:-translate-y-0.5 hover:shadow-md ring-1 ring-transparent ${isIncomplete ? 'bg-amber-50 border-amber-200 text-amber-800 ring-amber-500/10' : (isNotRecorded ? 'bg-slate-50 border-slate-200 text-slate-500' : statusClass(card.status))}`}>
+
+                            {/* Left Side: Icon & Label */}
+                            <div className="flex items-center gap-3 overflow-hidden">
+                                <div className="w-10 h-10 rounded-full flex items-center justify-center bg-white/50 text-xl shadow-sm shrink-0">
+                                    {card.icon}
+                                </div>
+                                <div className="flex flex-col overflow-hidden">
+                                    <span className="text-xs font-bold uppercase tracking-wider text-slate-400 truncate">{card.label}</span>
+                                    {isIncomplete && (
+                                        <span className="text-[9px] font-bold text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded w-fit uppercase tracking-wider mt-0.5 truncate">
+                                            ⚠️ Incomplete
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Right Side: Value & Unit */}
+                            <div className="flex flex-col items-end justify-center shrink-0">
+                                {isNotRecorded ? (
+                                    <div className="flex items-center gap-1.5 opacity-80 cursor-pointer hover:opacity-100 transition-opacity">
+                                        <span className="text-xs font-medium text-slate-400 italic">Not Recorded</span>
+                                        <span className="w-5 h-5 rounded-full bg-slate-200 flex flex-col items-center justify-center text-slate-500 hover:bg-primary-100 hover:text-primary-600 transition-colors">
+                                            <span className="text-xs font-bold leading-none">+</span>
+                                        </span>
+                                    </div>
+                                ) : (
+                                    <div className="flex items-baseline gap-1">
+                                        <span className="text-2xl font-bold text-slate-900">{displayValue && displayValue !== '—/—' ? displayValue : '—'}</span>
+                                        <span className="text-sm font-medium text-slate-500">{card.unit}</span>
+                                        {trendArrow(card.trend)}
+                                    </div>
+                                )}
+                            </div>
                         </div>
-                        <div className="flex items-baseline gap-1 mt-auto">
-                            <span className="text-xl font-extrabold tracking-tighter">{card.value}</span>
-                            <span className="text-[10px] font-bold opacity-60">{card.unit}</span>
-                            {trendArrow(card.trend)}
-                        </div>
-                    </div>
-                ))}
+                    );
+                })}
             </div>
         </div>
     );

@@ -340,23 +340,11 @@ const PatientView = ({ isOpen, onClose, patientId, patient: patientProp, onEdit,
                                     </div>
 
                                     {/* Vitals — 4-column row, fills all available width */}
-                                    <div className="pv-metrics-grid">
-                                        <div className="pv-metric-card pv-metric-bmi">
-                                            <span className="pv-metric-val">{patientData.bmi || '—'}</span>
-                                            <span className="pv-metric-lbl">BMI</span>
-                                        </div>
-                                        <div className="pv-metric-card pv-metric-weight">
-                                            <span className="pv-metric-val">{patientData.weightKg || '—'} <small>kg</small></span>
-                                            <span className="pv-metric-lbl">Weight</span>
-                                        </div>
-                                        <div className="pv-metric-card pv-metric-height">
-                                            <span className="pv-metric-val">{patientData.heightCm || '—'} <small>cm</small></span>
-                                            <span className="pv-metric-lbl">Height</span>
-                                        </div>
-                                        <div className="pv-metric-card pv-metric-bp">
-                                            <span className="pv-metric-val">{patientData.bp}</span>
-                                            <span className="pv-metric-lbl">Blood Pressure</span>
-                                        </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                                        <VitalCard label="BMI" value={patientData.bmi} />
+                                        <VitalCard label="Weight" value={patientData.weightKg} unit="kg" />
+                                        <VitalCard label="Height" value={patientData.heightCm} unit="cm" />
+                                        <VitalCard label="Blood Pressure" value={patientData.bp} unit="mmHg" />
                                     </div>
                                 </div>
 
@@ -1849,5 +1837,17 @@ const BillingsTab = ({ patientId }) => {
     );
 };
 
+// Reusable VitalCard component enforcing strict typographic hierarchy with Tailwind
+const VitalCard = ({ label, value, unit }) => (
+    <div className="flex flex-col w-full p-3.5 bg-white border border-slate-200 rounded-xl shadow-sm transition-shadow hover:shadow-md ring-1 ring-transparent hover:border-teal-200">
+        <span className="text-xs uppercase tracking-wider text-slate-400 font-bold mb-1">{label}</span>
+        <div className="flex items-baseline gap-1 mt-auto">
+            <span className="text-2xl font-bold text-slate-900">{value && value !== '—/—' ? value : '—'}</span>
+            {unit && value && value !== '—' && value !== '—/—' && (
+                <span className="text-sm font-medium text-slate-500">{unit}</span>
+            )}
+        </div>
+    </div>
+);
 
 export default PatientView;

@@ -12,7 +12,7 @@ export class Doctor {
     if (userProfile.role !== UserRole.DOCTOR) {
       throw new Error('The provided user profile must have the role of UserRole.doctor.');
     }
-    
+
     this.userProfile = userProfile;
     this.specialization = specialization;
     this.licenseNumber = licenseNumber;
@@ -47,6 +47,14 @@ export class Doctor {
 
   get fullName() {
     return this.userProfile.fullName;
+  }
+
+  get firstName() {
+    return this.userProfile.firstName;
+  }
+
+  get lastName() {
+    return this.userProfile.lastName;
   }
 
   get email() {

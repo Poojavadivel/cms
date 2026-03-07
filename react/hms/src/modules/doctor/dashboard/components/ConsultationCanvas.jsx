@@ -27,10 +27,30 @@ const ConsultationCanvas = ({ appointment, onConsultationSaved }) => {
     const [chiefComplaint, setChiefComplaint] = useState('');
     const [diagnosis, setDiagnosis] = useState('');
     const [treatmentPlan, setTreatmentPlan] = useState('');
-    const [medicines, setMedicines] = useState([{ name: '', dose: '', duration: '', frequency: '' }]);
+    const [medicines, setMedicines] = useState([{ name: '', dose: '', unit: '', frequency: '', duration: '' }]);
     const [notes, setNotes] = useState('');
     const [medicineSuggest, setMedicineSuggest] = useState({ idx: null, query: '' });
     const [submitting, setSubmitting] = useState(false);
+    const [rxErrors, setRxErrors] = useState({}); // { idx: { field: 'message' } }
+    const [rxTouched, setRxTouched] = useState(false); // true after first submit attempt
+
+    // Medical constants
+    const DOSE_UNITS = ['mg', 'ml', 'g', 'mcg', 'IU', 'drops', 'puffs', 'units'];
+    const FREQUENCIES = [
+        { value: '', label: 'Select...' },
+        { value: 'OD', label: 'OD – Once daily' },
+        { value: 'BD', label: 'BD – Twice daily' },
+        { value: 'TDS', label: 'TDS – Thrice daily' },
+        { value: 'QDS', label: 'QDS – Four times daily' },
+        { value: '1-0-1', label: '1-0-1 – Morning & Night' },
+        { value: '1-1-1', label: '1-1-1 – Three times' },
+        { value: '1-0-0', label: '1-0-0 – Morning only' },
+        { value: '0-0-1', label: '0-0-1 – Night only' },
+        { value: 'SOS', label: 'SOS – As needed' },
+        { value: 'PRN', label: 'PRN – When required' },
+        { value: 'HS', label: 'HS – At bedtime' },
+        { value: 'STAT', label: 'STAT – Immediately' },
+    ];
 
     const patientId = appointment?.patientId?._id || appointment?.patientId;
 
@@ -59,13 +79,51 @@ const ConsultationCanvas = ({ appointment, onConsultationSaved }) => {
     };
 
     const addMedicine = () =>
-        setMedicines(prev => [...prev, { name: '', dose: '', duration: '', frequency: '' }]);
+        setMedicines(prev => [...prev, { name: '', dose: '', unit: '', frequency: '', duration: '' }]);
 
-    const removeMedicine = (i) =>
+    const removeMedicine = (i) => {
         setMedicines(prev => prev.filter((_, idx) => idx !== i));
+        setRxErrors(prev => { const next = { ...prev }; delete next[i]; return next; });
+    };
 
-    const updateMedicine = (i, field, value) =>
+    const updateMedicine = (i, field, value) => {
         setMedicines(prev => prev.map((m, idx) => idx === i ? { ...m, [field]: value } : m));
+        // Clear error for this field if it was showing
+        if (rxTouched) {
+            setRxErrors(prev => {
+                const next = { ...prev };
+                if (next[i]) { delete next[i][field]; if (Object.keys(next[i]).length === 0) delete next[i]; }
+                return next;
+            });
+        }
+    };
+
+    /**
+     * Validates all medicines that have at least a name filled in.
+     * Returns { isValid, errors: { [idx]: { field: message } } }
+     */
+    const validatePrescriptions = () => {
+        const errors = {};
+        medicines.forEach((med, i) => {
+            // Skip completely empty rows
+            if (!med.name.trim() && !med.dose && !med.unit && !med.frequency) return;
+
+            const rowErrors = {};
+            if (!med.name.trim()) rowErrors.name = 'Drug name is required';
+            if (!med.dose || isNaN(Number(med.dose)) || Number(med.dose) <= 0) rowErrors.dose = 'Valid dosage number required';
+            if (!med.unit) rowErrors.unit = 'Select a unit (mg, ml, etc.)';
+            if (!med.frequency) rowErrors.frequency = 'Select frequency';
+            if (!med.duration?.trim()) rowErrors.duration = 'Duration required';
+
+            if (Object.keys(rowErrors).length > 0) errors[i] = rowErrors;
+        });
+        return { isValid: Object.keys(errors).length === 0, errors };
+    };
+
+    // Compute form validity for submit button state
+    const filledMedicines = medicines.filter(m => m.name.trim());
+    const { isValid: rxValid } = filledMedicines.length > 0 ? validatePrescriptions() : { isValid: true };
+    const formValid = diagnosis.trim() && rxValid;
 
     const handleLabOrder = async ({ orders, note, priority }) => {
         try {
@@ -85,23 +143,44 @@ const ConsultationCanvas = ({ appointment, onConsultationSaved }) => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!diagnosis.trim()) { showToast('Please enter a diagnosis.', 'warning'); return; }
+
+        // Validate prescriptions
+        setRxTouched(true);
+        const { isValid, errors } = validatePrescriptions();
+        if (!isValid) {
+            setRxErrors(errors);
+            showToast('Please fix prescription errors before saving.', 'warning');
+            return;
+        }
+        setRxErrors({});
+
         setSubmitting(true);
         try {
+            // Combine dose + unit into a single string for the API
+            const formattedMedicines = medicines
+                .filter(m => m.name.trim())
+                .map(m => ({
+                    name: m.name,
+                    dose: `${m.dose}${m.unit}`,
+                    frequency: m.frequency,
+                    duration: m.duration,
+                }));
+
             await apiPost('/consultation/submit', {
                 patientId,
                 appointmentId: appointment?._id,
                 chiefComplaint,
                 diagnosis,
                 treatmentPlan,
-                medicines: medicines.filter(m => m.name.trim()),
+                medicines: formattedMedicines,
                 notes,
             });
             showToast('Consultation saved successfully!', 'success');
             onConsultationSaved?.();
             // Reset form
             setChiefComplaint(''); setDiagnosis(''); setTreatmentPlan('');
-            setMedicines([{ name: '', dose: '', duration: '', frequency: '' }]);
-            setNotes('');
+            setMedicines([{ name: '', dose: '', unit: '', frequency: '', duration: '' }]);
+            setNotes(''); setRxErrors({}); setRxTouched(false);
         } catch (err) {
             showToast(err.message || 'Failed to save consultation.', 'error');
         } finally {
@@ -203,199 +282,244 @@ const ConsultationCanvas = ({ appointment, onConsultationSaved }) => {
                 </div>
             </div>
 
-            {/* ── Three-Panel Canvas Body ── */}
-            <div className="flex-1 flex overflow-hidden">
+            {/* ── Main Workspace Body ── */}
+            <div className="flex flex-col flex-1 w-full overflow-y-auto p-4 lg:p-6 bg-slate-50/50">
 
-                {/* Panel 1 (Left): Vitals & Context (approx 25%) */}
-                <div className="w-[30%] min-w-[280px] border-r border-slate-200 bg-slate-50/50 overflow-y-auto p-5 space-y-6">
+                {/* Row 2: Vitals & Context */}
+                <div className="w-full mb-6 relative">
                     {loadingPatient ? (
                         <div className="space-y-4">
                             <SkeletonLoader variant="vitals" />
-                            <SkeletonLoader variant="text" lines={6} />
                         </div>
                     ) : (
-                        <>
+                        <div className="flex flex-col gap-6">
                             <VitalsWidget vitals={vitals} />
-                            <div className="h-px bg-slate-200/60 w-full" />
-                            <HistoryTimeline history={history} />
-                        </>
+                            {/* History Timeline optionally spans below or can be compressed */}
+                            {history.length > 0 && (
+                                <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+                                    <h4 className="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2">
+                                        <span className="text-primary-500">⏳</span> Patient History
+                                    </h4>
+                                    <HistoryTimeline history={history} />
+                                </div>
+                            )}
+                        </div>
                     )}
                 </div>
 
-                {/* Panel 2 (Middle): Workspace Form (approx 45%) */}
-                <div className="flex-1 border-r border-slate-200 bg-white overflow-y-auto p-6 lg:p-8">
-                    <form id="consultation-form" onSubmit={handleSubmit} className="max-w-3xl mx-auto space-y-6">
+                {/* Row 3: Split View (Notes & Prescriptions) */}
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 w-full pb-8">
 
-                        <div className="pb-4 border-b border-slate-100 flex items-center gap-2">
-                            <span className="w-8 h-8 rounded-lg bg-primary-50 text-primary-600 flex items-center justify-center text-lg">📝</span>
-                            <h3 className="text-lg font-bold text-slate-800 tracking-tight">Clinical Notes</h3>
-                        </div>
+                    {/* Left Column: Clinical Notes */}
+                    <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 flex flex-col h-full">
+                        <form id="consultation-form" onSubmit={handleSubmit} className="space-y-4 w-full flex-1">
+                            <div className="pb-4 border-b border-slate-100 flex items-center gap-2">
+                                <span className="w-8 h-8 rounded-lg bg-primary-50 text-primary-600 flex items-center justify-center text-lg">📝</span>
+                                <h3 className="text-lg font-bold text-slate-800 tracking-tight">Clinical Notes</h3>
+                            </div>
 
-                        {/* Chief Complaint */}
-                        <div className="space-y-1.5">
-                            <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Chief Complaint</label>
-                            <input
-                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 focus:bg-white transition-all"
-                                placeholder="e.g. Persistent fever for 3 days..."
-                                value={chiefComplaint}
-                                onChange={e => setChiefComplaint(e.target.value)}
-                            />
-                        </div>
-
-                        {/* Diagnosis */}
-                        <div className="space-y-1.5">
-                            <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">
-                                Diagnosis <span className="text-rose-500">*</span>
-                            </label>
-                            <textarea
-                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 focus:bg-white transition-all min-h-[100px] resize-y"
-                                placeholder="Enter primary diagnosis..."
-                                value={diagnosis}
-                                onChange={e => setDiagnosis(e.target.value)}
-                                required
-                            />
-                        </div>
-
-                        {/* Treatment Plan */}
-                        <div className="space-y-1.5">
-                            <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Treatment Plan</label>
-                            <textarea
-                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 focus:bg-white transition-all min-h-[100px] resize-y"
-                                placeholder="e.g. Rest, hydration, follow up in 3 days..."
-                                value={treatmentPlan}
-                                onChange={e => setTreatmentPlan(e.target.value)}
-                            />
-                        </div>
-
-                        {/* Doctor's Private Notes */}
-                        <div className="space-y-1.5">
-                            <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Doctor's Private Notes</label>
-                            <textarea
-                                className="w-full px-4 py-3 bg-amber-50/50 border border-amber-200/60 rounded-xl text-sm font-medium text-slate-800 placeholder:text-amber-700/40 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 focus:bg-amber-50 transition-all min-h-[80px] resize-y"
-                                placeholder="Personal remarks (not visible to patient)..."
-                                value={notes}
-                                onChange={e => setNotes(e.target.value)}
-                            />
-                        </div>
-
-                    </form>
-                </div>
-
-                {/* Panel 3 (Right): Rx & Labs "Cart" (approx 30%) */}
-                <div className="w-[32%] min-w-[320px] bg-slate-50/30 overflow-y-auto p-5 flex flex-col gap-6">
-
-                    {/* Prescriptions Section */}
-                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
-                        <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
-                            <h4 className="text-[13px] font-bold text-slate-800 tracking-tight flex items-center gap-2">
-                                <span className="text-primary-600">💊</span> Prescriptions
-                            </h4>
-                            <span className="text-[10px] font-bold bg-slate-200 text-slate-600 px-2 py-0.5 rounded-md">
-                                {medicines.filter(m => m.name.trim()).length} Items
-                            </span>
-                        </div>
-
-                        <div className="p-4 space-y-3">
-                            {medicines.map((med, i) => (
-                                <div key={i} className="group relative bg-slate-50 border border-slate-200 rounded-xl p-3 transition-colors hover:border-primary-300">
-                                    {/* Action row */}
-                                    <div className="flex items-start gap-2 mb-2">
-                                        <div className="flex-1 relative">
-                                            <input
-                                                className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-sm font-bold text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500/20"
-                                                placeholder="Medicine Name..."
-                                                value={med.name}
-                                                onChange={e => {
-                                                    updateMedicine(i, 'name', e.target.value);
-                                                    setMedicineSuggest({ idx: i, query: e.target.value });
-                                                }}
-                                                onBlur={() => setTimeout(() => setMedicineSuggest({ idx: null, query: '' }), 200)}
-                                            />
-                                            {/* Autocomplete */}
-                                            {medicineSuggest.idx === i && suggestions.length > 0 && (
-                                                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-primary-500 rounded-lg shadow-lg z-50 overflow-hidden">
-                                                    {suggestions.slice(0, 5).map(s => (
-                                                        <div
-                                                            key={s}
-                                                            className="px-3 py-2 text-sm text-slate-700 hover:bg-primary-50 hover:text-primary-700 cursor-pointer font-medium"
-                                                            onMouseDown={() => {
-                                                                updateMedicine(i, 'name', s);
-                                                                setMedicineSuggest({ idx: null, query: '' });
-                                                            }}
-                                                        >
-                                                            {s}
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
-                                        {medicines.length > 1 && (
-                                            <button
-                                                type="button"
-                                                onClick={() => removeMedicine(i)}
-                                                className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:bg-rose-100 hover:text-rose-600 transition-colors shrink-0"
-                                                title="Remove Medicine"
-                                            >
-                                                ✕
-                                            </button>
-                                        )}
-                                    </div>
-
-                                    {/* Dosage Details */}
-                                    <div className="grid grid-cols-3 gap-2">
-                                        <input
-                                            className="px-2 py-1.5 bg-white border border-slate-200 rounded-md text-[12px] font-medium text-slate-700 focus:outline-none focus:border-primary-400 placeholder:text-slate-400"
-                                            placeholder="Dose (e.g. 500mg)"
-                                            value={med.dose}
-                                            onChange={e => updateMedicine(i, 'dose', e.target.value)}
-                                        />
-                                        <input
-                                            className="px-2 py-1.5 bg-white border border-slate-200 rounded-md text-[12px] font-medium text-slate-700 focus:outline-none focus:border-primary-400 placeholder:text-slate-400"
-                                            placeholder="Freq (e.g. 1-0-1)"
-                                            value={med.frequency}
-                                            onChange={e => updateMedicine(i, 'frequency', e.target.value)}
-                                        />
-                                        <input
-                                            className="px-2 py-1.5 bg-white border border-slate-200 rounded-md text-[12px] font-medium text-slate-700 focus:outline-none focus:border-primary-400 placeholder:text-slate-400"
-                                            placeholder="Duration (e.g. 5 Days)"
-                                            value={med.duration}
-                                            onChange={e => updateMedicine(i, 'duration', e.target.value)}
-                                        />
-                                    </div>
+                            <div className="space-y-4 w-full">
+                                {/* Chief Complaint */}
+                                <div className="space-y-1.5 w-full">
+                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Chief Complaint</label>
+                                    <input
+                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 focus:bg-white transition-all"
+                                        placeholder="e.g. Persistent fever for 3 days..."
+                                        value={chiefComplaint}
+                                        onChange={e => setChiefComplaint(e.target.value)}
+                                    />
                                 </div>
-                            ))}
 
-                            <button
-                                type="button"
-                                onClick={addMedicine}
-                                className="w-full py-2.5 border-2 border-dashed border-primary-200 text-primary-600 rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-primary-50 hover:border-primary-300 transition-colors"
-                            >
-                                + Add Medicine
-                            </button>
+                                {/* Diagnosis */}
+                                <div className="space-y-1.5 w-full">
+                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">
+                                        Diagnosis <span className="text-rose-500">*</span>
+                                    </label>
+                                    <textarea
+                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 focus:bg-white transition-all min-h-[100px] resize-y"
+                                        placeholder="Enter primary diagnosis..."
+                                        value={diagnosis}
+                                        onChange={e => setDiagnosis(e.target.value)}
+                                        required
+                                    />
+                                </div>
+
+                                {/* Treatment Plan */}
+                                <div className="space-y-1.5 w-full">
+                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Treatment Plan</label>
+                                    <textarea
+                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 focus:bg-white transition-all min-h-[100px] resize-y"
+                                        placeholder="e.g. Rest, hydration, follow up in 3 days..."
+                                        value={treatmentPlan}
+                                        onChange={e => setTreatmentPlan(e.target.value)}
+                                    />
+                                </div>
+
+                                {/* Doctor's Private Notes */}
+                                <div className="space-y-1.5 w-full">
+                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Doctor's Private Notes</label>
+                                    <textarea
+                                        className="w-full px-4 py-3 bg-amber-50/50 border border-amber-200/60 rounded-xl text-sm font-medium text-slate-800 placeholder:text-amber-700/40 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 focus:bg-amber-50 transition-all min-h-[80px] resize-y"
+                                        placeholder="Personal remarks (not visible to patient)..."
+                                        value={notes}
+                                        onChange={e => setNotes(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    {/* Right Column: Rx & Labs */}
+                    <div className="flex flex-col gap-6 h-full">
+
+                        {/* Prescriptions Section */}
+                        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col flex-1">
+                            <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                                <h4 className="text-[13px] font-bold text-slate-800 tracking-tight flex items-center gap-2">
+                                    <span className="text-primary-600">💊</span> Prescriptions
+                                </h4>
+                                <span className="text-[10px] font-bold bg-slate-200 text-slate-600 px-2 py-0.5 rounded-md">
+                                    {medicines.filter(m => m.name.trim()).length} Items
+                                </span>
+                            </div>
+
+                            <div className="p-4 space-y-4 max-h-[500px] overflow-y-auto">
+                                {medicines.map((med, i) => {
+                                    const err = rxErrors[i] || {};
+                                    const hasErr = Object.keys(err).length > 0;
+                                    return (
+                                        <div key={i} className={`group relative border rounded-xl p-4 transition-colors ${hasErr ? 'bg-rose-50/50 border-rose-300' : 'bg-slate-50 border-slate-200 hover:border-primary-300'}`}>
+                                            {/* Medicine Name row */}
+                                            <div className="flex items-start gap-2 mb-3">
+                                                <div className="flex-1 relative w-full">
+                                                    <input
+                                                        className={`w-full px-3 py-2 bg-white border rounded-lg text-sm font-bold text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 ${err.name ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-primary-500 focus:ring-primary-500/20'}`}
+                                                        placeholder="Medicine Name *"
+                                                        value={med.name}
+                                                        onChange={e => {
+                                                            updateMedicine(i, 'name', e.target.value);
+                                                            setMedicineSuggest({ idx: i, query: e.target.value });
+                                                        }}
+                                                        onBlur={() => setTimeout(() => setMedicineSuggest({ idx: null, query: '' }), 200)}
+                                                    />
+                                                    {err.name && <p className="text-[10px] text-rose-500 font-bold mt-1 ml-1">{err.name}</p>}
+                                                    {/* Autocomplete */}
+                                                    {medicineSuggest.idx === i && suggestions.length > 0 && (
+                                                        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-primary-500 rounded-lg shadow-lg z-50 overflow-hidden">
+                                                            {suggestions.slice(0, 5).map(s => (
+                                                                <div
+                                                                    key={s}
+                                                                    className="px-3 py-2 text-sm text-slate-700 hover:bg-primary-50 hover:text-primary-700 cursor-pointer font-medium"
+                                                                    onMouseDown={() => {
+                                                                        updateMedicine(i, 'name', s);
+                                                                        setMedicineSuggest({ idx: null, query: '' });
+                                                                    }}
+                                                                >
+                                                                    {s}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                {medicines.length > 1 && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => removeMedicine(i)}
+                                                        className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 hover:bg-rose-100 hover:border-rose-200 hover:text-rose-600 transition-colors shrink-0"
+                                                        title="Remove Medicine"
+                                                    >
+                                                        ✕
+                                                    </button>
+                                                )}
+                                            </div>
+
+                                            {/* Dose + Unit + Frequency + Duration (4-col Grid) */}
+                                            <div className="grid grid-cols-4 gap-2 w-full">
+                                                <div>
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        step="any"
+                                                        className={`w-full px-3 py-2 bg-white border rounded-md text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 placeholder:text-slate-400 ${err.dose ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-primary-400 focus:ring-primary-500/20'}`}
+                                                        placeholder="Dose *"
+                                                        value={med.dose}
+                                                        onChange={e => updateMedicine(i, 'dose', e.target.value)}
+                                                    />
+                                                    {err.dose && <p className="text-[9px] text-rose-500 font-bold mt-0.5">{err.dose}</p>}
+                                                </div>
+
+                                                <div>
+                                                    <select
+                                                        className={`w-full px-2 py-2 bg-white border rounded-md text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 appearance-none cursor-pointer ${err.unit ? 'border-rose-400 focus:border-rose-500 text-rose-700 focus:ring-rose-500/20' : 'border-slate-200 focus:border-primary-400 focus:ring-primary-500/20'}`}
+                                                        value={med.unit}
+                                                        onChange={e => updateMedicine(i, 'unit', e.target.value)}
+                                                    >
+                                                        <option value="">Unit *</option>
+                                                        {DOSE_UNITS.map(u => <option key={u} value={u}>{u}</option>)}
+                                                    </select>
+                                                    {err.unit && <p className="text-[9px] text-rose-500 font-bold mt-0.5">{err.unit}</p>}
+                                                </div>
+
+                                                <div>
+                                                    <select
+                                                        className={`w-full px-2 py-2 bg-white border rounded-md text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 appearance-none cursor-pointer ${err.frequency ? 'border-rose-400 focus:border-rose-500 text-rose-700 focus:ring-rose-500/20' : 'border-slate-200 focus:border-primary-400 focus:ring-primary-500/20'}`}
+                                                        value={med.frequency}
+                                                        onChange={e => updateMedicine(i, 'frequency', e.target.value)}
+                                                    >
+                                                        {FREQUENCIES.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
+                                                    </select>
+                                                    {err.frequency && <p className="text-[9px] text-rose-500 font-bold mt-0.5">{err.frequency}</p>}
+                                                </div>
+
+                                                <div>
+                                                    <input
+                                                        className={`w-full px-3 py-2 bg-white border rounded-md text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 placeholder:text-slate-400 ${err.duration ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-200 focus:border-primary-400 focus:ring-primary-500/20'}`}
+                                                        placeholder="e.g. 5 Days *"
+                                                        value={med.duration}
+                                                        onChange={e => updateMedicine(i, 'duration', e.target.value)}
+                                                    />
+                                                    {err.duration && <p className="text-[9px] text-rose-500 font-bold mt-0.5">{err.duration}</p>}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+
+                                <button
+                                    type="button"
+                                    onClick={addMedicine}
+                                    className="w-full py-3 border-2 border-dashed border-primary-200 text-primary-600 rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-primary-50 hover:border-primary-300 transition-colors"
+                                >
+                                    + Add Medicine
+                                </button>
+                            </div>
                         </div>
+
+                        {/* Submit Actions */}
+                        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm mt-auto shrink-0 flex flex-col gap-4 w-full">
+                            <button
+                                type="submit"
+                                form="consultation-form"
+                                disabled={submitting || !formValid}
+                                className={`w-full font-bold py-4 px-4 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 group ${!formValid
+                                    ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
+                                    : 'bg-primary-600 hover:bg-primary-700 text-white hover:shadow-lg'
+                                    }`}
+                            >
+                                {submitting ? (
+                                    <span className="animate-pulse">Saving Record...</span>
+                                ) : !formValid ? (
+                                    <><span className="text-lg">⚠️</span> Complete Required Fields</>
+                                ) : (
+                                    <><span className="text-lg">✅</span> Finalize Consultation</>
+                                )}
+                            </button>
+
+                            {/* Optional Lab Order triggers can go here */}
+                            <LabOrderPanel onSubmit={handleLabOrder} />
+                        </div>
+
                     </div>
-
-                    {/* Submit Actions */}
-                    <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm mt-auto shrink-0 flex flex-col gap-3">
-                        <button
-                            type="submit"
-                            form="consultation-form"
-                            disabled={submitting}
-                            className="w-full bg-primary-600 hover:bg-primary-700 disabled:bg-slate-300 text-white font-bold py-3.5 px-4 rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 group"
-                        >
-                            {submitting ? (
-                                <span className="animate-pulse">Saving Record...</span>
-                            ) : (
-                                <>
-                                    <span className="text-lg">✅</span> Finalize Consultation
-                                </>
-                            )}
-                        </button>
-
-                        {/* Optional Lab Order triggers can go here */}
-                        <LabOrderPanel onSubmit={handleLabOrder} />
-                    </div>
-
                 </div>
             </div>
         </div>

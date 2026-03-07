@@ -2,34 +2,21 @@
  * patientsService.js
  * Patients API Service - React equivalent of Flutter's patient methods in AuthService
  * 
- * Provides CRUD operations for patients with real API integration
+ * Uses the centralized apiService.js instance to ensure consistent
+ * baseURL, token attachment (Authorization + x-auth-token), and error handling.
  */
 
-import axios from 'axios';
+import api from './apiService';
 import { PatientEndpoints, ReportsEndpoints, DoctorEndpoints, IntakeEndpoints } from './apiConstants';
 import logger from './loggerService';
 import { PatientDetails } from '../models/Patients';
 import { fetchPrescriptions, fetchLabReports } from './prescriptionService';
 
 /**
- * Get auth token from localStorage
+ * Get auth token from localStorage (still needed for downloadPatientReport blob request)
  */
 const getAuthToken = () => {
   return localStorage.getItem('auth_token') || localStorage.getItem('x-auth-token') || localStorage.getItem('authToken');
-};
-
-/**
- * Create axios instance with default config
- */
-const createAxiosInstance = () => {
-  const token = getAuthToken();
-  return axios.create({
-    baseURL: process.env.REACT_APP_API_URL || 'https://hms-dev.onrender.com/api',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token && { 'x-auth-token': token })
-    }
-  });
 };
 
 /**
@@ -56,8 +43,7 @@ export const fetchPatients = async (options = {}) => {
 
     logger.apiRequest('GET', url);
 
-    const axiosInstance = createAxiosInstance();
-    const response = await axiosInstance.get(url);
+    const response = await api.get(url);
 
     logger.apiResponse('GET', url, response.status);
 
@@ -92,8 +78,7 @@ export const fetchMyPatients = async () => {
 
     logger.apiRequest('GET', url);
 
-    const axiosInstance = createAxiosInstance();
-    const response = await axiosInstance.get(url);
+    const response = await api.get(url);
 
     logger.apiResponse('GET', url, response.status);
 
@@ -125,8 +110,7 @@ export const fetchPatientById = async (id) => {
   try {
     logger.apiRequest('GET', PatientEndpoints.getById(id));
 
-    const axiosInstance = createAxiosInstance();
-    const response = await axiosInstance.get(PatientEndpoints.getById(id));
+    const response = await api.get(PatientEndpoints.getById(id));
 
     logger.apiResponse('GET', PatientEndpoints.getById(id), response.status);
 
@@ -152,8 +136,7 @@ export const createPatient = async (patientData) => {
   try {
     logger.apiRequest('POST', PatientEndpoints.create, patientData);
 
-    const axiosInstance = createAxiosInstance();
-    const response = await axiosInstance.post(PatientEndpoints.create, patientData);
+    const response = await api.post(PatientEndpoints.create, patientData);
 
     logger.apiResponse('POST', PatientEndpoints.create, response.status);
     logger.success('PATIENTS', 'Patient created successfully');
@@ -175,8 +158,7 @@ export const updatePatient = async (id, patientData) => {
   try {
     logger.apiRequest('PUT', PatientEndpoints.update(id), patientData);
 
-    const axiosInstance = createAxiosInstance();
-    const response = await axiosInstance.put(PatientEndpoints.update(id), patientData);
+    const response = await api.put(PatientEndpoints.update(id), patientData);
 
     logger.apiResponse('PUT', PatientEndpoints.update(id), response.status);
     logger.success('PATIENTS', `Patient ${id} updated successfully`);
@@ -197,8 +179,7 @@ export const deletePatient = async (id) => {
   try {
     logger.apiRequest('DELETE', PatientEndpoints.delete(id));
 
-    const axiosInstance = createAxiosInstance();
-    const response = await axiosInstance.delete(PatientEndpoints.delete(id));
+    const response = await api.delete(PatientEndpoints.delete(id));
 
     logger.apiResponse('DELETE', PatientEndpoints.delete(id), response.status);
     logger.success('PATIENTS', `Patient ${id} deleted successfully`);
@@ -228,11 +209,7 @@ export const downloadPatientReport = async (patientId) => {
       };
     }
 
-    const response = await axios.get(endpoint, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
+    const response = await api.get(endpoint, {
       responseType: 'blob'
     });
 
@@ -290,8 +267,7 @@ export const fetchPatientAppointments = async (patientId) => {
     const url = `/appointments?patientId=${patientId}`;
     logger.apiRequest('GET', url);
 
-    const axiosInstance = createAxiosInstance();
-    const response = await axiosInstance.get(url);
+    const response = await api.get(url);
 
     logger.apiResponse('GET', url, response.status);
 
@@ -345,7 +321,6 @@ export const fetchPatientLabResults = async (patientId) => {
  */
 export const createFollowUp = async (patientId, followUpData) => {
   try {
-    const api = createAxiosInstance();
     const payload = {
       patientId: patientId,
       followUpDate: followUpData.followUpDate,
@@ -388,7 +363,6 @@ const patientsService = {
    */
   saveIntake: async (patientId, intakeData) => {
     try {
-      const api = createAxiosInstance();
       const url = IntakeEndpoints.create(patientId);
       logger.apiRequest('POST', url, intakeData);
       const response = await api.post(url, intakeData);
@@ -407,7 +381,6 @@ const patientsService = {
    */
   fetchIntakes: async (patientId, options = {}) => {
     try {
-      const api = createAxiosInstance();
       const params = new URLSearchParams(options).toString();
       const url = `${IntakeEndpoints.get(patientId)}?${params}`;
 

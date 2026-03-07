@@ -47,15 +47,24 @@ api.interceptors.response.use(
             window.location.href = '/login';
         }
 
+        if (status === 403) {
+            // Forbidden — clear credentials and redirect with message
+            console.warn('🚫 [API] 403 Forbidden — access denied. Clearing session.');
+            localStorage.clear();
+            window.location.href = '/login?reason=access_denied';
+        }
+
         // Normalize the error so callers always get a clean object
         const normalizedError = {
             status: status || 0,
             message:
-                status === 404
-                    ? 'Resource not found (404)'
-                    : status === 500
-                        ? 'Server error. Please try again later.'
-                        : message || 'An unexpected error occurred.',
+                status === 403
+                    ? 'Access Denied. Please log in again.'
+                    : status === 404
+                        ? 'Resource not found (404)'
+                        : status === 500
+                            ? 'Server error. Please try again later.'
+                            : message || 'An unexpected error occurred.',
             raw: error,
         };
 

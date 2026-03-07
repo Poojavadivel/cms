@@ -58,6 +58,22 @@ const DashboardInner = () => {
   };
 
   const todayAppts = appointments.filter(a => isToday(a.startAt || a.date));
+
+  // ─── Distinct KPI Counters ─────────────────────────────────────────────
+  // Total booked = everything scheduled for today (regardless of status)
+  const totalBookedToday = todayAppts.length;
+
+  // Currently waiting = arrived but not yet seen (waiting, checked-in, scheduled, vitals-done)
+  const waitingCount = todayAppts.filter(a => {
+    const st = (a.queueStatus || a.status || '').toLowerCase();
+    return ['waiting', 'scheduled', 'confirmed', 'checked-in', 'vitals-done', 'vitals done', 'emergency'].includes(st);
+  }).length;
+
+  // Completed = consultations finished today
+  const seenCount = todayAppts.filter(a =>
+    (a.status || '').toLowerCase() === 'completed'
+  ).length;
+
   const pendingLabs = appointments.filter(a =>
     (a.followUp?.labTests || []).some(l => l.ordered && !l.completed)
   ).length;
@@ -66,12 +82,41 @@ const DashboardInner = () => {
   ).length;
 
   // Avg wait time (mock — real data would come from a dedicated endpoint)
-  const avgWait = todayAppts.length > 0 ? Math.round(todayAppts.length * 4.5) : 0;
+  const avgWait = waitingCount > 0 ? Math.round(waitingCount * 4.5) : 0;
+
+  // ─── Time Utilities ──────────────────────────────────────────────────────
+  const now = new Date();
+
+  /** Convert an ISO / UTC date string to a localized "hh:mm AM/PM" string */
+  const formatLocalTime = (isoString) => {
+    if (!isoString) return '--:--';
+    try {
+      return new Date(isoString).toLocaleTimeString('en-US', {
+        hour: '2-digit', minute: '2-digit', hour12: true,
+      });
+    } catch { return '--:--'; }
+  };
+
+  /** Returns true if the given status means the patient is actively being seen */
+  const isActiveStatus = (appt) => {
+    const st = (appt.queueStatus || appt.status || '').toLowerCase();
+    return ['emergency', 'vitals-done', 'vitals done', 'checked-in', 'confirmed', 'in-progress'].includes(st);
+  };
 
   // Active patient queue: today's scheduled/confirmed appointments
+  // Filter out completed/cancelled, and also filter out stale past-time
+  // appointments UNLESS they have an active clinical status.
   const statusOrder = { emergency: 0, 'vitals-done': 1, 'checked-in': 2, scheduled: 3 };
   const patientQueue = todayAppts
-    .filter(a => !['completed', 'cancelled'].includes((a.status || '').toLowerCase()))
+    .filter(a => {
+      // Always exclude completed/cancelled
+      if (['completed', 'cancelled'].includes((a.status || '').toLowerCase())) return false;
+      // Keep appointments with active clinical status regardless of time
+      if (isActiveStatus(a)) return true;
+      // For remaining (scheduled/waiting): only keep if appointment time hasn't passed
+      const apptTime = new Date(a.startAt || a.date);
+      return apptTime >= now || (now - apptTime) < 30 * 60 * 1000; // 30-min grace window
+    })
     .sort((a, b) => {
       const ao = statusOrder[a.queueStatus?.toLowerCase()] ?? 3;
       const bo = statusOrder[b.queueStatus?.toLowerCase()] ?? 3;
@@ -87,9 +132,9 @@ const DashboardInner = () => {
     return matchSearch && matchFilter;
   });
 
-  // Greetings
-  const hour = new Date().getHours();
-  const greeting = hour < 12 ? 'Good Morning' : hour < 17 ? 'Good Afternoon' : 'Good Evening';
+  // ─── Greeting (5AM–12PM Morning, 12PM–5PM Afternoon, 5PM–5AM Evening) ──
+  const hour = now.getHours();
+  const greeting = hour >= 5 && hour < 12 ? 'Good Morning' : hour >= 12 && hour < 17 ? 'Good Afternoon' : 'Good Evening';
 
   // ─── Queue badge color ────────────────────────────────────────────────────
   const queueBadge = (appt) => {
@@ -102,28 +147,26 @@ const DashboardInner = () => {
 
   const kpiCards = [
     {
-      label: "Today's Appointments",
-      value: loading ? '—' : todayAppts.length,
+      label: 'Total Booked',
+      value: loading ? '—' : totalBookedToday,
       icon: <MdCalendarToday />,
       color: '#0d9488',
       bg: '#f0fdfa',
       onClick: () => navigate('/doctor/appointments'),
     },
     {
-      label: 'Pending Labs',
-      value: loading ? '—' : pendingLabs,
-      icon: <MdScience />,
+      label: 'Waiting Now',
+      value: loading ? '—' : waitingCount,
+      icon: <MdTimelapse />,
       color: '#d97706',
       bg: '#fffbeb',
-      onClick: () => navigate('/doctor/patients'),
     },
     {
-      label: 'In-Patients (IPD)',
-      value: loading ? '—' : inPatients,
-      icon: <MdBed />,
-      color: '#7c3aed',
-      bg: '#f5f3ff',
-      onClick: () => navigate('/doctor/patients'),
+      label: 'Seen Today',
+      value: loading ? '—' : seenCount,
+      icon: <MdTrendingUp />,
+      color: '#059669',
+      bg: '#ecfdf5',
     },
     {
       label: 'Avg Wait Time',
@@ -148,7 +191,7 @@ const DashboardInner = () => {
           </div>
           <div>
             <h1 className="text-sm font-bold text-slate-800 tracking-tight">
-              {greeting}, <span className="text-primary-700">Dr. {user?.lastName || user?.firstName || 'Doctor'}</span>
+              {greeting}, <span className="text-primary-700">Dr. {user?.firstName || user?.fullName?.split(' ')[0] || 'Doctor'}</span>
             </h1>
             <p className="text-[11px] font-medium text-slate-500 uppercase tracking-widest mt-0.5">
               {new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
@@ -280,7 +323,7 @@ const DashboardInner = () => {
                       <span>•</span>
                       <span className="flex items-center gap-1">
                         <MdTimelapse size={14} />
-                        {new Date(filteredQueue[0].startAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                        {formatLocalTime(filteredQueue[0].startAt)}
                       </span>
                     </div>
 
@@ -303,7 +346,7 @@ const DashboardInner = () => {
                     Active Queue
                   </h3>
                   <span className="bg-primary-100 text-primary-800 text-[11px] font-bold px-2.5 py-1 rounded-lg">
-                    {filteredQueue.length} Wait
+                    {filteredQueue.length} In Queue
                   </span>
                 </div>
 
@@ -313,8 +356,8 @@ const DashboardInner = () => {
                     <button
                       key={f}
                       className={`px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-colors ${filterStatus === f
-                          ? 'bg-slate-800 text-white'
-                          : 'bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700'
+                        ? 'bg-slate-800 text-white'
+                        : 'bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700'
                         }`}
                       onClick={() => setFilterStatus(f)}
                     >
@@ -339,7 +382,7 @@ const DashboardInner = () => {
                       const badge = queueBadge(appt);
                       const isActive = selectedAppointment?._id === appt._id;
                       const name = appt.patientId?.fullName || `${appt.patientId?.firstName || ''} ${appt.patientId?.lastName || ''}`.trim() || appt.patientName || 'Unknown Patient';
-                      const time = appt.startAt ? new Date(appt.startAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '--:--';
+                      const time = formatLocalTime(appt.startAt);
 
                       return (
                         <button
