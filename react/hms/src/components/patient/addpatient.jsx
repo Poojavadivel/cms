@@ -152,7 +152,7 @@ const PremiumInput = ({ label, error, required, children, className = '', icon }
 
 // --- Main Component ---
 
-const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
+const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId, initialData }) => {
     // --- State ---
     const [currentStep, setCurrentStep] = useState(0);
     const [loading, setLoading] = useState(false);
@@ -175,7 +175,7 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
     const [uploading, setUploading] = useState(false);
     const [scannerError, setScannerError] = useState(null);
     const [uploadStartTime, setUploadStartTime] = useState(null);
-    
+
     // Verification Modal State
     const [verificationModalOpen, setVerificationModalOpen] = useState(false);
     const [currentVerificationId, setCurrentVerificationId] = useState(null);
@@ -191,6 +191,19 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
         appointmentDate: '', appointmentTime: '', appointmentReason: '', patientCode: ''
     });
 
+    // Helper for robust date parsing
+    const safeToISODate = (dateInput) => {
+        if (!dateInput) return '';
+        try {
+            const date = new Date(dateInput);
+            if (isNaN(date.getTime())) return '';
+            return date.toISOString().split('T')[0];
+        } catch (e) {
+            console.warn('Failed to parse date:', dateInput, e);
+            return '';
+        }
+    };
+
     // Reset & Load Data
     useEffect(() => {
         if (isOpen) {
@@ -200,63 +213,83 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
             setScannerError(null);
             fetchDoctors();
 
-            if (patientId) {
+            const populateForm = (patient) => {
+                if (!patient) return;
+
+                console.log('🔄 Populating form with patient data:', patient);
+
+                // Extract phone number and country code
+                const fullPhone = patient.phone || '';
+                let extractedCode = '+91';
+                let extractedNumber = '';
+
+                if (fullPhone) {
+                    // Try to extract country code (starts with +)
+                    const match = fullPhone.match(/^(\+\d{1,4})?(\d+)$/);
+                    if (match) {
+                        extractedCode = match[1] || '+91';
+                        extractedNumber = match[2] || '';
+                    } else {
+                        extractedNumber = fullPhone.replace(/\D/g, '');
+                    }
+                }
+
+                setCountryCode(extractedCode);
+                setPhoneNumber(extractedNumber);
+
+                setFormData({
+                    firstName: patient.firstName || (patient.name ? patient.name.split(' ')[0] : ''),
+                    lastName: patient.lastName || (patient.name ? patient.name.split(' ').slice(1).join(' ') : ''),
+                    dateOfBirth: safeToISODate(patient.dateOfBirth),
+                    age: patient.age || '',
+                    gender: patient.gender || '',
+                    bloodGroup: patient.bloodGroup || '',
+                    phone: fullPhone,
+                    email: patient.email || '',
+                    emergencyContactName: patient.emergencyContactName || '',
+                    emergencyContactPhone: patient.emergencyContactPhone || '',
+                    houseNo: patient.houseNo || '',
+                    street: patient.street || '',
+                    town: patient.town || '',
+                    city: patient.city || '',
+                    district: patient.district || '',
+                    state: patient.state || '',
+                    pincode: patient.pincode || '',
+                    country: patient.country || 'India',
+                    lat: patient.lat || '',
+                    lng: patient.lng || '',
+                    assignedDoctor: patient.doctorId || '',
+                    knownConditions: Array.isArray(patient.medicalHistory) ? patient.medicalHistory.join(', ') : (patient.medicalHistory || ''),
+                    allergies: Array.isArray(patient.allergies) ? patient.allergies.join(', ') : (patient.allergies || ''),
+                    height: patient.height || '',
+                    weight: patient.weight || '',
+                    bmi: patient.bmi || '',
+                    bp: patient.bp || '',
+                    pulse: patient.pulse || '',
+                    spo2: patient.oxygen || patient.spo2 || '',
+                    insuranceNumber: patient.insuranceNumber || '',
+                    insuranceProvider: patient.insuranceProvider || '',
+                    insuranceExpiry: safeToISODate(patient.expiryDate || patient.insuranceExpiry),
+                    patientCode: patient.patientCode || ''
+                });
+
+                // Set cities if state is present
+                if (patient.state && INDIAN_STATES[patient.state]) {
+                    setCities(INDIAN_STATES[patient.state]);
+                }
+            };
+
+            if (initialData) {
+                populateForm(initialData);
+            } else if (patientId) {
                 setFetchingData(true);
-                patientsService.fetchPatientById(patientId).then(patient => {
-                    // Extract phone number and country code
-                    const fullPhone = patient.phone || '';
-                    let extractedCode = '+91';
-                    let extractedNumber = '';
-
-                    if (fullPhone) {
-                        // Try to extract country code (starts with +)
-                        const match = fullPhone.match(/^(\+\d{1,4})?(\d+)$/);
-                        if (match) {
-                            extractedCode = match[1] || '+91';
-                            extractedNumber = match[2] || '';
-                        } else {
-                            extractedNumber = fullPhone.replace(/\D/g, '');
-                        }
-                    }
-
-                    setCountryCode(extractedCode);
-                    setPhoneNumber(extractedNumber);
-
-                    setFormData({
-                        firstName: patient.firstName || (patient.name ? patient.name.split(' ')[0] : ''),
-                        lastName: patient.lastName || (patient.name ? patient.name.split(' ').slice(1).join(' ') : ''),
-                        dateOfBirth: patient.dateOfBirth ? new Date(patient.dateOfBirth).toISOString().split('T')[0] : '',
-                        age: patient.age || '',
-                        gender: patient.gender || '', bloodGroup: patient.bloodGroup || '',
-                        phone: fullPhone, email: patient.email || '',
-                        emergencyContactName: patient.emergencyContactName || '', emergencyContactPhone: patient.emergencyContactPhone || '',
-                        houseNo: patient.houseNo || '',
-                        street: patient.street || '',
-                        town: patient.town || '',
-                        city: patient.city || '',
-                        district: patient.district || '',
-                        state: patient.state || '',
-                        pincode: patient.pincode || '',
-                        country: patient.country || 'India',
-                        lat: patient.lat || '',
-                        lng: patient.lng || '',
-                        assignedDoctor: patient.doctorId || '',
-                        knownConditions: Array.isArray(patient.medicalHistory) ? patient.medicalHistory.join(', ') : (patient.medicalHistory || ''),
-                        allergies: Array.isArray(patient.allergies) ? patient.allergies.join(', ') : (patient.allergies || ''),
-                        height: patient.height || '', weight: patient.weight || '',
-                        bmi: patient.bmi || '', bp: patient.bp || '',
-                        pulse: patient.pulse || '', spo2: patient.oxygen || '',
-                        insuranceNumber: patient.insuranceNumber || '',
-                        insuranceProvider: patient.insuranceProvider || '',
-                        insuranceExpiry: patient.expiryDate || '',
-                        patientCode: patient.patientCode || ''
-                    });
-
-                    // Set cities if state is present
-                    if (patient.state && INDIAN_STATES[patient.state]) {
-                        setCities(INDIAN_STATES[patient.state]);
-                    }
-                }).catch(console.error).finally(() => setFetchingData(false));
+                patientsService.fetchPatientById(patientId)
+                    .then(populateForm)
+                    .catch(err => {
+                        console.error('Failed to fetch patient for edit:', err);
+                        // toast.error('Failed to load patient details');
+                    })
+                    .finally(() => setFetchingData(false));
             } else {
                 // Reset for new patient
                 setFormData({
@@ -270,11 +303,11 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                     appointmentDate: '', appointmentTime: '', appointmentReason: '', patientCode: ''
                 });
                 setCities([]);
-                setCountryCode('+91'); // Reset to default
-                setPhoneNumber(''); // Clear phone number
+                setCountryCode('+91');
+                setPhoneNumber('');
             }
         }
-    }, [isOpen, patientId]);
+    }, [isOpen, patientId, initialData]);
 
     // Load Pincodes when district changes (Lazy load comprehensive local database)
     useEffect(() => {
@@ -515,8 +548,8 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                 try {
                     // V2 auto-detects document type - no need to specify!
                     const scannedResult = await scannerService.scanAndExtractMedicalData(
-                        file, 
-                        pid, 
+                        file,
+                        pid,
                         null,  // No document type needed - auto-detected!
                         true   // Use V2 section-level processing
                     );
@@ -531,8 +564,8 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                     }
 
                     setUploadedFiles(prev => [...prev, {
-                        file, 
-                        name: file.name, 
+                        file,
+                        name: file.name,
                         scannedResult,
                         verificationId: scannedResult.verificationId,
                         requiresVerification: scannedResult.verificationRequired || false,
@@ -540,7 +573,7 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                         documentTypes: scannedResult.documentTypes,  // All detected types
                         sectionCount: scannedResult.sectionCount  // Number of sections
                     }]);
-                    
+
                     // Debug log
                     console.log('[UPLOAD] File processed with auto-detection:', {
                         name: file.name,
@@ -1254,17 +1287,17 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                                                                         };
                                                                         return badges[type] || badges['PRESCRIPTION'];
                                                                     };
-                                                                    
+
                                                                     const badge = getDocTypeBadge(file.documentType);
                                                                     const BadgeIcon = badge.icon;
-                                                                    
+
                                                                     return (
                                                                         <div key={`uploaded-file-${idx}-${file.name || 'unnamed'}`} className="flex items-center justify-between bg-white border border-slate-100 p-3 rounded-lg text-sm shadow-sm gap-3">
                                                                             <div className="flex items-center gap-3 flex-1 min-w-0">
                                                                                 {/* Document Type Badge */}
-                                                                                <div 
+                                                                                <div
                                                                                     className="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-semibold whitespace-nowrap"
-                                                                                    style={{ 
+                                                                                    style={{
                                                                                         backgroundColor: badge.bgColor,
                                                                                         color: badge.color
                                                                                     }}
@@ -1272,17 +1305,17 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                                                                                     <BadgeIcon size={14} />
                                                                                     {badge.label}
                                                                                 </div>
-                                                                                
+
                                                                                 {/* File Name */}
                                                                                 <span className="truncate font-bold text-[#0f3e61]">{file.name}</span>
-                                                                                
+
                                                                                 {/* Section Count Badge (if multi-section) */}
                                                                                 {file.sectionCount > 1 && (
                                                                                     <span className="px-2 py-0.5 bg-indigo-100 text-indigo-600 rounded-full text-xs font-bold">
                                                                                         {file.sectionCount} sections
                                                                                     </span>
                                                                                 )}
-                                                                                
+
                                                                                 {/* Processing Version Badge */}
                                                                                 {file.scannedResult?.processingVersion === 'v2-section-level' && (
                                                                                     <span className="px-2 py-0.5 bg-green-100 text-green-600 rounded-full text-xs font-bold">
@@ -1290,7 +1323,7 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                                                                                     </span>
                                                                                 )}
                                                                             </div>
-                                                                            
+
                                                                             <div className="flex items-center gap-2">
                                                                                 {/* Show Verify button for ALL documents with verificationId */}
                                                                                 {file.verificationId && (
@@ -1306,8 +1339,8 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                                                                                         <MdInfo className="text-base" /> Verify Data
                                                                                     </button>
                                                                                 )}
-                                                                                <button 
-                                                                                    onClick={() => removeUploadedFile(idx)} 
+                                                                                <button
+                                                                                    onClick={() => removeUploadedFile(idx)}
                                                                                     className="text-red-400 hover:text-red-600 p-1"
                                                                                     title="Remove file"
                                                                                 >
@@ -1464,7 +1497,7 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
                     </style>
                 </div>
             )}
-            
+
             {/* Data Verification Modal */}
             <DataVerificationModal
                 isOpen={verificationModalOpen}

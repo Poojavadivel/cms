@@ -37,6 +37,12 @@
 
   /* 6. SPACING */
   --space-3: 16px;
+
+  /* 7. TYPOGRAPHY */
+  --ls-body: -0.01em;
+  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  font-family: var(--font-family);
 }
 
 /* Scoped Page Container */
@@ -639,24 +645,37 @@
 }
 
 .modern-table thead th {
-  text-align: left;
   padding: 12px 20px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;
   color: #64748B;
   border-bottom: 1px solid #E2E8F0;
   background: #F8FAFC;
-  /* Slight contrast header */
   position: sticky;
   top: 0;
   z-index: 10;
   letter-spacing: 0.05em;
+  font-family: var(--font-family);
+  text-align: center !important;
+}
+
+/* Specific Header Alignments */
+.modern-table thead th:nth-child(1),
+.modern-table thead th:nth-child(2),
+.modern-table thead th:nth-child(4) {
+  text-align: left !important;
+}
+
+.modern-table thead th:nth-child(3),
+.modern-table thead th:nth-child(5),
+.modern-table thead th:nth-child(6) {
+  text-align: center !important;
 }
 
 .modern-table tbody tr {
-  height: 56px;
-  /* COMPACT ROW HEIGHT (Was 72) */
+  height: 64px;
+  /* Standardized row height (Matching Patients) */
   border-bottom: 1px solid #F1F5F9;
   transition: background 0.1s;
 }
@@ -668,10 +687,24 @@
 .modern-table tbody td {
   padding: 0 20px;
   vertical-align: middle;
-  font-size: 14px;
-  /* Smaller text */
+  font-size: 13px;
+  font-weight: 500;
   color: var(--text-title);
   letter-spacing: var(--ls-body);
+  font-family: var(--font-family);
+  text-align: left;
+  /* Default data align */
+}
+
+/* Specific Data Alignments */
+.cell-date-time,
+.cell-status,
+.cell-actions {
+  text-align: center !important;
+}
+
+.cell-condition {
+  text-align: left !important;
 }
 
 /* Columns */
@@ -739,7 +772,7 @@
 }
 
 .info-group .primary {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--text-title);
   line-height: 1.4;
@@ -747,10 +780,10 @@
 }
 
 .info-group .secondary {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
   color: var(--neutral-gray);
-  letter-spacing: 0;
+  letter-spacing: var(--ls-body);
 }
 
 .text-blue-primary {
@@ -769,10 +802,13 @@
   font-size: 12px;
 }
 
-.cell-condition {
-  font-weight: 500;
-  color: var(--text-body);
-  letter-spacing: var(--ls-body);
+.info-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.cell-date-time .info-group {
+  align-items: center;
 }
 
 .cell-doctor {
@@ -814,8 +850,7 @@
 
 /* Status Chips */
 .status-pill {
-  height: 22px;
-  /* Compact Pill */
+  height: 24px;
   border-radius: 12px;
   padding: 0 10px;
   font-size: 11px;
@@ -824,6 +859,8 @@
   align-items: center;
   justify-content: center;
   transition: all 0.2s ease;
+  letter-spacing: 0.02em;
+  font-family: var(--font-family);
 }
 
 .status-pill.status-editable.clickable {
@@ -842,87 +879,113 @@
 
 .status-pill.confirmed {
   background: rgba(40, 199, 111, 0.12);
-  color: #207DC0;
+  color: #28C76F;
+  border: 1px solid rgba(40, 199, 111, 0.2);
 }
 
 .status-pill.pending {
   background: rgba(244, 180, 0, 0.12);
   color: #F4B400;
+  border: 1px solid rgba(244, 180, 0, 0.2);
 }
 
 .status-pill.cancelled {
-  background: #F3F4F6;
-  color: #6B7280;
+  background: rgba(239, 68, 68, 0.1);
+  color: #EF4444;
+  border: 1px solid rgba(239, 68, 68, 0.15);
 }
 
 /* New status colors */
 .status-pill.scheduled {
-  background: rgba(32, 125, 192, 0.12);
-  /* Blue */
+  background: rgba(32, 125, 192, 0.1);
   color: #207DC0;
+  border: 1px solid rgba(32, 125, 192, 0.2);
 }
 
 .status-pill.rescheduled {
   background: rgba(168, 85, 247, 0.12);
-  /* Purple */
   color: #A855F7;
+  border: 1px solid rgba(168, 85, 247, 0.2);
 }
 
 .status-pill.completed {
-  background: rgba(32, 125, 192, 0.12);
-  /* Green */
-  color: #207DC0;
+  background: rgba(40, 199, 111, 0.1);
+  color: #28C76F;
+  border: 1px solid rgba(40, 199, 111, 0.2);
 }
 
 .status-pill.no-show {
   background: rgba(239, 68, 68, 0.12);
-  /* Red */
   color: #EF4444;
+  border: 1px solid rgba(239, 68, 68, 0.2);
 }
 
-/* Actions */
-.action-buttons-group {
+/* Actions - unique classes to prevent CSS bleed */
+.apt-action-group {
   display: flex;
   gap: 6px;
+  justify-content: center;
+  align-items: center;
 }
 
-.btn-action {
-  width: 28px;
+.apt-btn-action {
   height: 28px;
+  padding: 4px 8px;
   border-radius: 6px;
   border: none;
-  background: transparent;
   cursor: pointer;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  color: var(--text-muted);
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
   transition: all 0.2s;
+  white-space: nowrap;
+  font-family: var(--font-family);
+  line-height: 1;
+  box-sizing: border-box;
+  text-decoration: none;
+  background: transparent;
 }
 
-.btn-action:hover {
-  background: #F1F5F9;
-  color: var(--primary);
+.apt-btn-action svg {
+  width: 14px;
+  height: 14px;
+  min-width: 14px;
+  flex-shrink: 0;
+  display: block;
 }
 
-.btn-action.intake:hover {
-  background: rgba(32, 125, 192, 0.1);
-  color: #207DC0;
+.apt-btn-action span {
+  display: inline-block;
+  line-height: 1;
 }
 
-.btn-action.edit:hover {
-  background: rgba(14, 74, 75, 0.1);
+.apt-btn-action.edit {
+  background: rgba(22, 90, 138, 0.08);
   color: #165a8a;
 }
 
-.btn-action.view:hover {
-  background: rgba(107, 114, 128, 0.1);
-  color: #6B7280;
+.apt-btn-action.edit:hover {
+  background: rgba(22, 90, 138, 0.18);
 }
 
-.btn-action.delete:hover {
-  background: rgba(220, 38, 38, 0.1);
+.apt-btn-action.view {
+  background: rgba(107, 114, 128, 0.08);
+  color: #4B5563;
+}
+
+.apt-btn-action.view:hover {
+  background: rgba(107, 114, 128, 0.18);
+}
+
+.apt-btn-action.delete {
+  background: rgba(220, 38, 38, 0.08);
   color: #DC2626;
+}
+
+.apt-btn-action.delete:hover {
+  background: rgba(220, 38, 38, 0.18);
 }
 
 /* Pagination */

@@ -40,6 +40,12 @@
 
   /* 6. SPACING */
   --space-3: 16px;
+
+  /* 7. TYPOGRAPHY */
+  --ls-body: -0.01em;
+  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  font-family: var(--font-family);
 }
 
 .patients-page.dashboard-container {
@@ -304,9 +310,8 @@
 }
 
 .modern-table thead th {
-  text-align: left;
   padding: 12px 20px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;
   color: #64748B;
@@ -316,10 +321,26 @@
   top: 0;
   z-index: 10;
   letter-spacing: 0.05em;
+  font-family: var(--font-family);
+  text-align: center !important;
+}
+
+/* Specific Header Alignments */
+.patients-page .modern-table thead th:nth-child(1),
+.patients-page .modern-table thead th:nth-child(5),
+.patients-page .modern-table thead th:nth-child(6) {
+  text-align: left !important;
+}
+
+.patients-page .modern-table thead th:nth-child(2),
+.patients-page .modern-table thead th:nth-child(3),
+.patients-page .modern-table thead th:nth-child(4),
+.patients-page .modern-table thead th:nth-child(7) {
+  text-align: center !important;
 }
 
 .modern-table tbody tr {
-  height: 56px;
+  height: 64px;
   border-bottom: 1px solid #F1F5F9;
   transition: background 0.1s;
 }
@@ -331,9 +352,27 @@
 .modern-table tbody td {
   padding: 0 20px;
   vertical-align: middle;
-  font-size: 14px;
+  font-size: 13px;
+  font-weight: 500;
   color: var(--text-title);
   letter-spacing: var(--ls-body);
+  font-family: var(--font-family);
+  text-align: left;
+  /* Default data align */
+}
+
+/* Specific Data Alignments */
+.cell-age,
+.cell-gender,
+.cell-last-visit,
+.cell-actions {
+  text-align: center !important;
+}
+
+.cell-patient,
+.cell-doctor,
+.cell-condition {
+  text-align: left !important;
 }
 
 /* Patient Cell */
@@ -358,7 +397,7 @@
 }
 
 .info-group .primary {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--text-title);
   line-height: 1.4;
@@ -402,13 +441,15 @@
   color: var(--text-title);
 }
 
-/* Actions */
-.action-buttons-group {
+/* Actions - unique classes to prevent CSS bleed */
+.pat-action-group {
   display: flex;
   gap: 6px;
+  justify-content: center;
+  align-items: center;
 }
 
-.btn-action {
+.pat-btn-action {
   width: 28px;
   height: 28px;
   border-radius: 6px;
@@ -419,62 +460,62 @@
   align-items: center;
   justify-content: center;
   transition: all 0.2s;
+  box-sizing: border-box;
 }
 
-/* View - Gray (REMOVED - now billing) */
 /* Billing - Blue */
-.btn-action.billing svg {
+.pat-btn-action.billing svg {
   stroke: #3B82F6;
 }
 
-.btn-action.billing:hover {
+.pat-btn-action.billing:hover {
   background: #EFF6FF;
 }
 
-.btn-action.billing:hover svg {
+.pat-btn-action.billing:hover svg {
   stroke: #2563EB;
 }
 
 /* Edit - Green */
-.btn-action.edit svg {
+.pat-btn-action.edit svg {
   stroke: #207DC0;
 }
 
-.btn-action.edit:hover {
+.pat-btn-action.edit:hover {
   background: #F0FDF4;
 }
 
-.btn-action.edit:hover svg {
+.pat-btn-action.edit:hover svg {
   stroke: #047857;
 }
 
 /* Delete - Red */
-.btn-action.delete svg {
+.pat-btn-action.delete svg {
   stroke: #DC2626;
 }
 
-.btn-action.delete:hover {
+.pat-btn-action.delete:hover {
   background: #FEF2F2;
 }
 
-.btn-action.delete:hover svg {
+.pat-btn-action.delete:hover svg {
   stroke: #B91C1C;
 }
 
 /* Download - Amber */
-.btn-action.download svg {
+.pat-btn-action.download svg {
   stroke: #D97706;
 }
 
-.btn-action.download:hover {
+.pat-btn-action.download:hover {
   background: #FEF3C7;
 }
 
-.btn-action.download:hover svg {
+.pat-btn-action.download:hover svg {
   stroke: #B45309;
 }
 
-.btn-action:disabled {
+.pat-btn-action:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }

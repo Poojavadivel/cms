@@ -14,6 +14,7 @@ const EditPatientModal = ({ patient, isOpen, onClose, onSuccess }) => {
       onClose={onClose}
       onSuccess={onSuccess}
       patientId={patient?.id || patient?.patientId || patient?._id}
+      initialData={patient}
     />
   );
 };

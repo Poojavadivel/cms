@@ -17,6 +17,21 @@ import {
   MdPhone
 } from 'react-icons/md';
 
+// Placeholder patterns to filter out from notes/reason fields
+const PLACEHOLDER_PATTERNS = [
+  /created during registration/i,
+  /auto[- ]?generated/i,
+  /^default$/i,
+  /^n\/?a$/i,
+  /^none$/i,
+  /^-+$/,
+];
+const isPlaceholder = (text) => {
+  if (!text || !text.trim()) return true;
+  return PLACEHOLDER_PATTERNS.some(p => p.test(text.trim()));
+};
+const cleanField = (val) => (val && !isPlaceholder(val)) ? val : '';
+
 const EditAppointmentForm = ({ appointmentId, onClose, onUpdate, onDelete }) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -113,8 +128,13 @@ const EditAppointmentForm = ({ appointmentId, onClose, onUpdate, onDelete }) => 
         doctorName,
         date,
         time,
-        notes: data.notes || '',
-        chiefComplaint: data.chiefComplaint || data.reason || '',
+        notes: cleanField(data.notes),
+        chiefComplaint:
+          data.chiefComplaint ||
+          data.reason ||
+          data.metadata?.chiefComplaint ||
+          data.metadata?.reason ||
+          '',
         status: data.status || 'Scheduled',
         gender,
         patientCode,
@@ -165,7 +185,17 @@ const EditAppointmentForm = ({ appointmentId, onClose, onUpdate, onDelete }) => 
       };
 
       await appointmentsService.updateAppointment(appointmentId, payload);
-      if (onUpdate) onUpdate();
+      // Pass updated fields back to parent for immediate table refresh
+      if (onUpdate) await onUpdate({
+        chiefComplaint: formData.chiefComplaint,
+        reason: formData.chiefComplaint,
+        notes: formData.notes,
+        status: formData.status,
+        doctorId: formData.doctorId,
+        doctorName: formData.doctorName,
+        date: formData.date,
+        time: formData.time,
+      });
       onClose();
     } catch (error) {
       console.error('Failed to update:', error);

@@ -384,7 +384,7 @@ const getDoctorTextColor = (index) => {
   return colors[index % colors.length];
 };
 
-// Format date from API (YYYY-MM-DD) to display format (Oct 24, 2023)
+// Format date from API (YYYY-MM-DD) to display format (26 Mar, 2026)
 const formatDate = (dateStr) => {
   if (!dateStr) return 'Not set';
   try {
@@ -392,17 +392,46 @@ const formatDate = (dateStr) => {
     const ymdRegex = /^\d{4}-\d{2}-\d{2}$/;
     if (ymdRegex.test(dateStr)) {
       const [year, month, day] = dateStr.split('-').map(Number);
-      // Create date object using local components (months are 0-indexed)
       const date = new Date(year, month - 1, day);
-      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      return `${String(day).padStart(2, '0')} ${months[month - 1]}, ${year}`;
     }
 
     // Fallback for other formats
     const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${String(date.getDate()).padStart(2, '0')} ${months[date.getMonth()]}, ${date.getFullYear()}`;
   } catch {
     return dateStr;
   }
+};
+
+// Format time from 24-hour HH:MM to 12-hour hh:mm AM/PM
+const formatTime = (timeStr) => {
+  if (!timeStr || timeStr === 'Not set') return 'Not set';
+  try {
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    const period = hours >= 12 ? 'PM' : 'AM';
+    const h12 = hours % 12 || 12;
+    return `${String(h12).padStart(2, '0')}:${String(minutes).padStart(2, '0')} ${period}`;
+  } catch {
+    return timeStr;
+  }
+};
+
+// Known placeholder / auto-generated text that should NOT be shown as a medical condition
+const PLACEHOLDER_PATTERNS = [
+  /created during registration/i,
+  /auto[- ]?generated/i,
+  /default/i,
+  /^n\/?a$/i,
+  /^none$/i,
+  /^-+$/,
+];
+
+const isPlaceholderText = (text) => {
+  if (!text || !text.trim()) return true;
+  return PLACEHOLDER_PATTERNS.some(pattern => pattern.test(text.trim()));
 };
 
 // Extract condition from patient data (Matched from Patients.jsx with enhancements for deeper nesting)
@@ -449,16 +478,24 @@ const extractCondition = (patient) => {
     return patient.metadata.condition;
   }
 
-  // 5. Notes (as last resort)
-  if (patient.notes && patient.notes.trim()) {
+  // 5. Notes (as last resort) — skip if it's a placeholder
+  if (patient.notes && patient.notes.trim() && !isPlaceholderText(patient.notes)) {
     const notes = patient.notes.trim();
     return notes.length > 30 ? `${notes.substring(0, 30)}...` : notes;
   }
 
-  return 'N/A';
+  return '—';
 };
 
 // Transform API appointment to component format (matching Flutter logic)
+// Normalize doctor name to always use "Dr." prefix consistently
+const normalizeDoctorName = (name) => {
+  if (!name || !name.trim()) return '';
+  // Strip any existing prefix variants (Dr, Dr., dr, doctor, etc.)
+  const stripped = name.trim().replace(/^(Dr\.?|Doctor)\s+/i, '');
+  return `Dr. ${stripped}`;
+};
+
 const transformAppointment = (apt, index) => {
   // Extract doctor field safely (may be String, Map, or null) - EXACTLY like Flutter
   let doctorName = '';
@@ -472,6 +509,8 @@ const transformAppointment = (apt, index) => {
   } else if (typeof apt.doctor === 'string') {
     doctorName = apt.doctor;
   }
+  // Always normalize to "Dr. Name" format
+  if (doctorName) doctorName = normalizeDoctorName(doctorName);
 
   // Extract patient field safely - EXACTLY like Flutter
   let patientIdStr = '';
@@ -552,25 +591,33 @@ const transformAppointment = (apt, index) => {
     }
   }
 
-  // Extract reason/chiefComplaint
+  // Extract reason/chiefComplaint — ONLY from chief complaint/reason fields, NOT clinical notes
+  // Clinical Notes are private observations — they should NOT appear in the Condition column
   let reason = '';
-  if (apt.chiefComplaint) {
-    reason = String(apt.chiefComplaint).trim();
-  } else if (apt.reason) {
-    reason = String(apt.reason).trim();
-  } else if (apt.metadata && apt.metadata.chiefComplaint) {
-    reason = String(apt.metadata.chiefComplaint).trim();
-  } else if (apt.metadata && apt.metadata.reason) {
-    reason = String(apt.metadata.reason).trim();
-  } else if (apt.notes) {
-    reason = String(apt.notes).trim();
+  const candidateReasons = [
+    apt.chiefComplaint,
+    apt.reason,
+    apt.metadata?.chiefComplaint,
+    apt.metadata?.reason,
+  ];
+  for (const val of candidateReasons) {
+    if (val && String(val).trim() && !isPlaceholderText(String(val))) {
+      reason = String(val).trim();
+      break;
+    }
   }
+
+  // Generate a short unique appointment reference from the appointment's own _id
+  const aptIdStr = String(apt._id || apt.id || index);
+  const aptDigits = aptIdStr.replace(/\D/g, '').slice(-5).padStart(5, '0');
+  const appointmentRef = 'PAT-' + aptDigits;
 
   // Store both display ID and actual patient object for lookup
   return {
-    id: String(apt._id || apt.id || index),
+    id: aptIdStr,
+    appointmentRef, // Unique per appointment (not shared across same patient)
     patientName: patientFullName || 'Unknown',
-    patientId: patientCode || patientIdStr || `PT-${index}`, // Display code
+    patientId: patientCode || patientIdStr || `PT-${index}`, // Display code (used for search/filter)
     patientIdObj: apt.patientId, // CRITICAL: Store original patient object with _id
     doctor: doctorName || 'Not Assigned',
     doctorGender: doctorGender, // Add doctor gender for icon display
@@ -584,7 +631,7 @@ const transformAppointment = (apt, index) => {
     service: apt.appointmentType || reason || 'Consultation',
     status: apt.status ? (apt.status.charAt(0).toUpperCase() + apt.status.slice(1).toLowerCase()) : 'Scheduled',
     gender: gender || 'Male',
-    condition: reason || extractCondition(apt.patientId) // Prioritize appointment reason over general condition
+    condition: reason || '—' // Only chief complaint/reason — never clinical notes
   };
 };
 
@@ -603,6 +650,10 @@ const Appointments = () => {
   const [rowsPerPage] = useState(8);
   const [isLoading, setIsLoading] = useState(true);
   const [notification, setNotification] = useState(null);
+
+  // Persistent map of { appointmentId: conditionString } across multiple edits
+  // so that editing patient A then patient B doesn't revert A's condition
+  const conditionOverridesRef = useRef({});
 
   const showNotification = (message, type = 'success') => {
     setNotification({ message, type });
@@ -705,6 +756,7 @@ const Appointments = () => {
       result = result.filter(a =>
         a.patientName.toLowerCase().includes(q) ||
         a.patientId.toLowerCase().includes(q) ||
+        (a.appointmentRef && a.appointmentRef.toLowerCase().includes(q)) ||
         a.doctor.toLowerCase().includes(q) ||
         a.status.toLowerCase().includes(q)
       );
@@ -722,18 +774,36 @@ const Appointments = () => {
   const totalPages = Math.ceil(filteredAppointments.length / rowsPerPage);
 
   // Refresh appointments after changes
+  // Uses conditionOverridesRef to protect ALL previously-edited conditions from being overwritten
   const refreshAppointments = async () => {
     try {
       setIsLoading(true);
       const data = await appointmentsService.fetchAppointments();
       const transformed = data.map((apt, index) => transformAppointment(apt, index));
-      setAllAppointments(transformed);
+
+      // Merge preserved conditions: if fresh transform gives '—' or empty
+      // but we have a known real value from a recent edit, keep it
+      const overrides = conditionOverridesRef.current;
+      const merged = transformed.map(apt => {
+        const preserved = overrides[apt.id];
+        if (preserved && (!apt.condition || apt.condition === '—')) {
+          return { ...apt, condition: preserved };
+        }
+        // If the API now returns a real condition, remove the override
+        if (overrides[apt.id] && apt.condition && apt.condition !== '—') {
+          delete overrides[apt.id];
+        }
+        return apt;
+      });
+
+      setAllAppointments(merged);
     } catch (error) {
       console.error('Failed to refresh appointments:', error);
     } finally {
       setIsLoading(false);
     }
   };
+
 
   // Handle view appointment
   const handleView = (appointment) => {
@@ -747,9 +817,60 @@ const Appointments = () => {
     setShowEditModal(true);
   };
 
-  // Handle update from EditAppointmentForm
-  const handleUpdateSuccess = async () => {
-    await refreshAppointments();
+  // Handle update from EditAppointmentForm — receives changed fields for instant optimistic update
+  const handleUpdateSuccess = async (updatedFields = {}) => {
+    // Optimistic update: immediately patch the edited appointment in local state
+    // so the table reflects changes (condition, status, doctor, date, time) without delay
+    if (selectedAppointmentId && updatedFields && Object.keys(updatedFields).length > 0) {
+      setAllAppointments(prev => prev.map(apt => {
+        if (apt.id !== selectedAppointmentId) return apt;
+
+        // Build the new condition from the updated chiefComplaint/reason, filtering placeholders
+        const newCondition = (
+          updatedFields.chiefComplaint && !isPlaceholderText(updatedFields.chiefComplaint)
+            ? updatedFields.chiefComplaint
+            : updatedFields.reason && !isPlaceholderText(updatedFields.reason)
+              ? updatedFields.reason
+              : apt.condition // keep old value if nothing real was provided
+        );
+
+        // Normalize doctor name if it changed
+        const newDoctor = updatedFields.doctorName
+          ? normalizeDoctorName(updatedFields.doctorName)
+          : apt.doctor;
+
+        return {
+          ...apt,
+          condition: newCondition,
+          status: updatedFields.status
+            ? (updatedFields.status.charAt(0).toUpperCase() + updatedFields.status.slice(1).toLowerCase())
+            : apt.status,
+          doctor: newDoctor,
+          date: updatedFields.date ? formatDate(updatedFields.date) : apt.date,
+          rawDate: updatedFields.date || apt.rawDate,
+          time: updatedFields.time || apt.time,
+        };
+      }));
+    }
+
+    showNotification('Appointment updated successfully', 'success');
+
+    // Accumulate this edit's condition into the persistent overrides ref
+    // so it survives future refreshes (even from other appointment edits)
+    if (selectedAppointmentId) {
+      const realCondition =
+        (updatedFields.chiefComplaint && !isPlaceholderText(updatedFields.chiefComplaint)
+          ? updatedFields.chiefComplaint
+          : updatedFields.reason && !isPlaceholderText(updatedFields.reason)
+            ? updatedFields.reason
+            : null);
+      if (realCondition) {
+        conditionOverridesRef.current[selectedAppointmentId] = realCondition;
+      }
+    }
+
+    // Background refresh — conditionOverridesRef protects ALL previously-edited conditions
+    refreshAppointments();
   };
 
   const handleDeleteSuccess = async () => {
@@ -980,12 +1101,12 @@ const Appointments = () => {
           <table className="modern-table">
             <thead>
               <tr>
-                <th style={{ width: '25%' }}>Patient</th>
+                <th style={{ width: '22%' }}>Patient</th>
                 <th style={{ width: '18%' }}>Doctor</th>
-                <th style={{ width: '18%' }}>Date & Time</th>
-                <th style={{ width: '15%' }}>Condition</th>
+                <th style={{ width: '16%' }}>Date & Time</th>
+                <th style={{ width: '16%' }}>Condition</th>
                 <th style={{ width: '12%' }}>Status</th>
-                <th style={{ width: '12%' }}>Actions</th>
+                <th style={{ width: '16%' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -1033,7 +1154,7 @@ const Appointments = () => {
                         </div>
                         <div className="info-group">
                           <span className="primary font-semibold">{apt.patientName}</span>
-                          <span className="secondary opacity-60 text-xs">{apt.patientId}</span>
+                          <span className="secondary opacity-60 text-xs" title={`Patient: ${apt.patientId}`}>{apt.appointmentRef}</span>
                         </div>
                       </div>
                     </td>
@@ -1048,16 +1169,18 @@ const Appointments = () => {
                         />
                         <div className="info-group">
                           <span className="primary font-semibold">{apt.doctor}</span>
-                          <span className="secondary opacity-60 text-xs text-blue-primary">(MD)</span>
+                          {apt.doctor !== 'Not Assigned' && (
+                            <span className="secondary opacity-60 text-xs text-blue-primary">(MD)</span>
+                          )}
                         </div>
                       </div>
                     </td>
 
                     {/* DATE & TIME - Split View */}
-                    <td>
+                    <td className="cell-date-time">
                       <div className="info-group">
                         <span className="primary font-semibold">{apt.date}</span>
-                        <span className="secondary opacity-60 text-xs">@{apt.time}</span>
+                        <span className="secondary opacity-60 text-xs">{formatTime(apt.time)}</span>
                       </div>
                     </td>
 
@@ -1065,7 +1188,7 @@ const Appointments = () => {
                     <td className="cell-condition">{apt.condition}</td>
 
                     {/* STATUS */}
-                    <td>
+                    <td className="cell-status">
                       <span
                         className={`status-pill ${apt.status.toLowerCase()} status-editable clickable`}
                         onClick={() => handleStatusToggle(apt)}
@@ -1076,16 +1199,16 @@ const Appointments = () => {
                     </td>
 
                     {/* ACTIONS */}
-                    <td>
-                      <div className="action-buttons-group">
-                        <button className="btn-action edit" title="Edit" onClick={() => handleEdit(apt)}>
-                          <Icons.Edit />
+                    <td className="cell-actions">
+                      <div className="apt-action-group">
+                        <button className="apt-btn-action edit" title="Edit" onClick={() => handleEdit(apt)}>
+                          <Icons.Edit /><span>Edit</span>
                         </button>
-                        <button className="btn-action view" title="View" onClick={() => handleView(apt)}>
-                          <Icons.Eye />
+                        <button className="apt-btn-action view" title="View" onClick={() => handleView(apt)}>
+                          <Icons.Eye /><span>View</span>
                         </button>
-                        <button className="btn-action delete" title="Delete" onClick={() => handleDelete(apt)}>
-                          <Icons.Delete />
+                        <button className="apt-btn-action delete" title="Delete" onClick={() => handleDelete(apt)}>
+                          <Icons.Delete /><span>Delete</span>
                         </button>
                       </div>
                     </td>

@@ -957,7 +957,7 @@ const Patients = () => {
                 return (
                   <tr key={patient.id}>
                     {/* PATIENT COLUMN */}
-                    <td>
+                    <td className="cell-patient">
                       <div className="cell-patient">
                         <img
                           src={avatarSrc}
@@ -965,7 +965,7 @@ const Patients = () => {
                           className="patient-avatar"
                         />
                         <div className="info-group">
-                          <span 
+                          <span
                             className="primary font-semibold"
                             style={{ cursor: 'pointer', color: '#207DC0' }}
                             onClick={() => handleView(patient)}
@@ -981,18 +981,18 @@ const Patients = () => {
                     </td>
 
                     {/* AGE */}
-                    <td style={{ fontWeight: 500, color: '#334155' }}>{patient.age}</td>
+                    <td className="cell-age">{patient.age}</td>
 
                     {/* GENDER */}
-                    <td style={{ fontWeight: 500, color: '#334155' }}>{patient.gender}</td>
+                    <td className="cell-gender">{patient.gender}</td>
 
                     {/* LAST VISIT */}
-                    <td>
+                    <td className="cell-last-visit">
                       <span className="primary">{formatLastVisit(patient.lastVisit)}</span>
                     </td>
 
                     {/* DOCTOR - Match Appointments page style */}
-                    <td>
+                    <td className="cell-doctor">
                       <div className="cell-doctor">
                         <img
                           src={patient.doctorGender === 'Female' ? doctorFemaleIcon : doctorMaleIcon}
@@ -1010,13 +1010,13 @@ const Patients = () => {
                     </td>
 
                     {/* CONDITION */}
-                    <td style={{ fontWeight: 500, color: '#334155' }}>{patient.condition}</td>
+                    <td className="cell-condition">{patient.condition}</td>
 
                     {/* ACTIONS */}
-                    <td>
-                      <div className="action-buttons-group">
+                    <td className="cell-actions">
+                      <div className="pat-action-group">
                         <button
-                          className="btn-action billing"
+                          className="pat-btn-action billing"
                           title="View billing"
                           aria-label={`View billing for ${patient.name}`}
                           onClick={() => handleBilling(patient)}
@@ -1025,7 +1025,7 @@ const Patients = () => {
                           {loadingPatientId === patient.id ? '...' : <Icons.Billing />}
                         </button>
                         <button
-                          className="btn-action edit"
+                          className="pat-btn-action edit"
                           title="Edit patient"
                           aria-label={`Edit ${patient.name}`}
                           onClick={() => handleEdit(patient)}
@@ -1034,7 +1034,7 @@ const Patients = () => {
                           <Icons.Edit />
                         </button>
                         <button
-                          className="btn-action delete"
+                          className="pat-btn-action delete"
                           title="Delete patient"
                           aria-label={`Delete ${patient.name}`}
                           onClick={() => handleDelete(patient)}
@@ -1043,7 +1043,7 @@ const Patients = () => {
                           <Icons.Delete />
                         </button>
                         <button
-                          className="btn-action download"
+                          className="pat-btn-action download"
                           title="Download report"
                           aria-label={`Download report for ${patient.name}`}
                           onClick={() => handleDownload(patient)}

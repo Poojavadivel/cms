@@ -1,5 +1,5 @@
 const express = require('express');
-const { Appointment, Patient } = require('../Models'); // Mongoose models
+const { Appointment, Patient, User } = require('../Models'); // Mongoose models
 const auth = require('../Middleware/Auth'); // loads fresh user + role
 const router = express.Router();
 
@@ -43,12 +43,19 @@ function normalizeAppointments(arr) {
     const fullName = `${patientFirstName} ${patientLastName}`.trim();
     const patientName = fullName || a.patientName || 'Unknown Patient';
 
+    // Surface chiefComplaint/reason from metadata as top-level fields
+    // so the frontend can always find them without digging into metadata
+    const chiefComplaint = a.metadata?.chiefComplaint || '';
+    const reason = a.metadata?.reason || '';
+
     const normalized = {
       ...a,
       doctor: extractDoctorName(a.doctorId),
       patientName: patientName,
       patientFullName: fullName,
-      patientCode: a.patientId?.patientCode || a.patientId?.metadata?.patientCode || 'N/A'
+      patientCode: a.patientId?.patientCode || a.patientId?.metadata?.patientCode || 'N/A',
+      chiefComplaint,
+      reason,
     };
 
     // Calculate age from patient dateOfBirth if available
@@ -100,11 +107,39 @@ router.post('/', auth, async (req, res) => {
     }
 
     // --- Determine doctorId ---
+    // Admin/superadmin can explicitly choose the doctor from the UI.
+    // If no doctorId is passed, fallback to patient's assigned doctor for backward compatibility.
     let doctorId = null;
     if (role === 'doctor') {
       doctorId = userId;
     } else if (role === 'admin' || role === 'superadmin') {
-      doctorId = patient.doctorId?._id || userId;
+      const requestedDoctorId = data.doctorId || null;
+
+      if (requestedDoctorId) {
+        const selectedDoctor = await User.findById(requestedDoctorId)
+          .select('_id role firstName lastName email')
+          .lean();
+
+        if (!selectedDoctor) {
+          return res.status(400).json({
+            success: false,
+            message: 'Selected doctor not found',
+            errorCode: 1010,
+          });
+        }
+
+        if (selectedDoctor.role !== 'doctor') {
+          return res.status(400).json({
+            success: false,
+            message: 'Selected user is not a doctor',
+            errorCode: 1011,
+          });
+        }
+
+        doctorId = selectedDoctor._id;
+      } else {
+        doctorId = patient.doctorId?._id || userId;
+      }
     } else {
       doctorId = userId;
     }
@@ -193,15 +228,11 @@ router.get('/', auth, async (req, res) => {
       query.isDeleted = { $ne: true };
     }
 
-    console.log("🔎 Appointment query:", query);
-
     const appointments = await Appointment.find(query)
       .populate('patientId', 'firstName lastName phone email bloodGroup metadata dateOfBirth gender patientCode')
       .populate('doctorId', 'firstName lastName email')
-      .sort({ startAt: -1 }) // Sort by date, newest first
+      .sort({ startAt: -1 })
       .lean();
-
-    console.log("✅ Found appointments:", appointments.length);
 
     const normalized = normalizeAppointments(appointments);
 
@@ -222,7 +253,7 @@ router.get('/deleted/list', auth, async (req, res) => {
     const role = req.user.role;
 
     let query = { isDeleted: true };
-    
+
     // Doctors can only see their own deleted appointments
     if (role === 'doctor') {
       query.doctorId = userId;
@@ -360,7 +391,7 @@ router.delete('/:id', auth, async (req, res) => {
     appointment.deletedAt = new Date();
     appointment.deletedBy = userId;
     await appointment.save();
-    
+
     console.log("✅ Appointment soft deleted:", req.params.id);
 
     res.status(200).json({ success: true, message: 'Appointment deleted successfully' });
@@ -403,17 +434,28 @@ router.put('/:id', auth, async (req, res) => {
       metadata: data.metadata ?? appointment.metadata,
     };
 
+    // Keep metadata as the source of truth for chief complaint/reason.
+    // The Appointment schema does not define top-level `reason` / `chiefComplaint`.
+    const hasReasonField = Object.prototype.hasOwnProperty.call(data, 'reason');
+    const hasChiefComplaintField = Object.prototype.hasOwnProperty.call(data, 'chiefComplaint');
+    if (hasReasonField || hasChiefComplaintField) {
+      updateObj.metadata = {
+        ...(appointment.metadata || {}),
+        ...(data.metadata || {}),
+      };
+
+      if (hasReasonField) {
+        updateObj.metadata.reason = data.reason ?? '';
+      }
+      if (hasChiefComplaintField) {
+        updateObj.metadata.chiefComplaint = data.chiefComplaint ?? '';
+      }
+    }
+
     // Update simple fields for editing
     if (data.date && data.time) {
       updateObj.startAt = new Date(`${data.date}T${data.time}`);
     }
-    if (data.reason) {
-      updateObj.reason = data.reason;
-    }
-    if (data.chiefComplaint) {
-      updateObj.chiefComplaint = data.chiefComplaint;
-    }
-
     // Handle follow-up data from intake form
     if (data.followUp && typeof data.followUp === 'object') {
       updateObj.followUp = {
