@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import ChatbotWidget from './ChatbotWidget-Flutter';
+import ChatbotWidget from './ChatbotWidget';
 import './ChatbotFloatingButton.css';
 
 const ChatbotFloatingButton = ({ userRole = 'doctor' }) => {
