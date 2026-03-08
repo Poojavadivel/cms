@@ -13,21 +13,24 @@
 import React, { useState, useEffect } from 'react';
 import { MdClose, MdSave, MdEdit, MdMonitorHeart, MdNote, MdMedication, MdScience, MdEventNote, MdFavorite } from 'react-icons/md';
 import PatientProfileHeaderCard from '../doctor/PatientProfileHeaderCard';
-import SectionCard from './SectionCard';
-import PharmacyTable from './PharmacyTable';
-import PathologyTable from './PathologyTable';
 import './AppointmentIntakeModal.css';
+
+// Lazy load heavy form components and tables
+const SectionCard = React.lazy(() => import('./SectionCard'));
+const PharmacyTable = React.lazy(() => import('./PharmacyTable'));
+const PathologyTable = React.lazy(() => import('./PathologyTable'));
 import appointmentsService from '../../services/appointmentsService';
 import patientsService from '../../services/patientsService';
 import pharmacyService from '../../services/pharmacyService';
 import pathologyService from '../../services/pathologyService';
 import { PatientDetails } from '../../models/Patients';
 import { calculateBMI, VitalsSchema } from '../../utils/vitalsHelpers';
+import useSWR from 'swr';
+import { Skeleton, SkeletonCard } from '../common/SkeletonLoaders';
 
 const AppointmentIntakeModal = ({ isOpen, onClose, appointmentId, onSuccess }) => {
   const [appointment, setAppointment] = useState(null);
   const [patient, setPatient] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
   const [successNotification, setSuccessNotification] = useState(null);
@@ -54,13 +57,6 @@ const AppointmentIntakeModal = ({ isOpen, onClose, appointmentId, onSuccess }) =
   // eslint-disable-next-line no-unused-vars
   const [followUpData, setFollowUpData] = useState({});
 
-  useEffect(() => {
-    if (isOpen && appointmentId) {
-      fetchAppointment();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, appointmentId]);
-
   // Auto-calculate BMI using clinical helper
   useEffect(() => {
     if (height && weight) {
@@ -70,121 +66,117 @@ const AppointmentIntakeModal = ({ isOpen, onClose, appointmentId, onSuccess }) =
     }
   }, [height, weight, patient, appointment]);
 
-  const fetchAppointment = async () => {
-    setIsLoading(true);
-    setError('');
-    try {
-      const data = await appointmentsService.fetchAppointmentById(appointmentId);
-      setAppointment(data);
+  // SWR Fetcher for optimized data loading
+  const fetchIntakeData = async (id) => {
+    const data = await appointmentsService.fetchAppointmentById(id);
 
-      // Extract patient ID and fetch patient details
-      let patientId = null;
-      if (typeof data.patientId === 'object' && data.patientId?._id) {
-        patientId = data.patientId._id;
-      } else if (typeof data.patientId === 'string') {
-        patientId = data.patientId;
-      }
-
-      if (patientId) {
-        try {
-          const patientData = await patientsService.fetchPatientById(patientId);
-          setPatient(patientData);
-
-          // Prefill vitals from patient data (fallback)
-          if (patientData.height) setHeight(patientData.height);
-          if (patientData.weight) setWeight(patientData.weight);
-          if (patientData.bmi) setBmi(patientData.bmi);
-          if (patientData.oxygen) setSpo2(patientData.oxygen);
-
-          // Fetch existing intake for this appointment
-          const intakes = await patientsService.fetchIntakes(patientId, { limit: 100 });
-          // Find intake for this appointment
-          const appointmentIntake = intakes.find(i => String(i.appointmentId) === String(appointmentId));
-
-          if (appointmentIntake) {
-            console.log('✅ Found existing intake for appointment:', appointmentIntake._id);
-
-            // Override Vitals from Intake
-            if (appointmentIntake.triage && appointmentIntake.triage.vitals) {
-              const v = appointmentIntake.triage.vitals;
-              if (v.heightCm) setHeight(v.heightCm);
-              if (v.weightKg) setWeight(v.weightKg);
-              if (v.bmi) setBmi(v.bmi);
-              if (v.spo2) setSpo2(v.spo2);
-            }
-
-            // Load Notes
-            if (appointmentIntake.notes) setCurrentNotes(appointmentIntake.notes);
-
-            // Load Pharmacy Items
-            if (appointmentIntake.meta && appointmentIntake.meta.pharmacyItems && Array.isArray(appointmentIntake.meta.pharmacyItems)) {
-              const loadedPharmacyRows = await Promise.all(appointmentIntake.meta.pharmacyItems.map(async (item) => {
-                // Fetch medicine details to check current stock
-                let stock = 0;
-                if (item.medicineId) {
-                  try {
-                    const med = await pharmacyService.fetchMedicineById(item.medicineId);
-                    stock = med.availableQty ?? med.stock ?? 0;
-                  } catch (e) { console.warn('Failed to fetch stock for', item.name); }
-                }
-
-                return {
-                  medicineId: item.medicineId || '',
-                  Medicine: item.name || '',
-                  Dosage: item.dosage || '',
-                  Frequency: item.frequency || '',
-                  duration: item.duration || '',
-                  quantity: item.quantity || 1,
-                  price: item.unitPrice || 0,
-                  total: item.lineTotal || 0,
-                  Notes: item.notes || '',
-                  availableStock: stock
-                };
-
-              }));
-              setPharmacyRows(loadedPharmacyRows);
-            }
-
-            // Load Pathology Items
-            if (appointmentIntake.meta && appointmentIntake.meta.pathologyItems && Array.isArray(appointmentIntake.meta.pathologyItems)) {
-              setPathologyRows(appointmentIntake.meta.pathologyItems.map(item => ({
-                'Test Name': item.testName || '',
-                Category: item.category || '',
-                Priority: item.priority || 'Normal',
-                Notes: item.notes || ''
-              })));
-            }
-
-          }
-
-        } catch (err) {
-          console.error('Failed to fetch patient/intake details:', err);
-        }
-      }
-
-      // Prefill form data from appointment (if no intake found or to verify)
-      if (data.vitals) {
-        if (data.vitals.heightCm || data.vitals.height_cm) {
-          setHeight(data.vitals.heightCm || data.vitals.height_cm);
-        }
-        if (data.vitals.weightKg || data.vitals.weight_kg) {
-          setWeight(data.vitals.weightKg || data.vitals.weight_kg);
-        }
-        if (data.vitals.bmi) setBmi(data.vitals.bmi);
-        if (data.vitals.spo2) setSpo2(data.vitals.spo2);
-        if (data.vitals.bp) setBp(data.vitals.bp);
-      }
-
-      // If we haven't set notes from intake, set from appointment
-      if (!currentNotes && (data.currentNotes || data.notes)) {
-        setCurrentNotes(data.currentNotes || data.notes || '');
-      }
-    } catch (err) {
-      setError(err.message || 'Failed to load appointment');
-    } finally {
-      setIsLoading(false);
+    let patientId = null;
+    if (typeof data.patientId === 'object' && data.patientId?._id) {
+      patientId = data.patientId._id;
+    } else if (typeof data.patientId === 'string') {
+      patientId = data.patientId;
     }
+
+    let patientData = null;
+    let appointmentIntake = null;
+    let loadedPharmacyRows = [];
+    let loadedPathologyRows = [];
+
+    if (patientId) {
+      try {
+        patientData = await patientsService.fetchPatientById(patientId);
+
+        // Use a limit of 5 to avoid heavy payloads just for checking the current appointment
+        const intakes = await patientsService.fetchIntakes(patientId, { limit: 5 });
+        appointmentIntake = intakes.find(i => String(i.appointmentId) === String(id));
+
+        if (appointmentIntake) {
+          if (appointmentIntake.meta?.pharmacyItems && Array.isArray(appointmentIntake.meta.pharmacyItems)) {
+            loadedPharmacyRows = await Promise.all(appointmentIntake.meta.pharmacyItems.map(async (item) => {
+              let stock = 0;
+              if (item.medicineId) {
+                try {
+                  const med = await pharmacyService.fetchMedicineById(item.medicineId);
+                  stock = med.availableQty ?? med.stock ?? 0;
+                } catch (e) { }
+              }
+              return {
+                medicineId: item.medicineId || '',
+                Medicine: item.name || '',
+                Dosage: item.dosage || '',
+                Frequency: item.frequency || '',
+                duration: item.duration || '',
+                quantity: item.quantity || 1,
+                price: item.unitPrice || 0,
+                total: item.lineTotal || 0,
+                Notes: item.notes || '',
+                availableStock: stock
+              };
+            }));
+          }
+          if (appointmentIntake.meta?.pathologyItems && Array.isArray(appointmentIntake.meta.pathologyItems)) {
+            loadedPathologyRows = appointmentIntake.meta.pathologyItems.map(item => ({
+              'Test Name': item.testName || '',
+              Category: item.category || '',
+              Priority: item.priority || 'Normal',
+              Notes: item.notes || ''
+            }));
+          }
+        }
+      } catch (err) {
+        console.warn('Failed optional patient fetch:', err);
+      }
+    }
+
+    return { data, patientData, appointmentIntake, loadedPharmacyRows, loadedPathologyRows };
   };
+
+  const { isLoading, error: swrError } = useSWR(
+    isOpen && appointmentId ? `intake-${appointmentId}` : null,
+    () => fetchIntakeData(appointmentId),
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 60000, // 1 minute
+      onSuccess: ({ data, patientData, appointmentIntake, loadedPharmacyRows, loadedPathologyRows }) => {
+        setAppointment(data);
+        if (patientData) setPatient(patientData);
+
+        // Prefill vitals
+        if (patientData) {
+          if (patientData.height && !height) setHeight(patientData.height);
+          if (patientData.weight && !weight) setWeight(patientData.weight);
+          if (patientData.bmi && !bmi) setBmi(patientData.bmi);
+          if (patientData.oxygen && !spo2) setSpo2(patientData.oxygen);
+        }
+
+        if (appointmentIntake) {
+          if (appointmentIntake.triage?.vitals) {
+            const v = appointmentIntake.triage.vitals;
+            if (v.heightCm) setHeight(v.heightCm);
+            if (v.weightKg) setWeight(v.weightKg);
+            if (v.bmi) setBmi(v.bmi);
+            if (v.spo2) setSpo2(v.spo2);
+          }
+          if (appointmentIntake.notes) setCurrentNotes(appointmentIntake.notes);
+          if (loadedPharmacyRows.length > 0) setPharmacyRows(loadedPharmacyRows);
+          if (loadedPathologyRows.length > 0) setPathologyRows(loadedPathologyRows);
+        } else if (data.vitals) {
+          if (data.vitals.heightCm || data.vitals.height_cm) setHeight(data.vitals.heightCm || data.vitals.height_cm);
+          if (data.vitals.weightKg || data.vitals.weight_kg) setWeight(data.vitals.weightKg || data.vitals.weight_kg);
+          if (data.vitals.bmi) setBmi(data.vitals.bmi);
+          if (data.vitals.spo2) setSpo2(data.vitals.spo2);
+          if (data.vitals.bp) setBp(data.vitals.bp);
+        }
+
+        if (!currentNotes && (data.currentNotes || data.notes)) {
+          setCurrentNotes(data.currentNotes || data.notes || '');
+        }
+      },
+      onError: (err) => {
+        setError(err.message || 'Failed to load appointment');
+      }
+    }
+  );
 
   const handleSave = async () => {
     if (isSaving) return;
@@ -474,22 +466,30 @@ const AppointmentIntakeModal = ({ isOpen, onClose, appointmentId, onSuccess }) =
 
         {/* Dialog Content */}
         <div className="intake-modal-content-wrapper">
-          {isLoading ? (
-            <div className="intake-modal-loading">
-              <div className="spinner"></div>
-              <p>Loading appointment...</p>
-            </div>
-          ) : error && !appointment ? (
+          {error && !isLoading && !appointment ? (
             <div className="intake-modal-error">
-              <p>{error}</p>
+              <p>{error || swrError?.message}</p>
               <button onClick={onClose} className="btn-error-close">Close</button>
             </div>
-          ) : appointment ? (
+          ) : (
             <>
               {/* Scrollable Content */}
               <div className="intake-modal-scroll-area">
                 {/* Patient Profile Header Card */}
-                {patientForHeader && (
+                {isLoading && !patientForHeader ? (
+                  <div className="intake-patient-header mb-4">
+                    <SkeletonCard>
+                      <div className="flex items-center gap-4">
+                        <Skeleton variant="circular" width="60px" height="60px" />
+                        <div className="flex-1">
+                          <Skeleton width="40%" height="24px" className="mb-2" />
+                          <Skeleton width="60%" height="16px" className="mb-1" />
+                          <Skeleton width="30%" height="16px" />
+                        </div>
+                      </div>
+                    </SkeletonCard>
+                  </div>
+                ) : patientForHeader && (
                   <div className="intake-patient-header">
                     <PatientProfileHeaderCard
                       patient={patientForHeader}
@@ -506,183 +506,193 @@ const AppointmentIntakeModal = ({ isOpen, onClose, appointmentId, onSuccess }) =
                 )}
 
                 {/* Vital Signs Section */}
-                <SectionCard
-                  icon={<MdMonitorHeart />}
-                  title="Vital Signs"
-                  description="Record patient vitals and measurements"
-                  initiallyExpanded={true}
-                  actionRenderer={() => (
-                    <button
-                      type="button"
-                      onClick={() => setIsEditingVitals(!isEditingVitals)}
-                      title={isEditingVitals ? "Done Editing" : "Update Vitals"}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 10px',
-                        borderRadius: '6px', fontSize: '12px', fontWeight: '600',
-                        border: '1px solid #e2e8f0', color: '#334155',
-                        backgroundColor: isEditingVitals ? '#f8fafc' : 'white', cursor: 'pointer',
-                        transition: 'all 0.2s ease'
-                      }}
-                      onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
-                      onMouseOut={(e) => e.currentTarget.style.backgroundColor = isEditingVitals ? '#f8fafc' : 'white'}
-                    >
-                      {isEditingVitals ? <MdSave size={14} className="text-teal-600" /> : <MdEdit size={14} className="text-slate-500" />}
-                      {isEditingVitals ? 'Done' : 'Update Vitals'}
-                    </button>
-                  )}
-                >
-                  {/* ── Live Vitals Display Grid (Default) ───────────────────── */}
-                  {!isEditingVitals ? (
-                    <div className="vitals-display-grid">
-                      <VitalCard
-                        icon={<span className="vc-emoji">⚖️</span>}
-                        label="Weight"
-                        value={weight}
-                        unit="kg"
-                        accentColor="#0d9488"
-                      />
-                      <VitalCard
-                        icon={<span className="vc-emoji">📏</span>}
-                        label="Height"
-                        value={height}
-                        unit="cm"
-                        accentColor="#0369a1"
-                      />
-                      <VitalCard
-                        icon={<span className="vc-emoji">📉</span>}
-                        label="BMI"
-                        value={bmi}
-                        unit="kg/m²"
-                        status={bmiStatus}
-                        accentColor={bmiStatus?.color || '#64748b'}
-                      />
-                      <VitalCard
-                        icon={<MdFavorite size={18} />}
-                        label="SpO₂"
-                        value={spo2}
-                        unit="%"
-                        status={spo2Status}
-                        accentColor={spo2Status?.color || '#ef4444'}
-                      />
-                      <VitalCard
-                        icon={<span className="vc-emoji">🩺</span>}
-                        label="Blood Pressure"
-                        value={bp}
-                        unit="mmHg"
-                        accentColor="#6366f1"
-                      />
-                    </div>
-                  ) : (
-                    /* ── Input Form (Edit Mode) ────────────────────────────────── */
-                    <div className="vitals-input-grid mt-2">
-                      <div className="input-group">
-                        <label htmlFor="height">Height <span className="unit-label">(cm)</span></label>
-                        <input
-                          id="height"
-                          type="number"
-                          value={height}
-                          onChange={(e) => { setHeight(e.target.value); setError(''); }}
-                          placeholder="intake. cm"
-                          className="intake-input"
-                        />
+                <React.Suspense fallback={<SkeletonCard className="mb-4"><Skeleton width="100%" height="150px" /></SkeletonCard>}>
+                  <SectionCard
+                    icon={<MdMonitorHeart />}
+                    title="Vital Signs"
+                    description="Record patient vitals and measurements"
+                    initiallyExpanded={true}
+                    actionRenderer={() => (
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingVitals(!isEditingVitals)}
+                        title={isEditingVitals ? "Done Editing" : "Update Vitals"}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 10px',
+                          borderRadius: '6px', fontSize: '12px', fontWeight: '600',
+                          border: '1px solid #e2e8f0', color: '#334155',
+                          backgroundColor: isEditingVitals ? '#f8fafc' : 'white', cursor: 'pointer',
+                          transition: 'all 0.2s ease'
+                        }}
+                        onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
+                        onMouseOut={(e) => e.currentTarget.style.backgroundColor = isEditingVitals ? '#f8fafc' : 'white'}
+                      >
+                        {isEditingVitals ? <MdSave size={14} className="text-teal-600" /> : <MdEdit size={14} className="text-slate-500" />}
+                        {isEditingVitals ? 'Done' : 'Update Vitals'}
+                      </button>
+                    )}
+                  >
+                    {/* ── Live Vitals Display Grid (Default) ───────────────────── */}
+                    {isLoading ? (
+                      <div className="vitals-display-grid">
+                        <SkeletonCard className="py-4"><Skeleton width="60%" height="20px" /><Skeleton width="30%" height="12px" /></SkeletonCard>
+                        <SkeletonCard className="py-4"><Skeleton width="60%" height="20px" /><Skeleton width="30%" height="12px" /></SkeletonCard>
+                        <SkeletonCard className="py-4"><Skeleton width="60%" height="20px" /><Skeleton width="30%" height="12px" /></SkeletonCard>
+                        <SkeletonCard className="py-4"><Skeleton width="60%" height="20px" /><Skeleton width="30%" height="12px" /></SkeletonCard>
                       </div>
-                      <div className="input-group">
-                        <label htmlFor="weight">Weight <span className="unit-label">(kg)</span></label>
-                        <input
-                          id="weight"
-                          type="number"
+                    ) : !isEditingVitals ? (
+                      <div className="vitals-display-grid">
+                        <VitalCard
+                          icon={<span className="vc-emoji">⚖️</span>}
+                          label="Weight"
                           value={weight}
-                          onChange={(e) => { setWeight(e.target.value); setError(''); }}
-                          placeholder="e.g. 72"
-                          className="intake-input"
+                          unit="kg"
+                          accentColor="#0d9488"
                         />
-                      </div>
-                      <div className="input-group">
-                        <label htmlFor="bmi">BMI <span className="unit-label">(auto)</span></label>
-                        <input
-                          id="bmi"
-                          type="number"
+                        <VitalCard
+                          icon={<span className="vc-emoji">📏</span>}
+                          label="Height"
+                          value={height}
+                          unit="cm"
+                          accentColor="#0369a1"
+                        />
+                        <VitalCard
+                          icon={<span className="vc-emoji">📉</span>}
+                          label="BMI"
                           value={bmi}
-                          placeholder="Auto-calculated"
-                          className="intake-input intake-input--readonly"
-                          readOnly
+                          unit="kg/m²"
+                          status={bmiStatus}
+                          accentColor={bmiStatus?.color || '#64748b'}
                         />
-                      </div>
-                      <div className="input-group">
-                        <label htmlFor="spo2">SpO₂ <span className="unit-label">(%)</span></label>
-                        <input
-                          id="spo2"
-                          type="number"
+                        <VitalCard
+                          icon={<MdFavorite size={18} />}
+                          label="SpO₂"
                           value={spo2}
-                          onChange={(e) => setSpo2(e.target.value)}
-                          placeholder="e.g. 98"
-                          className="intake-input"
+                          unit="%"
+                          status={spo2Status}
+                          accentColor={spo2Status?.color || '#ef4444'}
                         />
-                      </div>
-                      <div className="input-group">
-                        <label htmlFor="bp">Blood Pressure <span className="unit-label">(mmHg)</span></label>
-                        <input
-                          id="bp"
-                          type="text"
+                        <VitalCard
+                          icon={<span className="vc-emoji">🩺</span>}
+                          label="Blood Pressure"
                           value={bp}
-                          onChange={(e) => setBp(e.target.value)}
-                          placeholder="e.g. 120/80"
-                          className="intake-input"
+                          unit="mmHg"
+                          accentColor="#6366f1"
                         />
                       </div>
-                    </div>
-                  )}
-                </SectionCard>
+                    ) : (
+                      /* ── Input Form (Edit Mode) ────────────────────────────────── */
+                      <div className="vitals-input-grid mt-2">
+                        <div className="input-group">
+                          <label htmlFor="height">Height <span className="unit-label">(cm)</span></label>
+                          <input
+                            id="height"
+                            type="number"
+                            value={height}
+                            onChange={(e) => { setHeight(e.target.value); setError(''); }}
+                            placeholder="intake. cm"
+                            className="intake-input"
+                          />
+                        </div>
+                        <div className="input-group">
+                          <label htmlFor="weight">Weight <span className="unit-label">(kg)</span></label>
+                          <input
+                            id="weight"
+                            type="number"
+                            value={weight}
+                            onChange={(e) => { setWeight(e.target.value); setError(''); }}
+                            placeholder="e.g. 72"
+                            className="intake-input"
+                          />
+                        </div>
+                        <div className="input-group">
+                          <label htmlFor="bmi">BMI <span className="unit-label">(auto)</span></label>
+                          <input
+                            id="bmi"
+                            type="number"
+                            value={bmi}
+                            placeholder="Auto-calculated"
+                            className="intake-input intake-input--readonly"
+                            readOnly
+                          />
+                        </div>
+                        <div className="input-group">
+                          <label htmlFor="spo2">SpO₂ <span className="unit-label">(%)</span></label>
+                          <input
+                            id="spo2"
+                            type="number"
+                            value={spo2}
+                            onChange={(e) => setSpo2(e.target.value)}
+                            placeholder="e.g. 98"
+                            className="intake-input"
+                          />
+                        </div>
+                        <div className="input-group">
+                          <label htmlFor="bp">Blood Pressure <span className="unit-label">(mmHg)</span></label>
+                          <input
+                            id="bp"
+                            type="text"
+                            value={bp}
+                            onChange={(e) => setBp(e.target.value)}
+                            placeholder="e.g. 120/80"
+                            className="intake-input"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </SectionCard>
+                </React.Suspense>
 
                 {/* Current Notes Section */}
-                <SectionCard
-                  icon={<MdNote />}
-                  title="Current Notes"
-                  description="Document observations and recommendations"
-                  initiallyExpanded={true}
-                >
-                  <div className="input-group">
-                    <label htmlFor="currentNotes">Clinical Notes</label>
-                    <textarea
-                      id="currentNotes"
-                      value={currentNotes}
-                      onChange={(e) => setCurrentNotes(e.target.value)}
-                      placeholder="Enter clinical notes, observations, and recommendations..."
-                      className="intake-textarea"
-                      rows={6}
+                <React.Suspense fallback={<SkeletonCard className="mb-4"><Skeleton width="100%" height="150px" /></SkeletonCard>}>
+                  <SectionCard
+                    icon={<MdNote />}
+                    title="Clinical Notes / Triage"
+                    description="Patient condition, complaints, and observations"
+                    initiallyExpanded={true}
+                  >
+                    <div className="intake-notes-container">
+                      <textarea
+                        value={currentNotes}
+                        onChange={(e) => { setCurrentNotes(e.target.value); setError(''); }}
+                        placeholder="Enter clinical observations, chief complaints, and triage notes here..."
+                        className="intake-textarea"
+                        rows={4}
+                      />
+                    </div>
+                  </SectionCard>
+                </React.Suspense>              {/* E-Prescription (Pharmacy) Section */}
+                <React.Suspense fallback={<SkeletonCard className="mb-4"><Skeleton width="100%" height="200px" /></SkeletonCard>}>
+                  <SectionCard
+                    icon={<MdMedication />}
+                    title="E-Prescription & Pharmacy"
+                    description="Prescribe medicines and view stock alerts"
+                    initiallyExpanded={false}
+                  >
+                    <PharmacyTable
+                      rows={pharmacyRows}
+                      onRowsChanged={setPharmacyRows}
+                      onStockWarnings={(warnings) => {
+                        console.log('Stock warnings:', warnings);
+                      }}
                     />
-                  </div>
-                </SectionCard>
+                  </SectionCard>
+                </React.Suspense>
 
-                {/* Pharmacy Section */}
-                <SectionCard
-                  icon={<MdMedication />}
-                  title="Pharmacy"
-                  description="Prescribe and manage medications"
-                  initiallyExpanded={false}
-                >
-                  <PharmacyTable
-                    rows={pharmacyRows}
-                    onRowsChanged={setPharmacyRows}
-                    onStockWarnings={(warnings) => {
-                      // Store warnings for save validation
-                      console.log('Stock warnings:', warnings);
-                    }}
-                  />
-                </SectionCard>
-
-                {/* Pathology Section */}
-                <SectionCard
-                  icon={<MdScience />}
-                  title="Pathology"
-                  description="Order and track lab investigations"
-                  initiallyExpanded={false}
-                >
-                  <PathologyTable
-                    rows={pathologyRows}
-                    onRowsChanged={setPathologyRows}
-                  />
-                </SectionCard>
+                {/* Pathology & Lab Orders */}
+                <React.Suspense fallback={<SkeletonCard className="mb-4"><Skeleton width="100%" height="200px" /></SkeletonCard>}>
+                  <SectionCard
+                    icon={<MdScience />}
+                    title="Pathology & Lab Orders"
+                    description="Order tests and investigations"
+                    initiallyExpanded={false}
+                  >
+                    <PathologyTable
+                      rows={pathologyRows}
+                      onRowsChanged={setPathologyRows}
+                    />
+                  </SectionCard>
+                </React.Suspense>
 
                 {/* Follow-Up Planning Section - Placeholder for future */}
                 <SectionCard
@@ -701,35 +711,35 @@ const AppointmentIntakeModal = ({ isOpen, onClose, appointmentId, onSuccess }) =
                 <div style={{ height: '100px' }}></div>
               </div>
 
-              {/* Fixed Bottom Save Bar */}
-              <div className="intake-modal-save-bar">
+              {/* Sticky Footer */}
+              <div className="intake-modal-footer">
                 <button
-                  className="btn-intake-cancel"
+                  className="intake-btn-cancel"
                   onClick={onClose}
                   disabled={isSaving}
                 >
                   Cancel
                 </button>
                 <button
-                  className="btn-intake-save"
+                  className="intake-btn-save"
                   onClick={handleSave}
-                  disabled={isSaving}
+                  disabled={isSaving || isLoading} // Disable save button while SWR is loading
                 >
                   {isSaving ? (
-                    <>
-                      <div className="btn-spinner"></div>
-                      Saving...
-                    </>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div className="spinner" style={{ width: '16px', height: '16px', borderWidth: '2px' }}></div>
+                      Saving Intake...
+                    </span>
                   ) : (
-                    <>
-                      <MdSave size={20} />
-                      Save Intake
-                    </>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <MdSave size={18} />
+                      Complete Intake
+                    </span>
                   )}
                 </button>
               </div>
             </>
-          ) : null}
+          )}
         </div>
       </div>
     </div>

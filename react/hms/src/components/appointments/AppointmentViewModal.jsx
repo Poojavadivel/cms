@@ -12,6 +12,7 @@ import appointmentsService from '../../services/appointmentsService';
 import patientsService from '../../services/patientsService';
 import { getGenderAvatar } from '../../utils/avatarHelpers';
 import { calculateBMI } from '../../utils/vitalsHelpers';
+import { Skeleton, SkeletonCard } from '../common/SkeletonLoaders';
 
 const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdit, onPatientClick, appointmentData }) => {
   const [appointment, setAppointment] = useState(null);
@@ -428,19 +429,33 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdi
 
       <div className="appointment-view-container">
 
-        {isLoading ? (
-          <div className="appointment-view-loading">
-            <div className="spinner"></div>
-            <p>Loading details...</p>
-          </div>
-        ) : error ? (
+        {error && !isLoading ? (
           <div className="appointment-view-error">
             <p>{error}</p>
             <button onClick={onClose} className="btn-error-close">Close</button>
           </div>
-        ) : appointment ? (
+        ) : (
           <>
             {(() => {
+              if (isLoading && (!appointment || !patient)) {
+                return (
+                  <div className="pv-summary-header mb-4">
+                    <SkeletonCard>
+                      <div className="flex items-center gap-4">
+                        <Skeleton variant="circular" width="80px" height="80px" />
+                        <div className="flex-1">
+                          <Skeleton width="40%" height="24px" className="mb-2" />
+                          <Skeleton width="60%" height="16px" className="mb-1" />
+                          <Skeleton width="30%" height="16px" />
+                        </div>
+                      </div>
+                    </SkeletonCard>
+                  </div>
+                );
+              }
+
+              if (!appointment) return null;
+
               const patientData = getPatientData();
               const avatarSrc = patientData.avatarUrl || getGenderAvatar(patientData.gender);
 
@@ -680,7 +695,7 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdi
               </div>
             </div>
           </>
-        ) : null}
+        )}
       </div>
     </div>
   );
