@@ -9,7 +9,6 @@ import AppointmentViewModal from '../../../components/appointments/AppointmentVi
 import AppointmentEditModal from '../../../components/appointments/AppointmentEditModal';
 import AppointmentIntakeModal from '../../../components/appointments/AppointmentIntakeModal';
 import PatientView from '../../../components/patient/patientview';
-import StatusBadge from '../../../components/common/StatusBadge';
 
 // --- MOCK DATA (KEPT FOR FALLBACK) ---
 const MOCK_APPOINTMENTS = [
@@ -236,7 +235,7 @@ const Icons = {
 const Header = () => (
   <div className="appointments-header">
     <div className="header-content">
-      <h1
+      <h1 
         className="appointments-main-title"
         style={{
           fontSize: '28px',
@@ -250,7 +249,7 @@ const Header = () => (
       >
         APPOINTMENTS
       </h1>
-      <p
+      <p 
         className="appointments-main-subtitle"
         style={{
           fontSize: '14px',
@@ -319,40 +318,28 @@ const FilterBar = ({
       <div className="filter-right-group">
         <div className="tabs-wrapper">
           <button
+            className={`tab-btn ${activeTab === 'upcoming' ? 'active' : ''}`}
+            onClick={() => onTabChange('upcoming')}
+          >
+            Upcoming
+          </button>
+          <button
             className={`tab-btn ${activeTab === 'all' ? 'active' : ''}`}
             onClick={() => onTabChange('all')}
           >
             All
           </button>
           <button
-            className={`tab-btn ${activeTab === 'scheduled' ? 'active' : ''}`}
-            onClick={() => onTabChange('scheduled')}
+            className={`tab-btn ${activeTab === 'completed' ? 'active' : ''}`}
+            onClick={() => onTabChange('completed')}
           >
-            Scheduled
-          </button>
-          <button
-            className={`tab-btn ${activeTab === 'confirmed' ? 'active' : ''}`}
-            onClick={() => onTabChange('confirmed')}
-          >
-            Confirmed
-          </button>
-          <button
-            className={`tab-btn ${activeTab === 'pending' ? 'active' : ''}`}
-            onClick={() => onTabChange('pending')}
-          >
-            Pending
+            Completed
           </button>
           <button
             className={`tab-btn ${activeTab === 'cancelled' ? 'active' : ''}`}
             onClick={() => onTabChange('cancelled')}
           >
             Cancelled
-          </button>
-          <button
-            className={`tab-btn ${activeTab === 'deleted' ? 'active' : ''}`}
-            onClick={() => onTabChange('deleted')}
-          >
-            Deleted
           </button>
         </div>
 
@@ -546,7 +533,7 @@ const transformAppointment = (apt, index) => {
 
 const Appointments = () => {
   // const navigate = useNavigate(); // Reserved for future navigation
-  const [activeTab, setActiveTab] = useState('all');
+  const [activeTab, setActiveTab] = useState('upcoming'); // Changed from 'all' to show only upcoming appointments
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDate, setSelectedDate] = useState(null);
   const [showCalendar, setShowCalendar] = useState(false);
@@ -577,12 +564,12 @@ const Appointments = () => {
     const fetchData = async () => {
       try {
         setIsLoading(true);
-
+        
         // Fetch deleted appointments if on deleted tab, otherwise fetch regular appointments
-        const data = activeTab === 'deleted'
+        const data = activeTab === 'deleted' 
           ? await appointmentsService.fetchDeletedAppointments()
           : await appointmentsService.fetchAppointments();
-
+          
         console.log(`✅ Fetched ${activeTab === 'deleted' ? 'deleted ' : ''}appointments from API:`, data);
 
         // Log first appointment to see structure
@@ -619,12 +606,12 @@ const Appointments = () => {
 
   // Reset state on component mount to ensure fresh start
   useEffect(() => {
-    setActiveTab('all');
+    setActiveTab('upcoming'); // Changed from 'all' to 'upcoming'
     setSearchQuery('');
     setSelectedDate(null);
     setCurrentPage(1);
     setShowCalendar(false);
-
+    
     return () => {
       // Cleanup: reset state when component unmounts
       setAllAppointments([]);
@@ -635,9 +622,60 @@ const Appointments = () => {
   // Filter appointments based on tab and search
   useEffect(() => {
     let result = allAppointments;
-
-    // Don't filter by status if we're on the deleted tab
-    if (activeTab !== 'all' && activeTab !== 'deleted') {
+    
+    // Get today's date and current time (LOCAL timezone)
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const todayStr = `${year}-${month}-${day}`; // Local YYYY-MM-DD
+    
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    const currentTimeStr = `${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`;
+    
+    console.log('📅 Today (local):', todayStr, '| Current time:', currentTimeStr); // Debug log
+    
+    // Filter by tab
+    if (activeTab === 'upcoming') {
+      // Show appointments for today and future dates, exclude completed/cancelled
+      result = result.filter(a => {
+        const aptDate = a.rawDate; // YYYY-MM-DD format
+        const aptTime = a.time || ''; // HH:MM format or empty
+        
+        const isNotCompleted = a.status.toLowerCase() !== 'completed';
+        const isNotCancelled = a.status.toLowerCase() !== 'cancelled';
+        
+        let isUpcoming = false;
+        
+        // Future dates are always upcoming
+        if (aptDate > todayStr) {
+          isUpcoming = true;
+        }
+        // Today's date - check time
+        else if (aptDate === todayStr) {
+          // If no time specified, show it (assume future)
+          if (!aptTime || aptTime === 'Not set') {
+            isUpcoming = true;
+          } else {
+            // Compare time (HH:MM format)
+            isUpcoming = aptTime > currentTimeStr;
+          }
+        }
+        // Past dates are not upcoming
+        else {
+          isUpcoming = false;
+        }
+        
+        // Debug log for first few appointments
+        if (result.indexOf(a) < 5) {
+          console.log(`🔍 ${a.patientName} | Date: ${aptDate} Time: ${aptTime} | Now: ${todayStr} ${currentTimeStr} | Upcoming: ${isUpcoming} | Status: ${a.status}`);
+        }
+        
+        return isUpcoming && isNotCompleted && isNotCancelled;
+      });
+    } else if (activeTab !== 'all' && activeTab !== 'deleted') {
+      // Status-based filtering (completed, cancelled, etc.)
       result = result.filter(a => a.status.toLowerCase() === activeTab.toLowerCase());
     }
 
@@ -716,6 +754,24 @@ const Appointments = () => {
   const handleIntake = (appointment) => {
     setSelectedAppointmentId(appointment.id);
     setShowIntakeModal(true);
+  };
+
+  // Handle intake save success - mark appointment as completed
+  const handleIntakeSaveSuccess = async () => {
+    try {
+      // Mark appointment as completed
+      if (selectedAppointmentId) {
+        console.log('✅ Marking appointment as completed:', selectedAppointmentId);
+        await appointmentsService.updateAppointmentStatus(selectedAppointmentId, 'Completed');
+        showNotification('Intake saved and appointment marked as completed', 'success');
+      }
+      // Refresh appointments to show updated status
+      await refreshAppointments();
+    } catch (error) {
+      console.error('Failed to mark appointment as completed:', error);
+      showNotification('Intake saved but failed to update appointment status', 'error');
+      await refreshAppointments(); // Still refresh to show intake data
+    }
   };
 
   // Handle patient name click - open patient details dialog
@@ -802,7 +858,7 @@ const Appointments = () => {
 
   // Handle quick status toggle from table
   const handleStatusToggle = async (appointment) => {
-    const statuses = ['Scheduled', 'Confirmed', 'Completed', 'Cancelled', 'Pending'];
+    const statuses = ['Scheduled', 'Completed', 'Cancelled'];
     const currentIndex = statuses.indexOf(appointment.status);
     const nextIndex = (currentIndex + 1) % statuses.length;
     const nextStatus = statuses[nextIndex];
@@ -944,10 +1000,13 @@ const Appointments = () => {
 
                     {/* STATUS */}
                     <td>
-                      <StatusBadge
-                        status={apt.status}
+                      <span
+                        className={`status-pill ${apt.status.toLowerCase()} status-editable clickable`}
                         onClick={() => handleStatusToggle(apt)}
-                      />
+                        title="Click to change status"
+                      >
+                        {apt.status}
+                      </span>
                     </td>
 
                     {/* ACTIONS */}
@@ -1038,7 +1097,7 @@ const Appointments = () => {
         isOpen={showIntakeModal}
         onClose={() => setShowIntakeModal(false)}
         appointmentId={selectedAppointmentId}
-        onSuccess={refreshAppointments}
+        onSuccess={handleIntakeSaveSuccess}
       />
 
       {/* Patient View Dialog - Same as Admin Module */}
