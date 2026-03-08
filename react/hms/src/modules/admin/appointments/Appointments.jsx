@@ -1202,13 +1202,13 @@ const Appointments = () => {
                     <td className="cell-actions">
                       <div className="apt-action-group">
                         <button className="apt-btn-action edit" title="Edit" onClick={() => handleEdit(apt)}>
-                          <Icons.Edit /><span>Edit</span>
+                          <Icons.Edit />
                         </button>
                         <button className="apt-btn-action view" title="View" onClick={() => handleView(apt)}>
-                          <Icons.Eye /><span>View</span>
+                          <Icons.Eye />
                         </button>
                         <button className="apt-btn-action delete" title="Delete" onClick={() => handleDelete(apt)}>
-                          <Icons.Delete /><span>Delete</span>
+                          <Icons.Delete />
                         </button>
                       </div>
                     </td>

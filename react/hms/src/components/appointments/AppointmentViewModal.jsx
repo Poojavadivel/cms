@@ -4,13 +4,16 @@
  * Matches Flutter's DoctorAppointmentPreview
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { MdClose, MdPerson, MdPhone, MdEmail, MdLocationOn, MdWork, MdCalendarToday, MdMale, MdFemale, MdWarning, MdSearch, MdEdit } from 'react-icons/md';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { MdClose, MdPerson, MdPhone, MdEmail, MdLocationOn, MdWork, MdCalendarToday, MdMale, MdFemale, MdWarning, MdSearch, MdEdit, MdLocalHospital, MdInfo, MdLocalPharmacy, MdBiotech, MdPayment, MdContentCopy, MdVisibility } from 'react-icons/md';
 import './AppointmentViewModal.css';
 import '../patient/patientview.css';
 import appointmentsService from '../../services/appointmentsService';
 import patientsService from '../../services/patientsService';
+import prescriptionService from '../../services/prescriptionService';
+import reportService from '../../services/reportService';
 import { getGenderAvatar } from '../../utils/avatarHelpers';
+import AppointmentIntakeModal from './AppointmentIntakeModal';
 
 const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdit, onPatientClick, appointmentData }) => {
   const [appointment, setAppointment] = useState(null);
@@ -22,6 +25,9 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdi
   // NEW: State for appointments list in the tab
   const [patientAppointments, setPatientAppointments] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
+
+
+  const [showIntakeModal, setShowIntakeModal] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -37,6 +43,8 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdi
 
         setAppointment(mappedAppt);
         setPatientAppointments([mappedAppt]);
+
+
 
         // ALWAYS fetch full patient object
         let pId = null;
@@ -58,12 +66,15 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdi
           }
         }
         // Priority 4: patientId string (if it looks like a MongoID, not "PAT-...")
-        else if (typeof appointmentData.patientId === 'string') {
-          // If it starts with "PAT-" or "PT-", it's likely a code, not a MongoID.
-          if (!appointmentData.patientId.startsWith('PAT-') && !appointmentData.patientId.startsWith('PT-')) {
+        // Priority 4: patientId string (if it looks like a MongoID)
+        else if (typeof appointmentData.patientId === 'string' && appointmentData.patientId) {
+          // Check if it's a 24-char hex string (Mongo ObjectId) or a code like PAT-xxxx
+          const isMongoId = /^[0-9a-fA-F]{24}$/.test(appointmentData.patientId);
+          if (isMongoId) {
             pId = appointmentData.patientId;
           } else {
-            console.warn("Patient ID looks like a code (" + appointmentData.patientId + "), skipping fetch by ID.");
+            // It's a code, but maybe patientIdObj has the ID
+            console.warn("Patient ID from appointmentData is a code (" + appointmentData.patientId + "), looking for ObjectId elsewhere.");
           }
         }
 
@@ -223,6 +234,40 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdi
   };
 
 
+  // Tab handler
+  const handleTabChange = useCallback((tab) => {
+    setActiveTab(tab);
+  }, []);
+
+  const copyToClipboard = (text, label) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(() => {
+      alert(`${label} copied!`);
+    });
+  };
+
+  // Helper to parse tags from string or array
+  const parseTags = (val) => {
+    if (!val) return [];
+    if (Array.isArray(val)) return val.filter(Boolean);
+    if (typeof val === 'string') return val.split(',').map(s => s.trim()).filter(Boolean);
+    return [];
+  };
+
+  // Helper to format date for tables
+  const formatTableDate = (dStr) => {
+    if (!dStr) return 'N/A';
+    try {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dStr)) {
+        const [y, m, d] = dStr.split('-').map(Number);
+        return new Date(y, m - 1, d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+      }
+      const d = new Date(dStr);
+      if (isNaN(d.getTime())) return dStr;
+      return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    } catch (e) { return dStr; }
+  };
+
   if (!isOpen) return null;
 
   const getGenderIcon = (gender) => {
@@ -363,6 +408,7 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdi
       noAlcohol,
       noSmoker,
       avatarUrl: patientData.avatarUrl || patientData.metadata?.avatarUrl || null,
+      patientCode: patientData.metadata?.patientCode || patientData.patientCode || patientData._id?.substring(0, 8) || '',
     };
   };
 
@@ -416,7 +462,7 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdi
 
   return (
     <div className="appointment-view-overlay">
-      {/* Floating Close Button */}
+      {/* Floating Close Button — outside container */}
       <button className="appointment-close-floating" onClick={onClose}>
         <MdClose size={32} />
       </button>
@@ -451,18 +497,7 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdi
                           className="pv-avatar-image"
                           onError={(e) => { e.target.src = getGenderAvatar(patientData.gender); }}
                         />
-                        <div className="pv-lifestyle-indicators">
-                          {patientData.noAlcohol && (
-                            <div className="pv-lifestyle-badge no-alcohol">
-                              <span className="pv-lifestyle-label">Alcohol</span>
-                            </div>
-                          )}
-                          {patientData.noSmoker && (
-                            <div className="pv-lifestyle-badge no-smoker">
-                              <span className="pv-lifestyle-label">Smoker</span>
-                            </div>
-                          )}
-                        </div>
+                        {/* Lifestyle indicators removed for cleaner UI */}
                       </div>
                     </div>
 
@@ -472,9 +507,14 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdi
                         <h2 className="pv-name-main">{patientData.name}</h2>
                         <div className="pv-contact-icons">
                           {patientData.phone && <button className="pv-contact-btn" title={patientData.phone}><MdPhone size={14} /></button>}
-                          {patientData.email && <button className="pv-contact-btn" title={patientData.email}><MdEmail size={14} /></button>}
                         </div>
                       </div>
+
+                      {patientData.patientCode && (
+                        <div className="pv-patient-code-badge" onClick={() => copyToClipboard(patientData.patientCode, 'Patient ID')} title="Click to copy">
+                          <span className="pv-code-prefix">ID:</span> {patientData.patientCode} <MdContentCopy size={12} className="pv-code-copy-icon" />
+                        </div>
+                      )}
 
                       <div className="pv-info-pills">
                         <div className="pv-pill">
@@ -493,43 +533,36 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdi
                         )}
                       </div>
 
-                      <div className="pv-metrics-row">
-                        <div className="pv-metric-card">
-                          <span className="pv-metric-val">{patientData.bmi || '—'}</span>
-                          <span className="pv-metric-lbl">BMI</span>
+                    </div>
+
+                    {/* Right — Edit + Diagnosis/Barriers + Vitals 2x2 */}
+                    <div className="pv-header-right">
+                      <button
+                        className="pv-edit-btn"
+                        onClick={() => onEdit(appointment)}
+                      >
+                        <MdEdit size={14} /> Edit
+                      </button>
+
+                      {/* Vitals — 2x2 Grid for right corner */}
+                      <div className="pv-vitals-grid-2x2">
+                        <div className="pv-metric-card pv-metric-height">
+                          <span className="pv-metric-val">{patientData.heightCm || '—'} <small>cm</small></span>
+                          <span className="pv-metric-lbl">Height</span>
                         </div>
-                        <div className="pv-metric-card">
+                        <div className="pv-metric-card pv-metric-weight">
                           <span className="pv-metric-val">{patientData.weightKg || '—'} <small>kg</small></span>
                           <span className="pv-metric-lbl">Weight</span>
                         </div>
-                        <div className="pv-metric-card">
-                          <span className="pv-metric-val">{patientData.heightCm || '—'} <small>Cm</small></span>
-                          <span className="pv-metric-lbl">Height</span>
+                        <div className="pv-metric-card pv-metric-bmi">
+                          <span className="pv-metric-val">{patientData.bmi || '—'}</span>
+                          <span className="pv-metric-lbl">BMI</span>
                         </div>
-                        <div className="pv-metric-card">
+                        <div className="pv-metric-card pv-metric-bp">
                           <span className="pv-metric-val">{patientData.bp}</span>
                           <span className="pv-metric-lbl">Blood Pressure</span>
                         </div>
                       </div>
-                    </div>
-
-                    {/* Right Actions */}
-                    <div className="pv-header-right">
-                      <button 
-                        className="pv-edit-btn" 
-                        onClick={() => {
-                          console.log('Edit button clicked in AppointmentViewModal');
-                          console.log('onEdit prop:', onEdit);
-                          console.log('appointment object:', appointment);
-                          if (onEdit) {
-                            onEdit(appointment);
-                          } else {
-                            console.error('onEdit prop is not defined!');
-                          }
-                        }}
-                      >
-                        <MdEdit size={14} /> Edit
-                      </button>
 
                       {patientData.diagnosis.length > 0 && (
                         <div className="pv-diagnosis-section">
@@ -554,129 +587,134 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdi
               );
             })()}
 
-            {/* TAB SECTION - Single "Appointments" Tab */}
+            {/* TAB SECTION — 5 Tabs */}
             <div className="appointment-tabs-section">
               <div className="tabs-header">
-                <button className="tab-button active">
-                  <MdCalendarToday />
-                  <span>Appointments</span>
-                </button>
+                {[
+                  { id: 'appointments', label: 'Visit History', icon: <MdCalendarToday /> },
+                ].map(tab => (
+                  <button
+                    key={tab.id}
+                    className={`tab-button ${activeTab === tab.id ? 'active' : ''}`}
+                    onClick={() => handleTabChange(tab.id)}
+                  >
+                    {tab.icon}
+                    <span>{tab.label}</span>
+                  </button>
+                ))}
               </div>
 
               <div className="tabs-content">
                 <div className="tab-content-wrapper full-width-content">
-                  {/* Search Bar */}
-                  <div className="appointments-filter-bar simple">
-                    <div className="search-box">
-                      <MdSearch size={20} />
-                      <input
-                        type="text"
-                        placeholder="Search appointments..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                      />
-                    </div>
-                  </div>
 
-                  {/* Appointment List */}
-                  <div className="appointments-list-container">
-                    {filteredList.length > 0 ? (
-                      <table className="appointments-table">
-                        <thead>
-                          <tr>
-                            <th>Date & Time</th>
-                            <th>Doctor</th>
-                            <th>Service</th>
-                            <th>Condition/Reason</th>
-                            <th>Status</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {filteredList.map(appt => {
-                            // Helper to extract nested doctor name
-                            let drName = appt.doctor || 'Not Assigned';
-                            if (appt.doctorId && typeof appt.doctorId === 'object') {
-                              drName = `${appt.doctorId.firstName || ''} ${appt.doctorId.lastName || ''}`.trim();
-                            } else if (appt.doctorName) {
-                              drName = appt.doctorName;
-                            }
-
-                            // Helper to extract service/reason
-                            const apptService = appt.service || appt.appointmentType || 'Consultation';
-
-                            // Extract reason for condition
-                            let reason = '';
-                            if (appt.followUpReason) reason = appt.followUpReason;
-                            else if (appt.chiefComplaint) reason = appt.chiefComplaint;
-                            else if (appt.reason) reason = appt.reason;
-                            else if (appt.metadata?.followUpReason) reason = appt.metadata.followUpReason;
-                            else if (appt.metadata?.chiefComplaint) reason = appt.metadata.chiefComplaint;
-                            else if (appt.metadata?.reason) reason = appt.metadata.reason;
-                            else if (appt.notes) reason = appt.notes;
-
-                            // If appt.patientId is object, use it. Else use 'patient' state if matches.
-                            let pObj = typeof appt.patientId === 'object' ? appt.patientId : null;
-                            if (!pObj && patient && (appt.patientId === patient._id || patient._id === patientId)) {
-                              pObj = patient;
-                            }
-                            const condition = appt.condition || reason || extractCondition(pObj);
-
-                            // Date formatting help
-                            const formatRowDate = (dStr) => {
-                              if (!dStr) return 'N/A';
-                              try {
-                                // Handle YYYY-MM-DD to avoid UTC shift
-                                if (/^\d{4}-\d{2}-\d{2}$/.test(dStr)) {
-                                  const [y, m, d] = dStr.split('-').map(Number);
-                                  return new Date(y, m - 1, d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-                                }
-                                const d = new Date(dStr);
-                                if (isNaN(d.getTime())) return dStr;
-                                return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-                              } catch (e) { return dStr; }
-                            };
-
-                            return (
-                              <tr key={appt._id || appt.id}>
-                                <td>
-                                  <div className="appt-date-time">
-                                    <span className="appt-date">{formatRowDate(appt.date || appt.startAt)}</span>
-                                    <span className="appt-time-sub">{appt.time || (appt.startAt && new Date(appt.startAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))}</span>
-                                  </div>
-                                </td>
-                                <td>
-                                  <span className="appt-doctor-cell">{drName}</span>
-                                </td>
-                                <td>
-                                  <span className="appt-service-cell">{apptService}</span>
-                                </td>
-                                <td>
-                                  <span className="appt-condition">
-                                    {condition}
-                                  </span>
-                                </td>
-                                <td>
-                                  <span className={`status-badge ${appt.status?.toLowerCase() || 'scheduled'}`}>
-                                    {appt.status ? (appt.status.charAt(0).toUpperCase() + appt.status.slice(1).toLowerCase()) : 'Scheduled'}
-                                  </span>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    ) : (
-                      <div className="no-appointments">
-                        <p>No appointments found.</p>
+                  {/* ═══ TAB: Appointments (existing) ═══ */}
+                  {activeTab === 'appointments' && (
+                    <>
+                      <div className="appointments-filter-bar simple">
+                        <div className="search-box">
+                          <MdSearch size={20} />
+                          <input
+                            type="text"
+                            placeholder="Search appointments..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                          />
+                        </div>
                       </div>
-                    )}
-                  </div>
+                      <div className="appointments-list-container">
+                        {filteredList.length > 0 ? (
+                          <table className="appointments-table">
+                            <thead>
+                              <tr>
+                                <th>Date & Time</th>
+                                <th>Doctor</th>
+                                <th>Service</th>
+                                <th>Condition/Reason</th>
+                                <th>Status</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {filteredList.map(appt => {
+                                let drName = appt.doctor || 'Not Assigned';
+                                if (appt.doctorId && typeof appt.doctorId === 'object') {
+                                  drName = `${appt.doctorId.firstName || ''} ${appt.doctorId.lastName || ''}`.trim();
+                                } else if (appt.doctorName) {
+                                  drName = appt.doctorName;
+                                }
+                                const apptService = appt.service || appt.appointmentType || 'Consultation';
+                                let reason = '';
+                                if (appt.followUpReason) reason = appt.followUpReason;
+                                else if (appt.chiefComplaint) reason = appt.chiefComplaint;
+                                else if (appt.reason) reason = appt.reason;
+                                else if (appt.metadata?.followUpReason) reason = appt.metadata.followUpReason;
+                                else if (appt.metadata?.chiefComplaint) reason = appt.metadata.chiefComplaint;
+                                else if (appt.metadata?.reason) reason = appt.metadata.reason;
+                                else if (appt.notes) reason = appt.notes;
+                                let pObj = typeof appt.patientId === 'object' ? appt.patientId : null;
+                                if (!pObj && patient && (appt.patientId === patient._id || patient._id === patientId)) {
+                                  pObj = patient;
+                                }
+                                const condition = appt.condition || reason || extractCondition(pObj);
+                                return (
+                                  <tr key={appt._id || appt.id}>
+                                    <td>
+                                      <div className="appt-date-time">
+                                        <span className="appt-date">{formatTableDate(appt.date || appt.startAt)}</span>
+                                        <span className="appt-time-sub">{appt.time || (appt.startAt && new Date(appt.startAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))}</span>
+                                      </div>
+                                    </td>
+                                    <td><span className="appt-doctor-cell">{drName}</span></td>
+                                    <td><span className="appt-service-cell">{apptService}</span></td>
+                                    <td><span className="appt-condition">{condition}</span></td>
+                                    <td>
+                                      <span className={`status-badge ${appt.status?.toLowerCase() || 'scheduled'}`}>
+                                        {appt.status ? (appt.status.charAt(0).toUpperCase() + appt.status.slice(1).toLowerCase()) : 'Scheduled'}
+                                      </span>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        ) : (
+                          <div className="no-appointments"><p>No appointments found.</p></div>
+                        )}
+                      </div>
+                    </>
+                  )}
+
+
                 </div>
               </div>
             </div>
           </>
-        ) : null}
+        ) : (
+          <div className="appointment-view-empty">
+            <p>No appointment selected</p>
+          </div>
+        )}
       </div>
+
+      {/* INTAKE MODAL FOR UPDATES */}
+      {showIntakeModal && appointment && (
+        <AppointmentIntakeModal
+          isOpen={showIntakeModal}
+          onClose={() => setShowIntakeModal(false)}
+          appointmentId={appointment._id || appointment.id}
+          onSuccess={async () => {
+            // REFRESH DATA
+            const pId = patient?._id || appointment?.patientObjectId || (typeof appointment?.patientIdObj === 'object' ? appointment.patientIdObj?._id : appointment?.patientIdObj);
+            if (pId) {
+              try {
+                const refreshedPatient = await patientsService.fetchPatientById(pId);
+                setPatient(refreshedPatient);
+              } catch (e) {
+                console.error("Refresh failed", e);
+              }
+            }
+          }}
+        />
+      )}
     </div>
   );
 };
