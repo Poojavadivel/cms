@@ -26,7 +26,8 @@ import {
     MdVisibility,
     MdDelete,
     MdPictureAsPdf,
-    MdFilterList
+    MdFilterList,
+    MdCheck
 } from 'react-icons/md';
 import './patientview.css';
 import patientsService from '../../services/patientsService';
@@ -35,6 +36,8 @@ import pathologyService from '../../services/pathologyService';
 import invoiceService from '../../services/invoiceService';
 import reportService from '../../services/reportService';
 import { getGenderAvatar } from '../../utils/avatarHelpers';
+import { calculateBMI } from '../../utils/vitalsHelpers';
+import MissingEmergencyPhone from '../common/MissingEmergencyPhone';
 
 const PatientView = ({ isOpen, onClose, patientId, patient: patientProp, onEdit, showBillingTab = true }) => {
     const [patient, setPatient] = useState(null);
@@ -165,10 +168,8 @@ const PatientView = ({ isOpen, onClose, patientId, patient: patientProp, onEdit,
         const bp = patient.vitals?.bp || patient.bp || '—';
 
         // BMI
-        let bmi = null;
-        if (weightKg && heightCm) {
-            bmi = (weightKg / Math.pow(heightCm / 100, 2)).toFixed(1);
-        } else if (patient.vitals?.bmi) {
+        let bmi = calculateBMI(weightKg, heightCm, age);
+        if (bmi === null && patient.vitals?.bmi) {
             bmi = patient.vitals.bmi;
         }
 
@@ -341,7 +342,7 @@ const PatientView = ({ isOpen, onClose, patientId, patient: patientProp, onEdit,
 
                                     {/* Vitals — 4-column row, fills all available width */}
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                                        <VitalCard label="BMI" value={patientData.bmi} />
+                                        <VitalCard label="BMI" value={patientData.bmi} unit="kg/m²" />
                                         <VitalCard label="Weight" value={patientData.weightKg} unit="kg" />
                                         <VitalCard label="Height" value={patientData.heightCm} unit="cm" />
                                         <VitalCard label="Blood Pressure" value={patientData.bp} unit="mmHg" />
@@ -390,7 +391,7 @@ const PatientView = ({ isOpen, onClose, patientId, patient: patientProp, onEdit,
 
                         {/* 3. TAB CONTENT (Scrollable) */}
                         <div className="patient-tab-content">
-                            {activeTab === 'profile' && <ProfileTab patient={patient} copyToClipboard={copyToClipboard} />}
+                            {activeTab === 'profile' && <ProfileTab patient={patient} copyToClipboard={copyToClipboard} onEdit={onEdit} />}
                             {activeTab === 'medical-history' && <MedicalHistoryTab patientId={patientId || patient?._id} patient={patient} />}
                             {activeTab === 'prescription' && <PrescriptionTab patientId={patientId || patient?._id} />}
                             {activeTab === 'lab-results' && <LabResultTab patientId={patientId || patient?._id} />}
@@ -404,8 +405,9 @@ const PatientView = ({ isOpen, onClose, patientId, patient: patientProp, onEdit,
 };
 
 // --- PROFILE TAB ---
-const ProfileTab = ({ patient, copyToClipboard }) => {
+const ProfileTab = ({ patient, copyToClipboard, onEdit }) => {
     const address = patient.address || {};
+    const [isAddressCopied, setIsAddressCopied] = useState(false);
 
     const copyAddress = () => {
         // Build address from multiple possible field locations
@@ -447,6 +449,10 @@ const ProfileTab = ({ patient, copyToClipboard }) => {
 
         const fullAddr = addressParts.join(', ').trim();
         copyToClipboard(fullAddr, 'Address');
+
+        // Bug 25: Visual feedback
+        setIsAddressCopied(true);
+        setTimeout(() => setIsAddressCopied(false), 2000);
     };
 
     const openMaps = () => {
@@ -514,22 +520,37 @@ const ProfileTab = ({ patient, copyToClipboard }) => {
                         </div>
                         <h3 className="font-semibold text-gray-800 m-0 text-base">Address & Details</h3>
                     </div>
-                    {/* Action Buttons in Header */}
+                    {/* Bug 25: Accessible Action Buttons with Tooltips & Feedback */}
                     <div className="flex items-center gap-2">
-                        <button
-                            onClick={copyAddress}
-                            className="p-2 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-md transition-colors"
-                            title="Copy Address"
-                        >
-                            <MdContentCopy size={16} />
-                        </button>
-                        <button
-                            onClick={openMaps}
-                            className="p-2 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-md transition-colors"
-                            title="Open in Maps"
-                        >
-                            <MdMap size={16} />
-                        </button>
+                        {/* Copy Address Button */}
+                        <div className="relative group">
+                            <button
+                                onClick={copyAddress}
+                                className={`p-2 rounded-md transition-all duration-200 flex items-center justify-center ${isAddressCopied ? 'text-emerald-500 bg-emerald-50 ring-1 ring-emerald-100' : 'text-slate-400 hover:text-teal-600 hover:bg-teal-50'}`}
+                                aria-label="Copy full address to clipboard"
+                            >
+                                {isAddressCopied ? <MdCheck size={16} className="animate-in zoom-in duration-200" /> : <MdContentCopy size={16} />}
+                            </button>
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1.5 bg-slate-900/95 backdrop-blur-sm text-white text-[10px] font-bold rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none whitespace-nowrap z-30 shadow-xl border border-white/10 scale-90 group-hover:scale-100 origin-bottom">
+                                {isAddressCopied ? 'Address Copied!' : 'Copy to Clipboard'}
+                                <div className="absolute top-full left-1/2 -translate-x-1/2 border-x-[5px] border-x-transparent border-t-[5px] border-t-slate-900/95"></div>
+                            </div>
+                        </div>
+
+                        {/* View in Maps Button */}
+                        <div className="relative group">
+                            <button
+                                onClick={openMaps}
+                                className="p-2 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-md transition-all duration-200 flex items-center justify-center"
+                                aria-label="View address on Google Maps"
+                            >
+                                <MdMap size={16} />
+                            </button>
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1.5 bg-slate-900/95 backdrop-blur-sm text-white text-[10px] font-bold rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none whitespace-nowrap z-30 shadow-xl border border-white/10 scale-90 group-hover:scale-100 origin-bottom">
+                                View on Google Maps
+                                <div className="absolute top-full left-1/2 -translate-x-1/2 border-x-[5px] border-x-transparent border-t-[5px] border-t-slate-900/95"></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -585,14 +606,14 @@ const ProfileTab = ({ patient, copyToClipboard }) => {
                     <div className="flex flex-col gap-1">
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Contact Name</span>
                         <span className="text-sm font-medium text-slate-900">
-                            {patient.emergencyContactName || 'No contact on file'}
+                            {patient.emergencyContactName || <span className="text-slate-400 italic text-sm font-normal">Not Provided</span>}
                         </span>
                     </div>
 
                     <div className="flex flex-col gap-1">
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Relationship</span>
                         <span className="text-sm font-medium text-slate-900">
-                            {patient.emergencyContactRelation || patient.metadata?.emergencyContactRelation || '—'}
+                            {(patient.emergencyContactRelation || patient.metadata?.emergencyContactRelation) || <span className="text-slate-400 italic text-sm font-normal">Not Provided</span>}
                         </span>
                     </div>
 
@@ -607,7 +628,7 @@ const ProfileTab = ({ patient, copyToClipboard }) => {
                                 {patient.emergencyContactPhone}
                             </a>
                         ) : (
-                            <span className="text-sm font-medium text-slate-900">No phone on file</span>
+                            <MissingEmergencyPhone onEdit={onEdit} patient={patient} />
                         )}
                     </div>
                 </div>
@@ -1858,14 +1879,26 @@ const getVitalStatusColor = (label, value) => {
 };
 
 const VitalCard = ({ label, value, unit }) => {
-    const colorClass = getVitalStatusColor(label, value);
+    let colorClass = getVitalStatusColor(label, value);
+    const isStringMessage = typeof value === 'string' && value.length > 10;
+
+    if (label.toLowerCase() === 'bmi' && isStringMessage) {
+        colorClass = 'bg-amber-50 border-amber-200 text-amber-900';
+    }
+
     return (
         <div className={`flex flex-col w-full p-3.5 border rounded-xl shadow-sm transition-shadow hover:shadow-md ring-1 ring-transparent hover:border-teal-200 ${colorClass}`}>
             <span className="text-xs uppercase tracking-wider opacity-60 font-bold mb-1">{label}</span>
             <div className="flex items-baseline gap-1 mt-auto">
-                <span className="text-2xl font-bold">{value && value !== '—/—' ? value : '—'}</span>
-                {unit && value && value !== '—' && value !== '—/—' && (
-                    <span className="text-sm font-medium opacity-70">{unit}</span>
+                {isStringMessage ? (
+                    <span className="text-sm font-medium leading-tight">{value}</span>
+                ) : (
+                    <>
+                        <span className="text-2xl font-bold">{value && value !== '—/—' ? value : '—'}</span>
+                        {unit && value && value !== '—' && value !== '—/—' && (
+                            <span className="text-sm font-medium opacity-70">{unit}</span>
+                        )}
+                    </>
                 )}
             </div>
         </div>

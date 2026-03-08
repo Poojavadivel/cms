@@ -7,6 +7,7 @@
 import React from 'react';
 import { MdClose } from 'react-icons/md';
 import PatientProfileHeaderCard from './PatientProfileHeaderCard';
+import MissingEmergencyPhone from '../common/MissingEmergencyPhone';
 import './PatientProfileView.css';
 
 const PatientProfileView = ({ patient, isOpen, onClose, onEdit }) => {
@@ -51,15 +52,13 @@ const PatientProfileView = ({ patient, isOpen, onClose, onEdit }) => {
               />
             </div>
 
-            {patient?.emergencyContactName && (
-              <>
-                <h3>Emergency Contact</h3>
-                <div className="detail-grid">
-                  <DetailItem label="Name" value={patient?.emergencyContactName} />
-                  <DetailItem label="Phone" value={patient?.emergencyContactPhone || 'N/A'} />
-                </div>
-              </>
-            )}
+            {/* Emergency Contact */}
+            <h3>Emergency Contact</h3>
+            <div className="detail-grid">
+              <DetailItem label="Name" value={patient?.emergencyContactName || <span className="text-slate-400 italic text-sm font-normal">Not Provided</span>} />
+              <DetailItem label="Relationship" value={(patient?.emergencyContactRelation || patient?.metadata?.emergencyContactRelation) || <span className="text-slate-400 italic text-sm font-normal">Not Provided</span>} />
+              <DetailItem label="Phone" value={patient?.emergencyContactPhone || <MissingEmergencyPhone onEdit={onEdit} patient={patient} />} />
+            </div>
 
             {patient?.medicalHistory && patient.medicalHistory.length > 0 && (
               <>

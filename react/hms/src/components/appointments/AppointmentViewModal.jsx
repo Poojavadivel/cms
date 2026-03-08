@@ -11,6 +11,7 @@ import '../patient/patientview.css';
 import appointmentsService from '../../services/appointmentsService';
 import patientsService from '../../services/patientsService';
 import { getGenderAvatar } from '../../utils/avatarHelpers';
+import { calculateBMI } from '../../utils/vitalsHelpers';
 
 const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdit, onPatientClick, appointmentData }) => {
   const [appointment, setAppointment] = useState(null);
@@ -261,8 +262,12 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdi
       null;
 
     // Calculate BMI if missing but weight/height exist
-    if (!bmi && weightKg && heightCm) {
-      bmi = (weightKg / Math.pow(heightCm / 100, 2)).toFixed(1);
+    if (bmi === null && weightKg && heightCm) {
+      let age = null;
+      if (patientData?.age) {
+        age = Number(patientData.age);
+      }
+      bmi = calculateBMI(weightKg, heightCm, age);
     }
 
     return { weightKg, heightCm, bmi, bp };
@@ -515,8 +520,8 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdi
 
                     {/* Right Actions */}
                     <div className="pv-header-right">
-                      <button 
-                        className="pv-edit-btn" 
+                      <button
+                        className="pv-edit-btn"
                         onClick={() => {
                           console.log('Edit button clicked in AppointmentViewModal');
                           console.log('onEdit prop:', onEdit);

@@ -5,14 +5,15 @@
  */
 
 import React, { useState } from 'react';
-import { 
-  MdClose, MdBadge, MdBloodtype, MdMale, MdFemale, 
-  MdCake, MdHeight, MdMonitorWeight, MdScale, 
-  MdMonitorHeart 
+import {
+  MdClose, MdBadge, MdBloodtype, MdMale, MdFemale,
+  MdCake, MdHeight, MdMonitorWeight, MdScale,
+  MdMonitorHeart
 } from 'react-icons/md';
 import './AppointmentPreviewDialog.css';
+import MissingEmergencyPhone from '../common/MissingEmergencyPhone';
 
-const AppointmentPreviewDialog = ({ patient, isOpen, onClose, showBillingTab = true }) => {
+const AppointmentPreviewDialog = ({ patient, isOpen, onClose, onEdit, showBillingTab = true }) => {
   const [activeTab, setActiveTab] = useState('profile');
 
   if (!isOpen || !patient) return null;
@@ -33,17 +34,17 @@ const AppointmentPreviewDialog = ({ patient, isOpen, onClose, showBillingTab = t
   const oxygen = extractVital('spo2', 'oxygen');
 
   // Helpers - Updated
-  const f = (val, suffix = '') => (val || val === 0 ? `${val}${suffix}` : '—');
+  const f = (val) => (val || val === 0 ? val : '—');
   const isFemale = patient.gender?.toLowerCase()?.startsWith('f');
 
   // Get patient code (prefer patientCode over patientId)
   const patientCode = patient.patientCode || patient.patientId || 'NO-ID';
-  
+
   // Build complete address
   const addressParts = [
-    patient.houseNo, 
-    patient.street, 
-    patient.city, 
+    patient.houseNo,
+    patient.street,
+    patient.city,
     patient.state
   ].filter(Boolean);
   const fullAddress = addressParts.length > 0 ? addressParts.join(', ') : '—';
@@ -60,7 +61,7 @@ const AppointmentPreviewDialog = ({ patient, isOpen, onClose, showBillingTab = t
   return (
     <div className="appointment-preview-overlay-flutter" onClick={onClose}>
       <div className="appointment-preview-content-flutter" onClick={e => e.stopPropagation()}>
-        
+
         {/* Floating Close Button */}
         <button className="btn-close-floating-appt" onClick={onClose}>
           <MdClose size={20} />
@@ -68,12 +69,12 @@ const AppointmentPreviewDialog = ({ patient, isOpen, onClose, showBillingTab = t
 
         {/* Main Content Wrapper */}
         <div className="appt-flutter-wrapper">
-          
+
           {/* Header Card */}
           <div className="appt-header-card-flutter">
-            
+
             {/* Left: Avatar */}
-            <img 
+            <img
               src={isFemale ? '/girlicon.png' : '/boyicon.png'}
               alt={patient.gender}
               className="appt-avatar-flutter"
@@ -117,28 +118,32 @@ const AppointmentPreviewDialog = ({ patient, isOpen, onClose, showBillingTab = t
 
             {/* Right: Vitals Grid */}
             <div className="appt-vitals-grid-flutter">
-              <VitalCard 
-                icon={<MdHeight />} 
-                label="Height" 
-                value={f(height, ' cm')} 
+              <VitalCard
+                icon={<MdHeight />}
+                label="Height"
+                value={f(height)}
+                unit="cm"
                 type="height"
               />
-              <VitalCard 
-                icon={<MdMonitorWeight />} 
-                label="Weight" 
-                value={f(weight, ' kg')} 
+              <VitalCard
+                icon={<MdMonitorWeight />}
+                label="Weight"
+                value={f(weight)}
+                unit="kg"
                 type="weight"
               />
-              <VitalCard 
-                icon={<MdScale />} 
-                label="BMI" 
-                value={f(bmi)} 
+              <VitalCard
+                icon={<MdScale />}
+                label="BMI"
+                value={f(bmi)}
+                unit="kg/m²"
                 type="bmi"
               />
-              <VitalCard 
-                icon={<MdMonitorHeart />} 
-                label="SpO₂" 
-                value={f(oxygen, '%')} 
+              <VitalCard
+                icon={<MdMonitorHeart />}
+                label="SpO₂"
+                value={f(oxygen)}
+                unit="%"
                 type="spo2"
               />
             </div>
@@ -146,7 +151,7 @@ const AppointmentPreviewDialog = ({ patient, isOpen, onClose, showBillingTab = t
 
           {/* Tabs Container */}
           <div className="appt-tabs-container-flutter">
-            
+
             {/* Tab Bar */}
             <div className="appt-tabs-flutter">
               {tabs.map(tab => (
@@ -177,13 +182,18 @@ const AppointmentPreviewDialog = ({ patient, isOpen, onClose, showBillingTab = t
 };
 
 // Vital Card Component
-const VitalCard = ({ icon, label, value, type }) => (
+const VitalCard = ({ icon, label, value, type, unit }) => (
   <div className="appt-vital-card-flutter">
     <div className={`appt-vital-icon-flutter ${type}`}>
       {icon}
     </div>
-    <span className="appt-vital-value-flutter">{value}</span>
-    <span className="appt-vital-label-flutter">{label}</span>
+    <div className="flex items-baseline justify-center gap-1 mt-1">
+      <span className="appt-vital-value-flutter" style={{ lineHeight: 1 }}>{value}</span>
+      {unit && value !== '—' && (
+        <span className="text-xs font-semibold text-slate-400">{unit}</span>
+      )}
+    </div>
+    <span className="appt-vital-label-flutter" style={{ marginTop: '2px' }}>{label}</span>
   </div>
 );
 
@@ -203,15 +213,12 @@ const ProfileTab = ({ patient }) => {
           <InfoRow label="Email Address" value={patient.email} />
           <InfoRow label="Residential Address" value={fullAddress} />
         </div>
-        
+
         <div className="appt-info-card">
           <h4 className="appt-card-title">Emergency & Allergies</h4>
-          <InfoRow label="Emergency Contact" value={patient.emergencyContactName} />
-          {patient.emergencyContactPhone && (
-            <div style={{ fontSize: '12px', color: '#64748B', marginTop: '4px' }}>
-              {patient.emergencyContactPhone}
-            </div>
-          )}
+          <InfoRow label="Emergency Contact" value={patient.emergencyContactName || <span className="text-slate-400 italic font-normal">Not Provided</span>} />
+          <InfoRow label="Relationship" value={(patient.emergencyContactRelation || patient.metadata?.emergencyContactRelation) || <span className="text-slate-400 italic font-normal">Not Provided</span>} />
+          <InfoRow label="Phone Number" value={patient.emergencyContactPhone || <MissingEmergencyPhone onEdit={onEdit} patient={patient} />} />
           <InfoRow label="Allergies" value={
             patient.allergies && patient.allergies.length > 0 ? (
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '8px' }}>
@@ -239,6 +246,10 @@ const ProfileTab = ({ patient }) => {
 const HistoryTab = ({ patient }) => {
   const [history, setHistory] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
+
+  // Bug 27: Add New state
+  const [isAddModalOpen, setIsAddModalOpen] = React.useState(false);
+
   const patientId = patient.id || patient._id || patient.patientId;
 
   React.useEffect(() => {
@@ -247,7 +258,7 @@ const HistoryTab = ({ patient }) => {
         setLoading(false);
         return;
       }
-      
+
       try {
         const response = await fetch(`/api/scanner-enterprise/medical-history/${patientId}`, {
           headers: {
@@ -264,7 +275,7 @@ const HistoryTab = ({ patient }) => {
         setLoading(false);
       }
     };
-    
+
     fetchHistory();
   }, [patientId]);
 
@@ -291,7 +302,16 @@ const HistoryTab = ({ patient }) => {
 
   return (
     <div className="appt-tab-inner">
-      <h3 className="appt-section-title-flutter">Medical History Timeline</h3>
+      {/* Bug 27: Interactive Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+        <h3 className="appt-section-title-flutter" style={{ marginBottom: 0 }}>Medical History Timeline</h3>
+        <button
+          onClick={() => setIsAddModalOpen(true)}
+          className="pv-btn-primary flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors shadow-sm text-sm font-medium"
+        >
+          <span>+ Add History</span>
+        </button>
+      </div>
       {history.length > 0 ? (
         <div className="appt-prescriptions-table-wrapper">
           <table className="appt-prescriptions-table">
@@ -316,7 +336,7 @@ const HistoryTab = ({ patient }) => {
                     {item.medicalHistory || item.diagnosis || '—'}
                   </td>
                   <td>
-                    <button 
+                    <button
                       className="appt-prescription-action-btn"
                       onClick={() => {
                         if (item.pdfId) {
@@ -337,6 +357,22 @@ const HistoryTab = ({ patient }) => {
       ) : (
         <EmptyState title="No Medical History" />
       )}
+
+      {/* Bug 27: Placeholder Modal for Add Action */}
+      {isAddModalOpen && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 10001, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setIsAddModalOpen(false)}>
+          <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '12px', width: '400px', maxWidth: '90%' }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '18px', fontWeight: 'bold' }}>Add Medical History</h3>
+            <div style={{ padding: '32px 0', textAlign: 'center', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px dashed #cbd5e1' }}>
+              <p style={{ color: '#64748b', fontSize: '14px', margin: 0 }}>Form component goes here.</p>
+            </div>
+            <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+              <button style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer' }} onClick={() => setIsAddModalOpen(false)}>Cancel</button>
+              <button style={{ padding: '8px 16px', borderRadius: '6px', border: 'none', background: '#0f766e', color: 'white', cursor: 'not-allowed', opacity: 0.5 }}>Save</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -344,6 +380,10 @@ const HistoryTab = ({ patient }) => {
 const PrescriptionsTab = ({ patient }) => {
   const [prescriptions, setPrescriptions] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
+
+  // Bug 27: Add New state
+  const [isAddModalOpen, setIsAddModalOpen] = React.useState(false);
+
   const patientId = patient.id || patient._id || patient.patientId;
 
   React.useEffect(() => {
@@ -352,7 +392,7 @@ const PrescriptionsTab = ({ patient }) => {
         setLoading(false);
         return;
       }
-      
+
       try {
         const response = await fetch(`/api/scanner-enterprise/prescriptions/${patientId}`, {
           headers: {
@@ -369,7 +409,7 @@ const PrescriptionsTab = ({ patient }) => {
         setLoading(false);
       }
     };
-    
+
     fetchPrescriptions();
   }, [patientId]);
 
@@ -396,7 +436,16 @@ const PrescriptionsTab = ({ patient }) => {
 
   return (
     <div className="appt-tab-inner">
-      <h3 className="appt-section-title-flutter">Active Prescriptions</h3>
+      {/* Bug 27: Interactive Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+        <h3 className="appt-section-title-flutter" style={{ marginBottom: 0 }}>Active Prescriptions</h3>
+        <button
+          onClick={() => setIsAddModalOpen(true)}
+          className="pv-btn-primary flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors shadow-sm text-sm font-medium"
+        >
+          <span>+ Add Prescription</span>
+        </button>
+      </div>
       {prescriptions.length > 0 ? (
         <div className="appt-prescriptions-table-wrapper">
           <table className="appt-prescriptions-table">
@@ -419,7 +468,7 @@ const PrescriptionsTab = ({ patient }) => {
                   <td>{prescription.doctorName || '—'}</td>
                   <td>{prescription.prescriptionSummary || prescription.diagnosis || '—'}</td>
                   <td>
-                    <button 
+                    <button
                       className="appt-prescription-action-btn"
                       onClick={() => {
                         if (prescription.pdfId) {
@@ -438,24 +487,70 @@ const PrescriptionsTab = ({ patient }) => {
           </table>
         </div>
       ) : (
-        <EmptyState 
-          title="No Active Prescriptions" 
+        <EmptyState
+          title="No Active Prescriptions"
           subtitle="Prescriptions issued by doctors will appear here."
         />
+      )}
+
+      {/* Bug 27: Placeholder Modal for Add Action */}
+      {isAddModalOpen && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 10001, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setIsAddModalOpen(false)}>
+          <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '12px', width: '500px', maxWidth: '90%' }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '18px', fontWeight: 'bold' }}>Add Prescription</h3>
+            <div style={{ padding: '32px 0', textAlign: 'center', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px dashed #cbd5e1' }}>
+              <p style={{ color: '#64748b', fontSize: '14px', margin: 0 }}>Prescription form structure (Drug, Dose, Route, Frequency) goes here.</p>
+            </div>
+            <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+              <button style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer' }} onClick={() => setIsAddModalOpen(false)}>Cancel</button>
+              <button style={{ padding: '8px 16px', borderRadius: '6px', border: 'none', background: '#0f766e', color: 'white', cursor: 'not-allowed', opacity: 0.5 }}>Save Prescription</button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
 };
 
-const LabTab = () => (
-  <div className="appt-tab-inner">
-    <h3 className="appt-section-title-flutter">Lab Reports</h3>
-    <EmptyState 
-      title="No Lab Results" 
-      subtitle="Pathology and imaging reports will be listed here."
-    />
-  </div>
-);
+const LabTab = () => {
+  // Bug 27: Add New state
+  const [isAddModalOpen, setIsAddModalOpen] = React.useState(false);
+
+  return (
+    <div className="appt-tab-inner">
+      {/* Bug 27: Interactive Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+        <h3 className="appt-section-title-flutter" style={{ marginBottom: 0 }}>Lab Reports</h3>
+        <button
+          onClick={() => setIsAddModalOpen(true)}
+          className="pv-btn-primary flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors shadow-sm text-sm font-medium"
+        >
+          <span>+ Upload Lab Result</span>
+        </button>
+      </div>
+      <EmptyState
+        title="No Lab Results"
+        subtitle="Pathology and imaging reports will be listed here."
+      />
+
+      {/* Bug 27: Placeholder Modal for Add Action */}
+      {isAddModalOpen && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 10001, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setIsAddModalOpen(false)}>
+          <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '12px', width: '400px', maxWidth: '90%' }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '18px', fontWeight: 'bold' }}>Upload Lab Result</h3>
+            <div style={{ padding: '32px 0', textAlign: 'center', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px dashed #cbd5e1' }}>
+              <p style={{ color: '#64748b', fontSize: '14px', margin: 0 }}>File upload & Test Details form goes here.</p>
+            </div>
+            <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+              <button style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer' }} onClick={() => setIsAddModalOpen(false)}>Cancel</button>
+              <button style={{ padding: '8px 16px', borderRadius: '6px', border: 'none', background: '#0f766e', color: 'white', cursor: 'not-allowed', opacity: 0.5 }}>Upload Report</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const BillingTab = () => (
   <div className="appt-tab-inner">

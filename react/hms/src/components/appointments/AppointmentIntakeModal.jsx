@@ -11,7 +11,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { MdClose, MdSave, MdMonitorHeart, MdNote, MdMedication, MdScience, MdEventNote, MdFavorite } from 'react-icons/md';
+import { MdClose, MdSave, MdEdit, MdMonitorHeart, MdNote, MdMedication, MdScience, MdEventNote, MdFavorite } from 'react-icons/md';
 import PatientProfileHeaderCard from '../doctor/PatientProfileHeaderCard';
 import SectionCard from './SectionCard';
 import PharmacyTable from './PharmacyTable';
@@ -22,6 +22,7 @@ import patientsService from '../../services/patientsService';
 import pharmacyService from '../../services/pharmacyService';
 import pathologyService from '../../services/pathologyService';
 import { PatientDetails } from '../../models/Patients';
+import { calculateBMI, VitalsSchema } from '../../utils/vitalsHelpers';
 
 const AppointmentIntakeModal = ({ isOpen, onClose, appointmentId, onSuccess }) => {
   const [appointment, setAppointment] = useState(null);
@@ -38,6 +39,9 @@ const AppointmentIntakeModal = ({ isOpen, onClose, appointmentId, onSuccess }) =
   const [spo2, setSpo2] = useState('');
   const [bp, setBp] = useState('');
   const [currentNotes, setCurrentNotes] = useState('');
+
+  // UI State
+  const [isEditingVitals, setIsEditingVitals] = useState(false);
 
   // Pharmacy rows (for future) - eslint-disable-next-line no-unused-vars
   const [pharmacyRows, setPharmacyRows] = useState([]);
@@ -57,18 +61,14 @@ const AppointmentIntakeModal = ({ isOpen, onClose, appointmentId, onSuccess }) =
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, appointmentId]);
 
-  // Auto-calculate BMI
+  // Auto-calculate BMI using clinical helper
   useEffect(() => {
     if (height && weight) {
-      const h = parseFloat(height);
-      const w = parseFloat(weight);
-      if (h > 0 && w > 0) {
-        const hMeters = h / 100;
-        const calculatedBmi = w / (hMeters * hMeters);
-        setBmi(calculatedBmi.toFixed(1));
-      }
+      const patientAge = patient?.age || appointment?.patientAge || null;
+      const validBmi = calculateBMI(weight, height, patientAge);
+      setBmi(validBmi);
     }
-  }, [height, weight]);
+  }, [height, weight, patient, appointment]);
 
   const fetchAppointment = async () => {
     setIsLoading(true);
@@ -188,6 +188,16 @@ const AppointmentIntakeModal = ({ isOpen, onClose, appointmentId, onSuccess }) =
 
   const handleSave = async () => {
     if (isSaving) return;
+
+    // ── Biological Limit Validation (Bug 24) ──
+    const patientAge = patient?.age || appointment?.patientAge || null;
+    const vitalsValidation = VitalsSchema.validate({ weightKg: weight, heightCm: height }, patientAge);
+
+    if (!vitalsValidation.isValid) {
+      const errorStrings = Object.values(vitalsValidation.errors).join(' ');
+      setError(`Vitals Error: ${errorStrings}`);
+      return;
+    }
 
     setIsSaving(true);
     setError('');
@@ -366,6 +376,7 @@ const AppointmentIntakeModal = ({ isOpen, onClose, appointmentId, onSuccess }) =
 
   // ── VitalCard helper ──────────────────────────────────────────────────
   const getBmiStatus = (val) => {
+    if (typeof val === 'string') return { label: 'Age < 18', color: '#f59e0b', bg: 'rgba(245,158,11,0.10)' };
     const n = parseFloat(val);
     if (!val || isNaN(n)) return null;
     if (n < 18.5) return { label: 'Underweight', color: '#0ea5e9', bg: 'rgba(14,165,233,0.10)' };
@@ -500,98 +511,127 @@ const AppointmentIntakeModal = ({ isOpen, onClose, appointmentId, onSuccess }) =
                   title="Vital Signs"
                   description="Record patient vitals and measurements"
                   initiallyExpanded={true}
+                  actionRenderer={() => (
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingVitals(!isEditingVitals)}
+                      title={isEditingVitals ? "Done Editing" : "Update Vitals"}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 10px',
+                        borderRadius: '6px', fontSize: '12px', fontWeight: '600',
+                        border: '1px solid #e2e8f0', color: '#334155',
+                        backgroundColor: isEditingVitals ? '#f8fafc' : 'white', cursor: 'pointer',
+                        transition: 'all 0.2s ease'
+                      }}
+                      onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
+                      onMouseOut={(e) => e.currentTarget.style.backgroundColor = isEditingVitals ? '#f8fafc' : 'white'}
+                    >
+                      {isEditingVitals ? <MdSave size={14} className="text-teal-600" /> : <MdEdit size={14} className="text-slate-500" />}
+                      {isEditingVitals ? 'Done' : 'Update Vitals'}
+                    </button>
+                  )}
                 >
-                  {/* ── Live Vitals Display Grid ───────────────────── */}
-                  <div className="vitals-display-grid">
-                    <VitalCard
-                      icon={<span className="vc-emoji">⚖️</span>}
-                      label="Weight"
-                      value={weight}
-                      unit="kg"
-                      accentColor="#0d9488"
-                    />
-                    <VitalCard
-                      icon={<span className="vc-emoji">📏</span>}
-                      label="Height"
-                      value={height}
-                      unit="cm"
-                      accentColor="#0369a1"
-                    />
-                    <VitalCard
-                      icon={<span className="vc-emoji">📉</span>}
-                      label="BMI"
-                      value={bmi}
-                      status={bmiStatus}
-                      accentColor={bmiStatus?.color || '#64748b'}
-                    />
-                    <VitalCard
-                      icon={<MdFavorite size={18} />}
-                      label="SpO₂"
-                      value={spo2}
-                      unit="%"
-                      status={spo2Status}
-                      accentColor={spo2Status?.color || '#ef4444'}
-                    />
-                  </div>
-
-                  {/* ── Input Form ────────────────────────────────── */}
-                  <div className="vitals-input-grid">
-                    <div className="input-group">
-                      <label htmlFor="height">Height <span className="unit-label">(cm)</span></label>
-                      <input
-                        id="height"
-                        type="number"
-                        value={height}
-                        onChange={(e) => setHeight(e.target.value)}
-                        placeholder="e.g. 175"
-                        className="intake-input"
-                      />
-                    </div>
-                    <div className="input-group">
-                      <label htmlFor="weight">Weight <span className="unit-label">(kg)</span></label>
-                      <input
-                        id="weight"
-                        type="number"
+                  {/* ── Live Vitals Display Grid (Default) ───────────────────── */}
+                  {!isEditingVitals ? (
+                    <div className="vitals-display-grid">
+                      <VitalCard
+                        icon={<span className="vc-emoji">⚖️</span>}
+                        label="Weight"
                         value={weight}
-                        onChange={(e) => setWeight(e.target.value)}
-                        placeholder="e.g. 72"
-                        className="intake-input"
+                        unit="kg"
+                        accentColor="#0d9488"
                       />
-                    </div>
-                    <div className="input-group">
-                      <label htmlFor="bmi">BMI <span className="unit-label">(auto)</span></label>
-                      <input
-                        id="bmi"
-                        type="number"
+                      <VitalCard
+                        icon={<span className="vc-emoji">📏</span>}
+                        label="Height"
+                        value={height}
+                        unit="cm"
+                        accentColor="#0369a1"
+                      />
+                      <VitalCard
+                        icon={<span className="vc-emoji">📉</span>}
+                        label="BMI"
                         value={bmi}
-                        placeholder="Auto-calculated"
-                        className="intake-input intake-input--readonly"
-                        readOnly
+                        unit="kg/m²"
+                        status={bmiStatus}
+                        accentColor={bmiStatus?.color || '#64748b'}
                       />
-                    </div>
-                    <div className="input-group">
-                      <label htmlFor="spo2">SpO₂ <span className="unit-label">(%)</span></label>
-                      <input
-                        id="spo2"
-                        type="number"
+                      <VitalCard
+                        icon={<MdFavorite size={18} />}
+                        label="SpO₂"
                         value={spo2}
-                        onChange={(e) => setSpo2(e.target.value)}
-                        placeholder="e.g. 98"
-                        className="intake-input"
+                        unit="%"
+                        status={spo2Status}
+                        accentColor={spo2Status?.color || '#ef4444'}
                       />
-                    </div>
-                    <div className="input-group">
-                      <label htmlFor="bp">Blood Pressure <span className="unit-label">(mmHg)</span></label>
-                      <input
-                        id="bp"
-                        type="text"
+                      <VitalCard
+                        icon={<span className="vc-emoji">🩺</span>}
+                        label="Blood Pressure"
                         value={bp}
-                        onChange={(e) => setBp(e.target.value)}
-                        placeholder="e.g. 120/80"
-                        className="intake-input"
+                        unit="mmHg"
+                        accentColor="#6366f1"
                       />
                     </div>
-                  </div>
+                  ) : (
+                    /* ── Input Form (Edit Mode) ────────────────────────────────── */
+                    <div className="vitals-input-grid mt-2">
+                      <div className="input-group">
+                        <label htmlFor="height">Height <span className="unit-label">(cm)</span></label>
+                        <input
+                          id="height"
+                          type="number"
+                          value={height}
+                          onChange={(e) => { setHeight(e.target.value); setError(''); }}
+                          placeholder="intake. cm"
+                          className="intake-input"
+                        />
+                      </div>
+                      <div className="input-group">
+                        <label htmlFor="weight">Weight <span className="unit-label">(kg)</span></label>
+                        <input
+                          id="weight"
+                          type="number"
+                          value={weight}
+                          onChange={(e) => { setWeight(e.target.value); setError(''); }}
+                          placeholder="e.g. 72"
+                          className="intake-input"
+                        />
+                      </div>
+                      <div className="input-group">
+                        <label htmlFor="bmi">BMI <span className="unit-label">(auto)</span></label>
+                        <input
+                          id="bmi"
+                          type="number"
+                          value={bmi}
+                          placeholder="Auto-calculated"
+                          className="intake-input intake-input--readonly"
+                          readOnly
+                        />
+                      </div>
+                      <div className="input-group">
+                        <label htmlFor="spo2">SpO₂ <span className="unit-label">(%)</span></label>
+                        <input
+                          id="spo2"
+                          type="number"
+                          value={spo2}
+                          onChange={(e) => setSpo2(e.target.value)}
+                          placeholder="e.g. 98"
+                          className="intake-input"
+                        />
+                      </div>
+                      <div className="input-group">
+                        <label htmlFor="bp">Blood Pressure <span className="unit-label">(mmHg)</span></label>
+                        <input
+                          id="bp"
+                          type="text"
+                          value={bp}
+                          onChange={(e) => setBp(e.target.value)}
+                          placeholder="e.g. 120/80"
+                          className="intake-input"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </SectionCard>
 
                 {/* Current Notes Section */}

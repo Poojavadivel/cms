@@ -8,18 +8,19 @@ import React, { useState } from 'react';
 import { MdExpandMore, MdExpandLess } from 'react-icons/md';
 import './SectionCard.css';
 
-const SectionCard = ({ 
-  icon, 
-  title, 
-  description, 
-  children, 
-  initiallyExpanded = true 
+const SectionCard = ({
+  icon,
+  title,
+  description,
+  children,
+  initiallyExpanded = true,
+  actionRenderer
 }) => {
   const [isExpanded, setIsExpanded] = useState(initiallyExpanded);
 
   return (
     <div className="section-card">
-      <div 
+      <div
         className="section-card-header"
         onClick={() => setIsExpanded(!isExpanded)}
       >
@@ -34,13 +35,20 @@ const SectionCard = ({
             )}
           </div>
         </div>
-        <button 
-          className="section-card-expand-btn"
-          type="button"
-          aria-label={isExpanded ? 'Collapse' : 'Expand'}
-        >
-          {isExpanded ? <MdExpandLess size={24} /> : <MdExpandMore size={24} />}
-        </button>
+        <div className="section-card-header-right" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {actionRenderer && (
+            <div onClick={(e) => e.stopPropagation()}>
+              {actionRenderer()}
+            </div>
+          )}
+          <button
+            className="section-card-expand-btn"
+            type="button"
+            aria-label={isExpanded ? 'Collapse' : 'Expand'}
+          >
+            {isExpanded ? <MdExpandLess size={24} /> : <MdExpandMore size={24} />}
+          </button>
+        </div>
       </div>
 
       {isExpanded && (

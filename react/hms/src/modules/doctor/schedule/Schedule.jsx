@@ -12,6 +12,7 @@ import patientsService from '../../../services/patientsService';
 import { PatientProfileView } from '../../../components/doctor';
 import AppointmentIntakeModal from '../../../components/appointments/AppointmentIntakeModal';
 import StatusBadge from '../../../components/common/StatusBadge';
+import PatientVitalsBadgeList from '../../../components/common/PatientVitalsBadgeList';
 import './Schedule.css';
 
 const DoctorSchedule = () => {
@@ -367,7 +368,25 @@ const DoctorSchedule = () => {
   );
 };
 
-// Helper Components
+// ─── Visit Type Utilities ─────────────────────────────────────────────────────
+const getVisitType = (appointment) => {
+  const type = (appointment.visitType || appointment.appointmentType || appointment.type || '').toLowerCase();
+  if (type.includes('follow') || type.includes('review')) return 'Follow-Up';
+  if (type.includes('tele') || type.includes('video') || type.includes('remote')) return 'Telemedicine';
+  if (type.includes('emergency') || type.includes('urgent')) return 'Emergency';
+  if (type.includes('initial') || type.includes('new')) return 'New Patient';
+  return 'Consultation';
+};
+
+const visitTypeBadgeStyles = {
+  'Follow-Up': 'bg-indigo-50 text-indigo-700 border-indigo-200',
+  'Telemedicine': 'bg-cyan-50 text-cyan-700 border-cyan-200',
+  'Emergency': 'bg-rose-50 text-rose-700 border-rose-200',
+  'New Patient': 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  'Consultation': 'bg-slate-100 text-slate-600 border-slate-200',
+};
+
+// ─── Redesigned Appointment "Smart Card" ──────────────────────────────────────
 const AppointmentCard = ({ appointment, onViewIntake, onViewPatient, onDelete, onConfirm }) => {
   // --- ROBUST DATA EXTRACTION ---
   const pId = appointment.patientId;
@@ -402,86 +421,121 @@ const AppointmentCard = ({ appointment, onViewIntake, onViewPatient, onDelete, o
     }
   }
 
-  // 5. Reasons & Vitals
+  // 5. Reason / Chief Complaint
   const reason = appointment.reason ||
-    appointment.appointmentType ||
     appointment.chiefComplaint ||
-    (isPopulated ? pId.chiefComplaint : 'Consultation');
+    (isPopulated ? pId.chiefComplaint : null);
 
+  // 6. Visit Type
+  const visitType = getVisitType(appointment);
+  const visitBadgeCls = visitTypeBadgeStyles[visitType] || visitTypeBadgeStyles['Consultation'];
+
+  // 7. Status
   const status = appointment.status || 'Scheduled';
-
-  const getStatusColor = (status) => {
-    const s = String(status).toLowerCase();
-    if (s.includes('confirm')) return '#207DC0'; // Green
-    if (s.includes('sched')) return '#0EA5E9';   // Blue
-    if (s.includes('pend')) return '#F59E0B';    // Amber
-    if (s.includes('cancel')) return '#EF4444';   // Red
-    if (s.includes('complete')) return '#8B5CF6'; // Purple
-    return '#94A3B8';
-  };
-
   const isActionable = status.toLowerCase() === 'scheduled' || status.toLowerCase() === 'pending';
 
-  // Determine avatar image based on gender
+  // 8. Avatar
   const genderStr = (gender || '').toLowerCase().trim();
   const avatarSrc = genderStr.includes('female') || genderStr.startsWith('f')
     ? '/girlicon.png'
     : '/boyicon.png';
 
+  // 9. Compact age/gender label
+  const genderLetter = genderStr.startsWith('f') ? 'F' : genderStr.startsWith('m') ? 'M' : '—';
+  const ageGender = age > 0 ? `${age}${genderLetter}` : genderLetter;
+
   return (
-    <div className={`appointment-card modern-shadow status-border-${status.toLowerCase()}`}>
-      <div className="card-header">
-        <div className="patient-avatar-box" data-gender={genderStr}>
-          <img
-            src={avatarSrc}
-            alt={gender}
-            className="patient-avatar-img"
-            onError={(e) => { e.target.src = '/boyicon.png'; }}
-          />
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden group">
+      {/* ── Row 1: Time Ribbon + Patient + Status ── */}
+      <div className="grid grid-cols-[auto_1fr_auto] gap-3 items-center p-4 pb-2">
+        {/* Time Block — Most prominent */}
+        <div className="flex flex-col items-center justify-center bg-primary-50 rounded-xl px-3.5 py-2 min-w-[72px] border border-primary-100">
+          <span className="text-lg font-extrabold text-primary-700 leading-tight tracking-tight">{timeStr}</span>
         </div>
-        <div className="patient-info">
-          <div
-            className="patient-name clickable-title"
-            onClick={(e) => {
-              e.stopPropagation();
-              onViewPatient();
-            }}
-          >
-            {patientName}
+
+        {/* Patient Info */}
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 border-2 border-slate-200 shadow-sm">
+            <img
+              src={avatarSrc}
+              alt={gender}
+              className="w-full h-full object-cover"
+              onError={(e) => { e.target.src = '/boyicon.png'; }}
+            />
           </div>
-          <div className="patient-meta-row">
-            <span className="age-pill">{age > 0 ? `${age} yrs` : 'N/A'}</span>
-            <span className="dot">•</span>
-            <span className="gender-text">{gender}</span>
+          <div className="min-w-0">
+            <h4
+              className="text-sm font-bold text-slate-800 truncate cursor-pointer hover:text-primary-600 transition-colors"
+              onClick={(e) => { e.stopPropagation(); onViewPatient(); }}
+              title="View Patient Profile"
+            >
+              {patientName}
+            </h4>
+            <span className="text-xs font-medium text-slate-400">{ageGender}</span>
           </div>
         </div>
+
+        {/* Status Badge */}
         <StatusBadge status={status} />
       </div>
 
-      <div className="card-body-details">
-        <div className="schedule-row">
-          <MdCalendarToday className="icon-tiny" />
-          <span className="time-label">Scheduled for:</span>
-          <span className="time-value">{timeStr}</span>
+      {/* ── Row 2: Context Row (Reason + Visit Type + Vitals) ── */}
+      <div className="px-4 pb-3 flex flex-col gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Visit Type Badge */}
+          <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${visitBadgeCls}`}>
+            {visitType}
+          </span>
+
+          {/* Reason / Chief Complaint */}
+          {reason ? (
+            <span className="text-xs text-slate-500 italic truncate max-w-[200px]" title={reason}>
+              — {reason}
+            </span>
+          ) : (
+            <span className="text-xs text-slate-400 italic">No reason specified</span>
+          )}
         </div>
-        <div className="reason-box">
-          <p className="reason-text">"{reason}"</p>
-        </div>
+
+        {/* Vitals Badge List - Extracts universally from patientId object or appointment root */}
+        <PatientVitalsBadgeList data={isPopulated ? pId : appointment} />
       </div>
 
-      <div className="card-actions-row">
+      {/* ── Row 3: Action Bar ── */}
+      <div className="flex items-center gap-2 px-4 py-2.5 bg-slate-50/80 border-t border-slate-100">
         {isActionable && (
-          <button className="btn-modern btn-confirm flex-2" onClick={onConfirm} title="Confirm Appointment">
-            <MdCheck />
-            <span>Confirm</span>
+          <button
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500 text-white text-xs font-semibold hover:bg-emerald-600 transition-colors shadow-sm"
+            onClick={onConfirm}
+            title="Confirm Appointment"
+          >
+            <MdCheck size={14} />
+            Confirm
           </button>
         )}
-        <button className="btn-modern btn-intake flex-2" onClick={onViewIntake} title="Open Intake Form">
-          <MdRemoveRedEye />
-          <span>Intake</span>
+        <button
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-500 text-white text-xs font-semibold hover:bg-primary-600 transition-colors shadow-sm"
+          onClick={onViewPatient}
+          title="Start Consult / View Profile"
+        >
+          <MdRemoveRedEye size={14} />
+          Start Consult
         </button>
-        <button className="btn-modern btn-delete-icon" onClick={onDelete} title="Archive / Delete">
-          <MdDelete />
+        <button
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-600 text-xs font-medium hover:bg-slate-100 transition-colors"
+          onClick={onViewIntake}
+          title="Open Intake Form"
+        >
+          <MdRemoveRedEye size={14} />
+          Intake
+        </button>
+        <div className="flex-1" />
+        <button
+          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-colors"
+          onClick={onDelete}
+          title="Archive / Delete"
+        >
+          <MdDelete size={16} />
         </button>
       </div>
     </div>

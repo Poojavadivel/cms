@@ -208,13 +208,28 @@ const ConsultationCanvas = ({ appointment, onConsultationSaved }) => {
         `${appointment.patientId?.firstName || ''} ${appointment.patientId?.lastName || ''}`.trim() ||
         appointment.patientName || 'Patient';
 
-    const vitals = patientData?.vitals
+    // Robust extraction: Vitals may be nested in `patientData.vitals` or directly on `patientData`
+    const vitals = patientData
         ? {
-            bp: { value: patientData.vitals.bp || '--/--', unit: 'mmHg', trend: 'stable', status: 'normal' },
-            spo2: { value: patientData.vitals.spo2 || '--', unit: '%', trend: 'stable', status: patientData.vitals.spo2 < 94 ? 'critical' : 'normal' },
-            temp: { value: patientData.vitals.temp || '--', unit: '°C', trend: 'stable', status: patientData.vitals.temp > 38.5 ? 'warning' : 'normal' },
-            weight: { value: patientData.vitals.weightKg || '--', unit: 'kg', trend: 'stable', status: 'normal' },
-            recordedAt: patientData.vitals.updatedAt,
+            bp: {
+                value: patientData.vitals?.bp || patientData.bp || patientData.bloodPressure || '--/--',
+                unit: 'mmHg', trend: 'stable', status: 'normal'
+            },
+            spo2: {
+                value: patientData.vitals?.spo2 || patientData.oxygen || patientData.spo2 || '--',
+                unit: '%', trend: 'stable',
+                status: (parseFloat(patientData.vitals?.spo2 || patientData.oxygen || patientData.spo2) < 94) ? 'critical' : 'normal'
+            },
+            temp: {
+                value: patientData.vitals?.temp || patientData.temperature || '--',
+                unit: '°C', trend: 'stable',
+                status: (parseFloat(patientData.vitals?.temp || patientData.temperature) > 38.5) ? 'warning' : 'normal'
+            },
+            weight: {
+                value: patientData.vitals?.weightKg || patientData.weightKg || patientData.weight || '--',
+                unit: 'kg', trend: 'stable', status: 'normal'
+            },
+            recordedAt: patientData.vitals?.updatedAt || patientData.updatedAt || new Date().toISOString(),
         }
         : {};
 
