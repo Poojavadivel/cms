@@ -344,37 +344,53 @@ const PatientView = ({ isOpen, onClose, patientId, patient: patientProp, onEdit,
                                         </div>
                                     </div>
 
-                                    {/* Right — Edit + Vitals + Diagnosis/Barriers */}
+                                    {/* Right — Actions Group (Edit + Vitals) + Info Group (Diagnosis/Barriers) */}
                                     <div className="pv-header-right">
-                                        <button className="pv-edit-btn" onClick={() => onEdit && onEdit(patient)}>
-                                            <MdEdit size={14} /> Edit
-                                        </button>
+                                        <div className="pv-header-actions-group">
+                                            <button className="pv-edit-btn" onClick={() => onEdit && onEdit(patient)}>
+                                                <MdEdit size={14} /> Edit
+                                            </button>
 
-                                        {/* Vitals — 4-column row */}
-                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                                            <VitalCard label="BMI" value={patientData.bmi} unit="kg/m²" />
-                                            <VitalCard label="Weight" value={patientData.weightKg} unit="kg" />
-                                            <VitalCard label="Height" value={patientData.heightCm} unit="cm" />
-                                            <VitalCard label="Blood Pressure" value={patientData.bp} unit="mmHg" />
+                                            {/* Vitals — 2x2 Grid */}
+                                            <div className="pv-vitals-grid-2x2">
+                                                <div className="pv-metric-card pv-metric-height">
+                                                    <span className="pv-metric-val">{patientData.heightCm || '—'} <small>cm</small></span>
+                                                    <span className="pv-metric-lbl">Height</span>
+                                                </div>
+                                                <div className="pv-metric-card pv-metric-weight">
+                                                    <span className="pv-metric-val">{patientData.weightKg || '—'} <small>kg</small></span>
+                                                    <span className="pv-metric-lbl">Weight</span>
+                                                </div>
+                                                <div className="pv-metric-card pv-metric-bmi">
+                                                    <span className="pv-metric-val">{patientData.bmi || '—'}</span>
+                                                    <span className="pv-metric-lbl">BMI</span>
+                                                </div>
+                                                <div className="pv-metric-card pv-metric-bp">
+                                                    <span className="pv-metric-val">{patientData.bp}</span>
+                                                    <span className="pv-metric-lbl">Blood Pressure</span>
+                                                </div>
+                                            </div>
                                         </div>
 
-                                        {patientData.diagnosis.length > 0 && (
-                                            <div className="pv-diagnosis-section">
-                                                <span className="pv-sec-label">Own Diagnosis</span>
-                                                <div className="pv-tags-row">
-                                                    {patientData.diagnosis.map((d, i) => <span key={i} className="pv-tag diag">{d}</span>)}
+                                        <div className="pv-header-tags-group">
+                                            {patientData.diagnosis.length > 0 && (
+                                                <div className="pv-diagnosis-section">
+                                                    <span className="pv-sec-label">Own Diagnosis</span>
+                                                    <div className="pv-tags-row">
+                                                        {patientData.diagnosis.map((d, i) => <span key={i} className="pv-tag diag">{d}</span>)}
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        )}
+                                            )}
 
-                                        {patientData.barriers.length > 0 && (
-                                            <div className="pv-barriers-section">
-                                                <span className="pv-sec-label">Health Barriers</span>
-                                                <div className="pv-tags-row">
-                                                    {patientData.barriers.map((b, i) => <span key={i} className="pv-tag barrier">{b}</span>)}
+                                            {patientData.barriers.length > 0 && (
+                                                <div className="pv-barriers-section">
+                                                    <span className="pv-sec-label">Health Barriers</span>
+                                                    <div className="pv-tags-row">
+                                                        {patientData.barriers.map((b, i) => <span key={i} className="pv-tag barrier">{b}</span>)}
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        )}
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             </div>

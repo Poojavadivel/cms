@@ -451,16 +451,43 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdi
 
   const getFilteredAppointments = () => {
     if (!searchTerm) return patientAppointments;
-    return patientAppointments.filter(appt => {
-      // Search logic (date, status, condition?) user said "Search should filter appointments of the selected patient...". usually by date or status or condition. 
-      // Previous request said "Doctor, Date, Department".
-      // Current request says "Add one search input".
-      // I'll search across basic fields.
-      const date = appt.date || '';
-      const status = appt.status || '';
+    const term = searchTerm.toLowerCase();
 
-      return date.includes(searchTerm) ||
-        status.toLowerCase().includes(searchTerm.toLowerCase());
+    return patientAppointments.filter(appt => {
+      // Improved logic: Search across multiple fields
+      const date = (appt.date || appt.startAt || '').toLowerCase();
+      const status = (appt.status || '').toLowerCase();
+
+      let drName = (appt.doctor || '').toLowerCase();
+      if (appt.doctorId && typeof appt.doctorId === 'object') {
+        drName = `${appt.doctorId.firstName || ''} ${appt.doctorId.lastName || ''}`.trim().toLowerCase();
+      } else if (appt.doctorName) {
+        drName = appt.doctorName.toLowerCase();
+      }
+
+      const apptService = (appt.service || appt.appointmentType || 'Consultation').toLowerCase();
+
+      // Extract logic for condition similarly to table row
+      let reason = '';
+      if (appt.followUpReason) reason = appt.followUpReason;
+      else if (appt.chiefComplaint) reason = appt.chiefComplaint;
+      else if (appt.reason) reason = appt.reason;
+      else if (appt.metadata?.followUpReason) reason = appt.metadata.followUpReason;
+      else if (appt.metadata?.chiefComplaint) reason = appt.metadata.chiefComplaint;
+      else if (appt.metadata?.reason) reason = appt.metadata.reason;
+      else if (appt.notes) reason = appt.notes;
+
+      let pObj = typeof appt.patientId === 'object' ? appt.patientId : null;
+      if (!pObj && patient && (appt.patientId === patient._id || patient._id === patientId)) {
+        pObj = patient;
+      }
+      const condition = (appt.condition || reason || extractCondition(pObj) || '').toLowerCase();
+
+      return date.includes(term) ||
+        status.includes(term) ||
+        drName.includes(term) ||
+        apptService.includes(term) ||
+        condition.includes(term);
     });
   };
 
@@ -555,71 +582,60 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdi
 
                     </div>
 
-                    {/* Right — Edit + Diagnosis/Barriers + Vitals 2x2 */}
+                    {/* Right — Actions Group (Edit + Vitals) + Info Group (Diagnosis/Barriers) */}
                     <div className="pv-header-right">
-                      <button
-                        className="pv-edit-btn"
-                        onClick={() => onEdit(appointment)}
-                      >
-                        <MdEdit size={14} /> Edit
-                      </button>
+                      <div className="pv-header-actions-group">
+                        <button
+                          className="pv-edit-btn"
+                          onClick={() => {
+                            if (onEdit) {
+                              onEdit(appointment);
+                            }
+                          }}
+                        >
+                          <MdEdit size={14} /> Edit
+                        </button>
 
-                      {/* Vitals — 2x2 Grid for right corner */}
-                      <div className="pv-vitals-grid-2x2">
-                        <div className="pv-metric-card pv-metric-height">
-                          <span className="pv-metric-val">{patientData.heightCm || '—'} <small>cm</small></span>
-                          <span className="pv-metric-lbl">Height</span>
-                        </div>
-                        <div className="pv-metric-card pv-metric-weight">
-                          <span className="pv-metric-val">{patientData.weightKg || '—'} <small>kg</small></span>
-                          <span className="pv-metric-lbl">Weight</span>
-                        </div>
-                        <div className="pv-metric-card pv-metric-bmi">
-                          <span className="pv-metric-val">{patientData.bmi || '—'}</span>
-                          <span className="pv-metric-lbl">BMI</span>
-                        </div>
-                        <div className="pv-metric-card pv-metric-bp">
-                          <span className="pv-metric-val">{patientData.bp}</span>
-                          <span className="pv-metric-lbl">Blood Pressure</span>
+                        {/* Vitals — 2x2 Grid */}
+                        <div className="pv-vitals-grid-2x2">
+                          <div className="pv-metric-card pv-metric-height">
+                            <span className="pv-metric-val">{patientData.heightCm || '—'} <small>cm</small></span>
+                            <span className="pv-metric-lbl">Height</span>
+                          </div>
+                          <div className="pv-metric-card pv-metric-weight">
+                            <span className="pv-metric-val">{patientData.weightKg || '—'} <small>kg</small></span>
+                            <span className="pv-metric-lbl">Weight</span>
+                          </div>
+                          <div className="pv-metric-card pv-metric-bmi">
+                            <span className="pv-metric-val">{patientData.bmi || '—'}</span>
+                            <span className="pv-metric-lbl">BMI</span>
+                          </div>
+                          <div className="pv-metric-card pv-metric-bp">
+                            <span className="pv-metric-val">{patientData.bp}</span>
+                            <span className="pv-metric-lbl">Blood Pressure</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    {/* Right Actions */}
-                    <div className="pv-header-right">
-                      <button
-                        className="pv-edit-btn"
-                        onClick={() => {
-                          console.log('Edit button clicked in AppointmentViewModal');
-                          console.log('onEdit prop:', onEdit);
-                          console.log('appointment object:', appointment);
-                          if (onEdit) {
-                            onEdit(appointment);
-                          } else {
-                            console.error('onEdit prop is not defined!');
-                          }
-                        }}
-                      >
-                        <MdEdit size={14} /> Edit
-                      </button>
-
-                      {patientData.diagnosis.length > 0 && (
-                        <div className="pv-diagnosis-section">
-                          <span className="pv-sec-label">Own Diagnosis</span>
-                          <div className="pv-tags-row">
-                            {patientData.diagnosis.map((d, i) => <span key={i} className="pv-tag diag">{d}</span>)}
+                      <div className="pv-header-tags-group">
+                        {patientData.diagnosis.length > 0 && (
+                          <div className="pv-diagnosis-section">
+                            <span className="pv-sec-label">Own Diagnosis</span>
+                            <div className="pv-tags-row">
+                              {patientData.diagnosis.map((d, i) => <span key={i} className="pv-tag diag">{d}</span>)}
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        )}
 
-                      {patientData.barriers.length > 0 && (
-                        <div className="pv-barriers-section">
-                          <span className="pv-sec-label">Health Barriers</span>
-                          <div className="pv-tags-row">
-                            {patientData.barriers.map((b, i) => <span key={i} className="pv-tag barrier">{b}</span>)}
+                        {patientData.barriers.length > 0 && (
+                          <div className="pv-barriers-section">
+                            <span className="pv-sec-label">Health Barriers</span>
+                            <div className="pv-tags-row">
+                              {patientData.barriers.map((b, i) => <span key={i} className="pv-tag barrier">{b}</span>)}
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -716,7 +732,18 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdi
                             </tbody>
                           </table>
                         ) : (
-                          <div className="no-appointments"><p>No appointments found.</p></div>
+                          <div className="no-appointments">
+                            <div className="no-results-content">
+                              <MdInfo size={48} className="no-results-icon" />
+                              <h3>No results found</h3>
+                              <p>We couldn't find any appointments matching "{searchTerm}"</p>
+                              {searchTerm && (
+                                <button className="clear-search-btn" onClick={() => setSearchTerm('')}>
+                                  Clear Search
+                                </button>
+                              )}
+                            </div>
+                          </div>
                         )}
                       </div>
                     </>

@@ -417,89 +417,132 @@
     font-family: 'Amazon Ember', 'Inter', 'Segoe UI', 'SF Pro', sans-serif;
 }
 
-/* Right Section — 2×2 vitals grid + Edit button */
+/* Right Section — Actions Group (Edit + Vitals) + Info Group (Diagnosis/Barriers) */
 .pv-header-right {
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    align-items: stretch;
-    justify-content: flex-start;
+    gap: 16px;
+    align-items: flex-end;
     flex-shrink: 0;
-    min-width: 220px;
-    max-width: 240px;
+    min-width: 260px;
+}
+
+.pv-header-actions-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+    padding-bottom: 2px;
+}
+
+.pv-header-tags-group {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
 }
 
 /* 2×2 Vitals Grid */
 .pv-vitals-grid-2x2 {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 6px;
+    gap: 10px;
     width: 100%;
 }
 
 .pv-vitals-grid-2x2 .pv-metric-card {
-    padding: 4px 8px;
-    border-radius: 4px;
-    min-width: 115px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: #FFFFFF;
+    border: 1px solid #E3E6E6;
+    border-top: 3px solid #6C757D;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    transition: all 0.2s ease;
+    min-width: 110px;
 }
 
-.pv-metric-icon {
-    font-size: 16px;
-    line-height: 1;
-    margin-bottom: 2px;
+.pv-vitals-grid-2x2 .pv-metric-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.pv-metric-height {
+    border-top-color: #0077CC !important;
+}
+
+.pv-metric-weight {
+    border-top-color: #6C757D !important;
+}
+
+.pv-metric-bmi {
+    border-top-color: #F59E0B !important;
+}
+
+.pv-metric-bp {
+    border-top-color: #DC2626 !important;
+}
+
+.pv-metric-val {
+    font-size: 13px;
+    font-weight: 700;
+    color: #0F1111;
+    line-height: 1.2;
+    font-family: 'Amazon Ember', 'Inter', sans-serif;
+}
+
+.pv-metric-val small {
+    font-size: 10px;
+    font-weight: 500;
+    color: #8D9096;
+    margin-left: 2px;
+}
+
+.pv-metric-lbl {
+    font-size: 10px;
+    color: #565959;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 2px;
 }
 
 .pv-edit-btn {
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 6px;
     padding: 6px 14px;
     background: #FF9900;
     border: none;
-    border-radius: 8px;
+    border-radius: 6px;
     font-size: 13px;
-    font-weight: 600;
-    color: #FFFFFF;
+    font-weight: 700;
+    color: #FFFFFF !important;
     cursor: pointer;
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    font-family: 'Amazon Ember', 'Inter', sans-serif;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    width: fit-content;
     align-self: flex-end;
-    font-family: 'Amazon Ember', 'Inter', 'Segoe UI', 'SF Pro', sans-serif;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    position: relative;
-    overflow: hidden;
-    margin-bottom: 2px;
-}
-
-.pv-edit-btn::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 0;
-    height: 0;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.3);
-    transform: translate(-50%, -50%);
-    transition: width 0.4s ease, height 0.4s ease;
-}
-
-.pv-edit-btn:active::after {
-    width: 200px;
-    height: 200px;
 }
 
 .pv-edit-btn:hover {
-    background: #D97706;
-    transform: scale(1.04);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    background: #E47911;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.pv-edit-btn:active {
+    transform: translateY(0);
 }
 
 .pv-diagnosis-section,
 .pv-barriers-section {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 6px;
     align-items: flex-end;
+    width: 100%;
 }
 
 .pv-sec-label {
