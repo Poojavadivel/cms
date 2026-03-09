@@ -941,12 +941,12 @@ const Appointments = () => {
           <table className="w-full text-left border-collapse">
             <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
               <tr>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[25%]">Patient</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[18%]">Date & Time</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[15%] hidden md:table-cell">Service</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[18%] hidden lg:table-cell">Reason</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[12%]">Status</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[12%] text-right pr-8">Actions</th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-left w-[25%]">Patient</th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-left w-[18%]">Date & Time</th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-left w-[15%] hidden md:table-cell">Service</th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-left w-[18%] hidden lg:table-cell">Reason</th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-left w-[12%]">Status</th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right w-[12%] pr-6">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 bg-white">

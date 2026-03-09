@@ -617,25 +617,23 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdi
                         </div>
                       </div>
 
-                      <div className="pv-header-tags-group">
-                        {patientData.diagnosis.length > 0 && (
-                          <div className="pv-diagnosis-section">
-                            <span className="pv-sec-label">Own Diagnosis</span>
-                            <div className="pv-tags-row">
-                              {patientData.diagnosis.map((d, i) => <span key={i} className="pv-tag diag">{d}</span>)}
-                            </div>
+                      {patientData.diagnosis.length > 0 && (
+                        <div className="pv-diagnosis-section">
+                          <span className="pv-sec-label">Own Diagnosis</span>
+                          <div className="pv-tags-row">
+                            {patientData.diagnosis.map((d, i) => <span key={i} className="pv-tag diag">{d}</span>)}
                           </div>
-                        )}
+                        </div>
+                      )}
 
-                        {patientData.barriers.length > 0 && (
-                          <div className="pv-barriers-section">
-                            <span className="pv-sec-label">Health Barriers</span>
-                            <div className="pv-tags-row">
-                              {patientData.barriers.map((b, i) => <span key={i} className="pv-tag barrier">{b}</span>)}
-                            </div>
+                      {patientData.barriers.length > 0 && (
+                        <div className="pv-barriers-section">
+                          <span className="pv-sec-label">Health Barriers</span>
+                          <div className="pv-tags-row">
+                            {patientData.barriers.map((b, i) => <span key={i} className="pv-tag barrier">{b}</span>)}
                           </div>
-                        )}
-                      </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -754,7 +752,8 @@ const AppointmentViewModal = ({ isOpen, onClose, appointmentId, patientId, onEdi
               </div>
             </div>
           </>
-        )}
+        )
+        }
       </div>
 
       {/* INTAKE MODAL FOR UPDATES */}
