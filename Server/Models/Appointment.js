@@ -16,7 +16,7 @@ const AppointmentSchema = new Schema({
   startAt: { type: Date, required: true, index: true },
   endAt: { type: Date },
   location: { type: String, default: '' },
-  status: { type: String, enum: ['Scheduled', 'Confirmed', 'Pending', 'Completed', 'Cancelled', 'No-Show', 'Rescheduled'], default: 'Scheduled', index: true },
+  status: { type: String, enum: ['Scheduled', 'Completed', 'Cancelled'], default: 'Scheduled', index: true },
   vitals: { type: Schema.Types.Mixed, default: {} },
   notes: { type: String, default: '' },
   metadata: { type: Schema.Types.Mixed, default: {} },

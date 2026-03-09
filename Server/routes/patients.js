@@ -129,10 +129,10 @@ router.get('/', auth, async (req, res) => {
     // Build filter
     const filter = { deleted_at: null };
 
-    // Enforce doctor specific filtering
-    if (req.user && req.user.role === 'doctor') {
-      filter.doctorId = req.user.id;
-    }
+    // ✅ REMOVED: Doctor filtering - Now doctors can see ALL patients
+    // if (req.user && req.user.role === 'doctor') {
+    //   filter.doctorId = req.user.id;
+    // }
 
     if (q) {
       const regex = new RegExp(q, 'i');

@@ -79,8 +79,28 @@ function generateNoDataResponse(extraction) {
  * @returns {Promise<string>} AI-generated response
  */
 async function generateAIResponse(userMessage, fullContext, userRole, user, chatId, extraction) {
+  // Check if this is an appointment query with appointment data
+  const isAppointmentQuery = extraction.intent === 'appointments' || extraction.intent === 'appointments_today';
+  const hasAppointmentData = fullContext.enhanced && fullContext.enhanced.todayAppointments &&
+                             fullContext.enhanced.todayAppointments.length > 0;
+
+  // If appointment query with data, return structured data for React component
+  if (isAppointmentQuery && hasAppointmentData) {
+    const appointments = fullContext.enhanced.todayAppointments;
+
+    // Return a special JSON format that frontend will detect and render as table
+    return JSON.stringify({
+      type: 'appointments_table',
+      data: {
+        appointments: appointments,
+        date: new Date().toISOString()
+      }
+    });
+  }
+
+  // For other queries, use the AI response
   const systemPrompt = getSystemPrompt(userRole);
-  
+
   const summarizerUser = `User Query: ${userMessage}
 
 Available Context:
@@ -130,7 +150,7 @@ RULES:
         metadata: { userMessage: userMessage, intent: extraction.intent }
       }
     );
-    
+
     return String(reply).trim();
   } catch (summErr) {
     console.error(`[responseGenerator] Summarizer call failed:`, summErr);
