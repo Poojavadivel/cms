@@ -233,34 +233,13 @@ const Icons = {
 
 // --- COMPONENTS ---
 const Header = () => (
-  <div className="appointments-header">
-    <div className="header-content">
-      <h1 
-        className="appointments-main-title"
-        style={{
-          fontSize: '28px',
-          fontWeight: 800,
-          color: '#0F172A',
-          margin: 0,
-          letterSpacing: '-0.04em',
-          lineHeight: 1.1,
-          textTransform: 'uppercase'
-        }}
-      >
+  <div className="bg-slate-50 border-l-[6px] border-teal-500 rounded-xl px-6 py-8 mb-6 flex flex-col shadow-sm relative overflow-hidden h-32 justify-center">
+    {/* Clean subtle pattern or gradient in background if needed, but keeping it minimalist */}
+    <div className="relative z-10">
+      <h1 className="text-slate-900 text-3xl font-bold uppercase tracking-tight m-0">
         APPOINTMENTS
       </h1>
-      <p 
-        className="appointments-main-subtitle"
-        style={{
-          fontSize: '14px',
-          color: '#64748B',
-          margin: '4px 0 0 0',
-          fontWeight: 500,
-          whiteSpace: 'nowrap',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis'
-        }}
-      >
+      <p className="text-slate-500 mt-2 font-medium text-sm m-0">
         Manage bookings, schedules, and patient statuses
       </p>
     </div>
@@ -292,8 +271,6 @@ const FilterBar = ({
   const handleDateSelect = (date) => {
     const localDate = new Date(date.getTime() - (date.getTimezoneOffset() * 60000))
       .toISOString().split('T')[0];
-
-    // Toggle behavior: If clicking the already selected date, clear the filter
     if (localDate === selectedDate) {
       onDateChange(null);
     } else {
@@ -303,64 +280,64 @@ const FilterBar = ({
   };
 
   return (
-    <div className="filter-bar-container">
-      <div className="search-wrapper">
-        <span className="search-icon-lg"><Icons.Search /></span>
+    <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 mb-6 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      {/* Search Input */}
+      <div className="relative flex-1 max-w-lg">
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+          <Icons.Search />
+        </span>
         <input
           type="text"
           placeholder="Search by patient name, doctor, or status..."
-          className="search-input-lg"
+          className="w-full bg-slate-50 border-transparent rounded-lg py-2.5 pl-10 pr-4 text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-teal-500 focus:ring-2 focus:ring-teal-100 transition-all outline-none"
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
         />
       </div>
 
-      <div className="filter-right-group">
-        <div className="tabs-wrapper">
-          <button
-            className={`tab-btn ${activeTab === 'upcoming' ? 'active' : ''}`}
-            onClick={() => onTabChange('upcoming')}
-          >
-            Upcoming
-          </button>
-          <button
-            className={`tab-btn ${activeTab === 'all' ? 'active' : ''}`}
-            onClick={() => onTabChange('all')}
-          >
-            All
-          </button>
-          <button
-            className={`tab-btn ${activeTab === 'completed' ? 'active' : ''}`}
-            onClick={() => onTabChange('completed')}
-          >
-            Completed
-          </button>
-          <button
-            className={`tab-btn ${activeTab === 'cancelled' ? 'active' : ''}`}
-            onClick={() => onTabChange('cancelled')}
-          >
-            Cancelled
-          </button>
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+        {/* Segmented Control Tabs */}
+        <div className="bg-slate-100 p-1 rounded-lg flex items-center space-x-1 overflow-x-auto">
+          {['upcoming', 'all', 'completed', 'cancelled'].map((tabId) => (
+            <button
+              key={tabId}
+              onClick={() => onTabChange(tabId)}
+              className={`capitalize px-4 py-1.5 text-sm font-medium rounded-md transition-all whitespace-nowrap ${activeTab === tabId
+                ? 'bg-white text-slate-900 shadow-sm'
+                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
+                }`}
+            >
+              {tabId}
+            </button>
+          ))}
         </div>
 
-        <div className="calendar-filter-wrapper" ref={calendarRef}>
-          <button
-            className={`btn-filter-date ${selectedDate ? 'active' : ''}`}
-            onClick={() => setShowCalendar(!showCalendar)}
-          >
-            <Icons.Calendar />
-            {selectedDate ? formatDate(selectedDate) : 'Filter by Date'}
-            <span style={{ fontSize: '11px', marginLeft: '4px' }}>▼</span>
-          </button>
-
-          {selectedDate && (
-            <button className="btn-clear-date-mini" onClick={() => onDateChange(null)} title="Clear date filter">
-              <Icons.Close />
+        {/* Date Filter Button */}
+        <div className="relative" ref={calendarRef}>
+          <div className="flex items-center gap-2">
+            <button
+              className={`flex items-center gap-2 border text-sm font-medium rounded-lg px-4 py-2 transition-colors ${selectedDate ? 'border-teal-200 bg-teal-50 text-teal-700' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                }`}
+              onClick={() => setShowCalendar(!showCalendar)}
+            >
+              <Icons.Calendar />
+              {selectedDate ? formatDate(selectedDate) : 'Filter by Date'}
+              <span className="text-[10px] ml-1 opacity-70">▼</span>
             </button>
-          )}
+
+            {selectedDate && (
+              <button
+                className="w-8 h-8 rounded-full flex items-center justify-center border border-slate-200 bg-white text-slate-400 hover:text-red-500 hover:border-red-200 hover:bg-red-50 transition-colors"
+                onClick={() => onDateChange(null)}
+                title="Clear date filter"
+              >
+                <Icons.Close />
+              </button>
+            )}
+          </div>
 
           {showCalendar && (
-            <div className="calendar-dropdown">
+            <div className="absolute top-full right-0 mt-2 z-50 bg-white rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.12)] border border-slate-200 p-4 min-w-[320px]">
               <Calendar
                 onChange={handleDateSelect}
                 value={selectedDate ? new Date(selectedDate) : new Date()}
@@ -373,6 +350,47 @@ const FilterBar = ({
     </div>
   );
 };
+
+// --- SEMANTIC STATUS BADGE ---
+const StatusBadge = ({ status, onClick }) => {
+  const s = status ? status.toLowerCase() : '';
+
+  let styles = 'bg-slate-100 text-slate-700 border-slate-200';
+  if (onHoverClickStyles(styles, s)) {
+    // Handled inside
+  }
+
+  // Custom semantic matching
+  if (['scheduled', 'pending'].includes(s)) {
+    styles = 'bg-blue-50 text-blue-700 border-blue-100';
+  } else if (['confirmed', 'completed'].includes(s)) {
+    styles = 'bg-emerald-50 text-emerald-700 border-emerald-100';
+  } else if (['cancelled', 'no-show', 'noshow'].includes(s)) {
+    styles = 'bg-red-50 text-red-700 border-red-100';
+  } else if (['rescheduled'].includes(s)) {
+    styles = 'bg-purple-50 text-purple-700 border-purple-100';
+  }
+
+  return (
+    <span
+      onClick={(e) => {
+        if (onClick) {
+          e.stopPropagation();
+          onClick();
+        }
+      }}
+      className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border transition-all ${onClick ? 'cursor-pointer hover:shadow-sm hover:scale-105 active:scale-95' : ''} ${styles}`}
+      title={onClick ? "Click to change status" : ""}
+    >
+      {status}
+    </span>
+  );
+};
+
+// Dummy helper used above.
+function onHoverClickStyles(base, status) {
+  return false;
+}
 
 // --- HELPER FUNCTIONS ---
 
@@ -564,12 +582,12 @@ const Appointments = () => {
     const fetchData = async () => {
       try {
         setIsLoading(true);
-        
+
         // Fetch deleted appointments if on deleted tab, otherwise fetch regular appointments
-        const data = activeTab === 'deleted' 
+        const data = activeTab === 'deleted'
           ? await appointmentsService.fetchDeletedAppointments()
           : await appointmentsService.fetchAppointments();
-          
+
         console.log(`✅ Fetched ${activeTab === 'deleted' ? 'deleted ' : ''}appointments from API:`, data);
 
         // Log first appointment to see structure
@@ -611,7 +629,7 @@ const Appointments = () => {
     setSelectedDate(null);
     setCurrentPage(1);
     setShowCalendar(false);
-    
+
     return () => {
       // Cleanup: reset state when component unmounts
       setAllAppointments([]);
@@ -622,32 +640,32 @@ const Appointments = () => {
   // Filter appointments based on tab and search
   useEffect(() => {
     let result = allAppointments;
-    
+
     // Get today's date and current time (LOCAL timezone)
     const now = new Date();
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const day = String(now.getDate()).padStart(2, '0');
     const todayStr = `${year}-${month}-${day}`; // Local YYYY-MM-DD
-    
+
     const currentHour = now.getHours();
     const currentMinute = now.getMinutes();
     const currentTimeStr = `${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`;
-    
+
     console.log('📅 Today (local):', todayStr, '| Current time:', currentTimeStr); // Debug log
-    
+
     // Filter by tab
     if (activeTab === 'upcoming') {
       // Show appointments for today and future dates, exclude completed/cancelled
       result = result.filter(a => {
         const aptDate = a.rawDate; // YYYY-MM-DD format
         const aptTime = a.time || ''; // HH:MM format or empty
-        
+
         const isNotCompleted = a.status.toLowerCase() !== 'completed';
         const isNotCancelled = a.status.toLowerCase() !== 'cancelled';
-        
+
         let isUpcoming = false;
-        
+
         // Future dates are always upcoming
         if (aptDate > todayStr) {
           isUpcoming = true;
@@ -666,12 +684,12 @@ const Appointments = () => {
         else {
           isUpcoming = false;
         }
-        
+
         // Debug log for first few appointments
         if (result.indexOf(a) < 5) {
           console.log(`🔍 ${a.patientName} | Date: ${aptDate} Time: ${aptTime} | Now: ${todayStr} ${currentTimeStr} | Upcoming: ${isUpcoming} | Status: ${a.status}`);
         }
-        
+
         return isUpcoming && isNotCompleted && isNotCancelled;
       });
     } else if (activeTab !== 'all' && activeTab !== 'deleted') {
@@ -918,110 +936,88 @@ const Appointments = () => {
         showCalendar={showCalendar}
         setShowCalendar={setShowCalendar}
       />
-      <div className="table-card">
-        <div className="modern-table-wrapper">
-          <table className="modern-table">
-            <thead>
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col min-h-0 relative z-0">
+        <div className="flex-1 overflow-auto">
+          <table className="w-full text-left border-collapse">
+            <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
               <tr>
-                <th style={{ width: '25%' }}>Patient</th>
-                <th style={{ width: '18%' }}>Date & Time</th>
-                <th style={{ width: '15%' }}>Service</th>
-                <th style={{ width: '18%' }}>Reason</th>
-                <th style={{ width: '12%' }}>Status</th>
-                <th style={{ width: '12%' }}>Actions</th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[25%]">Patient</th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[18%]">Date & Time</th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[15%] hidden md:table-cell">Service</th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[18%] hidden lg:table-cell">Reason</th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[12%]">Status</th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[12%] text-right pr-8">Actions</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-slate-100 bg-white">
               {currentRows.map((apt, idx) => {
-                // Determine avatar based on gender (matching Flutter logic)
                 const genderStr = (apt.gender || '').toLowerCase().trim();
-                let avatarSrc;
-                if (genderStr.includes('female') || genderStr.startsWith('f')) {
-                  avatarSrc = '/girlicon.png';
-                } else {
-                  avatarSrc = '/boyicon.png';
-                }
-
-                // Debug EVERY row
-                if (idx < 5) { // Only log first 5 to avoid console spam
-                  console.log(`🎨 Row ${idx}:`, {
-                    name: apt.patientName,
-                    gender: apt.gender,
-                    genderStr: genderStr,
-                    avatarSrc: avatarSrc,
-                    fullObject: apt
-                  });
-                }
+                let avatarSrc = (genderStr.includes('female') || genderStr.startsWith('f')) ? '/girlicon.png' : '/boyicon.png';
 
                 return (
-                  <tr key={apt.id}>
-                    {/* PATIENT COLUMN - Clickable */}
+                  <tr key={apt.id} className="hover:bg-slate-50 transition-colors group">
+                    {/* PATIENT COLUMN */}
                     <td
-                      className="cell-patient clickable"
+                      className="px-6 py-4 whitespace-nowrap cursor-pointer"
                       onClick={() => handlePatientNameClick(apt)}
-                      style={{ cursor: 'pointer' }}
                     >
-                      <img
-                        src={avatarSrc}
-                        alt={apt.gender}
-                        className="patient-avatar"
-                        onError={(e) => {
-                          // Fallback if image doesn't load
-                          e.target.style.display = 'none';
-                          e.target.nextElementSibling.style.display = 'flex';
-                        }}
-                      />
-                      <div className="gender-icon-box" style={{ display: 'none' }}>
-                        {apt.gender === 'Female' ? <Icons.Female /> : <Icons.Male />}
-                      </div>
-                      <div className="info-group">
-                        <span className="primary patient-name-clickable">
-                          {apt.patientName}
-                        </span>
-                        <span className="secondary">{apt.patientId}</span>
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={avatarSrc}
+                          alt={apt.gender}
+                          className="w-10 h-10 rounded-full object-cover border border-slate-200 bg-slate-50"
+                          onError={(e) => { e.target.style.display = 'none'; e.target.nextElementSibling.style.display = 'flex'; }}
+                        />
+                        <div className="w-10 h-10 rounded-full border border-slate-200 bg-slate-50 hidden items-center justify-center text-slate-400">
+                          {apt.gender === 'Female' ? <Icons.Female /> : <Icons.Male />}
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-sm font-bold text-slate-900 group-hover:text-teal-600 transition-colors">
+                            {apt.patientName}
+                          </span>
+                          <span className="text-xs text-slate-400 font-medium">{apt.patientId}</span>
+                        </div>
                       </div>
                     </td>
 
                     {/* DATE COLUMN */}
-                    <td>
-                      <div className="info-group">
-                        <span className="primary">{apt.date}</span>
-                        <span className="secondary">{apt.time}</span>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex flex-col">
+                        <span className="text-sm font-bold text-slate-900">{apt.date}</span>
+                        <span className="text-xs text-slate-500">{apt.time}</span>
                       </div>
                     </td>
 
                     {/* SERVICE */}
-                    <td style={{ fontWeight: 500, color: '#334155' }}>{apt.service}</td>
-
-                    {/* REASON */}
-                    <td style={{ fontWeight: 500, color: '#64748b', fontStyle: apt.reason === 'Not specified' ? 'italic' : 'normal' }}>
-                      {apt.reason}
+                    <td className="px-6 py-4 whitespace-nowrap hidden md:table-cell">
+                      <span className="text-sm font-medium text-slate-700">{apt.service}</span>
                     </td>
 
-                    {/* STATUS */}
-                    <td>
-                      <span
-                        className={`status-pill ${apt.status.toLowerCase()} status-editable clickable`}
-                        onClick={() => handleStatusToggle(apt)}
-                        title="Click to change status"
-                      >
-                        {apt.status}
+                    {/* REASON */}
+                    <td className="px-6 py-4 whitespace-nowrap hidden lg:table-cell">
+                      <span className={`text-sm ${apt.reason === 'Not specified' ? 'text-slate-400 italic' : 'text-slate-600 font-medium'}`}>
+                        {apt.reason}
                       </span>
                     </td>
 
+                    {/* STATUS */}
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <StatusBadge status={apt.status} onClick={() => handleStatusToggle(apt)} />
+                    </td>
+
                     {/* ACTIONS */}
-                    <td>
-                      <div className="action-buttons-group">
-                        <button className="btn-action intake" title="Intake" onClick={() => handleIntake(apt)}>
+                    <td className="px-6 py-4 whitespace-nowrap text-right pr-6">
+                      <div className="flex items-center justify-end gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
+                        <button className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors" title="Intake Form" onClick={() => handleIntake(apt)}>
                           <Icons.Intake />
                         </button>
-                        <button className="btn-action edit" title="Edit" onClick={() => handleEdit(apt)}>
+                        <button className="p-1.5 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-md transition-colors" title="Edit" onClick={() => handleEdit(apt)}>
                           <Icons.Edit />
                         </button>
-                        <button className="btn-action view" title="View" onClick={() => handleView(apt)}>
+                        <button className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors" title="View Details" onClick={() => handleView(apt)}>
                           <Icons.Eye />
                         </button>
-                        <button className="btn-action delete" title="Delete" onClick={() => handleDelete(apt)}>
+                        <button className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors" title="Delete" onClick={() => handleDelete(apt)}>
                           <Icons.Delete />
                         </button>
                       </div>
@@ -1031,17 +1027,17 @@ const Appointments = () => {
               })}
               {isLoading && (
                 <tr>
-                  <td colSpan="6" style={{ textAlign: 'center', padding: '48px', color: '#9CA3AF' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-                      <div style={{ width: '32px', height: '32px', border: '3px solid #e5e7eb', borderTopColor: '#207DC0', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }}></div>
-                      <span>Loading appointments...</span>
+                  <td colSpan="6" className="px-6 py-12 text-center text-slate-400">
+                    <div className="flex flex-col items-center justify-center gap-3">
+                      <div className="w-8 h-8 rounded-full border-2 border-slate-200 border-t-teal-500 animate-spin"></div>
+                      <span className="text-sm font-medium">Loading appointments...</span>
                     </div>
                   </td>
                 </tr>
               )}
               {!isLoading && currentRows.length === 0 && (
                 <tr>
-                  <td colSpan="6" style={{ textAlign: 'center', padding: '48px', color: '#9CA3AF' }}>
+                  <td colSpan="6" className="px-6 py-12 text-center text-slate-400 font-medium">
                     No appointments found matching your criteria.
                   </td>
                 </tr>

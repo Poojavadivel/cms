@@ -312,7 +312,7 @@ const PatientDetailsDialog = ({ patient, isOpen, onClose, onEdit, showBillingTab
 
             {/* Tab Content */}
             <div className="pd-tab-content-flutter">
-              {activeTab === 'profile' && <ProfileTab patient={patient} copyToClipboard={copyToClipboard} />}
+              {activeTab === 'profile' && <ProfileTab patient={patient} copyToClipboard={copyToClipboard} onEdit={onEdit} />}
               {activeTab === 'history' && <HistoryTab patient={patient} />}
               {activeTab === 'prescriptions' && <PrescriptionsTab patient={patient} />}
               {activeTab === 'lab' && <LabTab patient={patient} />}
@@ -374,7 +374,7 @@ const VitalCard = ({ label, value, unit }) => {
 };
 
 // Tab Components
-const ProfileTab = ({ patient, copyToClipboard }) => {
+const ProfileTab = ({ patient, copyToClipboard, onEdit }) => {
   const [isAddressCopied, setIsAddressCopied] = useState(false);
   const fullAddress = [patient.houseNo, patient.street, patient.city, patient.state]
     .filter(Boolean).join(', ');

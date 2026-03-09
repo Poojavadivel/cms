@@ -12,21 +12,21 @@
 
 import React, { useState, useEffect } from 'react';
 import { MdClose, MdSave, MdEdit, MdMonitorHeart, MdNote, MdMedication, MdScience, MdEventNote, MdFavorite } from 'react-icons/md';
+import useSWR from 'swr';
 import PatientProfileHeaderCard from '../doctor/PatientProfileHeaderCard';
-import './AppointmentIntakeModal.css';
-
-// Lazy load heavy form components and tables
-const SectionCard = React.lazy(() => import('./SectionCard'));
-const PharmacyTable = React.lazy(() => import('./PharmacyTable'));
-const PathologyTable = React.lazy(() => import('./PathologyTable'));
 import appointmentsService from '../../services/appointmentsService';
 import patientsService from '../../services/patientsService';
 import pharmacyService from '../../services/pharmacyService';
 import pathologyService from '../../services/pathologyService';
 import { PatientDetails } from '../../models/Patients';
 import { calculateBMI, VitalsSchema } from '../../utils/vitalsHelpers';
-import useSWR from 'swr';
 import { Skeleton, SkeletonCard } from '../common/SkeletonLoaders';
+import './AppointmentIntakeModal.css';
+
+// Lazy load heavy form components and tables
+const SectionCard = React.lazy(() => import('./SectionCard'));
+const PharmacyTable = React.lazy(() => import('./PharmacyTable'));
+const PathologyTable = React.lazy(() => import('./PathologyTable'));
 
 const AppointmentIntakeModal = ({ isOpen, onClose, appointmentId, onSuccess }) => {
   const [appointment, setAppointment] = useState(null);
