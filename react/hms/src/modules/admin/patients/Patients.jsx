@@ -393,6 +393,15 @@ const Patients = () => {
       return;
     }
 
+    // If we already have full patient data (e.g. coming from PatientView),
+    // skip the redundant fetch and open edit modal directly
+    if (patient.name && (patient.firstName || patient.lastName || patient.phone)) {
+      console.log('✅ [handleEdit] Using existing patient data (no fetch needed):', patient.name);
+      setActiveModal('edit');
+      setModalData(patient);
+      return;
+    }
+
     // Cancel any pending requests
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -1115,7 +1124,11 @@ const Patients = () => {
           patientId={modalData.id || modalData._id || modalData.patientId}
           isOpen={true}
           onClose={handleCloseModal}
-          onEdit={handleEdit}
+          onEdit={(patient) => {
+            // Simple, synchronous — same pattern as Appointment View Modal
+            setActiveModal('edit');
+            setModalData(patient);
+          }}
         />
       )}
 

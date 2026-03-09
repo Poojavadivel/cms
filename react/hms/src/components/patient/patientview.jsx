@@ -5,6 +5,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import AddPatientModal from './addpatient';
 import {
     MdClose,
     MdEdit,
@@ -45,6 +46,7 @@ const PatientView = ({ isOpen, onClose, patientId, patient: patientProp, onEdit,
     const [isLoading, setIsLoading] = useState(true);
     const [isDownloading, setIsDownloading] = useState(false);
     const [error, setError] = useState('');
+    const [showEditModal, setShowEditModal] = useState(false);
 
     const tabs = [
         { id: 'profile', label: 'Profile', icon: <MdPerson /> },
@@ -245,162 +247,200 @@ const PatientView = ({ isOpen, onClose, patientId, patient: patientProp, onEdit,
     const avatarSrc = patient ? (patientData.avatarUrl || getGenderAvatar(patientData.gender)) : '';
 
     return (
-        <div className="patient-view-overlay">
-            <button className="patient-close-floating" onClick={onClose}>
-                <MdClose size={32} />
-            </button>
+        <>
+            <div className="patient-view-overlay">
+                <button className="patient-close-floating" onClick={onClose}>
+                    <MdClose size={32} />
+                </button>
 
-            <div className="patient-view-container">
-                {isLoading ? (
-                    <div className="patient-view-loading">
-                        <div className="spinner"></div>
-                        <p>Loading details...</p>
-                    </div>
-                ) : error ? (
-                    <div className="patient-view-error">
-                        <p>{error}</p>
-                        <button onClick={onClose} className="btn-error-close">Close</button>
-                    </div>
-                ) : patient && patientData && (
-                    <>
-                        {/* 1. FIXED HEADER SECTION */}
-                        <div className="pv-summary-header">
-                            <div className="pv-header-content">
-                                {/* Avatar */}
-                                <div className="pv-avatar-section">
-                                    <div className="pv-avatar-container">
-                                        <img
-                                            src={avatarSrc}
-                                            alt={patientData.name}
-                                            className="pv-avatar-image"
-                                            onError={(e) => { e.target.src = getGenderAvatar(patientData.gender); }}
-                                        />
-                                        <div className="pv-lifestyle-indicators">
-                                            {patientData.noAlcohol && (
-                                                <div className="pv-lifestyle-badge no-alcohol">
-                                                    <span className="pv-lifestyle-label">Alcohol</span>
-                                                </div>
-                                            )}
-                                            {patientData.noSmoker && (
-                                                <div className="pv-lifestyle-badge no-smoker">
-                                                    <span className="pv-lifestyle-label">Smoker</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Info */}
-                                <div className="pv-info-section">
-                                    <div className="pv-name-row">
-                                        <div className="pv-name-id-group">
-                                            <h2 className="pv-name-main">{patientData.name}</h2>
-                                            <div className="pv-patient-code-badge" onClick={() => copyToClipboard(patientData.patientCode, 'Patient Code')} title="Click to copy Patient Code">
-                                                <span className="pv-code-prefix">ID:</span>
-                                                <span className="pv-code-val">{patientData.patientCode}</span>
-                                                <MdContentCopy size={12} className="pv-code-copy-icon" />
+                <div className="patient-view-container">
+                    {isLoading ? (
+                        <div className="patient-view-loading">
+                            <div className="spinner"></div>
+                            <p>Loading details...</p>
+                        </div>
+                    ) : error ? (
+                        <div className="patient-view-error">
+                            <p>{error}</p>
+                            <button onClick={onClose} className="btn-error-close">Close</button>
+                        </div>
+                    ) : patient && patientData && (
+                        <>
+                            {/* 1. FIXED HEADER SECTION */}
+                            <div className="pv-summary-header">
+                                <div className="pv-header-content">
+                                    {/* Avatar */}
+                                    <div className="pv-avatar-section">
+                                        <div className="pv-avatar-container">
+                                            <img
+                                                src={avatarSrc}
+                                                alt={patientData.name}
+                                                className="pv-avatar-image"
+                                                onError={(e) => { e.target.src = getGenderAvatar(patientData.gender); }}
+                                            />
+                                            <div className="pv-lifestyle-indicators">
+                                                {patientData.noAlcohol && (
+                                                    <div className="pv-lifestyle-badge no-alcohol">
+                                                        <span className="pv-lifestyle-label">Alcohol</span>
+                                                    </div>
+                                                )}
+                                                {patientData.noSmoker && (
+                                                    <div className="pv-lifestyle-badge no-smoker">
+                                                        <span className="pv-lifestyle-label">Smoker</span>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
-                                        <div className="pv-contact-icons">
-                                            {patientData.phone && (
-                                                <button
-                                                    className="pv-contact-btn"
-                                                    title={`Copy Phone: ${patientData.phone}`}
-                                                    onClick={() => copyToClipboard(patientData.phone, 'Phone Number')}
-                                                >
-                                                    <MdPhone size={14} />
-                                                </button>
+                                    </div>
+
+                                    {/* Info */}
+                                    <div className="pv-info-section">
+                                        <div className="pv-name-row">
+                                            <div className="pv-name-id-group">
+                                                <h2 className="pv-name-main">{patientData.name}</h2>
+                                                <div className="pv-patient-code-badge" onClick={() => copyToClipboard(patientData.patientCode, 'Patient Code')} title="Click to copy Patient Code">
+                                                    <span className="pv-code-prefix">ID:</span>
+                                                    <span className="pv-code-val">{patientData.patientCode}</span>
+                                                    <MdContentCopy size={12} className="pv-code-copy-icon" />
+                                                </div>
+                                            </div>
+                                            <div className="pv-contact-icons">
+                                                {patientData.phone && (
+                                                    <button
+                                                        className="pv-contact-btn"
+                                                        title={`Copy Phone: ${patientData.phone}`}
+                                                        onClick={() => copyToClipboard(patientData.phone, 'Phone Number')}
+                                                    >
+                                                        <MdPhone size={14} />
+                                                    </button>
+                                                )}
+                                                {patientData.email && (
+                                                    <button
+                                                        className="pv-contact-btn"
+                                                        title={`Copy Email: ${patientData.email}`}
+                                                        onClick={() => copyToClipboard(patientData.email, 'Email Address')}
+                                                    >
+                                                        <MdEmail size={14} />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div className="pv-info-pills">
+                                            <div className="pv-pill">
+                                                {getGenderIcon(patientData.gender)} <span>{patientData.gender}</span>
+                                            </div>
+                                            {patientData.age > 0 && (
+                                                <div className="pv-pill">
+                                                    <MdCalendarToday size={14} /> <span>{patientData.age} yrs{patientData.dob && ` · ${patientData.dob}`}</span>
+                                                </div>
                                             )}
-                                            {patientData.email && (
-                                                <button
-                                                    className="pv-contact-btn"
-                                                    title={`Copy Email: ${patientData.email}`}
-                                                    onClick={() => copyToClipboard(patientData.email, 'Email Address')}
-                                                >
-                                                    <MdEmail size={14} />
-                                                </button>
-                                            )}
+                                            <div className="pv-pill">
+                                                <MdLocationOn size={14} /> <span>{patientData.location}</span>
+                                            </div>
+                                            <div className="pv-pill">
+                                                <MdWork size={14} /> <span>{patientData.occupation}</span>
+                                            </div>
                                         </div>
                                     </div>
 
-                                    <div className="pv-info-pills">
-                                        <div className="pv-pill">
-                                            {getGenderIcon(patientData.gender)} <span>{patientData.gender}</span>
+                                    {/* Right — Edit + Vitals + Diagnosis/Barriers */}
+                                    <div className="pv-header-right">
+                                        <button className="pv-edit-btn" onClick={() => onEdit && onEdit(patient)}>
+                                            <MdEdit size={14} /> Edit
+                                        </button>
+
+                                        {/* Vitals — 4-column row */}
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                                            <VitalCard label="BMI" value={patientData.bmi} unit="kg/m²" />
+                                            <VitalCard label="Weight" value={patientData.weightKg} unit="kg" />
+                                            <VitalCard label="Height" value={patientData.heightCm} unit="cm" />
+                                            <VitalCard label="Blood Pressure" value={patientData.bp} unit="mmHg" />
                                         </div>
-                                        {patientData.age > 0 && (
-                                            <div className="pv-pill">
-                                                <MdCalendarToday size={14} /> <span>{patientData.age} yrs{patientData.dob && ` · ${patientData.dob}`}</span>
+
+                                        {patientData.diagnosis.length > 0 && (
+                                            <div className="pv-diagnosis-section">
+                                                <span className="pv-sec-label">Own Diagnosis</span>
+                                                <div className="pv-tags-row">
+                                                    {patientData.diagnosis.map((d, i) => <span key={i} className="pv-tag diag">{d}</span>)}
+                                                </div>
                                             </div>
                                         )}
-                                        <div className="pv-pill">
-                                            <MdLocationOn size={14} /> <span>{patientData.location}</span>
-                                        </div>
-                                        <div className="pv-pill">
-                                            <MdWork size={14} /> <span>{patientData.occupation}</span>
-                                        </div>
-                                    </div>
 
-                                    {/* Vitals — 4-column row, fills all available width */}
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                                        <VitalCard label="BMI" value={patientData.bmi} unit="kg/m²" />
-                                        <VitalCard label="Weight" value={patientData.weightKg} unit="kg" />
-                                        <VitalCard label="Height" value={patientData.heightCm} unit="cm" />
-                                        <VitalCard label="Blood Pressure" value={patientData.bp} unit="mmHg" />
-                                    </div>
-                                </div>
-
-                                {/* Right — Edit + Diagnosis/Barriers only */}
-                                <div className="pv-header-right">
-                                    <button className="pv-edit-btn" onClick={() => onEdit && onEdit(patient)}>
-                                        <MdEdit size={14} /> Edit
-                                    </button>
-
-                                    {patientData.diagnosis.length > 0 && (
-                                        <div className="pv-diagnosis-section">
-                                            <span className="pv-sec-label">Own Diagnosis</span>
-                                            <div className="pv-tags-row">
-                                                {patientData.diagnosis.map((d, i) => <span key={i} className="pv-tag diag">{d}</span>)}
+                                        {patientData.barriers.length > 0 && (
+                                            <div className="pv-barriers-section">
+                                                <span className="pv-sec-label">Health Barriers</span>
+                                                <div className="pv-tags-row">
+                                                    {patientData.barriers.map((b, i) => <span key={i} className="pv-tag barrier">{b}</span>)}
+                                                </div>
                                             </div>
-                                        </div>
-                                    )}
-
-                                    {patientData.barriers.length > 0 && (
-                                        <div className="pv-barriers-section">
-                                            <span className="pv-sec-label">Health Barriers</span>
-                                            <div className="pv-tags-row">
-                                                {patientData.barriers.map((b, i) => <span key={i} className="pv-tag barrier">{b}</span>)}
-                                            </div>
-                                        </div>
-                                    )}
+                                        )}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
 
-                        {/* 2. TAB NAVIGATION (Below Header) */}
-                        <div className="patient-tabs-nav-bar">
-                            {tabs.map(tab => (
-                                <button
-                                    key={tab.id}
-                                    className={`patient-tab-btn ${activeTab === tab.id ? 'active' : ''}`}
-                                    onClick={() => setActiveTab(tab.id)}
-                                >
-                                    {tab.label}
-                                </button>
-                            ))}
-                        </div>
+                            {/* 2. TAB NAVIGATION (Below Header) */}
+                            <div className="patient-tabs-nav-bar">
+                                {tabs.map(tab => (
+                                    <button
+                                        key={tab.id}
+                                        className={`patient-tab-btn ${activeTab === tab.id ? 'active' : ''}`}
+                                        onClick={() => setActiveTab(tab.id)}
+                                    >
+                                        {tab.label}
+                                    </button>
+                                ))}
+                            </div>
 
-                        {/* 3. TAB CONTENT (Scrollable) */}
-                        <div className="patient-tab-content">
-                            {activeTab === 'profile' && <ProfileTab patient={patient} copyToClipboard={copyToClipboard} onEdit={onEdit} />}
-                            {activeTab === 'medical-history' && <MedicalHistoryTab patientId={patientId || patient?._id} patient={patient} />}
-                            {activeTab === 'prescription' && <PrescriptionTab patientId={patientId || patient?._id} />}
-                            {activeTab === 'lab-results' && <LabResultTab patientId={patientId || patient?._id} />}
-                            {activeTab === 'billings' && <BillingsTab patientId={patientId || patient?._id} />}
-                        </div>
-                    </>
-                )}
-            </div>
-        </div >
+                            {/* 3. TAB CONTENT (Scrollable) */}
+                            <div className="patient-tab-content">
+                                {activeTab === 'profile' && <ProfileTab patient={patient} copyToClipboard={copyToClipboard} onEdit={onEdit} />}
+                                {activeTab === 'medical-history' && <MedicalHistoryTab patientId={patientId || patient?._id} patient={patient} />}
+                                {activeTab === 'prescription' && <PrescriptionTab patientId={patientId || patient?._id} />}
+                                {activeTab === 'lab-results' && <LabResultTab patientId={patientId || patient?._id} />}
+                                {activeTab === 'billings' && <BillingsTab patientId={patientId || patient?._id} />}
+                            </div>
+                        </>
+                    )}
+                </div>
+            </div >
+
+            {/* INTERNAL EDIT MODAL — rendered on top of PatientView */}
+            {
+                showEditModal && patient && (
+                    <div style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        width: '100vw',
+                        height: '100vh',
+                        background: 'rgba(0,0,0,0.85)',
+                        zIndex: 9999,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexDirection: 'column',
+                        gap: '20px'
+                    }}>
+                        <AddPatientModal
+                            isOpen={true}
+                            onClose={() => setShowEditModal(false)}
+                            onSuccess={async (updatedPatient) => {
+                                setShowEditModal(false);
+                                try {
+                                    const refreshed = await patientsService.fetchPatientById(patientId || patient.patientId || patient._id);
+                                    setPatient(refreshed);
+                                } catch (e) {
+                                    console.error('Failed to refresh patient after edit:', e);
+                                }
+                            }}
+                            patientId={patient.patientId || patient._id || patient.id}
+                            initialData={patient}
+                        />
+                    </div>
+                )
+            }
+        </>
     );
 };
 

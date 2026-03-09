@@ -32,7 +32,7 @@ const createAxiosInstance = () => {
 
 /**
  * Fetch prescriptions for a patient
- * Matches Flutter's getPrescriptions method in AuthService
+ * Prioritizes digital EMR records from intakes, then falls back to scanned docs.
  * 
  * @param {string} patientId - Patient ID
  * @param {number} limit - Max number of records (default: 50)
@@ -44,80 +44,91 @@ export const fetchPrescriptions = async (patientId, limit = 50, page = 0) => {
     throw new Error('patientId is required');
   }
 
+  const allRecords = [];
+
+  // ── SOURCE 1: Intake EMR records (digital prescriptions with pharmacy items) ──
   try {
-    // FIRST: Try pharmacy records endpoint (for real prescriptions/dispense records)
-    const pharmacyEndpoint = `/pharmacy/records?patientId=${patientId}&type=Dispense&limit=${limit}&page=${page}`;
-    logger.apiRequest('GET', pharmacyEndpoint);
-    logger.info('PRESCRIPTIONS', `Fetching from pharmacy records: ${pharmacyEndpoint}`);
+    const intakeEndpoint = `/intake/${patientId}/intake`;
+    logger.apiRequest('GET', intakeEndpoint);
 
     const axiosInstance = createAxiosInstance();
-    const response = await axiosInstance.get(pharmacyEndpoint);
+    const response = await axiosInstance.get(intakeEndpoint);
 
-    logger.apiResponse('GET', pharmacyEndpoint, response.status);
+    if (response.data && response.data.success && response.data.intakes) {
+      const digitalPrescriptions = response.data.intakes
+        .filter(intake => intake.meta?.pharmacyItems && intake.meta.pharmacyItems.length > 0)
+        .map(intake => ({
+          _id: intake._id,
+          prescriptionDate: intake.createdAt,
+          date: intake.createdAt,
+          hospitalName: 'Clinic',
+          doctorName: intake.doctorName || 'Attending Physician',
+          prescriptionSummary: intake.notes || intake.triage?.chiefComplaint || '',
+          diagnosis: intake.triage?.chiefComplaint || '',
+          items: intake.meta.pharmacyItems,
+          type: 'DIGITAL',
+          dispensed: !!intake.meta?.pharmacyId
+        }));
 
-    // Check for successful response with records AND has data
-    if (response.data && response.data.success && response.data.records && response.data.records.length > 0) {
-      const prescriptions = response.data.records;
-      logger.success('PRESCRIPTIONS', `Found ${prescriptions.length} pharmacy records (prescriptions)`);
-      return prescriptions;
-    } else {
-      logger.info('PRESCRIPTIONS', `Pharmacy records empty, trying scanned prescriptions...`);
+      allRecords.push(...digitalPrescriptions);
+      if (digitalPrescriptions.length > 0) {
+        logger.success('PRESCRIPTIONS', `Found ${digitalPrescriptions.length} digital EMR prescriptions`);
+      }
     }
-
-  } catch (pharmacyError) {
-    logger.warning('PRESCRIPTIONS', `Pharmacy endpoint failed: ${pharmacyError.message}`);
+  } catch (err) {
+    logger.warn('PRESCRIPTIONS', `Intake EMR fetch failed: ${err.message}`);
   }
 
+  // ── SOURCE 2: Dedicated PrescriptionDocument collection (scanned prescriptions only) ──
   try {
-    // SECOND: Try dedicated prescriptions endpoint (scanned documents)
     const scannerEndpoint = ScannerEndpoints.getPrescriptions(patientId);
-    logger.apiRequest('GET', scannerEndpoint);
-    logger.info('PRESCRIPTIONS', `Trying scanned prescriptions: ${scannerEndpoint}`);
-
     const axiosInstance = createAxiosInstance();
     const response = await axiosInstance.get(scannerEndpoint);
 
-    logger.apiResponse('GET', scannerEndpoint, response.status);
-
-    // Check for successful response with prescriptions
     if (response.data && response.data.success && response.data.prescriptions) {
-      const prescriptions = response.data.prescriptions;
-      logger.success('PRESCRIPTIONS', `Found ${prescriptions.length} scanned prescriptions`);
-      return prescriptions;
+      const scannedPrescriptions = response.data.prescriptions.map(rx => ({
+        ...rx,
+        type: 'SCANNED'
+      }));
+      allRecords.push(...scannedPrescriptions);
+      if (scannedPrescriptions.length > 0) {
+        logger.success('PRESCRIPTIONS', `Found ${scannedPrescriptions.length} scanned prescription documents`);
+      }
     }
-
-  } catch (error) {
-    logger.warning('PRESCRIPTIONS', `Scanner endpoint failed: ${error.message}`);
+  } catch (e) {
+    logger.warn('PRESCRIPTIONS', 'Scanner prescriptions fetch failed');
   }
 
+  // ── SOURCE 3: Pharmacy dispense records ──
   try {
-    // THIRD: Try fallback to combined reports endpoint
-    const reportsEndpoint = ScannerEndpoints.getReports(patientId);
-    logger.info('PRESCRIPTIONS', `Trying fallback combined endpoint: ${reportsEndpoint}`);
-
+    const pharmacyEndpoint = `/pharmacy/records?patientId=${patientId}&type=Dispense&limit=${limit}&page=${page}`;
     const axiosInstance = createAxiosInstance();
-    const response = await axiosInstance.get(reportsEndpoint);
+    const response = await axiosInstance.get(pharmacyEndpoint);
 
-    if (response.data && response.data.success && response.data.reports) {
-      const reports = response.data.reports;
-
-      // Filter only PRESCRIPTION type reports
-      const prescriptions = reports.filter(report => {
-        const intent = report.intent?.toString().toUpperCase();
-        const testType = report.testType?.toString().toUpperCase();
-        return intent === 'PRESCRIPTION' || testType === 'PRESCRIPTION';
-      });
-
-      logger.success('PRESCRIPTIONS', `Found ${prescriptions.length} prescriptions out of ${reports.length} total reports`);
-      return prescriptions;
+    if (response.data && response.data.success && response.data.records) {
+      const dispenseRecords = response.data.records.map(rec => ({
+        ...rec,
+        type: 'DISPENSED'
+      }));
+      allRecords.push(...dispenseRecords);
     }
-
-  } catch (fallbackError) {
-    logger.apiError('GET', ScannerEndpoints.getReports(patientId), fallbackError);
+  } catch (e) {
+    logger.warn('PRESCRIPTIONS', 'Pharmacy dispense records fetch failed');
   }
 
-  logger.warning('PRESCRIPTIONS', 'No prescriptions found from any endpoint');
-  return [];
+  // NOTE: We intentionally do NOT fetch from ScannerEndpoints.getReports() here.
+  // That endpoint returns ALL scanned documents (lab reports, medical history, etc.)
+  // and was causing data contamination in the Prescriptions tab.
+
+  // Remove duplicates by _id and sort newest first
+  const uniqueRecords = Array.from(
+    new Map(allRecords.filter(r => r._id).map(item => [item._id.toString(), item])).values()
+  );
+  return uniqueRecords.sort((a, b) => {
+    const dateA = new Date(a.prescriptionDate || a.date || a.createdAt || 0);
+    const dateB = new Date(b.prescriptionDate || b.date || b.createdAt || 0);
+    return dateB - dateA;
+  });
 };
 
 /**
@@ -131,70 +142,28 @@ export const fetchLabReports = async (patientId) => {
     throw new Error('patientId is required');
   }
 
-  console.log('[LAB_REPORTS] 🔍 Starting fetch for patient:', patientId);
-
   try {
-    // FIRST: Try pathology reports endpoint (for real lab reports)
     const pathologyEndpoint = `/pathology/reports?patientId=${patientId}&limit=100`;
-    logger.apiRequest('GET', pathologyEndpoint);
-    logger.info('LAB_REPORTS', `Fetching from pathology reports: ${pathologyEndpoint}`);
-    console.log('[LAB_REPORTS] 📡 Trying pathology endpoint:', pathologyEndpoint);
-
     const axiosInstance = createAxiosInstance();
     const response = await axiosInstance.get(pathologyEndpoint);
 
-    logger.apiResponse('GET', pathologyEndpoint, response.status);
-    console.log('[LAB_REPORTS] ✅ Pathology response:', response.status, response.data);
-
     if (response.data && response.data.success && response.data.reports && response.data.reports.length > 0) {
-      logger.success('LAB_REPORTS', `Found ${response.data.reports.length} pathology reports`);
-      console.log('[LAB_REPORTS] ✅ Returning', response.data.reports.length, 'pathology reports');
       return response.data.reports;
-    } else {
-      console.log('[LAB_REPORTS] ⚠️ Pathology response has no reports, trying scanner endpoint...');
     }
-
-  } catch (pathologyError) {
-    logger.warning('LAB_REPORTS', `Pathology endpoint failed: ${pathologyError.message}`);
-    console.log('[LAB_REPORTS] ⚠️ Pathology endpoint failed:', pathologyError.message);
-  }
+  } catch (e) { /* fallback */ }
 
   try {
-    // SECOND: Try scanner lab reports endpoint (scanned documents)
     const endpoint = ScannerEndpoints.getLabReports(patientId);
-    logger.apiRequest('GET', endpoint);
-    logger.info('LAB_REPORTS', `Trying scanned lab reports: ${endpoint}`);
-    console.log('[LAB_REPORTS] 📡 Trying scanner endpoint:', endpoint);
-
     const axiosInstance = createAxiosInstance();
     const response = await axiosInstance.get(endpoint);
 
-    logger.apiResponse('GET', endpoint, response.status);
-    console.log('[LAB_REPORTS] ✅ Scanner response:', response.status, response.data);
-
     if (response.data && response.data.success && response.data.labReports) {
-      logger.success('LAB_REPORTS', `Found ${response.data.labReports.length} scanned lab reports`);
-      console.log('[LAB_REPORTS] ✅ Returning', response.data.labReports.length, 'scanned lab reports');
       return response.data.labReports;
-    } else if (response.data && response.data.labReports) {
-      // Handle case where success field might be missing but data exists
-      console.log('[LAB_REPORTS] ✅ Found labReports without success flag:', response.data.labReports.length);
-      return response.data.labReports;
-    } else {
-      console.log('[LAB_REPORTS] ⚠️ Scanner response structure:', JSON.stringify(response.data, null, 2));
     }
-
+    return response.data?.labReports || [];
   } catch (error) {
-    logger.apiError('GET', ScannerEndpoints.getLabReports(patientId), error);
-    console.error('[LAB_REPORTS] ❌ Scanner endpoint error:', error.message);
-    if (error.response) {
-      console.error('[LAB_REPORTS] ❌ Error response:', error.response.status, error.response.data);
-    }
+    return [];
   }
-
-  logger.warning('LAB_REPORTS', 'No lab reports found from any endpoint');
-  console.log('[LAB_REPORTS] ⚠️ No lab reports found from any endpoint');
-  return [];
 };
 
 /**
@@ -210,29 +179,14 @@ export const fetchMedicalHistory = async (patientId) => {
 
   try {
     const endpoint = ScannerEndpoints.getMedicalHistory(patientId);
-    logger.apiRequest('GET', endpoint);
-    console.log('[SERVICE] 🔍 Fetching medical history from:', endpoint);
-
     const axiosInstance = createAxiosInstance();
     const response = await axiosInstance.get(endpoint);
 
-    logger.apiResponse('GET', endpoint, response.status);
-    console.log('[SERVICE] 📦 Response data:', {
-      success: response.data?.success,
-      count: response.data?.medicalHistory?.length || 0
-    });
-
     if (response.data && response.data.success && response.data.medicalHistory) {
-      logger.success('MEDICAL_HISTORY', `Found ${response.data.medicalHistory.length} medical history records`);
-      console.log('[SERVICE] ✅ Returning', response.data.medicalHistory.length, 'records');
       return response.data.medicalHistory;
     }
-
-    console.log('[SERVICE] ⚠️ No medical history in response');
     return [];
   } catch (error) {
-    logger.apiError('GET', ScannerEndpoints.getMedicalHistory(patientId), error);
-    console.error('[SERVICE] ❌ Failed to fetch medical history:', error.message);
     return [];
   }
 };
