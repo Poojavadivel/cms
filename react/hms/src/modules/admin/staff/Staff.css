@@ -77,6 +77,13 @@ html {
     animation: fadeInDown 0.6s ease-out;
 }
 
+.staff-page .header-content {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    min-width: 0;
+}
+
 @keyframes fadeInDown {
     from {
         opacity: 0;
@@ -102,7 +109,7 @@ html {
 .staff-page .main-subtitle {
     font-size: 14px;
     color: var(--text-muted);
-    margin: 4px 0 0 0;
+    margin: 0;
     font-weight: 500;
     white-space: nowrap;
     /* Enforce single line */
@@ -634,6 +641,16 @@ html {
 .status-pill.status-busy {
     background: rgba(239, 68, 68, 0.12);
     color: #ef4444;
+}
+
+.status-pill.status-on-call {
+    background: rgba(245, 158, 11, 0.14);
+    color: #b45309;
+}
+
+.status-pill.status-inactive {
+    background: rgba(148, 163, 184, 0.2);
+    color: #475569;
 }
 
 .status-pill.status-off-duty {

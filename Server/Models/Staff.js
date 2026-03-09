@@ -35,7 +35,7 @@ const StaffSchema = new Schema({
   gender: { type: String, enum: ['Male', 'Female', 'Other', ''], default: '' },
 
   // Employment / meta
-  status: { type: String, enum: ['Available', 'Off Duty', 'On Leave', 'On Call'], default: 'Available' },
+  status: { type: String, enum: ['Available', 'Off Duty', 'On Leave', 'On Call', 'Busy', 'Inactive'], default: 'Available' },
   shift: { type: String, default: '' },
   roles: [{ type: String }],
   qualifications: [{ type: String }],

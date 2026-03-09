@@ -53,12 +53,13 @@ const designations = [
 ];
 
 const shifts = ['Morning', 'Evening', 'Night', 'Rotational'];
-const statuses = ['Available', 'On Leave', 'Off Duty', 'Busy'];
+const statuses = ['Available', 'On Call', 'On Leave', 'Off Duty', 'Busy', 'Inactive'];
 
 const AddStaffDialog = ({ initial = null, onSubmit, onCancel }) => {
     const [currentStep, setCurrentStep] = useState(1);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [errors, setErrors] = useState({});
+    const [submitError, setSubmitError] = useState('');
     const [isCheckingStaffId, setIsCheckingStaffId] = useState(false);
 
     const [formData, setFormData] = useState({
@@ -160,6 +161,7 @@ const AddStaffDialog = ({ initial = null, onSubmit, onCancel }) => {
         if (step === 3) {
             if (!formData.joinedAt) newErrors.joinedAt = 'Joining date is required';
             if (!formData.shift) newErrors.shift = 'Shift is required';
+            if (!formData.status) newErrors.status = 'Status is required';
             if (!formData.location.trim()) newErrors.location = 'Work location is required';
         }
         setErrors(newErrors);
@@ -179,6 +181,7 @@ const AddStaffDialog = ({ initial = null, onSubmit, onCancel }) => {
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
+        if (submitError) setSubmitError('');
         if (errors[name]) {
             setErrors(prev => ({ ...prev, [name]: '' }));
         }
@@ -189,11 +192,17 @@ const AddStaffDialog = ({ initial = null, onSubmit, onCancel }) => {
         if (!validateStep(currentStep)) return;
 
         setIsSubmitting(true);
+        setSubmitError('');
         try {
             const { createUserAccount, userRole, password, confirmPassword, ...staffData } = formData;
 
+            const recordId = initial?.id || initial?._id || null;
+            if (initial && !recordId) {
+                throw new Error('Unable to update staff: record ID is missing. Please reopen and try again.');
+            }
+
             // Call standard submit
-            await onSubmit({ ...staffData, ...(initial?.id && { id: initial.id, _id: initial.id }) });
+            await onSubmit({ ...staffData, ...(recordId && { id: recordId, _id: recordId }) });
 
             // Handle user account separately if needed (mirroring original logic)
             if (createUserAccount && !initial) {
@@ -236,6 +245,7 @@ const AddStaffDialog = ({ initial = null, onSubmit, onCancel }) => {
             }
         } catch (error) {
             console.error('Final submit error:', error);
+            setSubmitError(error?.message || 'Failed to save staff details.');
         } finally {
             setIsSubmitting(false);
         }
@@ -441,14 +451,14 @@ const AddStaffDialog = ({ initial = null, onSubmit, onCancel }) => {
                                         initial={{ height: 0, opacity: 0 }}
                                         animate={{ height: 'auto', opacity: 1 }}
                                         exit={{ height: 0, opacity: 0 }}
-                                        className="col-span-2 space-y-6 pt-6 border-t border-slate-100"
+                                        className="col-span-2 space-y-6 pt-3 border-t border-slate-100"
                                     >
                                         <div className="flex items-center gap-3 mb-2">
                                             <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#207DC0] flex items-center justify-center border border-blue-100 shadow-sm">
                                                 <FiShield size={20} />
                                             </div>
                                             <div>
-                                                <h4 className="text-sm font-extrabold text-[#0f3e61] uppercase tracking-tight">Login Credentials</h4>
+                                                <h4 className="dialog-section-title text-sm font-extrabold text-[#0f3e61] uppercase tracking-tight">Login Credentials</h4>
                                                 <p className="text-[10px] text-slate-400 font-bold uppercase">Account will be created automatically</p>
                                             </div>
                                         </div>
@@ -535,6 +545,20 @@ const AddStaffDialog = ({ initial = null, onSubmit, onCancel }) => {
                                 </div>
                             </div>
 
+                            <div className="col-span-1">
+                                <label className="block text-sm font-bold text-slate-700 mb-2 uppercase tracking-tight">Status *</label>
+                                <select
+                                    name="status"
+                                    value={formData.status}
+                                    onChange={handleChange}
+                                    className={`w-full px-4 py-3.5 bg-slate-50 border-2 rounded-2xl transition-all outline-none ${errors.status ? 'border-red-100 bg-red-50 focus:border-red-400' : 'border-slate-100 focus:border-[#207DC0] focus:bg-white hover:border-slate-200'}`}
+                                >
+                                    <option value="">Select Status</option>
+                                    {statuses.map((s) => <option key={s} value={s}>{s}</option>)}
+                                </select>
+                                {errors.status && <span className="text-[10px] text-red-500 font-bold uppercase mt-1.5 block px-1">{errors.status}</span>}
+                            </div>
+
                             <div className="col-span-2">
                                 <label className="block text-sm font-bold text-slate-700 mb-2 uppercase tracking-tight">Work Location *</label>
                                 <div className="relative group">
@@ -607,6 +631,10 @@ const AddStaffDialog = ({ initial = null, onSubmit, onCancel }) => {
                             <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-100">
                                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Location</p>
                                 <p className="text-sm font-extrabold text-[#0f3e61]">{formData.location}</p>
+                            </div>
+                            <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-100">
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Status</p>
+                                <p className="text-sm font-extrabold text-[#0f3e61]">{formData.status || 'N/A'}</p>
                             </div>
                         </div>
 
@@ -731,7 +759,12 @@ const AddStaffDialog = ({ initial = null, onSubmit, onCancel }) => {
                     </div>
 
                     {/* Footer Actions */}
-                    <div className="p-8 bg-white border-t border-slate-100 flex justify-between items-center z-50 shrink-0 shadow-[0_-5px_25px_rgba(0,0,0,0.03)]">
+                    <div className="relative p-8 bg-white border-t border-slate-100 flex justify-between items-center z-50 shrink-0 shadow-[0_-5px_25px_rgba(0,0,0,0.03)]">
+                        {submitError ? (
+                            <div className="absolute left-8 right-8 -top-10 px-4 py-2 rounded-xl border border-red-200 bg-red-50 text-red-600 text-xs font-bold uppercase tracking-wide">
+                                {submitError}
+                            </div>
+                        ) : null}
                         {currentStep > 1 ? (
                             <button
                                 onClick={handleBack}

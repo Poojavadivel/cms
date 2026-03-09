@@ -452,8 +452,10 @@ const Staff = () => {
   const getStatusClass = (status) => {
     const statusLower = status?.toLowerCase() || '';
     if (statusLower === 'available') return 'status-available';
+    if (statusLower === 'on call') return 'status-on-call';
     if (statusLower === 'on leave') return 'status-on-leave';
     if (statusLower === 'busy') return 'status-busy';
+    if (statusLower === 'inactive') return 'status-inactive';
     return 'status-off-duty';
   };
 
@@ -498,7 +500,7 @@ const Staff = () => {
       <div className="dashboard-header">
         <div className="header-content">
           <h1 className="main-title">STAFF</h1>
-          <p className="main-subtitle">Manage hospital staff members, roles, and departments.</p>
+          <span className="main-subtitle">Manage hospital staff members, roles, and departments.</span>
         </div>
         <div className="header-actions">
           <button className="btn-new-appointment" onClick={handleAdd}>

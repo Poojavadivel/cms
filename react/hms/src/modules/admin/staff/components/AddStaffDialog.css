@@ -12,3 +12,9 @@
   flex-direction: row !important;
   align-items: stretch !important;
 }
+
+/* Prevent browser-default heading margins from creating blank space in expandable sections */
+.dialog-section-title {
+  margin: 0;
+  line-height: 1.2;
+}
