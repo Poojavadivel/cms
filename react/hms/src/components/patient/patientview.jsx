@@ -37,7 +37,7 @@ import pathologyService from '../../services/pathologyService';
 import invoiceService from '../../services/invoiceService';
 import reportService from '../../services/reportService';
 import { getGenderAvatar } from '../../utils/avatarHelpers';
-import { calculateBMI } from '../../utils/vitalsHelpers';
+import { calculateBMI, getBMICategory } from '../../utils/vitalsHelpers';
 import MissingEmergencyPhone from '../common/MissingEmergencyPhone';
 
 const PatientView = ({ isOpen, onClose, patientId, patient: patientProp, onEdit, showBillingTab = true }) => {
@@ -294,39 +294,47 @@ const PatientView = ({ isOpen, onClose, patientId, patient: patientProp, onEdit,
                                     </div>
 
                                     {/* Info */}
-                                    <div className="pv-info-section">
-                                        <div className="pv-name-row">
-                                            <div className="pv-name-id-group">
-                                                <h2 className="pv-name-main">{patientData.name}</h2>
-                                                <div className="pv-patient-code-badge" onClick={() => copyToClipboard(patientData.patientCode, 'Patient Code')} title="Click to copy Patient Code">
-                                                    <span className="pv-code-prefix">ID:</span>
-                                                    <span className="pv-code-val">{patientData.patientCode}</span>
-                                                    <MdContentCopy size={12} className="pv-code-copy-icon" />
+                                    <div className="pv-info-section flex-1 w-full">
+                                        <div className="flex justify-between items-start w-full">
+                                            <div className="pv-name-row flex-1">
+                                                <div className="pv-name-id-group">
+                                                    <h2 className="pv-name-main">{patientData.name}</h2>
+                                                    <div className="pv-patient-code-badge" onClick={() => copyToClipboard(patientData.patientCode, 'Patient Code')} title="Click to copy Patient Code">
+                                                        <span className="pv-code-prefix">ID:</span>
+                                                        <span className="pv-code-val">{patientData.patientCode}</span>
+                                                        <MdContentCopy size={12} className="pv-code-copy-icon" />
+                                                    </div>
+                                                </div>
+                                                <div className="pv-contact-icons">
+                                                    {patientData.phone && (
+                                                        <button
+                                                            className="pv-contact-btn"
+                                                            title={`Copy Phone: ${patientData.phone}`}
+                                                            onClick={() => copyToClipboard(patientData.phone, 'Phone Number')}
+                                                        >
+                                                            <MdPhone size={14} />
+                                                        </button>
+                                                    )}
+                                                    {patientData.email && (
+                                                        <button
+                                                            className="pv-contact-btn"
+                                                            title={`Copy Email: ${patientData.email}`}
+                                                            onClick={() => copyToClipboard(patientData.email, 'Email Address')}
+                                                        >
+                                                            <MdEmail size={14} />
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </div>
-                                            <div className="pv-contact-icons">
-                                                {patientData.phone && (
-                                                    <button
-                                                        className="pv-contact-btn"
-                                                        title={`Copy Phone: ${patientData.phone}`}
-                                                        onClick={() => copyToClipboard(patientData.phone, 'Phone Number')}
-                                                    >
-                                                        <MdPhone size={14} />
-                                                    </button>
-                                                )}
-                                                {patientData.email && (
-                                                    <button
-                                                        className="pv-contact-btn"
-                                                        title={`Copy Email: ${patientData.email}`}
-                                                        onClick={() => copyToClipboard(patientData.email, 'Email Address')}
-                                                    >
-                                                        <MdEmail size={14} />
-                                                    </button>
-                                                )}
-                                            </div>
+                                            <button
+                                                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md shadow-sm hover:bg-slate-50 transition-all duration-200"
+                                                onClick={() => onEdit && onEdit(patient)}
+                                            >
+                                                <MdEdit size={16} className="text-slate-500" /> Edit
+                                            </button>
                                         </div>
 
-                                        <div className="pv-info-pills">
+                                        <div className="pv-info-pills mt-3">
                                             <div className="pv-pill">
                                                 {getGenderIcon(patientData.gender)} <span>{patientData.gender}</span>
                                             </div>
@@ -344,53 +352,33 @@ const PatientView = ({ isOpen, onClose, patientId, patient: patientProp, onEdit,
                                         </div>
                                     </div>
 
-                                    {/* Right — Actions Group (Edit + Vitals) + Info Group (Diagnosis/Barriers) */}
+                                    {/* Right — Vitals + Diagnosis/Barriers */}
                                     <div className="pv-header-right">
-                                        <div className="pv-header-actions-group">
-                                            <button className="pv-edit-btn" onClick={() => onEdit && onEdit(patient)}>
-                                                <MdEdit size={14} /> Edit
-                                            </button>
+                                        {/* Vitals — 4-column row */}
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                                            <VitalCard label="BMI" value={patientData.bmi} unit="kg/m²" age={patientData.age} />
+                                            <VitalCard label="Weight" value={patientData.weightKg} unit="kg" />
+                                            <VitalCard label="Height" value={patientData.heightCm} unit="cm" />
+                                            <VitalCard label="Blood Pressure" value={patientData.bp} unit="mmHg" />
+                                        </div>
 
-                                            {/* Vitals — 2x2 Grid */}
-                                            <div className="pv-vitals-grid-2x2">
-                                                <div className="pv-metric-card pv-metric-height">
-                                                    <span className="pv-metric-val">{patientData.heightCm || '—'} <small>cm</small></span>
-                                                    <span className="pv-metric-lbl">Height</span>
-                                                </div>
-                                                <div className="pv-metric-card pv-metric-weight">
-                                                    <span className="pv-metric-val">{patientData.weightKg || '—'} <small>kg</small></span>
-                                                    <span className="pv-metric-lbl">Weight</span>
-                                                </div>
-                                                <div className="pv-metric-card pv-metric-bmi">
-                                                    <span className="pv-metric-val">{patientData.bmi || '—'}</span>
-                                                    <span className="pv-metric-lbl">BMI</span>
-                                                </div>
-                                                <div className="pv-metric-card pv-metric-bp">
-                                                    <span className="pv-metric-val">{patientData.bp}</span>
-                                                    <span className="pv-metric-lbl">Blood Pressure</span>
+                                        {patientData.diagnosis.length > 0 && (
+                                            <div className="pv-diagnosis-section">
+                                                <span className="pv-sec-label">Own Diagnosis</span>
+                                                <div className="pv-tags-row">
+                                                    {patientData.diagnosis.map((d, i) => <span key={i} className="pv-tag diag">{d}</span>)}
                                                 </div>
                                             </div>
-                                        </div>
+                                        )}
 
-                                        <div className="pv-header-tags-group">
-                                            {patientData.diagnosis.length > 0 && (
-                                                <div className="pv-diagnosis-section">
-                                                    <span className="pv-sec-label">Own Diagnosis</span>
-                                                    <div className="pv-tags-row">
-                                                        {patientData.diagnosis.map((d, i) => <span key={i} className="pv-tag diag">{d}</span>)}
-                                                    </div>
+                                        {patientData.barriers.length > 0 && (
+                                            <div className="pv-barriers-section">
+                                                <span className="pv-sec-label">Health Barriers</span>
+                                                <div className="pv-tags-row">
+                                                    {patientData.barriers.map((b, i) => <span key={i} className="pv-tag barrier">{b}</span>)}
                                                 </div>
-                                            )}
-
-                                            {patientData.barriers.length > 0 && (
-                                                <div className="pv-barriers-section">
-                                                    <span className="pv-sec-label">Health Barriers</span>
-                                                    <div className="pv-tags-row">
-                                                        {patientData.barriers.map((b, i) => <span key={i} className="pv-tag barrier">{b}</span>)}
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -419,7 +407,7 @@ const PatientView = ({ isOpen, onClose, patientId, patient: patientProp, onEdit,
                         </>
                     )}
                 </div>
-            </div >
+            </div>
 
             {/* INTERNAL EDIT MODAL — rendered on top of PatientView */}
             {
@@ -1917,13 +1905,6 @@ const BillingsTab = ({ patientId }) => {
 // Reusable VitalCard component enforcing strict typographic hierarchy and semantic color-coding
 const getVitalStatusColor = (label, value) => {
     if (!value || value === '—' || value === '—/—') return 'bg-white border-slate-200 text-slate-900';
-    const num = parseFloat(value);
-
-    if (label.toLowerCase() === 'bmi' && !isNaN(num)) {
-        if (num < 18.5) return 'bg-amber-50 border-amber-200 text-amber-900'; // Underweight
-        if (num >= 25 && num < 30) return 'bg-amber-50 border-amber-200 text-amber-900'; // Overweight
-        if (num >= 30) return 'bg-red-50 border-red-200 text-red-900'; // Obese
-    }
 
     if (label.toLowerCase() === 'blood pressure' && typeof value === 'string' && value.includes('/')) {
         const [sys, dia] = value.split('/').map(Number);
@@ -1934,17 +1915,26 @@ const getVitalStatusColor = (label, value) => {
     return 'bg-white border-slate-200 text-slate-900'; // Normal default
 };
 
-const VitalCard = ({ label, value, unit }) => {
+const VitalCard = ({ label, value, unit, age }) => {
     let colorClass = getVitalStatusColor(label, value);
+    let displayLabel = label;
+    let tooltip = '';
     const isStringMessage = typeof value === 'string' && value.length > 10;
 
-    if (label.toLowerCase() === 'bmi' && isStringMessage) {
-        colorClass = 'bg-amber-50 border-amber-200 text-amber-900';
+    // Apply strict Bug 33 Pediatric BMI Logic
+    if (label.toLowerCase() === 'bmi') {
+        const cat = getBMICategory(value, age);
+        colorClass = cat.colorClass;
+        displayLabel = cat.label;
+        if (cat.tooltip) tooltip = cat.tooltip;
     }
 
     return (
-        <div className={`flex flex-col w-full p-3.5 border rounded-xl shadow-sm transition-shadow hover:shadow-md ring-1 ring-transparent hover:border-teal-200 ${colorClass}`}>
-            <span className="text-xs uppercase tracking-wider opacity-60 font-bold mb-1">{label}</span>
+        <div
+            className={`flex flex-col w-full p-3.5 border rounded-xl shadow-sm transition-shadow hover:shadow-md ring-1 ring-transparent hover:border-teal-200 ${colorClass}`}
+            title={tooltip || undefined}
+        >
+            <span className="text-xs uppercase tracking-wider opacity-60 font-bold mb-1">{displayLabel}</span>
             <div className="flex items-baseline gap-1 mt-auto">
                 {isStringMessage ? (
                     <span className="text-sm font-medium leading-tight">{value}</span>

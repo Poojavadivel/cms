@@ -175,8 +175,8 @@ const EditPatientDrawer = ({ patient, isOpen, onClose, onSaved }) => {
                   type="button"
                   onClick={() => updateField('bloodGroup', bg)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${form.bloodGroup === bg
-                      ? 'bg-rose-500 text-white border-rose-500 shadow-sm'
-                      : 'bg-white text-slate-600 border-slate-200 hover:border-rose-300 hover:bg-rose-50'
+                    ? 'bg-rose-500 text-white border-rose-500 shadow-sm'
+                    : 'bg-white text-slate-600 border-slate-200 hover:border-rose-300 hover:bg-rose-50'
                     }`}
                 >
                   {bg}
@@ -383,12 +383,20 @@ const PatientProfileHeaderCardContent = ({ patient, latestIntake, onEdit }) => {
         </div>
 
         {/* Info */}
-        <div className="pv-info-section">
-          <div className="pv-name-row">
-            <h2 className="pv-name-main">{name}</h2>
+        <div className="pv-info-section flex-1 w-full">
+          <div className="flex justify-between items-start w-full">
+            <div className="pv-name-row">
+              <h2 className="pv-name-main">{name}</h2>
+            </div>
+            <button
+              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md shadow-sm hover:bg-slate-50 transition-all duration-200"
+              onClick={onEdit}
+            >
+              <MdEdit size={16} className="text-slate-500" /> Edit
+            </button>
           </div>
 
-          <div className="pv-info-pills">
+          <div className="pv-info-pills mt-3">
             <div className="pv-pill">
               <MdBadge /> <span>{isFemale ? 'Female' : 'Male'}</span>
             </div>
@@ -401,16 +409,7 @@ const PatientProfileHeaderCardContent = ({ patient, latestIntake, onEdit }) => {
           </div>
         </div>
 
-        {/* Right Actions — Always show Edit */}
-        <div className="pv-header-right">
-          <button
-            className="pv-edit-btn group"
-            onClick={onEdit}
-            style={{ cursor: 'pointer' }}
-          >
-            <MdEdit size={14} className="group-active:scale-90 transition-transform" /> Edit
-          </button>
-        </div>
+        {/* Right Actions — Removed legacy edit button */}
       </div>
     </div>
   );

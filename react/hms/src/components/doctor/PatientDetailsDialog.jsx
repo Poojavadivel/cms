@@ -17,7 +17,7 @@ import patientsService from '../../services/patientsService';
 import prescriptionService from '../../services/prescriptionService';
 import reportService from '../../services/reportService';
 import { getGenderAvatar } from '../../utils/avatarHelpers';
-import { calculateBMI } from '../../utils/vitalsHelpers';
+import { calculateBMI, getBMICategory } from '../../utils/vitalsHelpers';
 import MissingEmergencyPhone from '../common/MissingEmergencyPhone';
 
 const PatientDetailsDialog = ({ patient, isOpen, onClose, onEdit, showBillingTab = true }) => {
@@ -269,7 +269,7 @@ const PatientDetailsDialog = ({ patient, isOpen, onClose, onEdit, showBillingTab
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-4">
-                  <VitalCard label="BMI" value={patientData.bmi} unit="kg/m²" />
+                  <VitalCard label="BMI" value={patientData.bmi} unit="kg/m²" age={patientData.age} />
                   <VitalCard label="Weight" value={patientData.weightKg} unit="kg" />
                   <VitalCard label="Height" value={patientData.heightCm} unit="cm" />
                   <VitalCard label="Blood Pressure" value={patientData.bp} unit="mmHg" />
@@ -329,13 +329,6 @@ const PatientDetailsDialog = ({ patient, isOpen, onClose, onEdit, showBillingTab
 // Reusable VitalCard component enforcing strict typographic hierarchy and semantic color-coding
 const getVitalStatusColor = (label, value) => {
   if (!value || value === '—' || value === '—/—') return 'bg-white border-slate-200 text-slate-900';
-  const num = parseFloat(value);
-
-  if (label.toLowerCase() === 'bmi' && !isNaN(num)) {
-    if (num < 18.5) return 'bg-amber-50 border-amber-200 text-amber-900'; // Underweight
-    if (num >= 25 && num < 30) return 'bg-amber-50 border-amber-200 text-amber-900'; // Overweight
-    if (num >= 30) return 'bg-red-50 border-red-200 text-red-900'; // Obese
-  }
 
   if (label.toLowerCase() === 'blood pressure' && typeof value === 'string' && value.includes('/')) {
     const [sys, dia] = value.split('/').map(Number);
@@ -346,17 +339,26 @@ const getVitalStatusColor = (label, value) => {
   return 'bg-white border-slate-200 text-slate-900'; // Normal default
 };
 
-const VitalCard = ({ label, value, unit }) => {
+const VitalCard = ({ label, value, unit, age }) => {
   let colorClass = getVitalStatusColor(label, value);
+  let displayLabel = label;
+  let tooltip = '';
   const isStringMessage = typeof value === 'string' && value.length > 10;
 
-  if (label.toLowerCase() === 'bmi' && isStringMessage) {
-    colorClass = 'bg-amber-50 border-amber-200 text-amber-900';
+  // Apply strict Bug 33 Pediatric BMI Logic
+  if (label.toLowerCase() === 'bmi') {
+    const cat = getBMICategory(value, age);
+    colorClass = cat.colorClass;
+    displayLabel = cat.label;
+    if (cat.tooltip) tooltip = cat.tooltip;
   }
 
   return (
-    <div className={`flex flex-col w-full p-3.5 border rounded-xl shadow-sm transition-shadow hover:shadow-md ring-1 ring-transparent hover:border-teal-200 ${colorClass}`}>
-      <span className="text-xs uppercase tracking-wider opacity-60 font-bold mb-1">{label}</span>
+    <div
+      className={`flex flex-col w-full p-3.5 border rounded-xl shadow-sm transition-shadow hover:shadow-md ring-1 ring-transparent hover:border-teal-200 ${colorClass}`}
+      title={tooltip || undefined}
+    >
+      <span className="text-xs uppercase tracking-wider opacity-60 font-bold mb-1">{displayLabel}</span>
       <div className="flex items-baseline gap-1 mt-auto">
         {isStringMessage ? (
           <span className="text-[11px] font-medium leading-tight">{value}</span>

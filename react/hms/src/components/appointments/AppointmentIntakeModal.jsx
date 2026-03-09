@@ -21,6 +21,7 @@ import pathologyService from '../../services/pathologyService';
 import { PatientDetails } from '../../models/Patients';
 import { calculateBMI, VitalsSchema } from '../../utils/vitalsHelpers';
 import { Skeleton, SkeletonCard } from '../common/SkeletonLoaders';
+import NumberInput from '../common/NumberInput';
 import './AppointmentIntakeModal.css';
 
 // Lazy load heavy form components and tables
@@ -41,6 +42,8 @@ const AppointmentIntakeModal = ({ isOpen, onClose, appointmentId, onSuccess }) =
   const [bmi, setBmi] = useState('');
   const [spo2, setSpo2] = useState('');
   const [bp, setBp] = useState('');
+  const [temp, setTemp] = useState('');
+  const [pulse, setPulse] = useState('');
   const [currentNotes, setCurrentNotes] = useState('');
 
   // UI State
@@ -156,6 +159,8 @@ const AppointmentIntakeModal = ({ isOpen, onClose, appointmentId, onSuccess }) =
             if (v.weightKg) setWeight(v.weightKg);
             if (v.bmi) setBmi(v.bmi);
             if (v.spo2) setSpo2(v.spo2);
+            if (v.temp) setTemp(v.temp);
+            if (v.pulse) setPulse(v.pulse);
           }
           if (appointmentIntake.notes) setCurrentNotes(appointmentIntake.notes);
           if (loadedPharmacyRows.length > 0) setPharmacyRows(loadedPharmacyRows);
@@ -179,16 +184,28 @@ const AppointmentIntakeModal = ({ isOpen, onClose, appointmentId, onSuccess }) =
   );
 
   const handleSave = async () => {
-    if (isSaving) return;
+    if (isSaving || !isValid) return;
 
-    // ── Biological Limit Validation (Bug 24) ──
+    // ── Biological Limit Validation (Bug 24, 29, 30) ──
     const patientAge = patient?.age || appointment?.patientAge || null;
-    const vitalsValidation = VitalsSchema.validate({ weightKg: weight, heightCm: height }, patientAge);
+    const vitalsValidation = VitalsSchema.validate({
+      weightKg: weight,
+      heightCm: height,
+      spO2: spo2,
+      temp: temp,
+      pulse: pulse,
+      bp: bp
+    }, patientAge);
 
     if (!vitalsValidation.isValid) {
-      const errorStrings = Object.values(vitalsValidation.errors).join(' ');
-      setError(`Vitals Error: ${errorStrings}`);
-      return;
+      // Exclude soft warnings from blocking save if we want to allow skipping, 
+      // but block hard errors (like SpO2 > 100 or < 0).
+      const hardErrors = Object.entries(vitalsValidation.errors).filter(([key]) => !key.includes('Warning') && !key.includes('Required'));
+      if (hardErrors.length > 0) {
+        const errorStrings = hardErrors.map(([, msg]) => msg).join(' ');
+        setError(`Vitals Error: ${errorStrings}`);
+        return;
+      }
     }
 
     setIsSaving(true);
@@ -222,6 +239,8 @@ const AppointmentIntakeModal = ({ isOpen, onClose, appointmentId, onSuccess }) =
           bmi: bmi || null,
           spo2: spo2 || null,
           bp: bp || null,
+          temp: temp || null,
+          pulse: pulse || null,
         },
         currentNotes: currentNotes || null,
         pharmacy: pharmacyRows.map(row => ({
@@ -305,6 +324,21 @@ const AppointmentIntakeModal = ({ isOpen, onClose, appointmentId, onSuccess }) =
       setIsSaving(false);
     }
   };
+
+  // ── Form Validation State (Bug 31) ──
+  const patientAge = patient?.age || appointment?.patientAge || null;
+  const vitalsValidation = VitalsSchema.validate({
+    weightKg: weight,
+    heightCm: height,
+    spO2: spo2,
+    temp: temp,
+    pulse: pulse,
+    bp: bp
+  }, patientAge);
+
+  // Consider valid if there are no hard errors (warnings/required rules are ignorable for now, but math/biology breaks are blocked).
+  const hardErrors = Object.entries(vitalsValidation.errors).filter(([key]) => !key.includes('Warning') && !key.includes('Required'));
+  const isValid = hardErrors.length === 0;
 
   if (!isOpen) return null;
 
@@ -583,50 +617,144 @@ const AppointmentIntakeModal = ({ isOpen, onClose, appointmentId, onSuccess }) =
                     ) : (
                       /* ── Input Form (Edit Mode) ────────────────────────────────── */
                       <div className="vitals-input-grid mt-2">
+                        {/* Height */}
                         <div className="input-group">
                           <label htmlFor="height">Height <span className="unit-label">(cm)</span></label>
-                          <input
+                          <NumberInput
                             id="height"
-                            type="number"
+                            min="20"
+                            max="300"
                             value={height}
-                            onChange={(e) => { setHeight(e.target.value); setError(''); }}
-                            placeholder="intake. cm"
-                            className="intake-input"
+                            onChange={(val) => { setHeight(val); setError(''); }}
+                            placeholder="e.g. 170"
+                            className={`intake-input ${(() => {
+                              const v = VitalsSchema.validate({ heightCm: height });
+                              if (v.errors.heightCm) return 'error';
+                              return '';
+                            })()}`}
                           />
+                          {(() => {
+                            const v = VitalsSchema.validate({ heightCm: height });
+                            if (v.errors.heightCm) return <div className="validation-message error">⚠️ {v.errors.heightCm}</div>;
+                            return null;
+                          })()}
                         </div>
+
+                        {/* Weight */}
                         <div className="input-group">
                           <label htmlFor="weight">Weight <span className="unit-label">(kg)</span></label>
-                          <input
+                          <NumberInput
                             id="weight"
-                            type="number"
+                            min="0.5"
+                            max="400"
                             value={weight}
-                            onChange={(e) => { setWeight(e.target.value); setError(''); }}
+                            onChange={(val) => { setWeight(val); setError(''); }}
                             placeholder="e.g. 72"
-                            className="intake-input"
+                            className={`intake-input ${(() => {
+                              const patientAge = patient?.age || appointment?.patientAge || null;
+                              const v = VitalsSchema.validate({ weightKg: weight }, patientAge);
+                              if (v.errors.weightKg) return 'error';
+                              if (v.errors.weightKgWarning) return 'warning';
+                              return '';
+                            })()}`}
                           />
+                          {(() => {
+                            const patientAge = patient?.age || appointment?.patientAge || null;
+                            const v = VitalsSchema.validate({ weightKg: weight }, patientAge);
+                            if (v.errors.weightKg) return <div className="validation-message error">⚠️ {v.errors.weightKg}</div>;
+                            if (v.errors.weightKgWarning) return <div className="validation-message warning">⚠️ {v.errors.weightKgWarning}</div>;
+                            return null;
+                          })()}
                         </div>
+
+                        {/* BMI */}
                         <div className="input-group">
                           <label htmlFor="bmi">BMI <span className="unit-label">(auto)</span></label>
-                          <input
+                          <NumberInput
                             id="bmi"
-                            type="number"
                             value={bmi}
                             placeholder="Auto-calculated"
                             className="intake-input intake-input--readonly"
                             readOnly
+                            onChange={() => { }}
                           />
                         </div>
+
+                        {/* Temp */}
+                        <div className="input-group">
+                          <label htmlFor="temp">Temp <span className="unit-label">(°C)</span></label>
+                          <NumberInput
+                            id="temp"
+                            min="30"
+                            max="45"
+                            value={temp}
+                            onChange={(val) => setTemp(val)}
+                            placeholder="e.g. 37.0"
+                            className={`intake-input ${(() => {
+                              const v = VitalsSchema.validate({ temp: temp });
+                              if (v.errors.temp) return 'error';
+                              return '';
+                            })()}`}
+                          />
+                          {(() => {
+                            const v = VitalsSchema.validate({ temp: temp });
+                            if (v.errors.temp) return <div className="validation-message error">⚠️ {v.errors.temp}</div>;
+                            return null;
+                          })()}
+                        </div>
+
+                        {/* Pulse */}
+                        <div className="input-group">
+                          <label htmlFor="pulse">Heart Rate <span className="unit-label">(bpm)</span></label>
+                          <NumberInput
+                            id="pulse"
+                            min="0"
+                            max="300"
+                            value={pulse}
+                            onChange={(val) => setPulse(val)}
+                            placeholder="e.g. 80"
+                            className={`intake-input ${(() => {
+                              const v = VitalsSchema.validate({ pulse: pulse });
+                              if (v.errors.pulse) return 'error';
+                              return '';
+                            })()}`}
+                          />
+                          {(() => {
+                            const v = VitalsSchema.validate({ pulse: pulse });
+                            if (v.errors.pulse) return <div className="validation-message error">⚠️ {v.errors.pulse}</div>;
+                            return null;
+                          })()}
+                        </div>
+
+                        {/* SpO2 */}
                         <div className="input-group">
                           <label htmlFor="spo2">SpO₂ <span className="unit-label">(%)</span></label>
-                          <input
+                          <NumberInput
                             id="spo2"
-                            type="number"
+                            min="0"
+                            max="100"
+                            step="1"
                             value={spo2}
-                            onChange={(e) => setSpo2(e.target.value)}
+                            onChange={(val) => setSpo2(val)}
                             placeholder="e.g. 98"
-                            className="intake-input"
+                            className={`intake-input ${(() => {
+                              const v = VitalsSchema.validate({ spO2: spo2 });
+                              if (v.errors.spO2) return 'error';
+                              if (v.errors.spO2Warning || v.errors.spO2Required) return 'warning';
+                              return '';
+                            })()}`}
                           />
+                          {/* Live Validation Feedback */}
+                          {(() => {
+                            const v = VitalsSchema.validate({ spO2: spo2 });
+                            if (v.errors.spO2) return <div className="validation-message error">⚠️ {v.errors.spO2}</div>;
+                            if (v.errors.spO2Warning) return <div className="validation-message warning">⚠️ {v.errors.spO2Warning}</div>;
+                            if (v.errors.spO2Required) return <div className="validation-message warning">ⓘ {v.errors.spO2Required}</div>;
+                            return null;
+                          })()}
                         </div>
+
+                        {/* Blood Pressure */}
                         <div className="input-group">
                           <label htmlFor="bp">Blood Pressure <span className="unit-label">(mmHg)</span></label>
                           <input
@@ -635,8 +763,20 @@ const AppointmentIntakeModal = ({ isOpen, onClose, appointmentId, onSuccess }) =
                             value={bp}
                             onChange={(e) => setBp(e.target.value)}
                             placeholder="e.g. 120/80"
-                            className="intake-input"
+                            className={`intake-input ${(() => {
+                              const v = VitalsSchema.validate({ bp: bp });
+                              if (v.errors.bp || v.errors.bpSys || v.errors.bpDia || v.errors.bpFormat) return 'error';
+                              return '';
+                            })()}`}
                           />
+                          {(() => {
+                            const v = VitalsSchema.validate({ bp: bp });
+                            if (v.errors.bp) return <div className="validation-message error">⚠️ {v.errors.bp}</div>;
+                            if (v.errors.bpFormat) return <div className="validation-message error">⚠️ {v.errors.bpFormat}</div>;
+                            if (v.errors.bpSys) return <div className="validation-message error">⚠️ {v.errors.bpSys}</div>;
+                            if (v.errors.bpDia) return <div className="validation-message error">⚠️ {v.errors.bpDia}</div>;
+                            return null;
+                          })()}
                         </div>
                       </div>
                     )}
@@ -721,9 +861,9 @@ const AppointmentIntakeModal = ({ isOpen, onClose, appointmentId, onSuccess }) =
                   Cancel
                 </button>
                 <button
-                  className="intake-btn-save"
+                  className={`intake-btn-save ${(!isValid || isSaving || isLoading) ? 'opacity-50 cursor-not-allowed bg-slate-400 border-slate-400' : 'bg-primary-600 hover:bg-primary-700'} transition-all duration-200`}
                   onClick={handleSave}
-                  disabled={isSaving || isLoading} // Disable save button while SWR is loading
+                  disabled={!isValid || isSaving || isLoading} // Disabled if form is fundamentally broken
                 >
                   {isSaving ? (
                     <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
