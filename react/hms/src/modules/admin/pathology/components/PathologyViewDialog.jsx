@@ -218,6 +218,104 @@ const PathologyViewDialog = ({ isOpen, onClose, report }) => {
                             </div>
                         </div>
 
+                        {/* All Test Items Section - Display all individual tests if pathologyItems exists */}
+                        {reportData.pathologyItems && reportData.pathologyItems.length > 0 && (
+                            <div className="space-y-4">
+                                <div className="flex justify-between items-center">
+                                    <h4 className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-[#0f3e61]">All Ordered Tests</h4>
+                                    <div className="h-px flex-1 bg-slate-100 mx-6 opacity-50" />
+                                    <span className="text-[10px] font-bold text-slate-300 uppercase italic leading-none">{reportData.pathologyItems.length} Tests</span>
+                                </div>
+
+                                <div className="grid gap-4">
+                                    {reportData.pathologyItems.map((item, index) => (
+                                        <div key={index} className="bg-white rounded-[24px] border border-[#207DC0]/20 p-6 shadow-sm hover:shadow-md transition-all">
+                                            <div className="flex items-start gap-6">
+                                                <div className="flex-shrink-0">
+                                                    <div className="w-12 h-12 rounded-[16px] bg-[#207DC0]/10 flex items-center justify-center border border-[#207DC0]/10">
+                                                        <span className="text-[#207DC0] font-extrabold text-lg">{index + 1}</span>
+                                                    </div>
+                                                </div>
+                                                <div className="flex-1">
+                                                    <div className="flex items-center gap-3 mb-2">
+                                                        <h3 className="text-lg font-bold text-[#0f3e61]">{item.testName || 'Test ' + (index + 1)}</h3>
+                                                        {item.priority && (
+                                                            <span className={`text-[10px] font-extrabold uppercase tracking-widest px-3 py-1 rounded-full ${
+                                                                item.priority?.toLowerCase() === 'urgent' ? 'bg-red-100 text-red-600' :
+                                                                item.priority?.toLowerCase() === 'high' ? 'bg-orange-100 text-orange-600' :
+                                                                'bg-blue-100 text-blue-600'
+                                                            }`}>
+                                                                {item.priority}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <div className="grid grid-cols-3 gap-4 mt-3">
+                                                        {item.category && (
+                                                            <div>
+                                                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Category</p>
+                                                                <p className="text-sm font-semibold text-slate-700">{item.category}</p>
+                                                            </div>
+                                                        )}
+                                                        {item.rate && (
+                                                            <div>
+                                                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Rate</p>
+                                                                <p className="text-sm font-semibold text-slate-700">₹{item.rate}</p>
+                                                            </div>
+                                                        )}
+                                                        {item.turnaroundTime && (
+                                                            <div>
+                                                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Turnaround</p>
+                                                                <p className="text-sm font-semibold text-slate-700">{item.turnaroundTime}</p>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    {item.notes && (
+                                                        <div className="mt-3 p-3 bg-slate-50 rounded-xl">
+                                                            <p className="text-xs text-slate-600 italic">{item.notes}</p>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Test Results Section - Display test results if available */}
+                        {reportData.testResults && reportData.testResults.length > 0 && (
+                            <div className="space-y-4">
+                                <div className="flex justify-between items-center">
+                                    <h4 className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-[#0f3e61]">Test Results</h4>
+                                    <div className="h-px flex-1 bg-slate-100 mx-6 opacity-50" />
+                                    <span className="text-[10px] font-bold text-slate-300 uppercase italic leading-none">{reportData.testResults.length} Parameters</span>
+                                </div>
+
+                                <div className="bg-white rounded-[24px] border border-[#207DC0]/20 overflow-hidden shadow-sm">
+                                    <table className="w-full">
+                                        <thead className="bg-slate-50">
+                                            <tr>
+                                                <th className="text-left px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Parameter</th>
+                                                <th className="text-left px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Result</th>
+                                                <th className="text-left px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Unit</th>
+                                                <th className="text-left px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Reference Range</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {reportData.testResults.map((result, index) => (
+                                                <tr key={index} className="border-t border-slate-100 hover:bg-slate-50/50 transition-colors">
+                                                    <td className="px-6 py-4 text-sm font-semibold text-slate-700">{result.parameter || result.name}</td>
+                                                    <td className="px-6 py-4 text-sm font-bold text-[#0f3e61]">{result.value || result.result}</td>
+                                                    <td className="px-6 py-4 text-sm text-slate-600">{result.unit || '-'}</td>
+                                                    <td className="px-6 py-4 text-sm text-slate-600">{result.referenceRange || result.normalRange || '-'}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        )}
+
                         {/* Final Remarks */}
                         <div className="p-10 bg-slate-50 rounded-[48px] text-slate-800 relative border border-[#207DC0]/20 shadow-sm overflow-hidden">
                             <div className="absolute top-0 right-0 p-8 opacity-5">
