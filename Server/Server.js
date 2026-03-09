@@ -30,6 +30,7 @@ const webAppPath = path.join(__dirname, '..', 'mobile', 'dist');
 
 // --- API Route Definitions ---
 app.use('/api/auth', authRoutes);
+app.use('/api/users', require('./routes/users'));
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/staff', require('./routes/staff'));
 app.use('/api/patients', require('./routes/patients'));

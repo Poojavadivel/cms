@@ -29,6 +29,13 @@ class _DoctorSettingsScreenState extends State<DoctorSettingsScreen> {
   bool _emailNotifications = true;
   bool _pushNotifications = true;
   String _currentStatus = 'Available';
+    // State for edit mode and form fields
+    bool _isEditing = false;
+    final _formKey = GlobalKey<FormState>();
+    String? _editSpecialization;
+    String? _editDepartment;
+    String? _editLicenseNumber;
+    String? _editFullName;
 
   final AuthService _authService = AuthService.instance;
 
@@ -54,29 +61,30 @@ class _DoctorSettingsScreenState extends State<DoctorSettingsScreen> {
     // Access the doctor's profile from the AppProvider
     final doctor = Provider.of<AppProvider>(context).user as Doctor?;
 
-    return Scaffold(
-      backgroundColor: backgroundColor,
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(32.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildHeader(),
-            const SizedBox(height: 32),
-            _buildProfileSection(doctor),
-            const SizedBox(height: 32),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(child: _buildAvailabilitySection()),
-                const SizedBox(width: 32),
-                Expanded(child: _buildNotificationsSection()),
-              ],
-            ),
-          ],
+      return Scaffold(
+        backgroundColor: backgroundColor,
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(32.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeader(),
+              const SizedBox(height: 32),
+              _buildProfileSection(doctor),
+              if (_isEditing) _buildEditForm(doctor),
+              const SizedBox(height: 32),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: _buildAvailabilitySection()),
+                  const SizedBox(width: 32),
+                  Expanded(child: _buildNotificationsSection()),
+                ],
+              ),
+            ],
+          ),
         ),
-      ),
-    );
+      );
   }
 
   // --- WIDGET BUILDER METHODS ---
@@ -118,10 +126,97 @@ class _DoctorSettingsScreenState extends State<DoctorSettingsScreen> {
           _buildProfileInfoRow('Specialty', doctor?.specialization ?? 'N/A'),
           _buildProfileInfoRow('Department', doctor?.department ?? 'N/A'),
           _buildProfileInfoRow('License Number', doctor?.licenseNumber ?? 'N/A'),
+            Align(
+              alignment: Alignment.centerRight,
+              child: ElevatedButton(
+                onPressed: () {
+                  setState(() {
+                    _isEditing = true;
+                    _editFullName = doctor?.userProfile.fullName;
+                    _editSpecialization = doctor?.specialization;
+                    _editDepartment = doctor?.department;
+                    _editLicenseNumber = doctor?.licenseNumber;
+                  });
+                },
+                child: Text('Edit'),
+              ),
+            ),
         ],
       ),
     );
+    }
   }
+    Widget _buildEditForm(Doctor? doctor) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 24.0),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextFormField(
+                initialValue: _editFullName,
+                decoration: InputDecoration(labelText: 'Full Name'),
+                onChanged: (val) => _editFullName = val,
+                validator: (val) => val == null || val.isEmpty ? 'Required' : null,
+              ),
+              TextFormField(
+                initialValue: _editSpecialization,
+                decoration: InputDecoration(labelText: 'Specialty'),
+                onChanged: (val) => _editSpecialization = val,
+                validator: (val) => val == null || val.isEmpty ? 'Required' : null,
+              ),
+              TextFormField(
+                initialValue: _editDepartment,
+                decoration: InputDecoration(labelText: 'Department'),
+                onChanged: (val) => _editDepartment = val,
+                validator: (val) => val == null || val.isEmpty ? 'Required' : null,
+              ),
+              TextFormField(
+                initialValue: _editLicenseNumber,
+                decoration: InputDecoration(labelText: 'License Number'),
+                onChanged: (val) => _editLicenseNumber = val,
+                validator: (val) => val == null || val.isEmpty ? 'Required' : null,
+              ),
+              Row(
+                children: [
+                  ElevatedButton(
+                    onPressed: () {
+                      if (_formKey.currentState?.validate() ?? false) {
+                        // Update doctor details
+                        final updatedDoctor = doctor?.copyWith(
+                          userProfile: doctor.userProfile.copyWith(fullName: _editFullName ?? doctor.userProfile.fullName),
+                          specialization: _editSpecialization,
+                          department: _editDepartment,
+                          licenseNumber: _editLicenseNumber,
+                        );
+                        if (updatedDoctor != null) {
+                          Provider.of<AppProvider>(context, listen: false).setUser(updatedDoctor, Provider.of<AppProvider>(context, listen: false).token ?? '');
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Profile updated successfully')));
+                          setState(() {
+                            _isEditing = false;
+                          });
+                        }
+                      }
+                    },
+                    child: Text('Save'),
+                  ),
+                  const SizedBox(width: 16),
+                  TextButton(
+                    onPressed: () {
+                      setState(() {
+                        _isEditing = false;
+                      });
+                    },
+                    child: Text('Cancel'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
   Widget _buildAvailabilitySection() {
     return _buildSettingsCard(

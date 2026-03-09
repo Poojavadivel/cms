@@ -222,6 +222,9 @@ export const ScannerEndpoints = {
   getPrescriptions: (patientId) => `${API_BASE_URL}/scanner-enterprise/prescriptions/${patientId}`,
   getLabReports: (patientId) => `${API_BASE_URL}/scanner-enterprise/lab-reports/${patientId}`,
   getMedicalHistory: (patientId) => `${API_BASE_URL}/scanner-enterprise/medical-history/${patientId}`,
+  addMedicalHistory: `${API_BASE_URL}/scanner-enterprise/medical-history`,
+  updateMedicalHistory: (id) => `${API_BASE_URL}/scanner-enterprise/medical-history/${id}`,
+  deleteMedicalHistory: (id) => `${API_BASE_URL}/scanner-enterprise/medical-history/${id}`,
 };
 
 // Export as named constant to avoid ESLint warning

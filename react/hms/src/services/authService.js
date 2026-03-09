@@ -288,6 +288,34 @@ class AuthService {
   }
 
   /**
+   * Update user profile
+   * @param {Object} profileData - Data to update (firstName, lastName, phone, metadata)
+   * @returns {Promise<Object>} API response
+   */
+  async updateProfile(profileData) {
+    try {
+      logger.info('AUTH', 'Attempting profile update');
+
+      const response = await this.makeAuthRequest(`${API_BASE_URL}/users/profile`, {
+        method: 'PUT',
+        body: JSON.stringify(profileData),
+      });
+
+      console.log('✅ [AUTH] Profile updated successfully');
+
+      // Update local storage if user data is returned
+      if (response.user) {
+        localStorage.setItem(this.USER_DATA_KEY, JSON.stringify(response.user));
+      }
+
+      return response;
+    } catch (error) {
+      console.error('❌ [AUTH] Profile update failed:', error.message);
+      throw error;
+    }
+  }
+
+  /**
    * Validate existing token and get user data
    * Equivalent to Flutter's getUserData method
    * 

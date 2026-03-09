@@ -28,7 +28,8 @@ import {
     MdDelete,
     MdPictureAsPdf,
     MdFilterList,
-    MdCheck
+    MdCheck,
+    MdAdd
 } from 'react-icons/md';
 import './patientview.css';
 import patientsService from '../../services/patientsService';
@@ -47,6 +48,11 @@ const PatientView = ({ isOpen, onClose, patientId, patient: patientProp, onEdit,
     const [isDownloading, setIsDownloading] = useState(false);
     const [error, setError] = useState('');
     const [showEditModal, setShowEditModal] = useState(false);
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+    const handleDataRefresh = () => {
+        setRefreshTrigger(prev => prev + 1);
+    };
 
     const tabs = [
         { id: 'profile', label: 'Profile', icon: <MdPerson /> },
@@ -195,7 +201,9 @@ const PatientView = ({ isOpen, onClose, patientId, patient: patientProp, onEdit,
             barriers: Array.isArray(barriers) ? barriers : [],
             noAlcohol, noSmoker,
             avatarUrl: patient.avatarUrl || patient.metadata?.avatarUrl,
-            patientCode
+            patientCode,
+            fatherName: patient.fatherName || patient.metadata?.fatherName || '',
+            emergencyRelation: patient.emergencyContactRelation || patient.metadata?.emergencyContactRelation || ''
         };
     };
 
@@ -328,7 +336,7 @@ const PatientView = ({ isOpen, onClose, patientId, patient: patientProp, onEdit,
                                             </div>
                                             <button
                                                 className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md shadow-sm hover:bg-slate-50 transition-all duration-200"
-                                                onClick={() => onEdit && onEdit(patient)}
+                                                onClick={() => setShowEditModal(true)}
                                             >
                                                 <MdEdit size={16} className="text-slate-500" /> Edit
                                             </button>
@@ -360,6 +368,12 @@ const PatientView = ({ isOpen, onClose, patientId, patient: patientProp, onEdit,
                                             <VitalCard label="Weight" value={patientData.weightKg} unit="kg" />
                                             <VitalCard label="Height" value={patientData.heightCm} unit="cm" />
                                             <VitalCard label="Blood Pressure" value={patientData.bp} unit="mmHg" />
+                                        </div>
+
+                                        <div className="pv-header-actions-group">
+                                            <button className="pv-edit-btn" onClick={() => setShowEditModal(true)}>
+                                                <MdEdit size={14} /> Edit
+                                            </button>
                                         </div>
 
                                         {patientData.diagnosis.length > 0 && (
@@ -398,11 +412,11 @@ const PatientView = ({ isOpen, onClose, patientId, patient: patientProp, onEdit,
 
                             {/* 3. TAB CONTENT (Scrollable) */}
                             <div className="patient-tab-content">
-                                {activeTab === 'profile' && <ProfileTab patient={patient} copyToClipboard={copyToClipboard} onEdit={onEdit} />}
-                                {activeTab === 'medical-history' && <MedicalHistoryTab patientId={patientId || patient?._id} patient={patient} />}
-                                {activeTab === 'prescription' && <PrescriptionTab patientId={patientId || patient?._id} />}
-                                {activeTab === 'lab-results' && <LabResultTab patientId={patientId || patient?._id} />}
-                                {activeTab === 'billings' && <BillingsTab patientId={patientId || patient?._id} />}
+                                {activeTab === 'profile' && <ProfileTab patient={patient} copyToClipboard={copyToClipboard} onEdit={() => setShowEditModal(true)} />}
+                                {activeTab === 'medical-history' && <MedicalHistoryTab patientId={patientId || patient?._id} patient={patient} refreshTrigger={refreshTrigger} />}
+                                {activeTab === 'prescription' && <PrescriptionTab patientId={patientId || patient?._id} refreshTrigger={refreshTrigger} />}
+                                {activeTab === 'lab-results' && <LabResultTab patientId={patientId || patient?._id} refreshTrigger={refreshTrigger} />}
+                                {activeTab === 'billings' && <BillingsTab patientId={patientId || patient?._id} refreshTrigger={refreshTrigger} />}
                             </div>
                         </>
                     )}
@@ -431,15 +445,20 @@ const PatientView = ({ isOpen, onClose, patientId, patient: patientProp, onEdit,
                             onClose={() => setShowEditModal(false)}
                             onSuccess={async (updatedPatient) => {
                                 setShowEditModal(false);
-                                try {
-                                    const refreshed = await patientsService.fetchPatientById(patientId || patient.patientId || patient._id);
-                                    setPatient(refreshed);
-                                } catch (e) {
-                                    console.error('Failed to refresh patient after edit:', e);
+                                if (updatedPatient) {
+                                    setPatient(updatedPatient);
+                                } else {
+                                    try {
+                                        const refreshed = await patientsService.fetchPatientById(patientId || patient.patientId || patient._id);
+                                        setPatient(refreshed);
+                                    } catch (e) {
+                                        console.error('Failed to refresh patient after edit:', e);
+                                    }
                                 }
                             }}
                             patientId={patient.patientId || patient._id || patient.id}
                             initialData={patient}
+                            onDataUpdate={handleDataRefresh}
                         />
                     </div>
                 )
@@ -682,12 +701,14 @@ const ProfileTab = ({ patient, copyToClipboard, onEdit }) => {
 };
 
 // --- MEDICAL HISTORY TAB ---
-const MedicalHistoryTab = ({ patientId, patient }) => {
+const MedicalHistoryTab = ({ patientId, patient, refreshTrigger }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [historyData, setHistoryData] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [selectedItem, setSelectedItem] = useState(null);
     const [showDetailModal, setShowDetailModal] = useState(false);
+    const [showAddEditModal, setShowAddEditModal] = useState(false);
+    const [editingRecord, setEditingRecord] = useState(null);
+    const [selectedItem, setSelectedItem] = useState(null);
 
     useEffect(() => {
         if (patientId) {
@@ -697,7 +718,7 @@ const MedicalHistoryTab = ({ patientId, patient }) => {
             setHistoryData([]);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [patientId]);
+    }, [patientId, refreshTrigger]);
 
     const fetchHistory = async () => {
         setLoading(true);
@@ -749,6 +770,16 @@ const MedicalHistoryTab = ({ patientId, patient }) => {
             <div className="pv-tab-header-row">
                 <h3 className="pv-tab-title">MEDICAL HISTORY</h3>
                 <div className="pv-actions-right">
+                    <button
+                        className="pv-edit-btn"
+                        style={{ background: '#207DC0', marginRight: '10px' }}
+                        onClick={() => {
+                            setEditingRecord(null);
+                            setShowAddEditModal(true);
+                        }}
+                    >
+                        <MdAdd /> Add Record
+                    </button>
                     <button className="pv-btn-icon">
                         <MdFilterList />
                     </button>
@@ -774,7 +805,7 @@ const MedicalHistoryTab = ({ patientId, patient }) => {
                             <th>Hospital</th>
                             <th>Doctor</th>
                             <th>Summary</th>
-                            <th>Actions</th>
+                            <th style={{ textAlign: 'right' }}>Actions</th>
                         </tr>
                     </thead>
 
@@ -809,19 +840,63 @@ const MedicalHistoryTab = ({ patientId, patient }) => {
                                         {item.appointmentSummary || item.dischargeSummary || item.medicalHistory || item.diagnosis || '—'}
                                     </td>
                                     <td>
-                                        <button
-                                            className="pv-btn-action-circle"
-                                            onClick={() => item.pdfId ? reportService.viewPdf(item.pdfId) : handleViewDetails(item)}
-                                            title="View Details"
-                                        >
-                                            <MdVisibility />
-                                        </button>
+                                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                                            <button
+                                                className="pv-btn-action-circle"
+                                                onClick={() => item.pdfId && item.pdfId !== 'manual-entry' ? reportService.viewPdf(item.pdfId) : handleViewDetails(item)}
+                                                title="View Details"
+                                            >
+                                                <MdVisibility />
+                                            </button>
+                                            <button
+                                                className="pv-btn-action-circle"
+                                                onClick={() => {
+                                                    setEditingRecord(item);
+                                                    setShowAddEditModal(true);
+                                                }}
+                                                title="Edit Record"
+                                                style={{ color: '#207DC0' }}
+                                            >
+                                                <MdEdit />
+                                            </button>
+                                            <button
+                                                className="pv-btn-action-circle"
+                                                onClick={async () => {
+                                                    if (window.confirm('Are you sure you want to delete this record?')) {
+                                                        try {
+                                                            await prescriptionService.deleteMedicalHistory(item._id);
+                                                            fetchHistory();
+                                                        } catch (err) {
+                                                            alert('Failed to delete: ' + err.message);
+                                                        }
+                                                    }
+                                                }}
+                                                title="Delete Record"
+                                                style={{ color: '#EF4444' }}
+                                            >
+                                                <MdDelete />
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
                     </tbody>
                 </table>
             </div>
+
+            {/* Add/Edit Modal */}
+            {showAddEditModal && (
+                <MedicalHistoryModal
+                    isOpen={true}
+                    onClose={() => setShowAddEditModal(false)}
+                    onSuccess={() => {
+                        setShowAddEditModal(false);
+                        fetchHistory();
+                    }}
+                    patientId={patientId}
+                    initialData={editingRecord}
+                />
+            )}
 
             {/* Medical History Detail Modal */}
             {showDetailModal && selectedItem && (
@@ -1381,8 +1456,170 @@ const MedicalHistoryTab = ({ patientId, patient }) => {
 };
 
 
+// --- MEDICAL HISTORY MODAL ---
+const MedicalHistoryModal = ({ isOpen, onClose, onSuccess, patientId, initialData }) => {
+    const isEdit = !!initialData;
+    const [formData, setFormData] = useState(initialData || {
+        medicalType: 'appointment_summary',
+        hospitalName: '',
+        doctorName: '',
+        date: new Date().toISOString().split('T')[0],
+        medicalHistory: '',
+        appointmentSummary: '',
+        dischargeSummary: '',
+        hospitalLocation: '',
+        department: '',
+        doctorNotes: '',
+        observations: '',
+        remarks: ''
+    });
+    const [isSaving, setIsSaving] = useState(false);
+
+    if (!isOpen) return null;
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setIsSaving(true);
+        try {
+            if (isEdit) {
+                await prescriptionService.updateMedicalHistory(initialData._id, formData);
+            } else {
+                await prescriptionService.addMedicalHistory({ ...formData, patientId });
+            }
+            onSuccess();
+        } catch (error) {
+            console.error('Failed to save medical history:', error);
+            alert('Error: ' + (error.message || 'Failed to save record'));
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({
+            ...prev,
+            [name]: value,
+            // Sync legacy field for display compatibility
+            ...(name === 'appointmentSummary' || name === 'dischargeSummary' ? { medicalHistory: value } : {})
+        }));
+    };
+
+    return (
+        <div className="patient-view-overlay" style={{ zIndex: 10000 }}>
+            <div className="actions-detail-modal" style={{ height: 'auto', maxWeight: '600px', maxHeight: '85vh' }}>
+                <div style={{
+                    background: 'linear-gradient(135deg, #207DC0 0%, #165a8a 100%)',
+                    padding: '16px 20px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    color: 'white'
+                }}>
+                    <h2 style={{ margin: 0, fontSize: '18px' }}>{isEdit ? 'Edit Record' : 'Add Medical History'}</h2>
+                    <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer' }}>
+                        <MdClose size={24} />
+                    </button>
+                </div>
+
+                <form onSubmit={handleSubmit} style={{ padding: '20px', overflowY: 'auto' }}>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="flex flex-col gap-1">
+                            <label className="pv-label">Record Type</label>
+                            <select
+                                name="medicalType"
+                                value={formData.medicalType}
+                                onChange={handleChange}
+                                className="border p-2 rounded text-sm"
+                                required
+                            >
+                                <option value="appointment_summary">Appointment Summary</option>
+                                <option value="discharge_summary">Discharge Summary</option>
+                            </select>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                            <label className="pv-label">Date</label>
+                            <input
+                                type="date"
+                                name="date"
+                                value={formData.date}
+                                onChange={handleChange}
+                                className="border p-2 rounded text-sm"
+                                required
+                            />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                            <label className="pv-label">Hospital Name</label>
+                            <input
+                                type="text"
+                                name="hospitalName"
+                                value={formData.hospitalName}
+                                onChange={handleChange}
+                                className="border p-2 rounded text-sm"
+                                placeholder="Enter hospital name"
+                                required
+                            />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                            <label className="pv-label">Doctor Name</label>
+                            <input
+                                type="text"
+                                name="doctorName"
+                                value={formData.doctorName}
+                                onChange={handleChange}
+                                className="border p-2 rounded text-sm"
+                                placeholder="Enter doctor name"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col gap-1 mt-4">
+                        <label className="pv-label">Summary / Notes</label>
+                        <textarea
+                            name={formData.medicalType === 'discharge_summary' ? 'dischargeSummary' : 'appointmentSummary'}
+                            value={formData.medicalType === 'discharge_summary' ? formData.dischargeSummary : formData.appointmentSummary}
+                            onChange={handleChange}
+                            className="border p-2 rounded text-sm min-h-[100px]"
+                            placeholder="Enter detailed summary..."
+                            required
+                        />
+                    </div>
+
+                    <div style={{
+                        marginTop: '20px',
+                        paddingTop: '15px',
+                        borderTop: '1px solid #eee',
+                        display: 'flex',
+                        justifyContent: 'flex-end',
+                        gap: '10px'
+                    }}>
+                        <button type="button" onClick={onClose} className="pv-btn-outline">Cancel</button>
+                        <button
+                            type="submit"
+                            disabled={isSaving}
+                            style={{
+                                background: '#207DC0',
+                                color: 'white',
+                                border: 'none',
+                                padding: '8px 24px',
+                                borderRadius: '6px',
+                                fontWeight: '600',
+                                cursor: isSaving ? 'not-allowed' : 'pointer',
+                                opacity: isSaving ? 0.7 : 1
+                            }}
+                        >
+                            {isSaving ? 'Saving...' : 'Save Record'}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+};
+
+
 // --- PRESCRIPTION TAB ---
-const PrescriptionTab = ({ patientId }) => {
+const PrescriptionTab = ({ patientId, refreshTrigger }) => {
     const [prescriptions, setPrescriptions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -1396,7 +1633,7 @@ const PrescriptionTab = ({ patientId }) => {
             setPrescriptions([]);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [patientId]);
+    }, [patientId, refreshTrigger]);
 
     const fetchPrescriptionsData = async () => {
         setLoading(true);
@@ -1526,7 +1763,7 @@ const PrescriptionTab = ({ patientId }) => {
 };
 
 // --- LAB RESULTS TAB ---
-const LabResultTab = ({ patientId }) => {
+const LabResultTab = ({ patientId, refreshTrigger }) => {
     const [labs, setLabs] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -1540,7 +1777,7 @@ const LabResultTab = ({ patientId }) => {
             setLabs([]);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [patientId]);
+    }, [patientId, refreshTrigger]);
 
     const fetchLabResults = async () => {
         setLoading(true);
@@ -1710,7 +1947,7 @@ const LabResultTab = ({ patientId }) => {
 
 
 // --- BILLINGS TAB ---
-const BillingsTab = ({ patientId }) => {
+const BillingsTab = ({ patientId, refreshTrigger }) => {
     const [bills, setBills] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -1724,7 +1961,7 @@ const BillingsTab = ({ patientId }) => {
             setBills([]);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [patientId]);
+    }, [patientId, refreshTrigger]);
 
     const fetchBills = async () => {
         setLoading(true);

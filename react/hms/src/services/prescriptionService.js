@@ -191,10 +191,46 @@ export const fetchMedicalHistory = async (patientId) => {
   }
 };
 
+export const addMedicalHistory = async (data) => {
+  try {
+    const endpoint = ScannerEndpoints.addMedicalHistory;
+    const axiosInstance = createAxiosInstance();
+    const response = await axiosInstance.post(endpoint, data);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
+export const updateMedicalHistory = async (id, data) => {
+  try {
+    const endpoint = ScannerEndpoints.updateMedicalHistory(id);
+    const axiosInstance = createAxiosInstance();
+    const response = await axiosInstance.put(endpoint, data);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
+export const deleteMedicalHistory = async (id) => {
+  try {
+    const endpoint = ScannerEndpoints.deleteMedicalHistory(id);
+    const axiosInstance = createAxiosInstance();
+    const response = await axiosInstance.delete(endpoint);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
 const prescriptionService = {
   fetchPrescriptions,
   fetchLabReports,
   fetchMedicalHistory,
+  addMedicalHistory,
+  updateMedicalHistory,
+  deleteMedicalHistory,
 };
 
 export default prescriptionService;

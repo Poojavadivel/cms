@@ -131,6 +131,25 @@ router.get('/lab-reports/:patientId', auth, getPatientLabReports);
 router.get('/medical-history/:patientId', auth, getPatientMedicalHistory);
 
 /**
+ * POST /medical-history
+ * Create medical history manually
+ */
+const { addMedicalHistory, updateMedicalHistory, deleteMedicalHistory } = require('./documentController');
+router.post('/medical-history', auth, addMedicalHistory);
+
+/**
+ * PUT /medical-history/:id
+ * Update medical history
+ */
+router.put('/medical-history/:id', auth, updateMedicalHistory);
+
+/**
+ * DELETE /medical-history/:id
+ * Delete medical history
+ */
+router.delete('/medical-history/:id', auth, deleteMedicalHistory);
+
+/**
  * GET /pdf-public/:pdfId
  * Get PDF document (public access for viewing)
  */

@@ -491,6 +491,11 @@ router.put('/:id', auth, async (req, res) => {
     res.status(200).json({ success: true, message: 'Appointment updated successfully', appointment: normalized });
   } catch (err) {
     console.error('💥 FULL UPDATE error:', err);
+    // Return validation errors with details
+    if (err.name === 'ValidationError') {
+      const messages = Object.values(err.errors).map(e => e.message);
+      return res.status(400).json({ success: false, message: messages.join(', '), errorCode: 4000 });
+    }
     res.status(500).json({ success: false, message: 'Failed to update appointment', errorCode: 5005 });
   }
 });

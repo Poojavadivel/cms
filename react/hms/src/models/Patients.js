@@ -49,6 +49,14 @@ export class PatientDetails {
     bmi = '',
     isSelected = false,
     patientCode = null,
+    fatherName = '',
+    profession = '',
+    emergencyContactRelation = '',
+    diagnosis = [],
+    barriers = [],
+    noAlcohol = false,
+    noSmoker = false,
+    metadata = {},
   }) {
     this.patientId = patientId;
     this.name = name;
@@ -94,6 +102,14 @@ export class PatientDetails {
     this.bmi = bmi;
     this.isSelected = isSelected;
     this.patientCode = patientCode;
+    this.fatherName = fatherName;
+    this.profession = profession;
+    this.emergencyContactRelation = emergencyContactRelation;
+    this.diagnosis = diagnosis;
+    this.barriers = barriers;
+    this.noAlcohol = noAlcohol;
+    this.noSmoker = noSmoker;
+    this.metadata = metadata;
   }
 
   get doctorDisplayName() {
@@ -292,6 +308,14 @@ export class PatientDetails {
       notes: json.notes?.toString() || '',
       isSelected: json.isSelected === true,
       patientCode: extractedPatientCode,
+      fatherName: metadata.fatherName?.toString() || json.fatherName?.toString() || '',
+      profession: metadata.profession?.toString() || json.profession?.toString() || '',
+      emergencyContactRelation: metadata.emergencyContactRelation?.toString() || json.emergencyContactRelation?.toString() || '',
+      diagnosis: Array.isArray(metadata.diagnosis) ? metadata.diagnosis : (Array.isArray(json.diagnosis) ? json.diagnosis : []),
+      barriers: Array.isArray(metadata.barriers) ? metadata.barriers : (Array.isArray(json.barriers) ? json.barriers : []),
+      noAlcohol: metadata.noAlcohol === true || json.noAlcohol === true,
+      noSmoker: metadata.noSmoker === true || json.noSmoker === true,
+      metadata: metadata,
     });
   }
 
@@ -342,6 +366,13 @@ export class PatientDetails {
         expiryDate: this.expiryDate,
         avatarUrl: this.avatarUrl,
         medicalHistory: this.medicalHistory,
+        fatherName: this.fatherName,
+        profession: this.profession,
+        emergencyContactRelation: this.emergencyContactRelation,
+        diagnosis: this.diagnosis,
+        barriers: this.barriers,
+        noAlcohol: this.noAlcohol,
+        noSmoker: this.noSmoker,
       },
     };
 

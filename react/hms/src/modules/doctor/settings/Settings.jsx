@@ -52,6 +52,9 @@ const DoctorSettings = () => {
     fullName: user?.fullName || 'Doctor Name',
     email: user?.email || 'doctor@hms.com',
     phone: user?.phone || user?.contactNumber || 'N/A',
+    department: user?.metadata?.department || 'General',
+    experienceYears: user?.metadata?.experienceYears || 0,
+    specialization: user?.metadata?.specialization || user?.designation || 'Specialist'
   });
 
   const handleProfileChange = (e) => {
@@ -68,37 +71,38 @@ const DoctorSettings = () => {
     }
 
     // Phone validation
-    // Basic check: must not be empty or "N/A" if it's required (as per Bug 22)
     const phoneVal = profileForm.phone?.trim();
     if (!phoneVal || phoneVal === 'N/A') {
-      alert('Phone number is required. Please add your phone number.');
+      alert('Phone number is required.');
       return;
     }
 
-    // Optional: a simple regex just to ensure it looks like a phone number (digits, spaces, +, -, etc.)
-    const phoneRegex = /^[\d\s\+\-\(\)]+$/;
-    if (!phoneRegex.test(phoneVal)) {
-      alert('Please enter a valid phone number.');
-      return;
-    }
+    const nameParts = profileForm.fullName.split(' ');
+    const firstName = nameParts[0];
+    const lastName = nameParts.slice(1).join(' ');
 
     try {
-      // Mock API Payload Construction (excluding read-only fields like Role)
       const payload = {
-        fullName: profileForm.fullName,
-        email: profileForm.email,
-        phone: profileForm.phone
+        firstName,
+        lastName,
+        phone: profileForm.phone,
+        metadata: {
+          department: profileForm.department,
+          experienceYears: Number(profileForm.experienceYears),
+          specialization: profileForm.specialization
+        }
       };
 
-      console.log('Mock API PUT Request: Saving profile updates', payload);
-      // await api.put('/users/profile', payload);
+      console.log('API PUT Request: Saving profile updates', payload);
+      await authService.updateProfile(payload);
 
-      alert('Profile updated successfully! (Mock)');
+      alert('Profile updated successfully!');
       setIsEditingProfile(false);
-      // Context/User update logic would go here
+      // Window reload to refresh context (or use a refresh function if available)
+      window.location.reload();
     } catch (error) {
       console.error('Failed to update profile', error);
-      alert('Failed to update profile.');
+      alert('Failed to update profile: ' + (error.message || 'Unknown error'));
     }
   };
 
@@ -108,6 +112,9 @@ const DoctorSettings = () => {
       fullName: user?.fullName || 'Doctor Name',
       email: user?.email || 'doctor@hms.com',
       phone: user?.phone || user?.contactNumber || 'N/A',
+      department: user?.metadata?.department || 'General',
+      experienceYears: user?.metadata?.experienceYears || 0,
+      specialization: user?.metadata?.specialization || user?.designation || 'Specialist'
     });
     setIsEditingProfile(false);
   };
@@ -254,6 +261,45 @@ const DoctorSettings = () => {
                   ) : (
                     <div className="text-sm font-medium text-slate-900">{profileForm.phone}</div>
                   )
+                )}
+              </SettingRow>
+              <SettingRow label="Department" icon={<MdBadge />}>
+                {isEditingProfile ? (
+                  <input
+                    type="text"
+                    name="department"
+                    value={profileForm.department}
+                    onChange={handleProfileChange}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-md text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all"
+                  />
+                ) : (
+                  <div className="text-sm font-medium text-slate-900">{profileForm.department}</div>
+                )}
+              </SettingRow>
+              <SettingRow label="Specialization" icon={<MdBadge />}>
+                {isEditingProfile ? (
+                  <input
+                    type="text"
+                    name="specialization"
+                    value={profileForm.specialization}
+                    onChange={handleProfileChange}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-md text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all"
+                  />
+                ) : (
+                  <div className="text-sm font-medium text-slate-900">{profileForm.specialization}</div>
+                )}
+              </SettingRow>
+              <SettingRow label="Experience (Years)" icon={<MdBadge />}>
+                {isEditingProfile ? (
+                  <input
+                    type="number"
+                    name="experienceYears"
+                    value={profileForm.experienceYears}
+                    onChange={handleProfileChange}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-md text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all"
+                  />
+                ) : (
+                  <div className="text-sm font-medium text-slate-900">{profileForm.experienceYears} Years</div>
                 )}
               </SettingRow>
               <SettingRow label="Account Role" icon={<MdBadge />}>

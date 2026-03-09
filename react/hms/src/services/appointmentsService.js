@@ -5,30 +5,9 @@
  * Provides CRUD operations for appointments with real API integration
  */
 
-import axios from 'axios';
+import api from './apiService';
 import { AppointmentEndpoints, PatientEndpoints, IntakeEndpoints, DoctorEndpoints } from './apiConstants';
 import logger from './loggerService';
-
-/**
- * Get auth token from localStorage
- */
-const getAuthToken = () => {
-  return localStorage.getItem('auth_token') || localStorage.getItem('x-auth-token') || localStorage.getItem('authToken');
-};
-
-/**
- * Create axios instance with default config
- */
-const createAxiosInstance = () => {
-  const token = getAuthToken();
-  return axios.create({
-    baseURL: process.env.REACT_APP_API_URL || 'https://hms-dev.onrender.com/api',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token && { 'x-auth-token': token })
-    }
-  });
-};
 
 /**
  * Fetch all appointments
@@ -38,8 +17,7 @@ export const fetchAppointments = async () => {
   try {
     logger.apiRequest('GET', AppointmentEndpoints.getAll);
 
-    const axiosInstance = createAxiosInstance();
-    const response = await axiosInstance.get(AppointmentEndpoints.getAll);
+    const response = await api.get(AppointmentEndpoints.getAll);
 
     logger.apiResponse('GET', AppointmentEndpoints.getAll, response.status);
 
@@ -65,8 +43,7 @@ export const fetchAppointmentById = async (id) => {
   try {
     logger.apiRequest('GET', AppointmentEndpoints.getById(id));
 
-    const axiosInstance = createAxiosInstance();
-    const response = await axiosInstance.get(AppointmentEndpoints.getById(id));
+    const response = await api.get(AppointmentEndpoints.getById(id));
 
     logger.apiResponse('GET', AppointmentEndpoints.getById(id), response.status);
 
@@ -89,8 +66,7 @@ export const createAppointment = async (appointmentData) => {
   try {
     logger.apiRequest('POST', AppointmentEndpoints.create, appointmentData);
 
-    const axiosInstance = createAxiosInstance();
-    const response = await axiosInstance.post(AppointmentEndpoints.create, appointmentData);
+    const response = await api.post(AppointmentEndpoints.create, appointmentData);
 
     logger.apiResponse('POST', AppointmentEndpoints.create, response.status);
     logger.success('APPOINTMENTS', 'Appointment created successfully');
@@ -112,8 +88,7 @@ export const updateAppointment = async (id, appointmentData) => {
   try {
     logger.apiRequest('PUT', AppointmentEndpoints.update(id), appointmentData);
 
-    const axiosInstance = createAxiosInstance();
-    const response = await axiosInstance.put(AppointmentEndpoints.update(id), appointmentData);
+    const response = await api.put(AppointmentEndpoints.update(id), appointmentData);
 
     logger.apiResponse('PUT', AppointmentEndpoints.update(id), response.status);
     logger.success('APPOINTMENTS', `Appointment ${id} updated successfully`);
@@ -134,8 +109,7 @@ export const deleteAppointment = async (id) => {
   try {
     logger.apiRequest('DELETE', AppointmentEndpoints.delete(id));
 
-    const axiosInstance = createAxiosInstance();
-    const response = await axiosInstance.delete(AppointmentEndpoints.delete(id));
+    const response = await api.delete(AppointmentEndpoints.delete(id));
 
     logger.apiResponse('DELETE', AppointmentEndpoints.delete(id), response.status);
     logger.success('APPOINTMENTS', `Appointment ${id} deleted successfully`);
@@ -155,9 +129,7 @@ export const fetchPatients = async () => {
   try {
     logger.apiRequest('GET', PatientEndpoints.getAll);
 
-    const axiosInstance = createAxiosInstance();
-    // Request all patients with high limit and metadata
-    const response = await axiosInstance.get(PatientEndpoints.getAll, {
+    const response = await api.get(PatientEndpoints.getAll, {
       params: {
         limit: 100, // Backend max limit per page
         page: 0,
@@ -180,7 +152,7 @@ export const fetchPatients = async () => {
       for (let page = 1; page < totalPages; page++) {
         logger.info('PATIENTS', `Fetching page ${page}...`);
         additionalRequests.push(
-          axiosInstance.get(PatientEndpoints.getAll, {
+          api.get(PatientEndpoints.getAll, {
             params: { limit: 100, page, meta: 1 }
           })
         );
@@ -212,8 +184,7 @@ export const updateAppointmentStatus = async (id, status) => {
   try {
     logger.apiRequest('PATCH', AppointmentEndpoints.updateStatus(id), { status });
 
-    const axiosInstance = createAxiosInstance();
-    const response = await axiosInstance.patch(AppointmentEndpoints.updateStatus(id), { status });
+    const response = await api.patch(AppointmentEndpoints.updateStatus(id), { status });
 
     logger.apiResponse('PATCH', AppointmentEndpoints.updateStatus(id), response.status);
     logger.success('APPOINTMENTS', `Appointment ${id} status updated to ${status}`);
@@ -233,8 +204,7 @@ export const fetchTodayAppointments = async () => {
   try {
     logger.apiRequest('GET', AppointmentEndpoints.getToday);
 
-    const axiosInstance = createAxiosInstance();
-    const response = await axiosInstance.get(AppointmentEndpoints.getToday);
+    const response = await api.get(AppointmentEndpoints.getToday);
 
     logger.apiResponse('GET', AppointmentEndpoints.getToday, response.status);
 
@@ -258,8 +228,7 @@ export const fetchUpcomingAppointments = async () => {
   try {
     logger.apiRequest('GET', AppointmentEndpoints.getUpcoming);
 
-    const axiosInstance = createAxiosInstance();
-    const response = await axiosInstance.get(AppointmentEndpoints.getUpcoming);
+    const response = await api.get(AppointmentEndpoints.getUpcoming);
 
     logger.apiResponse('GET', AppointmentEndpoints.getUpcoming, response.status);
 
@@ -290,8 +259,7 @@ export const addIntake = async (payload, patientId) => {
     const endpoint = IntakeEndpoints.create(patientId);
     logger.apiRequest('POST', endpoint, payload);
 
-    const axiosInstance = createAxiosInstance();
-    const response = await axiosInstance.post(endpoint, payload);
+    const response = await api.post(endpoint, payload);
 
     logger.apiResponse('POST', endpoint, response.status);
     logger.success('INTAKE', 'Intake data saved successfully');
@@ -312,8 +280,7 @@ export const fetchDeletedAppointments = async () => {
     const endpoint = '/appointments/deleted/list';
     logger.apiRequest('GET', endpoint);
 
-    const axiosInstance = createAxiosInstance();
-    const response = await axiosInstance.get(endpoint);
+    const response = await api.get(endpoint);
 
     logger.apiResponse('GET', endpoint, response.status);
 
@@ -337,8 +304,7 @@ export const fetchDoctors = async () => {
   try {
     logger.apiRequest('GET', DoctorEndpoints.getAll);
 
-    const axiosInstance = createAxiosInstance();
-    const response = await axiosInstance.get(DoctorEndpoints.getAll);
+    const response = await api.get(DoctorEndpoints.getAll);
 
     logger.apiResponse('GET', DoctorEndpoints.getAll, response.status);
 

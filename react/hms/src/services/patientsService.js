@@ -141,7 +141,8 @@ export const createPatient = async (patientData) => {
     logger.apiResponse('POST', PatientEndpoints.create, response.status);
     logger.success('PATIENTS', 'Patient created successfully');
 
-    return response.data.patient || response.data.data || response.data;
+    const rawPatient = response.data.patient || response.data.data || response.data;
+    return PatientDetails.fromJSON(rawPatient);
   } catch (error) {
     logger.apiError('POST', PatientEndpoints.create, error);
     throw new Error(error.response?.data?.message || 'Failed to create patient');
@@ -163,7 +164,8 @@ export const updatePatient = async (id, patientData) => {
     logger.apiResponse('PUT', PatientEndpoints.update(id), response.status);
     logger.success('PATIENTS', `Patient ${id} updated successfully`);
 
-    return response.data.patient || response.data.data || response.data;
+    const rawPatient = response.data.patient || response.data.data || response.data;
+    return PatientDetails.fromJSON(rawPatient);
   } catch (error) {
     logger.apiError('PUT', PatientEndpoints.update(id), error);
     throw new Error(error.response?.data?.message || 'Failed to update patient');

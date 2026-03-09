@@ -19,7 +19,8 @@ import {
     MdInfo,
     MdLocalPharmacy,
     MdScience,
-    MdDescription
+    MdDescription,
+    MdWork
 } from 'react-icons/md';
 import {
     FiUser, FiPhone, FiHeart, FiActivity, FiShield, FiFileText, FiLoader, FiX, FiChevronDown, FiTarget
@@ -152,7 +153,7 @@ const PremiumInput = ({ label, error, required, children, className = '', icon }
 
 // --- Main Component ---
 
-const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId, initialData }) => {
+const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId, initialData, onDataUpdate }) => {
     // --- State ---
     const [currentStep, setCurrentStep] = useState(0);
     const [loading, setLoading] = useState(false);
@@ -240,6 +241,7 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId, initialData })
                 setFormData({
                     firstName: patient.firstName || (patient.name ? patient.name.split(' ')[0] : ''),
                     lastName: patient.lastName || (patient.name ? patient.name.split(' ').slice(1).join(' ') : ''),
+                    fatherName: patient.fatherName || patient.metadata?.fatherName || '',
                     dateOfBirth: safeToISODate(patient.dateOfBirth),
                     age: patient.age || '',
                     gender: patient.gender || '',
@@ -248,6 +250,7 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId, initialData })
                     email: patient.email || '',
                     emergencyContactName: patient.emergencyContactName || '',
                     emergencyContactPhone: patient.emergencyContactPhone || '',
+                    emergencyContactRelation: patient.emergencyContactRelation || patient.metadata?.emergencyContactRelation || '',
                     houseNo: patient.houseNo || '',
                     street: patient.street || '',
                     town: patient.town || '',
@@ -259,8 +262,13 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId, initialData })
                     lat: patient.lat || '',
                     lng: patient.lng || '',
                     assignedDoctor: patient.doctorId || '',
+                    profession: patient.profession || patient.metadata?.profession || '',
                     knownConditions: Array.isArray(patient.medicalHistory) ? patient.medicalHistory.join(', ') : (patient.medicalHistory || ''),
                     allergies: Array.isArray(patient.allergies) ? patient.allergies.join(', ') : (patient.allergies || ''),
+                    diagnosis: Array.isArray(patient.diagnosis) ? patient.diagnosis.join(', ') : (patient.diagnosis || ''),
+                    barriers: Array.isArray(patient.barriers) ? patient.barriers.join(', ') : (patient.barriers || ''),
+                    noAlcohol: patient.noAlcohol === true || patient.metadata?.noAlcohol === true || patient.metadata?.alcohol === false,
+                    noSmoker: patient.noSmoker === true || patient.metadata?.noSmoker === true || patient.metadata?.smoker === false,
                     height: patient.height || '',
                     weight: patient.weight || '',
                     bmi: patient.bmi || '',
@@ -293,11 +301,12 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId, initialData })
             } else {
                 // Reset for new patient
                 setFormData({
-                    firstName: '', lastName: '', dateOfBirth: '', age: '', gender: '', bloodGroup: '',
-                    phone: '', email: '', emergencyContactName: '', emergencyContactPhone: '',
+                    firstName: '', lastName: '', fatherName: '', dateOfBirth: '', age: '', gender: '', bloodGroup: '',
+                    phone: '', email: '', emergencyContactName: '', emergencyContactPhone: '', emergencyContactRelation: '',
                     houseNo: '', street: '', town: '', city: '', district: '', state: '', pincode: '', country: 'India',
                     lat: '', lng: '',
-                    assignedDoctor: '', knownConditions: '', allergies: '', notes: '', lastVisit: '',
+                    assignedDoctor: '', profession: '', knownConditions: '', allergies: '', notes: '', lastVisit: '',
+                    diagnosis: '', barriers: '', noAlcohol: false, noSmoker: false,
                     height: '', weight: '', bmi: '', bp: '', pulse: '', spo2: '',
                     insuranceNumber: '', insuranceProvider: '', insuranceExpiry: '',
                     appointmentDate: '', appointmentTime: '', appointmentReason: '', patientCode: ''
@@ -482,9 +491,10 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId, initialData })
 
     // Handlers
     const handleInputChange = (e) => {
-        const { name, value } = e.target;
+        const { name, value, type, checked } = e.target;
+        const val = type === 'checkbox' ? checked : value;
         setFormData(prev => {
-            const next = { ...prev, [name]: value };
+            const next = { ...prev, [name]: val };
 
             // Cascading logic
             if (name === 'state') {
@@ -698,10 +708,17 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId, initialData })
                 },
                 doctorId: formData.assignedDoctor || null,
                 metadata: {
+                    fatherName: formData.fatherName,
+                    profession: formData.profession,
                     emergencyContactName: formData.emergencyContactName,
                     emergencyContactPhone: formData.emergencyContactPhone,
+                    emergencyContactRelation: formData.emergencyContactRelation,
                     medicalHistory: formData.knownConditions ? formData.knownConditions.split(',').map(s => s.trim()) : [],
                     allergies: formData.allergies ? formData.allergies.split(',').map(s => s.trim()) : [],
+                    diagnosis: formData.diagnosis ? formData.diagnosis.split(',').map(s => s.trim()) : [],
+                    barriers: formData.barriers ? formData.barriers.split(',').map(s => s.trim()) : [],
+                    noAlcohol: formData.noAlcohol,
+                    noSmoker: formData.noSmoker,
                     insuranceNumber: formData.insuranceNumber,
                     insuranceProvider: formData.insuranceProvider
                 },
@@ -897,6 +914,16 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId, initialData })
                                                                 className="w-full outline-none text-[#0f3e61] placeholder-slate-300 font-semibold bg-transparent" placeholder="e.g. Doe" />
                                                         </PremiumInput>
 
+                                                        <PremiumInput label="Father/Spouse Name" icon={<FiUser />}>
+                                                            <input name="fatherName" value={formData.fatherName} onChange={handleInputChange}
+                                                                className="w-full outline-none text-[#0f3e61] placeholder-slate-300 font-semibold bg-transparent" placeholder="e.g. Richard Doe" />
+                                                        </PremiumInput>
+
+                                                        <PremiumInput label="Profession" icon={<MdWork />}>
+                                                            <input name="profession" value={formData.profession} onChange={handleInputChange}
+                                                                className="w-full outline-none text-[#0f3e61] placeholder-slate-300 font-semibold bg-transparent" placeholder="e.g. Software Engineer" />
+                                                        </PremiumInput>
+
                                                         <PremiumInput label="Date of Birth" error={errors.age} required icon={<MdCalendarToday />}>
                                                             <input type="date" name="dateOfBirth" value={formData.dateOfBirth} onChange={handleInputChange}
                                                                 max={new Date().toISOString().split('T')[0]}
@@ -985,6 +1012,10 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId, initialData })
 
                                                         <PremiumInput label="Emergency Phone">
                                                             <input name="emergencyContactPhone" value={formData.emergencyContactPhone} onChange={handleInputChange} className="w-full outline-none text-[#0f3e61] font-semibold bg-transparent" placeholder="+91 ..." />
+                                                        </PremiumInput>
+
+                                                        <PremiumInput label="Relationship">
+                                                            <input name="emergencyContactRelation" value={formData.emergencyContactRelation} onChange={handleInputChange} className="w-full outline-none text-[#0f3e61] font-semibold bg-transparent" placeholder="e.g. Spouse, Parent, Friend" />
                                                         </PremiumInput>
 
                                                         <div className="md:col-span-2 pt-4 pb-2 border-t border-slate-100 mt-2">
@@ -1327,17 +1358,23 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId, initialData })
                                                                             <div className="flex items-center gap-2">
                                                                                 {/* Show Verify button for ALL documents with verificationId */}
                                                                                 {file.verificationId && (
-                                                                                    <button
-                                                                                        onClick={() => {
-                                                                                            console.log('[VERIFY_BUTTON] Clicked for:', file.name, 'VerificationID:', file.verificationId);
-                                                                                            setCurrentVerificationId(file.verificationId);
-                                                                                            setVerificationModalOpen(true);
-                                                                                        }}
-                                                                                        className="flex items-center gap-1 px-3 py-1.5 bg-blue-50 text-[#207DC0] rounded-lg hover:bg-blue-100 transition-all font-bold text-xs whitespace-nowrap"
-                                                                                        title="View and verify extracted data"
-                                                                                    >
-                                                                                        <MdInfo className="text-base" /> Verify Data
-                                                                                    </button>
+                                                                                    file.verified ? (
+                                                                                        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-lg font-bold text-xs ring-1 ring-emerald-100/50">
+                                                                                            <MdCheckCircle className="text-base" /> Verified
+                                                                                        </div>
+                                                                                    ) : (
+                                                                                        <button
+                                                                                            onClick={() => {
+                                                                                                console.log('[VERIFY_BUTTON] Clicked for:', file.name, 'VerificationID:', file.verificationId);
+                                                                                                setCurrentVerificationId(file.verificationId);
+                                                                                                setVerificationModalOpen(true);
+                                                                                            }}
+                                                                                            className="flex items-center gap-1 px-3 py-1.5 bg-blue-50 text-[#207DC0] rounded-lg hover:bg-blue-100 transition-all font-bold text-xs whitespace-nowrap"
+                                                                                            title="View and verify extracted data"
+                                                                                        >
+                                                                                            <MdInfo className="text-base" /> Verify Data
+                                                                                        </button>
+                                                                                    )
                                                                                 )}
                                                                                 <button
                                                                                     onClick={() => removeUploadedFile(idx)}
@@ -1391,6 +1428,32 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId, initialData })
                                                                 <textarea name="knownConditions" value={formData.knownConditions} onChange={handleInputChange} rows={2}
                                                                     className="w-full outline-none bg-transparent resize-none text-[#0f3e61] font-semibold" placeholder="e.g. Diabetes, Hypertension..." />
                                                             </PremiumInput>
+
+                                                            <PremiumInput label="Clinical Diagnosis">
+                                                                <textarea name="diagnosis" value={formData.diagnosis} onChange={handleInputChange} rows={2}
+                                                                    className="w-full outline-none bg-transparent resize-none text-[#0f3e61] font-semibold" placeholder="e.g. Type 2 Diabetes" />
+                                                            </PremiumInput>
+
+                                                            <PremiumInput label="Health Barriers">
+                                                                <textarea name="barriers" value={formData.barriers} onChange={handleInputChange} rows={2}
+                                                                    className="w-full outline-none bg-transparent resize-none text-[#0f3e61] font-semibold" placeholder="e.g. Financial constraints, Transportation" />
+                                                            </PremiumInput>
+
+                                                            <div className="md:col-span-1 pt-4 pb-2 border-t border-slate-100 mt-2">
+                                                                <h3 className="text-sm font-extrabold uppercase text-slate-400 flex items-center gap-2">
+                                                                    <FiActivity /> Lifestyle Habits
+                                                                </h3>
+                                                                <div className="flex gap-4 mt-4">
+                                                                    <label className="flex items-center gap-2 cursor-pointer group">
+                                                                        <input type="checkbox" name="noAlcohol" checked={formData.noAlcohol} onChange={handleInputChange} className="w-5 h-5 rounded-lg border-2 border-slate-200 text-[#207DC0] focus:ring-[#207DC0]" />
+                                                                        <span className="text-sm font-bold text-slate-600 group-hover:text-[#207DC0] transition-colors whitespace-nowrap">Non-Alcoholic</span>
+                                                                    </label>
+                                                                    <label className="flex items-center gap-2 cursor-pointer group">
+                                                                        <input type="checkbox" name="noSmoker" checked={formData.noSmoker} onChange={handleInputChange} className="w-5 h-5 rounded-lg border-2 border-slate-200 text-[#207DC0] focus:ring-[#207DC0]" />
+                                                                        <span className="text-sm font-bold text-slate-600 group-hover:text-[#207DC0] transition-colors whitespace-nowrap">Non-Smoker</span>
+                                                                    </label>
+                                                                </div>
+                                                            </div>
 
                                                             <PremiumInput label="Assigned Doctor" icon={<MdPerson />}>
                                                                 <select name="assignedDoctor" value={formData.assignedDoctor} onChange={handleInputChange} className="w-full outline-none bg-transparent text-[#0f3e61] font-bold cursor-pointer appearance-none">
@@ -1507,8 +1570,22 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId, initialData })
                 }}
                 verificationId={currentVerificationId}
                 onConfirm={(result) => {
-                    console.log('Data verified and saved:', result);
-                    // Optionally refresh or update UI after confirmation
+                    console.log('[VERIFICATION] Data verified successfully:', result);
+
+                    // 1. Mark the file as verified in local state
+                    if (currentVerificationId) {
+                        setUploadedFiles(prev => prev.map(f =>
+                            f.verificationId === currentVerificationId
+                                ? { ...f, verified: true }
+                                : f
+                        ));
+                    }
+
+                    // 2. Trigger background refresh in Parent (PatientView)
+                    if (onDataUpdate) {
+                        console.log('[VERIFICATION] Triggering parent refresh...');
+                        onDataUpdate();
+                    }
                 }}
             />
         </AnimatePresence>
