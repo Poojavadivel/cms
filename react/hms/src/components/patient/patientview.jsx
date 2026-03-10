@@ -41,6 +41,15 @@ import { getGenderAvatar } from '../../utils/avatarHelpers';
 import { calculateBMI, getBMICategory } from '../../utils/vitalsHelpers';
 import MissingEmergencyPhone from '../common/MissingEmergencyPhone';
 
+/**
+ * Truncates text to a maximum length and appends ellipses if exceeded.
+ */
+const truncateText = (text, maxLength = 120) => {
+    if (!text || typeof text !== 'string') return '—';
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength).trim() + '...';
+};
+
 const PatientView = ({ isOpen, onClose, patientId, patient: patientProp, onEdit, showBillingTab = true }) => {
     const [patient, setPatient] = useState(null);
     const [activeTab, setActiveTab] = useState('profile');
@@ -226,6 +235,7 @@ const PatientView = ({ isOpen, onClose, patientId, patient: patientProp, onEdit,
             fallbackCopyTextToClipboard(text, label);
         }
     };
+
 
     const fallbackCopyTextToClipboard = (text, label) => {
         try {
@@ -831,8 +841,8 @@ const MedicalHistoryTab = ({ patientId, patient, refreshTrigger }) => {
                                     <td>{item.date || formatDateTime(item.recordDate || item.uploadDate)}</td>
                                     <td>{item.hospitalName || '—'}</td>
                                     <td>{item.doctorName || '—'}</td>
-                                    <td className="pv-td-notes" style={{ maxWidth: '300px', whiteSpace: 'normal', wordWrap: 'break-word' }}>
-                                        {item.appointmentSummary || item.dischargeSummary || item.medicalHistory || item.diagnosis || '—'}
+                                    <td className="pv-td-notes" title={item.appointmentSummary || item.dischargeSummary || item.medicalHistory || item.diagnosis || ''} style={{ maxWidth: '300px', whiteSpace: 'normal', wordWrap: 'break-word' }}>
+                                        {truncateText(item.appointmentSummary || item.dischargeSummary || item.medicalHistory || item.diagnosis)}
                                     </td>
                                     <td>
                                         <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
@@ -1726,8 +1736,8 @@ const PrescriptionTab = ({ patientId, refreshTrigger }) => {
                                     <td>{formatDateTime(item.prescriptionDate || item.uploadDate)}</td>
                                     <td>{item.hospitalName || '—'}</td>
                                     <td>{item.doctorName || '—'}</td>
-                                    <td style={{ maxWidth: '300px', whiteSpace: 'normal', wordWrap: 'break-word' }}>
-                                        {item.prescriptionSummary || item.diagnosis || '—'}
+                                    <td className="pv-td-notes" title={item.prescriptionSummary || item.diagnosis || ''} style={{ maxWidth: '300px', whiteSpace: 'normal', wordWrap: 'break-word' }}>
+                                        {truncateText(item.prescriptionSummary || item.diagnosis)}
                                     </td>
                                     <td>
                                         <button
@@ -1877,8 +1887,8 @@ const LabResultTab = ({ patientId, refreshTrigger }) => {
                                                 </div>
                                             )}
                                         </td>
-                                        <td>
-                                            {displayResult}
+                                        <td title={typeof displayResult === 'string' ? displayResult : ''}>
+                                            {truncateText(displayResult, 60)}
                                         </td>
                                         <td>
                                             {displayDate
@@ -2078,9 +2088,9 @@ const BillingsTab = ({ patientId, refreshTrigger }) => {
                                             <span style={{ color: '#059669' }}>—</span>
                                         )}
                                     </td>
-                                    <td>
+                                    <td className="pv-td-notes" title={bill.items?.map(i => i.description).join(', ') || ''}>
                                         {bill.items?.length > 0
-                                            ? `${bill.items[0].description}${bill.items.length > 1 ? ` +${bill.items.length - 1} more` : ''}`
+                                            ? truncateText(`${bill.items[0].description}${bill.items.length > 1 ? ` +${bill.items.length - 1} more` : ''}`, 50)
                                             : '—'}
                                     </td>
                                     <td>
