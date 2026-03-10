@@ -5,28 +5,21 @@
  */
 
 /**
- * Calculates BMI based on weight, height, and patient age.
- * Returns null or a warning string if the patient is under 18,
- * as standard BMI formulas are not clinically accurate for pediatrics.
+ * Calculates BMI based on weight and height.
+ * Always returns the raw numeric BMI value. Age-aware labeling
+ * is handled separately by getBMICategory() in the UI layer.
  * 
  * @param {number|string} weightKg - Weight in kilograms
  * @param {number|string} heightCm - Height in centimeters
- * @param {number} age - Patient age in years
- * @returns {number|string|null} - Calculated BMI or warning string
+ * @returns {number|null} - Calculated BMI or null
  */
-export const calculateBMI = (weightKg, heightCm, age) => {
+export const calculateBMI = (weightKg, heightCm) => {
     if (!weightKg || !heightCm) return null;
 
     const w = parseFloat(weightKg);
     const h = parseFloat(heightCm);
 
     if (isNaN(w) || isNaN(h) || w <= 0 || h <= 0) return null;
-
-    // Age-Aware Calculation: Pediatric limit
-    // Standard adult BMI is not valid for children under 18
-    if (age != null && age < 18) {
-        return 'Adult BMI Formula (Not clinically valid for <18)';
-    }
 
     const bmi = (w / Math.pow(h / 100, 2)).toFixed(1);
     return parseFloat(bmi);
