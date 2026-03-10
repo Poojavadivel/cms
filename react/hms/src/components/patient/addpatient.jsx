@@ -20,7 +20,8 @@ import {
     MdLocalPharmacy,
     MdScience,
     MdDescription,
-    MdWork
+    MdWork,
+    MdCheckCircle
 } from 'react-icons/md';
 import {
     FiUser, FiPhone, FiHeart, FiActivity, FiShield, FiFileText, FiLoader, FiX, FiChevronDown, FiTarget

@@ -286,94 +286,89 @@ const PatientView = ({ isOpen, onClose, patientId, patient: patientProp, onEdit,
                                                 className="pv-avatar-image"
                                                 onError={(e) => { e.target.src = getGenderAvatar(patientData.gender); }}
                                             />
-                                            <div className="pv-lifestyle-indicators">
-                                                {patientData.noAlcohol && (
-                                                    <div className="pv-lifestyle-badge no-alcohol">
-                                                        <span className="pv-lifestyle-label">Alcohol</span>
-                                                    </div>
-                                                )}
-                                                {patientData.noSmoker && (
-                                                    <div className="pv-lifestyle-badge no-smoker">
-                                                        <span className="pv-lifestyle-label">Smoker</span>
-                                                    </div>
-                                                )}
-                                            </div>
+                                            {/* Lifestyle indicators removed for cleaner UI consistency */}
                                         </div>
                                     </div>
 
                                     {/* Info */}
-                                    <div className="pv-info-section flex-1 w-full">
-                                        <div className="flex justify-between items-start w-full">
-                                            <div className="pv-name-row flex-1">
-                                                <div className="pv-name-id-group">
-                                                    <h2 className="pv-name-main">{patientData.name}</h2>
-                                                    <div className="pv-patient-code-badge" onClick={() => copyToClipboard(patientData.patientCode, 'Patient Code')} title="Click to copy Patient Code">
-                                                        <span className="pv-code-prefix">ID:</span>
-                                                        <span className="pv-code-val">{patientData.patientCode}</span>
-                                                        <MdContentCopy size={12} className="pv-code-copy-icon" />
-                                                    </div>
-                                                </div>
-                                                <div className="pv-contact-icons">
-                                                    {patientData.phone && (
-                                                        <button
-                                                            className="pv-contact-btn"
-                                                            title={`Copy Phone: ${patientData.phone}`}
-                                                            onClick={() => copyToClipboard(patientData.phone, 'Phone Number')}
-                                                        >
-                                                            <MdPhone size={14} />
-                                                        </button>
-                                                    )}
-                                                    {patientData.email && (
-                                                        <button
-                                                            className="pv-contact-btn"
-                                                            title={`Copy Email: ${patientData.email}`}
-                                                            onClick={() => copyToClipboard(patientData.email, 'Email Address')}
-                                                        >
-                                                            <MdEmail size={14} />
-                                                        </button>
-                                                    )}
-                                                </div>
+                                    <div className="pv-info-section">
+                                        <div className="pv-name-row">
+                                            <h2 className="pv-name-main">{patientData.name}</h2>
+                                            <div className="pv-contact-icons">
+                                                {patientData.phone && (
+                                                    <button
+                                                        className="pv-contact-btn"
+                                                        title={patientData.phone}
+                                                        onClick={() => copyToClipboard(patientData.phone, 'Phone Number')}
+                                                    >
+                                                        <MdPhone size={14} />
+                                                    </button>
+                                                )}
+                                                {patientData.email && (
+                                                    <button
+                                                        className="pv-contact-btn"
+                                                        title={patientData.email}
+                                                        onClick={() => copyToClipboard(patientData.email, 'Email Address')}
+                                                    >
+                                                        <MdEmail size={14} />
+                                                    </button>
+                                                )}
                                             </div>
-                                            <button
-                                                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md shadow-sm hover:bg-slate-50 transition-all duration-200"
-                                                onClick={() => setShowEditModal(true)}
-                                            >
-                                                <MdEdit size={16} className="text-slate-500" /> Edit
-                                            </button>
                                         </div>
 
-                                        <div className="pv-info-pills mt-3">
+                                        {patientData.patientCode && (
+                                            <div className="pv-patient-code-badge" onClick={() => copyToClipboard(patientData.patientCode, 'Patient Code')} title="Click to copy">
+                                                <span className="pv-code-prefix">ID:</span> {patientData.patientCode} <MdContentCopy size={12} className="pv-code-copy-icon" />
+                                            </div>
+                                        )}
+
+                                        <div className="pv-info-pills">
                                             <div className="pv-pill">
                                                 {getGenderIcon(patientData.gender)} <span>{patientData.gender}</span>
                                             </div>
-                                            {patientData.age > 0 && (
-                                                <div className="pv-pill">
-                                                    <MdCalendarToday size={14} /> <span>{patientData.age} yrs{patientData.dob && ` · ${patientData.dob}`}</span>
-                                                </div>
-                                            )}
                                             <div className="pv-pill">
                                                 <MdLocationOn size={14} /> <span>{patientData.location}</span>
                                             </div>
                                             <div className="pv-pill">
                                                 <MdWork size={14} /> <span>{patientData.occupation}</span>
                                             </div>
+                                            {patientData.dob && (
+                                                <div className="pv-pill">
+                                                    <MdCalendarToday size={14} /> <span>{patientData.dob} ({patientData.age} years)</span>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
 
-                                    {/* Right — Vitals + Diagnosis/Barriers */}
+                                    {/* Right — Actions Group (Edit + Vitals) + Info Group (Diagnosis/Barriers) */}
                                     <div className="pv-header-right">
-                                        {/* Vitals — 4-column row */}
-                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                                            <VitalCard label="BMI" value={patientData.bmi} unit="kg/m²" age={patientData.age} />
-                                            <VitalCard label="Weight" value={patientData.weightKg} unit="kg" />
-                                            <VitalCard label="Height" value={patientData.heightCm} unit="cm" />
-                                            <VitalCard label="Blood Pressure" value={patientData.bp} unit="mmHg" />
-                                        </div>
-
                                         <div className="pv-header-actions-group">
-                                            <button className="pv-edit-btn" onClick={() => setShowEditModal(true)}>
+                                            <button
+                                                className="pv-edit-btn"
+                                                onClick={() => setShowEditModal(true)}
+                                            >
                                                 <MdEdit size={14} /> Edit
                                             </button>
+
+                                            {/* Vitals — 2x2 Grid */}
+                                            <div className="pv-vitals-grid-2x2">
+                                                <div className="pv-metric-card pv-metric-height">
+                                                    <span className="pv-metric-val">{patientData.heightCm || '—'} <small>cm</small></span>
+                                                    <span className="pv-metric-lbl">Height</span>
+                                                </div>
+                                                <div className="pv-metric-card pv-metric-weight">
+                                                    <span className="pv-metric-val">{patientData.weightKg || '—'} <small>kg</small></span>
+                                                    <span className="pv-metric-lbl">Weight</span>
+                                                </div>
+                                                <div className="pv-metric-card pv-metric-bmi">
+                                                    <span className="pv-metric-val">{patientData.bmi || '—'}</span>
+                                                    <span className="pv-metric-lbl">BMI</span>
+                                                </div>
+                                                <div className="pv-metric-card pv-metric-bp">
+                                                    <span className="pv-metric-val">{patientData.bp || '—'}</span>
+                                                    <span className="pv-metric-lbl">Blood Pressure</span>
+                                                </div>
+                                            </div>
                                         </div>
 
                                         {patientData.diagnosis.length > 0 && (
@@ -2139,53 +2134,6 @@ const BillingsTab = ({ patientId, refreshTrigger }) => {
     );
 };
 
-// Reusable VitalCard component enforcing strict typographic hierarchy and semantic color-coding
-const getVitalStatusColor = (label, value) => {
-    if (!value || value === '—' || value === '—/—') return 'bg-white border-slate-200 text-slate-900';
 
-    if (label.toLowerCase() === 'blood pressure' && typeof value === 'string' && value.includes('/')) {
-        const [sys, dia] = value.split('/').map(Number);
-        if (sys >= 180 || dia >= 120) return 'bg-red-50 border-red-200 text-red-900'; // Crisis
-        if (sys >= 130 || dia >= 80) return 'bg-amber-50 border-amber-200 text-amber-900'; // High/Warning
-    }
-
-    return 'bg-white border-slate-200 text-slate-900'; // Normal default
-};
-
-const VitalCard = ({ label, value, unit, age }) => {
-    let colorClass = getVitalStatusColor(label, value);
-    let displayLabel = label;
-    let tooltip = '';
-    const isStringMessage = typeof value === 'string' && value.length > 10;
-
-    // Apply strict Bug 33 Pediatric BMI Logic
-    if (label.toLowerCase() === 'bmi') {
-        const cat = getBMICategory(value, age);
-        colorClass = cat.colorClass;
-        displayLabel = cat.label;
-        if (cat.tooltip) tooltip = cat.tooltip;
-    }
-
-    return (
-        <div
-            className={`flex flex-col w-full p-3.5 border rounded-xl shadow-sm transition-shadow hover:shadow-md ring-1 ring-transparent hover:border-teal-200 ${colorClass}`}
-            title={tooltip || undefined}
-        >
-            <span className="text-xs uppercase tracking-wider opacity-60 font-bold mb-1">{displayLabel}</span>
-            <div className="flex items-baseline gap-1 mt-auto">
-                {isStringMessage ? (
-                    <span className="text-sm font-medium leading-tight">{value}</span>
-                ) : (
-                    <>
-                        <span className="text-2xl font-bold">{value && value !== '—/—' ? value : '—'}</span>
-                        {unit && value && value !== '—' && value !== '—/—' && (
-                            <span className="text-sm font-medium opacity-70">{unit}</span>
-                        )}
-                    </>
-                )}
-            </div>
-        </div>
-    );
-};
 
 export default PatientView;
