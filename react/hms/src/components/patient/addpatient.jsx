@@ -625,12 +625,8 @@ const AddPatientModal = ({ isOpen, onClose, onSuccess, patientId }) => {
             }
         }
         if (currentStep === 2) {
-            // Mandatory vitals during initial registration
-            if (!patientId) {
-                if (!formData.height || parseFloat(formData.height) <= 0) newErrors.height = 'Height is required';
-                if (!formData.weight || parseFloat(formData.weight) <= 0) newErrors.weight = 'Weight is required';
-                if (!formData.bp || !formData.bp.trim()) newErrors.bp = 'Blood Pressure is required';
-            }
+            // Vitals are now optional during initial registration
+            // No mandatory fields for step 2
         }
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
