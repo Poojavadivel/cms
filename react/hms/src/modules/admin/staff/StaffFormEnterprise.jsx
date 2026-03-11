@@ -656,6 +656,11 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
                       />
                     </InputGroup>
 
+                    {/* DEBUG INFO */}
+                    <div className="col-span-2 p-3 bg-yellow-50 border border-yellow-200 rounded text-xs">
+                      <strong>DEBUG:</strong> designation={formData.designation} | createUserAccount={formData.createUserAccount ? 'TRUE' : 'FALSE'} | userRole={formData.userRole}
+                    </div>
+
                     {/* User Account Section for Doctor/Admin/Pharmacist/Pathologist */}
                     {formData.createUserAccount && (
                       <>
