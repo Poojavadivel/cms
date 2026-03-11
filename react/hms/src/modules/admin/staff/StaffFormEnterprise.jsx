@@ -152,20 +152,38 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
       'Pathologist': 'pathologist'
     };
     
-    if (roleMap[formData.designation]) {
-      setFormData(prev => ({
-        ...prev,
-        createUserAccount: true,
-        userRole: roleMap[formData.designation]
-      }));
+    const designation = formData.designation;
+    console.log('🔍 Designation changed:', designation);
+    
+    if (roleMap[designation]) {
+      console.log('✅ Creating user account for:', designation, '→ Role:', roleMap[designation]);
+      setFormData(prev => {
+        // Only update if values are different to prevent infinite loop
+        if (!prev.createUserAccount || prev.userRole !== roleMap[designation]) {
+          console.log('📝 Setting createUserAccount = true');
+          return {
+            ...prev,
+            createUserAccount: true,
+            userRole: roleMap[designation]
+          };
+        }
+        return prev;
+      });
     } else {
-      setFormData(prev => ({
-        ...prev,
-        createUserAccount: false,
-        userRole: '',
-        password: '',
-        confirmPassword: ''
-      }));
+      setFormData(prev => {
+        // Only update if createUserAccount is currently true
+        if (prev.createUserAccount) {
+          console.log('❌ Disabling user account creation');
+          return {
+            ...prev,
+            createUserAccount: false,
+            userRole: '',
+            password: '',
+            confirmPassword: ''
+          };
+        }
+        return prev;
+      });
     }
   }, [formData.designation]);
 
