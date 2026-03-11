@@ -292,28 +292,22 @@ const FilterBar = ({
       <div className="filter-right-group">
         <div className="tabs-wrapper">
           <button
+            className={`tab-btn ${activeTab === 'upcoming' ? 'active' : ''}`}
+            onClick={() => onTabChange('upcoming')}
+          >
+            Upcoming
+          </button>
+          <button
             className={`tab-btn ${activeTab === 'all' ? 'active' : ''}`}
             onClick={() => onTabChange('all')}
           >
             All
           </button>
           <button
-            className={`tab-btn ${activeTab === 'scheduled' ? 'active' : ''}`}
-            onClick={() => onTabChange('scheduled')}
+            className={`tab-btn ${activeTab === 'completed' ? 'active' : ''}`}
+            onClick={() => onTabChange('completed')}
           >
-            Scheduled
-          </button>
-          <button
-            className={`tab-btn ${activeTab === 'confirmed' ? 'active' : ''}`}
-            onClick={() => onTabChange('confirmed')}
-          >
-            Confirmed
-          </button>
-          <button
-            className={`tab-btn ${activeTab === 'pending' ? 'active' : ''}`}
-            onClick={() => onTabChange('pending')}
-          >
-            Pending
+            Completed
           </button>
           <button
             className={`tab-btn ${activeTab === 'cancelled' ? 'active' : ''}`}
@@ -509,7 +503,7 @@ const transformAppointment = (apt, index) => {
 
 const Appointments = () => {
   // const navigate = useNavigate(); // Reserved for future navigation
-  const [activeTab, setActiveTab] = useState('all');
+  const [activeTab, setActiveTab] = useState('upcoming'); // Default to upcoming appointments
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDate, setSelectedDate] = useState(null);
   const [showCalendar, setShowCalendar] = useState(false);
@@ -573,7 +567,48 @@ const Appointments = () => {
   // Filter appointments based on tab and search
   useEffect(() => {
     let result = allAppointments;
-    if (activeTab !== 'all') {
+    
+    // Get today's date and current time for upcoming filter
+    const now = new Date();
+    const todayStr = new Date(now.getTime() - (now.getTimezoneOffset() * 60000))
+      .toISOString().split('T')[0];
+    const currentTimeStr = now.toTimeString().slice(0, 5); // HH:MM format
+    
+    // Filter by tab
+    if (activeTab === 'upcoming') {
+      // Show appointments for today and future dates, exclude completed/cancelled
+      result = result.filter(a => {
+        const isNotCompleted = a.status.toLowerCase() !== 'completed';
+        const isNotCancelled = a.status.toLowerCase() !== 'cancelled';
+        
+        let isUpcoming = false;
+        
+        // Get appointment date
+        const aptDate = a.rawDate; // e.g., "2026-03-11"
+        const aptTime = a.rawTime; // e.g., "14:30"
+        
+        // Future dates are always upcoming
+        if (aptDate > todayStr) {
+          isUpcoming = true;
+        }
+        // Today's date - check time
+        else if (aptDate === todayStr) {
+          // If no time specified, show it (assume future)
+          if (!aptTime || aptTime === 'Not set') {
+            isUpcoming = true;
+          } else {
+            // Compare time (HH:MM format)
+            isUpcoming = aptTime > currentTimeStr;
+          }
+        }
+        // Past dates are not upcoming
+        else {
+          isUpcoming = false;
+        }
+        
+        return isUpcoming && isNotCompleted && isNotCancelled;
+      });
+    } else if (activeTab !== 'all') {
       result = result.filter(a => a.status.toLowerCase() === activeTab.toLowerCase());
     }
 
