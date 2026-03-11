@@ -1,16 +1,18 @@
-import React, { useState, useEffect } from 'react';
-// import { useNavigate } from 'react-router-dom'; // Reserved for future navigation
+import React, { useState, useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
+import Calendar from 'react-calendar';
+import 'react-calendar/dist/Calendar.css';
 import './Appointments.css';
 import appointmentsService from '../../../services/appointmentsService';
-import patientsService from '../../../services/patientsService';
-import staffService from '../../../services/staffService';
+// import patientsService from '../../../services/patientsService'; // Reserved for future use
+// import staffService from '../../../services/staffService'; // Reserved for future use
 import AppointmentViewModal from '../../../components/appointments/AppointmentViewModal';
 import AppointmentEditModal from '../../../components/appointments/AppointmentEditModal';
+import PatientView from '../../../components/patient/patientview';
+
 import NewAppointmentForm from './components/NewAppointmentForm';
 import EditAppointmentForm from './components/EditAppointmentForm';
-import StaffDetailEnterprise from '../../admin/staff/StaffDetailEnterprise';
-
-import AppointmentPreviewDialog from '../../../components/doctor/AppointmentPreviewDialog';
+import StaffDetailEnterprise from '../staff/StaffDetailEnterprise';
 
 // Import doctor icons
 import doctorFemaleIcon from '../../../assets/doctor-femaleicon.png';
@@ -25,7 +27,7 @@ const MOCK_APPOINTMENTS = [
     doctor: 'Dr. Smith',
     doctorInitials: 'DS',
     doctorColor: '#DBEAFE',
-    doctorTextColor: '#1E40AF',
+    doctorTextColor: '#165a8a',
     date: 'Oct 24, 2023',
     time: '10:00 AM',
     service: 'General Checkup',
@@ -53,7 +55,7 @@ const MOCK_APPOINTMENTS = [
     doctor: 'Dr. Smith',
     doctorInitials: 'DS',
     doctorColor: '#DBEAFE',
-    doctorTextColor: '#1E40AF',
+    doctorTextColor: '#165a8a',
     date: 'Oct 24, 2023',
     time: '02:15 PM',
     service: 'Consultation',
@@ -95,7 +97,7 @@ const MOCK_APPOINTMENTS = [
     doctor: 'Dr. Smith',
     doctorInitials: 'DS',
     doctorColor: '#DBEAFE',
-    doctorTextColor: '#1E40AF',
+    doctorTextColor: '#165a8a',
     date: 'Oct 26, 2023',
     time: '11:00 AM',
     service: 'General Checkup',
@@ -148,6 +150,12 @@ const Icons = {
       <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
     </svg>
   ),
+  Plus: () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="12" y1="5" x2="12" y2="19"></line>
+      <line x1="5" y1="12" x2="19" y2="12"></line>
+    </svg>
+  ),
   Clock: () => (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="10"></circle>
@@ -167,7 +175,7 @@ const Icons = {
     </svg>
   ),
   Male: () => (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#207DC0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="10" cy="10" r="7"></circle>
       <line x1="21" y1="3" x2="15" y2="9"></line>
       <line x1="21" y1="3" x2="21" y2="8"></line>
@@ -193,7 +201,7 @@ const Icons = {
     </svg>
   ),
   Edit: () => (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#165a8a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
       <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
     </svg>
@@ -226,12 +234,6 @@ const Icons = {
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <polyline points="9 18 15 12 9 6"></polyline>
     </svg>
-  ),
-  Plus: () => (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <line x1="12" y1="5" x2="12" y2="19"></line>
-      <line x1="5" y1="12" x2="19" y2="12"></line>
-    </svg>
   )
 };
 
@@ -251,58 +253,114 @@ const Header = () => (
   </div>
 );
 
-const FilterBar = ({ activeTab, onTabChange, searchQuery, onSearchChange }) => (
-  <div className="filter-bar-container">
-    <div className="search-wrapper">
-      <span className="search-icon-lg"><Icons.Search /></span>
-      <input
-        type="text"
-        placeholder="Search by patient name, doctor, or status..."
-        className="search-input-lg"
-        value={searchQuery}
-        onChange={(e) => onSearchChange(e.target.value)}
-      />
-    </div>
+const FilterBar = ({
+  activeTab,
+  onTabChange,
+  searchQuery,
+  onSearchChange,
+  selectedDate,
+  onDateChange,
+  showCalendar,
+  setShowCalendar
+}) => {
+  const calendarRef = useRef(null);
 
-    <div className="filter-right-group">
-      <div className="tabs-wrapper">
-        <button
-          className={`tab-btn ${activeTab === 'all' ? 'active' : ''}`}
-          onClick={() => onTabChange('all')}
-        >
-          All
-        </button>
-        <button
-          className={`tab-btn ${activeTab === 'scheduled' ? 'active' : ''}`}
-          onClick={() => onTabChange('scheduled')}
-        >
-          Scheduled
-        </button>
-        <button
-          className={`tab-btn ${activeTab === 'confirmed' ? 'active' : ''}`}
-          onClick={() => onTabChange('confirmed')}
-        >
-          Confirmed
-        </button>
-        <button
-          className={`tab-btn ${activeTab === 'pending' ? 'active' : ''}`}
-          onClick={() => onTabChange('pending')}
-        >
-          Pending
-        </button>
-        <button
-          className={`tab-btn ${activeTab === 'cancelled' ? 'active' : ''}`}
-          onClick={() => onTabChange('cancelled')}
-        >
-          Cancelled
-        </button>
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (calendarRef.current && !calendarRef.current.contains(event.target)) {
+        setShowCalendar(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [setShowCalendar]);
+
+  const handleDateSelect = (date) => {
+    const localDate = new Date(date.getTime() - (date.getTimezoneOffset() * 60000))
+      .toISOString().split('T')[0];
+
+    // Toggle behavior: If clicking the already selected date, clear the filter
+    if (localDate === selectedDate) {
+      onDateChange(null);
+    } else {
+      onDateChange(localDate);
+    }
+    setShowCalendar(false);
+  };
+  return (
+    <div className="filter-bar-container">
+      <div className="filter-right-group">
+        <div className="tabs-wrapper">
+          <button
+            className={`tab-btn ${activeTab === 'all' ? 'active' : ''}`}
+            onClick={() => onTabChange('all')}
+          >
+            All
+          </button>
+          <button
+            className={`tab-btn ${activeTab === 'scheduled' ? 'active' : ''}`}
+            onClick={() => onTabChange('scheduled')}
+          >
+            Scheduled
+          </button>
+          <button
+            className={`tab-btn ${activeTab === 'confirmed' ? 'active' : ''}`}
+            onClick={() => onTabChange('confirmed')}
+          >
+            Confirmed
+          </button>
+          <button
+            className={`tab-btn ${activeTab === 'pending' ? 'active' : ''}`}
+            onClick={() => onTabChange('pending')}
+          >
+            Pending
+          </button>
+          <button
+            className={`tab-btn ${activeTab === 'cancelled' ? 'active' : ''}`}
+            onClick={() => onTabChange('cancelled')}
+          >
+            Cancelled
+          </button>
+        </div>
+
+        <div className="calendar-filter-wrapper" ref={calendarRef}>
+          <button
+            className={`btn-filter-date ${selectedDate ? 'active' : ''}`}
+            onClick={() => setShowCalendar(!showCalendar)}
+          >
+            <Icons.Calendar />
+            {selectedDate ? formatDate(selectedDate) : 'Filter by Date'}
+            <span style={{ fontSize: '11px', marginLeft: '4px' }}>▼</span>
+          </button>
+
+          {showCalendar && (
+            <div className="calendar-dropdown">
+              <Calendar
+                onChange={handleDateSelect}
+                value={selectedDate ? new Date(selectedDate) : new Date()}
+                className="custom-calendar"
+              />
+            </div>
+          )}
+        </div>
       </div>
-      <button className="btn-filter-date">
-        Filter by Date <span style={{ fontSize: '11px', marginLeft: '2px' }}>▼</span>
-      </button>
+
+      <div className="search-left-part">
+        <div className="search-wrapper">
+          <span className="search-icon-lg"><Icons.Search /></span>
+          <input
+            type="text"
+            placeholder="Search by patient name, doctor, or status..."
+            className="search-input-lg"
+            value={searchQuery}
+            onChange={(e) => onSearchChange(e.target.value)}
+          />
+        </div>
+      </div>
     </div>
-  </div>
-);
+  );
+};
+
 
 // --- HELPER FUNCTIONS ---
 
@@ -322,7 +380,7 @@ const getDoctorColor = (index) => {
 
 // Get doctor text color (cycle through predefined colors)
 const getDoctorTextColor = (index) => {
-  const colors = ['#1E40AF', '#6B21A8', '#065F46', '#9A3412', '#BE185D'];
+  const colors = ['#165a8a', '#6B21A8', '#065F46', '#9A3412', '#BE185D'];
   return colors[index % colors.length];
 };
 
@@ -330,6 +388,16 @@ const getDoctorTextColor = (index) => {
 const formatDate = (dateStr) => {
   if (!dateStr) return 'Not set';
   try {
+    // Check for YYYY-MM-DD format
+    const ymdRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (ymdRegex.test(dateStr)) {
+      const [year, month, day] = dateStr.split('-').map(Number);
+      // Create date object using local components (months are 0-indexed)
+      const date = new Date(year, month - 1, day);
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    // Fallback for other formats
     const date = new Date(dateStr);
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   } catch {
@@ -417,10 +485,8 @@ const transformAppointment = (apt, index) => {
     patientFullName = `${p.firstName || ''} ${p.lastName || ''}`.trim();
     gender = p.gender || '';
 
-    // Extract patient code from metadata
-    if (p.metadata && typeof p.metadata === 'object') {
-      patientCode = p.metadata.patientCode || '';
-    }
+    // Extract patient code from root or metadata
+    patientCode = p.patientCode || (p.metadata && typeof p.metadata === 'object' ? p.metadata.patientCode : '');
   } else if (typeof apt.patientId === 'string') {
     patientIdStr = apt.patientId;
     patientFullName = apt.clientName || '';
@@ -457,11 +523,29 @@ const transformAppointment = (apt, index) => {
   let date = apt.date || '';
   let time = apt.time || '';
 
+  // Normalize date to YYYY-MM-DD for consistent filtering
+  if (date && date.includes('T')) {
+    // If it's an ISO timestamp, parse it to local date to align with filter
+    try {
+      const dt = new Date(date);
+      const year = dt.getFullYear();
+      const month = String(dt.getMonth() + 1).padStart(2, '0');
+      const day = String(dt.getDate()).padStart(2, '0');
+      date = `${year}-${month}-${day}`;
+    } catch (e) {
+      date = date.split('T')[0];
+    }
+  }
+
   // If date/time not present, try startAt
   if (!date && apt.startAt) {
     try {
       const dt = new Date(apt.startAt);
-      date = dt.toISOString().split('T')[0]; // YYYY-MM-DD
+      const year = dt.getFullYear();
+      const month = String(dt.getMonth() + 1).padStart(2, '0');
+      const day = String(dt.getDate()).padStart(2, '0');
+      date = `${year}-${month}-${day}`; // Local YYYY-MM-DD
+
       time = dt.toTimeString().split(' ')[0].substring(0, 5); // HH:MM
     } catch (e) {
       // Ignore parse errors
@@ -495,11 +579,12 @@ const transformAppointment = (apt, index) => {
     doctorColor: getDoctorColor(index),
     doctorTextColor: getDoctorTextColor(index),
     date: formatDate(date),
+    rawDate: date, // Keep raw YYYY-MM-DD for filtering
     time: time || 'Not set',
     service: apt.appointmentType || reason || 'Consultation',
-    status: apt.status || 'Scheduled',
+    status: apt.status ? (apt.status.charAt(0).toUpperCase() + apt.status.slice(1).toLowerCase()) : 'Scheduled',
     gender: gender || 'Male',
-    condition: extractCondition(apt.patientId)
+    condition: reason || extractCondition(apt.patientId) // Prioritize appointment reason over general condition
   };
 };
 
@@ -507,23 +592,32 @@ const transformAppointment = (apt, index) => {
 
 const Appointments = () => {
   // const navigate = useNavigate(); // Reserved for future navigation
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedDate, setSelectedDate] = useState(null);
+  const [showCalendar, setShowCalendar] = useState(false);
   const [allAppointments, setAllAppointments] = useState([]);
   const [filteredAppointments, setFilteredAppointments] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage] = useState(8);
   const [isLoading, setIsLoading] = useState(true);
+  const [notification, setNotification] = useState(null);
+
+  const showNotification = (message, type = 'success') => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), 3000);
+  };
 
   // Modal states
   const [showViewModal, setShowViewModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showNewApptModal, setShowNewApptModal] = useState(false);
 
-  const [selectedAppointmentId, setSelectedAppointmentId] = useState(null);
-  
   // Pre-selected patient for new appointment
   const [preSelectedPatient, setPreSelectedPatient] = useState(null);
+
+  const [selectedAppointmentId, setSelectedAppointmentId] = useState(null);
 
   // Patient dialog states
   const [selectedPatient, setSelectedPatient] = useState(null);
@@ -532,6 +626,26 @@ const Appointments = () => {
   // Doctor/Staff dialog states
   const [selectedDoctor, setSelectedDoctor] = useState(null);
   const [showDoctorDialog, setShowDoctorDialog] = useState(false);
+
+  // Handle new patient navigation for immediate booking
+  useEffect(() => {
+    if (location.state?.newPatient) {
+      console.log('🎉 [Appointments] Detected new patient from navigation:', location.state.newPatient);
+      const np = location.state.newPatient;
+
+      // Transform to format expected by NewAppointmentForm
+      const pData = {
+        id: np.id || np._id || np.patientId,
+        name: np.name || `${np.firstName || ''} ${np.lastName || ''}`.trim(),
+        age: np.age,
+        gender: np.gender,
+        phone: np.phone || np.contact || ''
+      };
+
+      setPreSelectedPatient(pData);
+      setShowNewApptModal(true);
+    }
+  }, [location.state]);
 
   // Fetch appointments from API on mount
   useEffect(() => {
@@ -556,7 +670,7 @@ const Appointments = () => {
         setFilteredAppointments(transformed);
       } catch (error) {
         console.error('❌ Failed to fetch appointments:', error);
-        alert('Failed to load appointments: ' + error.message);
+        showNotification('Failed to load appointments from server.', 'error');
         // Fallback to mock data if API fails
         setAllAppointments(MOCK_APPOINTMENTS);
         setFilteredAppointments(MOCK_APPOINTMENTS);
@@ -580,19 +694,28 @@ const Appointments = () => {
   useEffect(() => {
     let result = allAppointments;
     if (activeTab !== 'all') {
-      result = result.filter(a => a.status.toLowerCase() === activeTab);
+      result = result.filter(a => a.status.toLowerCase() === activeTab.toLowerCase());
+    }
+
+    if (selectedDate) {
+      result = result.filter(a => a.rawDate === selectedDate);
     }
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       result = result.filter(a =>
         a.patientName.toLowerCase().includes(q) ||
         a.patientId.toLowerCase().includes(q) ||
-        a.doctor.toLowerCase().includes(q)
+        a.doctor.toLowerCase().includes(q) ||
+        a.status.toLowerCase().includes(q)
       );
     }
+
+    // Sort alphabetically by patient name
+    result.sort((a, b) => a.patientName.localeCompare(b.patientName));
+
     setFilteredAppointments(result);
     setCurrentPage(1);
-  }, [activeTab, searchQuery, allAppointments]);
+  }, [activeTab, searchQuery, selectedDate, allAppointments]);
 
   const indexOfLastRow = currentPage * rowsPerPage;
   const indexOfFirstRow = indexOfLastRow - rowsPerPage;
@@ -625,6 +748,15 @@ const Appointments = () => {
     setShowEditModal(true);
   };
 
+  // Handle update from EditAppointmentForm
+  const handleUpdateSuccess = async () => {
+    await refreshAppointments();
+  };
+
+  const handleDeleteSuccess = async () => {
+    await refreshAppointments();
+  };
+
 
 
   // Handle patient name click - open patient details dialog
@@ -636,97 +768,35 @@ const Appointments = () => {
       const originalApt = allAppointments.find(a => a.id === appointment.id);
       console.log('📦 [handlePatientNameClick] Original appointment:', originalApt);
 
-      let patientData = null;
+      let patientId = appointment.patientIdObj?._id || appointment.patientIdObj || appointment.patientId;
 
-      // Try to get patient data from original appointment (as object)
-      if (originalApt && originalApt.patientIdObj && typeof originalApt.patientIdObj === 'object') {
-        patientData = originalApt.patientIdObj;
-        console.log('✅ Found patient data from patientIdObj:', patientData);
+      // Fallbacks if patientId is still not clear (e.g. string "PT-123")
+      // But transforming logic puts original object in patientIdObj
+
+      if (!patientId) {
+        // Try to get from originalApt
+        if (originalApt?.patientId?._id) patientId = originalApt.patientId._id;
+        else if (originalApt?.patientId) patientId = originalApt.patientId;
       }
 
-      if (!patientData || typeof patientData !== 'object') {
-        console.error('❌ Could not extract patient data from appointment');
-        console.error('Available appointment data:', appointment);
-        alert('Unable to load patient details. Patient information not found.');
-        return;
-      }
+      // If patientId is a string like "PT-xxx" (display ID) vs ObjectId, PatientView might fail if it expects ObjectId
+      // But existing logic seemed to rely on objects
+      // Let's pass the object if possible to PatientView? No, PatientView expects ID.
+      // So ensuring we have the ID.
 
-      // Transform patient data to match expected format
-      const fullPatient = {
-        id: patientData._id,
-        _id: patientData._id,
-        name: `${patientData.firstName || ''} ${patientData.lastName || ''}`.trim(),
-        firstName: patientData.firstName,
-        lastName: patientData.lastName,
-        email: patientData.email,
-        phone: patientData.phone || patientData.contact,
-        contact: patientData.phone || patientData.contact,
-        gender: patientData.gender,
-        age: patientData.age,
-        dateOfBirth: patientData.dateOfBirth || patientData.dob,
-        bloodGroup: patientData.bloodGroup,
-        address: patientData.address,
-        city: patientData.city,
-        state: patientData.state,
-        country: patientData.country,
-        pincode: patientData.pincode,
-        emergencyContactName: patientData.emergencyContactName,
-        emergencyContactPhone: patientData.emergencyContactPhone,
-        insuranceNumber: patientData.insuranceNumber,
-        expiryDate: patientData.expiryDate,
-        medicalHistory: Array.isArray(patientData.medicalHistory) ? patientData.medicalHistory : [],
-        allergies: patientData.allergies,
-        currentMedications: patientData.currentMedications,
-        chronicDiseases: patientData.chronicDiseases,
-        metadata: patientData.metadata,
-        ...patientData // Spread any additional fields
+      // Simplification: Just set the "patient" state with ID, let PatientView fetch.
+      // We will reuse "selectedPatient" state but just store the ID (or minimal object with ID).
+
+      // Let's store an object { _id: ... } compatible with what we pass to PatientView
+
+      const patientData = {
+        _id: patientId
       };
 
-      // Enrich with metadata if available
-      if (patientData.metadata) {
-        const metadata = patientData.metadata;
-        
-        // Add emergency contacts from metadata if not in main record
-        if (!fullPatient.emergencyContactName && metadata.emergencyContactName) {
-          fullPatient.emergencyContactName = metadata.emergencyContactName;
-          fullPatient.emergencyContactPhone = metadata.emergencyContactPhone;
-          console.log('✅ Added emergency contact from metadata:', fullPatient.emergencyContactName);
-        }
-
-        // Add insurance from metadata if not in main record
-        if (!fullPatient.insuranceNumber && metadata.insurance) {
-          fullPatient.insuranceNumber = metadata.insurance.policyNumber;
-          fullPatient.expiryDate = metadata.insurance.validUntil;
-          console.log('✅ Added insurance from metadata:', fullPatient.insuranceNumber);
-        }
-
-        // Add medical history from metadata - ENSURE it's always an array
-        if (metadata.medicalHistory && fullPatient.medicalHistory.length === 0) {
-          if (Array.isArray(metadata.medicalHistory)) {
-            fullPatient.medicalHistory = metadata.medicalHistory;
-            console.log('✅ Added medical history from metadata (array):', fullPatient.medicalHistory);
-          } else if (typeof metadata.medicalHistory === 'object' && metadata.medicalHistory.currentConditions) {
-            fullPatient.medicalHistory = Array.isArray(metadata.medicalHistory.currentConditions)
-              ? metadata.medicalHistory.currentConditions
-              : [];
-            console.log('✅ Added medical history from metadata (currentConditions):', fullPatient.medicalHistory);
-          }
-        }
-      }
-
-      // Ensure medicalHistory is always an array
-      if (!Array.isArray(fullPatient.medicalHistory)) {
-        console.warn('⚠️ medicalHistory is not an array, converting:', fullPatient.medicalHistory);
-        fullPatient.medicalHistory = [];
-      }
-
-      console.log('✅ Transformed patient details:', fullPatient);
-
-      setSelectedPatient(fullPatient);
+      setSelectedPatient(patientData); // We will pass selectedPatient._id to PatientView
       setShowPatientDialog(true);
     } catch (error) {
-      console.error('❌ Error loading patient details:', error);
-      alert('Failed to load patient details: ' + error.message);
+      console.error('❌ Error handling patient click:', error);
     }
   };
 
@@ -763,7 +833,6 @@ const Appointments = () => {
       if (!doctorData || typeof doctorData !== 'object') {
         console.error('❌ Could not extract doctor data from appointment');
         console.error('Available appointment data:', appointment);
-        alert('Unable to load doctor details. Doctor information not found.');
         return;
       }
 
@@ -796,7 +865,6 @@ const Appointments = () => {
       setShowDoctorDialog(true);
     } catch (error) {
       console.error('❌ Error loading doctor details:', error);
-      alert('Failed to load doctor details: ' + error.message);
     }
   };
 
@@ -805,33 +873,108 @@ const Appointments = () => {
     setSelectedDoctor(null);
   };
 
+  // Handle quick status toggle from table
+  const handleStatusToggle = async (appointment) => {
+    // Only cycle through statuses that match the main page tabs and form options
+    const statuses = ['Scheduled', 'Confirmed', 'Pending', 'Cancelled'];
+
+    console.log('🎯 [handleStatusToggle] Starting status toggle for appointment:', {
+      appointmentId: appointment.id,
+      currentStatus: appointment.status,
+      availableStatuses: statuses
+    });
+
+    const currentIndex = statuses.indexOf(appointment.status);
+
+    if (currentIndex === -1) {
+      console.warn('⚠️ Current status not in cycle list, defaulting to Scheduled');
+      const nextStatus = 'Scheduled';
+
+      try {
+        console.log(`🔄 Setting status to: ${nextStatus}`);
+        await appointmentsService.updateAppointmentStatus(appointment.id, nextStatus);
+        showNotification(`Appointment status updated to ${nextStatus}`, 'success');
+        await refreshAppointments();
+      } catch (error) {
+        console.error('❌ Failed to update status:', error);
+        console.error('Error details:', {
+          message: error.message,
+          response: error.response?.data,
+          status: error.response?.status
+        });
+        showNotification(`Failed to update status: ${error.response?.data?.message || error.message}`, 'error');
+      }
+      return;
+    }
+
+    const nextIndex = (currentIndex + 1) % statuses.length;
+    const nextStatus = statuses[nextIndex];
+
+    try {
+      console.log(`🔄 Toggling status: ${appointment.status} -> ${nextStatus}`);
+      console.log(`📡 Calling API: updateAppointmentStatus(${appointment.id}, ${nextStatus})`);
+
+      const result = await appointmentsService.updateAppointmentStatus(appointment.id, nextStatus);
+
+      console.log('✅ Status update successful:', result);
+      showNotification(`Appointment status updated to ${nextStatus}`, 'success');
+      await refreshAppointments();
+    } catch (error) {
+      console.error('❌ Failed to update status:', error);
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        appointmentId: appointment.id,
+        attemptedStatus: nextStatus
+      });
+      showNotification(`Failed to update status: ${error.response?.data?.message || error.message}`, 'error');
+    }
+  };
+
   // Handle delete appointment
   const handleDelete = async (appointment) => {
-    const confirmed = window.confirm(`Delete appointment for ${appointment.patientName}?`);
-    if (!confirmed) return;
+    if (!window.confirm(`Are you sure you want to delete the appointment for ${appointment.patientName}?`)) {
+      return;
+    }
     try {
       setIsLoading(true);
       await appointmentsService.deleteAppointment(appointment.id);
       console.log('✅ Deleted appointment:', appointment.id);
-      alert(`Deleted appointment for ${appointment.patientName}`);
+      showNotification('Appointment deleted successfully', 'success');
 
       // Refresh appointments list
       await refreshAppointments();
     } catch (error) {
       console.error('❌ Failed to delete appointment:', error);
-      alert('Failed to delete appointment: ' + error.message);
+      showNotification('Failed to delete appointment', 'error');
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="dashboard-container">
+    <div className="appointments-page dashboard-container">
       <Header />
+      {notification && (
+        <div className={`modern-notification ${notification.type}`}>
+          <div className="notif-content">
+            <span className="notif-icon">
+              {notification.type === 'success' ? '✅' : '❌'}
+            </span>
+            <span className="notif-msg">{notification.message}</span>
+          </div>
+          <button className="notif-close" onClick={() => setNotification(null)}>×</button>
+        </div>
+      )}
       <FilterBar
         activeTab={activeTab}
         onTabChange={setActiveTab}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
+        selectedDate={selectedDate}
+        onDateChange={setSelectedDate}
+        showCalendar={showCalendar}
+        setShowCalendar={setShowCalendar}
       />
       <div className="table-card">
         <div className="modern-table-wrapper">
@@ -871,65 +1014,64 @@ const Appointments = () => {
                 return (
                   <tr key={apt.id}>
                     {/* PATIENT COLUMN - Clickable */}
-                    {/* PATIENT COLUMN - Clickable */}
-                    <td
-                      className="cell-patient clickable"
-                      onClick={() => handlePatientNameClick(apt)}
-                      style={{ cursor: 'pointer' }}
-                    >
-                      <img
-                        src={avatarSrc}
-                        alt={apt.gender}
-                        className="patient-avatar"
-                        onError={(e) => {
-                          // Fallback if image doesn't load
-                          e.target.style.display = 'none';
-                          e.target.nextElementSibling.style.display = 'flex';
-                        }}
-                      />
-                      <div className="gender-icon-box" style={{ display: 'none' }}>
-                        {apt.gender === 'Female' ? <Icons.Female /> : <Icons.Male />}
-                      </div>
-                      <div className="info-group">
-                        <span className="primary patient-name-clickable">
-                          {apt.patientName}
-                        </span>
-                        <span className="secondary">{apt.patientId}</span>
+                    <td>
+                      <div
+                        className="cell-patient clickable"
+                        onClick={() => handlePatientNameClick(apt)}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <img
+                          src={avatarSrc}
+                          alt={apt.gender}
+                          className="patient-avatar"
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.nextElementSibling.style.display = 'flex';
+                          }}
+                        />
+                        <div className="gender-icon-box" style={{ display: 'none' }}>
+                          {apt.gender === 'Female' ? <Icons.Female /> : <Icons.Male />}
+                        </div>
+                        <div className="info-group">
+                          <span className="primary font-semibold">{apt.patientName}</span>
+                          <span className="secondary opacity-60 text-xs">{apt.patientId}</span>
+                        </div>
                       </div>
                     </td>
 
                     {/* DOCTOR COLUMN - Match Patient List Style */}
                     <td>
-                      <div className="cell-doctor">
+                      <div className="cell-doctor" onClick={() => handleDoctorNameClick(apt)}>
                         <img
                           src={apt.doctorGender === 'Female' ? doctorFemaleIcon : doctorMaleIcon}
                           alt={apt.doctor}
                           className="patient-avatar"
-                          style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }}
                         />
-                        <span 
-                          className="doctor-name-clickable"
-                          onClick={() => handleDoctorNameClick(apt)}
-                        >
-                          {apt.doctor}
-                        </span>
+                        <div className="info-group">
+                          <span className="primary font-semibold">{apt.doctor}</span>
+                          <span className="secondary opacity-60 text-xs text-blue-primary">(MD)</span>
+                        </div>
                       </div>
                     </td>
 
                     {/* DATE & TIME - Split View */}
                     <td>
                       <div className="info-group">
-                        <span className="primary">{apt.date}</span>
-                        <span className="secondary">{apt.time}</span>
+                        <span className="primary font-semibold">{apt.date}</span>
+                        <span className="secondary opacity-60 text-xs">@{apt.time}</span>
                       </div>
                     </td>
 
                     {/* CONDITION */}
-                    <td style={{ fontWeight: 500, color: '#334155' }}>{apt.condition}</td>
+                    <td className="cell-condition">{apt.condition}</td>
 
                     {/* STATUS */}
                     <td>
-                      <span className={`status-pill ${apt.status.toLowerCase()}`}>
+                      <span
+                        className={`status-pill ${apt.status.toLowerCase()} status-editable clickable`}
+                        onClick={() => handleStatusToggle(apt)}
+                        title="Click to change status"
+                      >
                         {apt.status}
                       </span>
                     </td>
@@ -955,7 +1097,7 @@ const Appointments = () => {
                 <tr>
                   <td colSpan="6" style={{ textAlign: 'center', padding: '48px', color: '#9CA3AF' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-                      <div style={{ width: '32px', height: '32px', border: '3px solid #e5e7eb', borderTopColor: '#3b82f6', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }}></div>
+                      <div style={{ width: '32px', height: '32px', border: '3px solid #e5e7eb', borderTopColor: '#207DC0', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }}></div>
                       <span>Loading appointments...</span>
                     </div>
                   </td>
@@ -996,23 +1138,17 @@ const Appointments = () => {
         </div>
       </div>
 
-      {/* Modals */}
+      {/* VIEW MODAL */}
       <AppointmentViewModal
         isOpen={showViewModal}
         onClose={() => setShowViewModal(false)}
         appointmentId={selectedAppointmentId}
-        onEdit={(appointment) => {
+        appointmentData={allAppointments.find(a => a.id === selectedAppointmentId)}
+        onEdit={() => {
           setShowViewModal(false);
-          setSelectedAppointmentId(appointment._id || appointment.id);
           setShowEditModal(true);
         }}
-      />
-
-      <AppointmentEditModal
-        isOpen={showEditModal}
-        onClose={() => setShowEditModal(false)}
-        appointmentId={selectedAppointmentId}
-        onSuccess={refreshAppointments}
+        onPatientClick={handlePatientNameClick}
       />
 
       {/* NEW APPOINTMENT MODAL */}
@@ -1027,12 +1163,23 @@ const Appointments = () => {
         />
       )}
 
-      {/* Appointment Preview Dialog - Matches Flutter DoctorAppointmentPreview */}
-      <AppointmentPreviewDialog
-        patient={selectedPatient}
+      {/* EDIT MODAL */}
+      {showEditModal && selectedAppointmentId && (
+        <EditAppointmentForm
+          appointmentId={selectedAppointmentId}
+          onClose={() => setShowEditModal(false)}
+          onUpdate={handleUpdateSuccess}
+          onDelete={handleDeleteSuccess}
+        />
+      )}
+
+
+
+      {/* Patient View - Replaces AppointmentPreviewDialog */}
+      <PatientView
+        patientId={selectedPatient?._id || selectedPatient?.id}
         isOpen={showPatientDialog}
         onClose={handleClosePatientDialog}
-        showBillingTab={false}
       />
 
       {/* Staff Detail Dialog - Show doctor/staff details */}
