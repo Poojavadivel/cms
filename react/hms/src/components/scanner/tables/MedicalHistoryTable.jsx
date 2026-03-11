@@ -4,7 +4,6 @@
  */
 
 import React from 'react';
-import './MedicalHistoryTable.css';
 import {
   Table,
   TableBody,

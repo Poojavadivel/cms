@@ -4,9 +4,6 @@
  */
 
 .verification-modal {
-  width: 100%;
-  max-width: 1050px;
-  max-height: 90vh;
   min-height: 600px;
 }
 
@@ -115,7 +112,7 @@
   .verification-modal {
     min-height: auto;
   }
-
+  
   .verification-modal-content {
     padding: 16px;
   }
