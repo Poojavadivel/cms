@@ -1,4 +1,5 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+/* --- ENTERPRISE DESIGN SYSTEM (Compact) --- */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 /* Loading spinner animation */
 @keyframes spin {
@@ -8,42 +9,43 @@
 }
 
 :root {
-  /* Medical Teal Theme */
-  --primary: #0d9488;
-  --primary-hover: #0f766e;
-  --primary-light: #f0fdfa;
-  --primary-mid: rgba(13, 148, 136, 0.12);
-  --secondary: #0369a1;
-  --accent-yellow: #f59e0b;
-  --accent-red: #ef4444;
-  --accent-purple: #8b5cf6;
-  --neutral-gray: #94a3b8;
+  /* 1. BRAND COLORS */
+  --primary: #207DC0;
+  --primary-hover: #165a8a;
+  --secondary: #207DC0;
+  --accent-yellow: #F4B400;
+  --accent-red: #FF5A5F;
+  --neutral-gray: #9CA3AF;
 
-  /* Surfaces */
-  --bg-page: #f1f5f9;
-  --bg-card: #ffffff;
-  --bg-input: #f8fafc;
-  --bg-hover-row: #f0fdfa;
+  /* 2. SURFACES */
+  --bg-page: #F7F9FC;
+  --bg-card: #FFFFFF;
+  --bg-input: #F1F3F7;
+  --bg-hover-row: #EEF3FF;
 
-  /* Typography */
-  --text-title: #0f172a;
+  /* 3. TYPOGRAPHY COLORS */
+  --text-title: #1E293B;
   --text-body: #334155;
-  --text-muted: #64748b;
+  --text-muted: #64748B;
 
-  /* Shadows */
-  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.04), 0 0 0 1px rgba(0, 0, 0, 0.04);
-  --shadow-hover: 0 4px 16px rgba(13, 148, 136, 0.12);
+  /* 4. SHADOWS (Tighter) */
+  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.04);
+  --shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-active: 0 0 0 2px rgba(38, 99, 255, 0.2);
 
-  /* Spacing */
+  /* 5. SPACING (Compact 4px/8px Grid) */
   --space-05: 4px;
   --space-1: 8px;
   --space-2: 12px;
+  /* Was 16 */
   --space-3: 16px;
+  /* Was 24 */
   --space-4: 24px;
+  /* Was 32 */
 
-  /* Radius */
+  /* 6. RADIUS */
   --radius-btn: 8px;
-  --radius-card: 14px;
+  --radius-card: 12px;
   --radius-search: 12px;
   --radius-pill: 20px;
 }
@@ -57,17 +59,16 @@ body {
   /* Prevent horizontal scroll only */
 }
 
-.appointments-page.dashboard-container {
+.dashboard-container {
   max-width: 100%;
-  padding: 16px 20px;
+  padding: 16px 24px;
+  /* Reduced padding */
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  gap: 0;
   box-sizing: border-box;
   overflow-y: auto;
-  background: var(--bg-page);
-  font-family: 'Inter', system-ui, sans-serif;
+  /* CRITICAL: Container handles frame */
 }
 
 /* Modern Notification Banner */
@@ -141,41 +142,38 @@ body {
 }
 
 /* --- HEADER --- */
-.appointments-page .appointments-header {
-  background: linear-gradient(135deg, var(--primary) 0%, #0369a1 100%) !important;
-  border-radius: var(--radius-card) !important;
-  display: flex !important;
-  justify-content: space-between !important;
-  align-items: center !important;
-  margin-bottom: var(--space-3) !important;
-  flex-shrink: 0 !important;
-  min-height: 72px !important;
-  position: relative !important;
-  z-index: 5 !important;
-  padding: 0 24px !important;
-  box-shadow: 0 4px 16px rgba(13, 148, 136, 0.2) !important;
+.appointments-header {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  /* Center align for compactness */
+  margin-bottom: var(--space-3);
+  flex-shrink: 0;
+  /* Don't shrink header */
+  min-height: 60px;
+  position: relative;
+  z-index: 5;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
 }
 
-.appointments-page .appointments-header .header-content {
-  display: flex !important;
-  flex-direction: column !important;
+.main-title {
+  font-size: 22px;
+  /* Smaller title */
+  font-weight: 700;
+  color: #0F172A !important;
+  margin: 0;
+  letter-spacing: -0.01em;
 }
 
-.appointments-page .appointments-header .appointments-main-title {
-  font-size: 22px !important;
-  font-weight: 800 !important;
-  color: #ffffff !important;
-  margin: 0 !important;
-  letter-spacing: -0.02em !important;
-  line-height: 1.1 !important;
-}
-
-.appointments-page .appointments-header .appointments-main-subtitle {
-  font-size: 12px !important;
-  color: rgba(255, 255, 255, 0.78) !important;
-  margin: 3px 0 0 0 !important;
-  font-weight: 500 !important;
-  white-space: nowrap !important;
+.main-subtitle {
+  font-size: 13px;
+  color: #9CA3AF !important;
+  margin: 2px 0 0 0;
 }
 
 .btn-new-appointment {
@@ -216,7 +214,7 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  border: 1px solid #207DC0;
+  border: 1px solid #165a8a;
 }
 
 .btn-approve-all:hover {
@@ -233,20 +231,22 @@ body {
   stroke-width: 3px;
 }
 
-/* --- SEARCH & FILTER --- */
+/* --- SEARCH & FILTER (Compact) --- */
 .filter-bar-container {
   background: var(--bg-card);
-  border-radius: var(--radius-card);
-  padding: 10px 16px;
+  border-radius: var(--radius-search);
+  padding: 12px 20px;
+  /* Increased padding */
   box-shadow: var(--shadow-card);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 16px;
+  gap: 20px;
+  /* Added gap between search and filters */
   margin-bottom: var(--space-3);
   flex-shrink: 0;
-  min-height: 56px;
-  border: 1px solid rgba(13, 148, 136, 0.08);
+  min-height: 60px;
+  /* Increased height */
 }
 
 .search-wrapper {
@@ -342,9 +342,11 @@ body {
 .tab-btn.active {
   background: var(--primary);
   color: white;
-  font-weight: 700;
-  box-shadow: 0 2px 8px rgba(13, 148, 136, 0.3);
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(38, 99, 255, 0.25);
+  /* Stronger shadow */
   transform: translateY(-1px);
+  /* Subtle lift */
 }
 
 .btn-filter-date {
@@ -587,14 +589,14 @@ body {
 }
 
 .modern-table tbody tr {
-  height: 58px;
-  border-bottom: 1px solid #f1f5f9;
-  transition: background 0.12s, box-shadow 0.12s;
+  height: 56px;
+  /* COMPACT ROW HEIGHT (Was 72) */
+  border-bottom: 1px solid #F1F5F9;
+  transition: background 0.1s;
 }
 
 .modern-table tbody tr:hover {
-  background-color: var(--bg-hover-row);
-  box-shadow: inset 3px 0 0 var(--primary);
+  background-color: #F8FAFC;
 }
 
 .modern-table tbody td {
@@ -729,47 +731,49 @@ body {
 }
 
 .status-pill.confirmed {
-  background: rgba(32, 125, 192, 0.1);
+  background: rgba(40, 199, 111, 0.12);
   color: #207DC0;
 }
 
 .status-pill.pending {
-  background: rgba(245, 158, 11, 0.1);
-  color: #d97706;
+  background: rgba(244, 180, 0, 0.12);
+  color: #F4B400;
 }
 
 .status-pill.cancelled {
-  background: rgba(100, 116, 139, 0.1);
-  color: #475569;
+  background: #F3F4F6;
+  color: #6B7280;
 }
 
-/* Additional statuses */
+/* New status colors */
 .status-pill.scheduled {
-  background: rgba(13, 148, 136, 0.1);
-  color: var(--primary);
+  background: rgba(32, 125, 192, 0.12);
+  /* Blue */
+  color: #207DC0;
 }
 
 .status-pill.rescheduled {
-  background: rgba(139, 92, 246, 0.1);
-  color: #7c3aed;
+  background: rgba(168, 85, 247, 0.12);
+  /* Purple */
+  color: #A855F7;
 }
 
 .status-pill.completed {
-  background: rgba(3, 105, 161, 0.1);
-  color: var(--secondary);
+  background: rgba(32, 125, 192, 0.12);
+  /* Green */
+  color: #207DC0;
 }
 
 .status-pill.no-show {
-  background: rgba(239, 68, 68, 0.1);
-  color: #dc2626;
+  background: rgba(239, 68, 68, 0.12);
+  /* Red */
+  color: #EF4444;
 }
 
 /* Actions */
 .action-buttons-group {
   display: flex;
   gap: 6px;
-  align-items: center;
-  justify-content: flex-start;
 }
 
 .btn-action {
@@ -784,109 +788,85 @@ body {
   justify-content: center;
   color: var(--text-muted);
   transition: all 0.2s;
-  padding: 0;
-  margin: 0;
-  flex-shrink: 0;
 }
 
 .btn-action:hover {
-  background: rgba(13, 148, 136, 0.08);
+  background: #F1F5F9;
   color: var(--primary);
-  transform: scale(1.1);
 }
 
 .btn-action.intake:hover {
   background: rgba(14, 165, 233, 0.1);
-  color: #0369a1;
+  color: #0EA5E9;
 }
 
 .btn-action.edit:hover {
-  background: rgba(13, 148, 136, 0.1);
-  color: var(--primary);
+  background: rgba(32, 125, 192, 0.1);
+  color: #207DC0;
 }
 
 .btn-action.view:hover {
-  background: rgba(100, 116, 139, 0.1);
-  color: #475569;
+  background: rgba(107, 114, 128, 0.1);
+  color: #6B7280;
 }
 
 .btn-action.delete:hover {
-  background: rgba(239, 68, 68, 0.1);
-  color: #dc2626;
+  background: rgba(220, 38, 38, 0.1);
+  color: #DC2626;
 }
 
 /* Pagination */
 .pagination-footer {
   padding: 10px 20px;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid #E2E8F0;
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
+  /* Move to left corner */
+  gap: 12px;
   align-items: center;
   background: white;
   flex-shrink: 0;
-  border-radius: 0 0 var(--radius-card) var(--radius-card);
 }
 
 .page-arrow-circle {
   width: 32px;
   height: 32px;
-  border-radius: 8px;
-  border: 1.5px solid #e2e8f0;
+  border-radius: 6px;
+  /* Square-ish for compact */
+  border: 1px solid #E2E8F0;
   background: white;
   color: var(--text-body);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.15s;
 }
 
 .page-arrow-circle:hover:not(:disabled) {
-  background: var(--primary-light);
-  border-color: var(--primary);
-  color: var(--primary);
-}
-
-.page-arrow-circle:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
+  background: #F8FAFC;
+  border-color: #CBD5E1;
 }
 
 .page-indicator-box {
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-muted);
-  background: var(--bg-input);
-  padding: 5px 14px;
-  border-radius: 20px;
-  border: 1px solid #e2e8f0;
 }
 
-/* Patient name clickable */
+/* Patient name clickable - Enterprise grade hover */
 .patient-name-clickable {
   cursor: pointer;
-  font-weight: 600;
-  transition: color 0.15s;
+  font-weight: 500;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
   color: inherit;
 }
 
 .patient-name-clickable:hover {
   color: var(--primary);
-  text-decoration: underline;
-  text-decoration-color: rgba(13, 148, 136, 0.4);
-  text-underline-offset: 2px;
+  transform: translateX(2px);
 }
 
-/* Table header accent line for first column */
-.modern-table thead th:first-child {
-  border-left: 3px solid var(--primary);
-}
-
-/* Row index striping */
-.modern-table tbody tr:nth-child(even) {
-  background-color: #fafcff;
-}
-
-.modern-table tbody tr:nth-child(even):hover {
-  background-color: var(--bg-hover-row);
+.patient-name-clickable:active {
+  transform: translateX(0);
 }
