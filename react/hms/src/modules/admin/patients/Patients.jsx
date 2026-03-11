@@ -393,15 +393,6 @@ const Patients = () => {
       return;
     }
 
-    // If we already have full patient data (e.g. coming from PatientView),
-    // skip the redundant fetch and open edit modal directly
-    if (patient.name && (patient.firstName || patient.lastName || patient.phone)) {
-      console.log('✅ [handleEdit] Using existing patient data (no fetch needed):', patient.name);
-      setActiveModal('edit');
-      setModalData(patient);
-      return;
-    }
-
     // Cancel any pending requests
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -966,7 +957,7 @@ const Patients = () => {
                 return (
                   <tr key={patient.id}>
                     {/* PATIENT COLUMN */}
-                    <td className="cell-patient">
+                    <td>
                       <div className="cell-patient">
                         <img
                           src={avatarSrc}
@@ -974,7 +965,7 @@ const Patients = () => {
                           className="patient-avatar"
                         />
                         <div className="info-group">
-                          <span
+                          <span 
                             className="primary font-semibold"
                             style={{ cursor: 'pointer', color: '#207DC0' }}
                             onClick={() => handleView(patient)}
@@ -990,18 +981,18 @@ const Patients = () => {
                     </td>
 
                     {/* AGE */}
-                    <td className="cell-age">{patient.age}</td>
+                    <td style={{ fontWeight: 500, color: '#334155' }}>{patient.age}</td>
 
                     {/* GENDER */}
-                    <td className="cell-gender">{patient.gender}</td>
+                    <td style={{ fontWeight: 500, color: '#334155' }}>{patient.gender}</td>
 
                     {/* LAST VISIT */}
-                    <td className="cell-last-visit">
+                    <td>
                       <span className="primary">{formatLastVisit(patient.lastVisit)}</span>
                     </td>
 
                     {/* DOCTOR - Match Appointments page style */}
-                    <td className="cell-doctor">
+                    <td>
                       <div className="cell-doctor">
                         <img
                           src={patient.doctorGender === 'Female' ? doctorFemaleIcon : doctorMaleIcon}
@@ -1019,13 +1010,13 @@ const Patients = () => {
                     </td>
 
                     {/* CONDITION */}
-                    <td className="cell-condition">{patient.condition}</td>
+                    <td style={{ fontWeight: 500, color: '#334155' }}>{patient.condition}</td>
 
                     {/* ACTIONS */}
-                    <td className="cell-actions">
-                      <div className="pat-action-group">
+                    <td>
+                      <div className="action-buttons-group">
                         <button
-                          className="pat-btn-action billing"
+                          className="btn-action billing"
                           title="View billing"
                           aria-label={`View billing for ${patient.name}`}
                           onClick={() => handleBilling(patient)}
@@ -1034,7 +1025,7 @@ const Patients = () => {
                           {loadingPatientId === patient.id ? '...' : <Icons.Billing />}
                         </button>
                         <button
-                          className="pat-btn-action edit"
+                          className="btn-action edit"
                           title="Edit patient"
                           aria-label={`Edit ${patient.name}`}
                           onClick={() => handleEdit(patient)}
@@ -1043,7 +1034,7 @@ const Patients = () => {
                           <Icons.Edit />
                         </button>
                         <button
-                          className="pat-btn-action delete"
+                          className="btn-action delete"
                           title="Delete patient"
                           aria-label={`Delete ${patient.name}`}
                           onClick={() => handleDelete(patient)}
@@ -1052,7 +1043,7 @@ const Patients = () => {
                           <Icons.Delete />
                         </button>
                         <button
-                          className="pat-btn-action download"
+                          className="btn-action download"
                           title="Download report"
                           aria-label={`Download report for ${patient.name}`}
                           onClick={() => handleDownload(patient)}
@@ -1124,11 +1115,7 @@ const Patients = () => {
           patientId={modalData.id || modalData._id || modalData.patientId}
           isOpen={true}
           onClose={handleCloseModal}
-          onEdit={(patient) => {
-            // Simple, synchronous — same pattern as Appointment View Modal
-            setActiveModal('edit');
-            setModalData(patient);
-          }}
+          onEdit={handleEdit}
         />
       )}
 

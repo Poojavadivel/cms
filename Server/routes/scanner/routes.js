@@ -17,7 +17,6 @@ const { upload } = require('./uploadMiddleware');
 
 // Controllers
 const { handleScanMedical } = require('./scanController');
-const { handleScanMedicalV2 } = require('./scanControllerV2');
 const { handleBulkUploadWithMatching } = require('./bulkController');
 const {
   getVerification,
@@ -47,17 +46,6 @@ const {
  *   - documentType: string (optional, auto-detected if not provided)
  */
 router.post('/scan-medical', auth, upload.single('image'), handleScanMedical);
-
-/**
- * POST /scan-medical-v2
- * SECTION-LEVEL scanning endpoint (Professional-grade)
- * Detects and processes multiple sections within one document
- * Like Epic Systems and athenahealth
- * Body: multipart/form-data with 'image' field
- *   - patientId: string (optional)
- *   - documentType: string (optional)
- */
-router.post('/scan-medical-v2', auth, upload.single('image'), handleScanMedicalV2);
 
 /**
  * POST /bulk-upload-with-matching
@@ -129,25 +117,6 @@ router.get('/lab-reports/:patientId', auth, getPatientLabReports);
  * Get all medical history records for a patient
  */
 router.get('/medical-history/:patientId', auth, getPatientMedicalHistory);
-
-/**
- * POST /medical-history
- * Create medical history manually
- */
-const { addMedicalHistory, updateMedicalHistory, deleteMedicalHistory } = require('./documentController');
-router.post('/medical-history', auth, addMedicalHistory);
-
-/**
- * PUT /medical-history/:id
- * Update medical history
- */
-router.put('/medical-history/:id', auth, updateMedicalHistory);
-
-/**
- * DELETE /medical-history/:id
- * Delete medical history
- */
-router.delete('/medical-history/:id', auth, deleteMedicalHistory);
 
 /**
  * GET /pdf-public/:pdfId

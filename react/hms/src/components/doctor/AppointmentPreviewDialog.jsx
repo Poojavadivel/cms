@@ -11,7 +11,6 @@ import {
   MdMonitorHeart
 } from 'react-icons/md';
 import './AppointmentPreviewDialog.css';
-import MissingEmergencyPhone from '../common/MissingEmergencyPhone';
 
 const AppointmentPreviewDialog = ({ patient, isOpen, onClose, onEdit, showBillingTab = true }) => {
   const [activeTab, setActiveTab] = useState('profile');
@@ -218,7 +217,7 @@ const ProfileTab = ({ patient }) => {
           <h4 className="appt-card-title">Emergency & Allergies</h4>
           <InfoRow label="Emergency Contact" value={patient.emergencyContactName || <span className="text-slate-400 italic font-normal">Not Provided</span>} />
           <InfoRow label="Relationship" value={(patient.emergencyContactRelation || patient.metadata?.emergencyContactRelation) || <span className="text-slate-400 italic font-normal">Not Provided</span>} />
-          <InfoRow label="Phone Number" value={patient.emergencyContactPhone || <MissingEmergencyPhone onEdit={onEdit} patient={patient} />} />
+          <InfoRow label="Phone Number" value={patient.emergencyContactPhone || <span className="text-slate-400 italic font-normal">Not Provided</span>} />
           <InfoRow label="Allergies" value={
             patient.allergies && patient.allergies.length > 0 ? (
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '8px' }}>

@@ -20,10 +20,10 @@ async function createMedicine(req, res) {
     const { name, genericName, category, manufacturer, dosageForm, strength, description } = req.body;
 
     if (!name || !name.trim()) {
-      return res.status(400).json({
-        success: false,
-        message: 'Medicine name is required',
-        errorCode: config.ERROR_CODES.VALIDATION_ERROR
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Medicine name is required', 
+        errorCode: config.ERROR_CODES.VALIDATION_ERROR 
       });
     }
 
@@ -53,7 +53,7 @@ async function createMedicine(req, res) {
  */
 async function getMedicines(req, res) {
   try {
-    // READ access is allowed for all authenticated users (doctors, admins, pharmacists)
+    if (!requireAdminOrPharmacist(req, res)) return;
     if (!ensureModel(Medicine, 'Medicine', res)) return;
 
     const { search } = req.query;
@@ -77,17 +77,17 @@ async function getMedicines(req, res) {
  */
 async function getMedicineById(req, res) {
   try {
-    // READ access is allowed for all authenticated users (doctors, admins, pharmacists)
+    if (!requireAdminOrPharmacist(req, res)) return;
     if (!ensureModel(Medicine, 'Medicine', res)) return;
 
     const { id } = req.params;
     const medicine = await Medicine.findById(id).lean();
 
     if (!medicine) {
-      return res.status(404).json({
-        success: false,
-        message: 'Medicine not found',
-        errorCode: config.ERROR_CODES.NOT_FOUND
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Medicine not found', 
+        errorCode: config.ERROR_CODES.NOT_FOUND 
       });
     }
 
@@ -122,10 +122,10 @@ async function updateMedicine(req, res) {
     const medicine = await Medicine.findByIdAndUpdate(id, updateData, { new: true, runValidators: true });
 
     if (!medicine) {
-      return res.status(404).json({
-        success: false,
-        message: 'Medicine not found',
-        errorCode: config.ERROR_CODES.NOT_FOUND
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Medicine not found', 
+        errorCode: config.ERROR_CODES.NOT_FOUND 
       });
     }
 
@@ -150,10 +150,10 @@ async function deleteMedicine(req, res) {
     const medicine = await Medicine.findByIdAndDelete(id);
 
     if (!medicine) {
-      return res.status(404).json({
-        success: false,
-        message: 'Medicine not found',
-        errorCode: config.ERROR_CODES.NOT_FOUND
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Medicine not found', 
+        errorCode: config.ERROR_CODES.NOT_FOUND 
       });
     }
 

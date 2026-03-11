@@ -122,93 +122,9 @@ async function getPublicPDF(req, res) {
   }
 }
 
-/**
- * POST /medical-history - Create medical history record manually
- */
-async function addMedicalHistory(req, res) {
-  try {
-    const data = req.body;
-    console.log('[MEDICAL_HISTORY] ➕ Creating manual record for patient:', data.patientId);
-
-    const record = await MedicalHistoryDocument.create({
-      ...data,
-      pdfId: data.pdfId || 'manual-entry', // Placeholder for non-scanned records
-      ocrEngine: 'manual',
-      status: 'completed',
-      uploadedBy: req.user?._id
-    });
-
-    return res.status(201).json({
-      success: true,
-      message: 'Medical history record created successfully',
-      record
-    });
-  } catch (error) {
-    console.error('[MEDICAL_HISTORY] ❌ Create error:', error);
-    return res.status(500).json({ success: false, message: error.message });
-  }
-}
-
-/**
- * PUT /medical-history/:id - Update medical history record
- */
-async function updateMedicalHistory(req, res) {
-  try {
-    const { id } = req.params;
-    const data = req.body;
-    console.log('[MEDICAL_HISTORY] 🔄 Updating record:', id);
-
-    const record = await MedicalHistoryDocument.findByIdAndUpdate(
-      id,
-      { ...data, updatedAt: Date.now() },
-      { new: true }
-    );
-
-    if (!record) {
-      return res.status(404).json({ success: false, message: 'Record not found' });
-    }
-
-    return res.json({
-      success: true,
-      message: 'Medical history record updated successfully',
-      record
-    });
-  } catch (error) {
-    console.error('[MEDICAL_HISTORY] ❌ Update error:', error);
-    return res.status(500).json({ success: false, message: error.message });
-  }
-}
-
-/**
- * DELETE /medical-history/:id - Delete medical history record
- */
-async function deleteMedicalHistory(req, res) {
-  try {
-    const { id } = req.params;
-    console.log('[MEDICAL_HISTORY] 🗑️ Deleting record:', id);
-
-    const record = await MedicalHistoryDocument.findByIdAndDelete(id);
-
-    if (!record) {
-      return res.status(404).json({ success: false, message: 'Record not found' });
-    }
-
-    return res.json({
-      success: true,
-      message: 'Medical history record deleted successfully'
-    });
-  } catch (error) {
-    console.error('[MEDICAL_HISTORY] ❌ Delete error:', error);
-    return res.status(500).json({ success: false, message: error.message });
-  }
-}
-
 module.exports = {
   getPatientPrescriptions,
   getPatientLabReports,
   getPatientMedicalHistory,
-  getPublicPDF,
-  addMedicalHistory,
-  updateMedicalHistory,
-  deleteMedicalHistory
+  getPublicPDF
 };

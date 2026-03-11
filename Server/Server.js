@@ -30,14 +30,13 @@ const webAppPath = path.join(__dirname, '..', 'mobile', 'dist');
 
 // --- API Route Definitions ---
 app.use('/api/auth', authRoutes);
-app.use('/api/users', require('./routes/users'));
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/staff', require('./routes/staff'));
 app.use('/api/patients', require('./routes/patients'));
 app.use('/api/doctors', require('./routes/doctors'));
 app.use('/api/pharmacy', require('./routes/pharmacy/routes'));
 app.use('/api/pathology', require('./routes/pathology'));
-app.use('/api/bot', require('./routes/bot/routes'));
+// app.use('/api/bot', require('./routes/bot/routes')); // EXCLUDED - Chatbot
 app.use('/api/intake', require('./routes/intake'));
 app.use('/api/scanner-enterprise', require('./routes/scanner/routes'));
 app.use('/api/card', require('./routes/card'));
@@ -52,7 +51,7 @@ console.log('🛏️  Ward Map (beds) & Dashboard routes loaded');
 console.log('💳 Billing & Services routes loaded');
 
 // --- Telegram Bot ---
-// app.use('/api/telegram', require('./routes/telegram/routes'));
+app.use('/api/telegram', require('./routes/telegram/routes'));
 console.log('✅ Telegram Bot activated and running...');
 
 // --- Static Files & SPA Support ---

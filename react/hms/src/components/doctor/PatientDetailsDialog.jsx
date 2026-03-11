@@ -10,17 +10,15 @@ import {
   MdCake, MdHeight, MdMonitorWeight, MdScale,
   MdMonitorHeart, MdPhone, MdEmail, MdLocationOn,
   MdWork, MdCalendarToday, MdContentCopy, MdPictureAsPdf, MdVisibility,
-  MdSearch, MdFilterList, MdCheck
+  MdSearch, MdFilterList
 } from 'react-icons/md';
 import './PatientDetailsDialog.css';
 import patientsService from '../../services/patientsService';
 import prescriptionService from '../../services/prescriptionService';
 import reportService from '../../services/reportService';
 import { getGenderAvatar } from '../../utils/avatarHelpers';
-import { calculateBMI, getBMICategory } from '../../utils/vitalsHelpers';
-import MissingEmergencyPhone from '../common/MissingEmergencyPhone';
 
-const PatientDetailsDialog = ({ patient, isOpen, onClose, onEdit, showBillingTab = true }) => {
+const PatientDetailsDialog = ({ patient, isOpen, onClose, showBillingTab = true }) => {
   const [activeTab, setActiveTab] = useState('profile');
   const [isDownloading, setIsDownloading] = useState(false);
 
@@ -85,8 +83,10 @@ const PatientDetailsDialog = ({ patient, isOpen, onClose, onEdit, showBillingTab
     const bp = patient.vitals?.bp || patient.bp || '—';
 
     // BMI
-    let bmi = calculateBMI(weightKg, heightCm, age);
-    if (bmi === null && (patient.vitals?.bmi || patient.bmi)) {
+    let bmi = null;
+    if (weightKg && heightCm) {
+      bmi = (weightKg / Math.pow(heightCm / 100, 2)).toFixed(1);
+    } else if (patient.vitals?.bmi || patient.bmi) {
       bmi = patient.vitals?.bmi || patient.bmi;
     }
 
@@ -268,11 +268,23 @@ const PatientDetailsDialog = ({ patient, isOpen, onClose, onEdit, showBillingTab
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-4">
-                  <VitalCard label="BMI" value={patientData.bmi} unit="kg/m²" age={patientData.age} />
-                  <VitalCard label="Weight" value={patientData.weightKg} unit="kg" />
-                  <VitalCard label="Height" value={patientData.heightCm} unit="cm" />
-                  <VitalCard label="Blood Pressure" value={patientData.bp} unit="mmHg" />
+                <div className="pv-metrics-row">
+                  <div className="pv-metric-card">
+                    <span className="pv-metric-val">{patientData.bmi || '—'}</span>
+                    <span className="pv-metric-lbl">BMI</span>
+                  </div>
+                  <div className="pv-metric-card">
+                    <span className="pv-metric-val">{patientData.weightKg || '—'} <small>kg</small></span>
+                    <span className="pv-metric-lbl">Weight</span>
+                  </div>
+                  <div className="pv-metric-card">
+                    <span className="pv-metric-val">{patientData.heightCm || '—'} <small>cm</small></span>
+                    <span className="pv-metric-lbl">Height</span>
+                  </div>
+                  <div className="pv-metric-card">
+                    <span className="pv-metric-val">{patientData.bp}</span>
+                    <span className="pv-metric-lbl">Blood Pressure</span>
+                  </div>
                 </div>
               </div>
 
@@ -312,7 +324,7 @@ const PatientDetailsDialog = ({ patient, isOpen, onClose, onEdit, showBillingTab
 
             {/* Tab Content */}
             <div className="pd-tab-content-flutter">
-              {activeTab === 'profile' && <ProfileTab patient={patient} copyToClipboard={copyToClipboard} onEdit={onEdit} />}
+              {activeTab === 'profile' && <ProfileTab patient={patient} copyToClipboard={copyToClipboard} />}
               {activeTab === 'history' && <HistoryTab patient={patient} />}
               {activeTab === 'prescriptions' && <PrescriptionsTab patient={patient} />}
               {activeTab === 'lab' && <LabTab patient={patient} />}
@@ -326,58 +338,19 @@ const PatientDetailsDialog = ({ patient, isOpen, onClose, onEdit, showBillingTab
   );
 };
 
-// Reusable VitalCard component enforcing strict typographic hierarchy and semantic color-coding
-const getVitalStatusColor = (label, value) => {
-  if (!value || value === '—' || value === '—/—') return 'bg-white border-slate-200 text-slate-900';
-
-  if (label.toLowerCase() === 'blood pressure' && typeof value === 'string' && value.includes('/')) {
-    const [sys, dia] = value.split('/').map(Number);
-    if (sys >= 180 || dia >= 120) return 'bg-red-50 border-red-200 text-red-900'; // Crisis
-    if (sys >= 130 || dia >= 80) return 'bg-amber-50 border-amber-200 text-amber-900'; // High/Warning
-  }
-
-  return 'bg-white border-slate-200 text-slate-900'; // Normal default
-};
-
-const VitalCard = ({ label, value, unit, age }) => {
-  let colorClass = getVitalStatusColor(label, value);
-  let displayLabel = label;
-  let tooltip = '';
-  const isStringMessage = typeof value === 'string' && value.length > 10;
-
-  // Apply strict Bug 33 Pediatric BMI Logic
-  if (label.toLowerCase() === 'bmi') {
-    const cat = getBMICategory(value, age);
-    colorClass = cat.colorClass;
-    displayLabel = cat.label;
-    if (cat.tooltip) tooltip = cat.tooltip;
-  }
-
-  return (
-    <div
-      className={`flex flex-col w-full p-3.5 border rounded-xl shadow-sm transition-shadow hover:shadow-md ring-1 ring-transparent hover:border-teal-200 ${colorClass}`}
-      title={tooltip || undefined}
-    >
-      <span className="text-xs uppercase tracking-wider opacity-60 font-bold mb-1">{displayLabel}</span>
-      <div className="flex items-baseline gap-1 mt-auto">
-        {isStringMessage ? (
-          <span className="text-[11px] font-medium leading-tight">{value}</span>
-        ) : (
-          <>
-            <span className="text-2xl font-bold">{value && value !== '—/—' ? value : '—'}</span>
-            {unit && value && value !== '—' && value !== '—/—' && (
-              <span className="text-sm font-medium opacity-70">{unit}</span>
-            )}
-          </>
-        )}
-      </div>
+// Vital Card Component
+const VitalCard = ({ icon, label, value, type }) => (
+  <div className="pd-vital-card-flutter">
+    <div className={`pd-vital-icon-flutter ${type}`}>
+      {icon}
     </div>
-  );
-};
+    <span className="pd-vital-value-flutter">{value}</span>
+    <span className="pd-vital-label-flutter">{label}</span>
+  </div>
+);
 
 // Tab Components
-const ProfileTab = ({ patient, copyToClipboard, onEdit }) => {
-  const [isAddressCopied, setIsAddressCopied] = useState(false);
+const ProfileTab = ({ patient, copyToClipboard }) => {
   const fullAddress = [patient.houseNo, patient.street, patient.city, patient.state]
     .filter(Boolean).join(', ');
 
@@ -389,24 +362,13 @@ const ProfileTab = ({ patient, copyToClipboard, onEdit }) => {
           <div className="pd-card-header-with-action">
             <h4 className="pd-card-title">Contact Details</h4>
             {fullAddress && (
-              <div className="relative group">
-                <button
-                  className={`pv-btn-outline-small flex items-center gap-1.5 transition-all duration-200 ${isAddressCopied ? 'border-emerald-500 text-emerald-600 bg-emerald-50' : ''}`}
-                  onClick={() => {
-                    copyToClipboard(fullAddress, 'Address');
-                    setIsAddressCopied(true);
-                    setTimeout(() => setIsAddressCopied(false), 2000);
-                  }}
-                  aria-label="Copy full residential address to clipboard"
-                >
-                  {isAddressCopied ? <MdCheck size={12} className="animate-in zoom-in duration-200" /> : <MdContentCopy size={12} />}
-                  {isAddressCopied ? 'Address Copied!' : 'Copy Address'}
-                </button>
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1.5 bg-slate-900/95 backdrop-blur-sm text-white text-[10px] font-bold rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none whitespace-nowrap z-30 shadow-xl border border-white/10 scale-90 group-hover:scale-100 origin-bottom">
-                  {isAddressCopied ? 'Address Copied!' : 'Copy to Clipboard'}
-                  <div className="absolute top-full left-1/2 -translate-x-1/2 border-x-[5px] border-x-transparent border-t-[5px] border-t-slate-900/95"></div>
-                </div>
-              </div>
+              <button
+                className="pv-btn-outline-small"
+                onClick={() => copyToClipboard(fullAddress, 'Address')}
+                title="Copy full address"
+              >
+                <MdContentCopy size={12} /> Copy Address
+              </button>
             )}
           </div>
           <InfoRow label="Phone Number" value={patient.phone || patient.phoneNumber} />
@@ -416,9 +378,10 @@ const ProfileTab = ({ patient, copyToClipboard, onEdit }) => {
 
         <div className="pd-info-card">
           <h4 className="pd-card-title">Emergency & Allergies</h4>
-          <InfoRow label="Emergency Contact" value={patient.emergencyContactName || <span className="text-slate-400 italic font-normal">Not Provided</span>} />
-          <InfoRow label="Relationship" value={(patient.emergencyContactRelation || patient.metadata?.emergencyContactRelation) || <span className="text-slate-400 italic font-normal">Not Provided</span>} />
-          <InfoRow label="Phone Number" value={patient.emergencyContactPhone || <MissingEmergencyPhone onEdit={onEdit} patient={patient} />} />
+          <InfoRow label="Emergency Contact" value={patient.emergencyContactName} />
+          <div style={{ fontSize: '12px', color: '#64748B', marginTop: '4px' }}>
+            {patient.emergencyContactPhone}
+          </div>
           <InfoRow label="Allergies" value={
             patient.allergies?.length > 0 ? (
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '8px' }}>
@@ -448,10 +411,6 @@ const HistoryTab = ({ patient }) => {
   const [loading, setLoading] = useState(true);
   const [selectedItem, setSelectedItem] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
-
-  // Bug 27: Add New state
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-
   const patientId = patient.id || patient._id || patient.patientId;
 
   const fetchHistory = async () => {
@@ -499,16 +458,7 @@ const HistoryTab = ({ patient }) => {
 
   return (
     <div className="pd-tab-inner">
-      {/* Bug 27: Interactive Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-        <h3 className="pd-section-title-flutter" style={{ marginBottom: 0 }}>Medical History Timeline</h3>
-        <button
-          onClick={() => setIsAddModalOpen(true)}
-          className="pv-btn-primary flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors shadow-sm text-sm font-medium"
-        >
-          <span>+ Add History</span>
-        </button>
-      </div>
+      <h3 className="pd-section-title-flutter">Medical History Timeline</h3>
       {history.length > 0 ? (
         <div className="pd-prescriptions-table-wrapper">
           <table className="pd-prescriptions-table">
@@ -533,7 +483,7 @@ const HistoryTab = ({ patient }) => {
                     {item.medicalHistory || item.diagnosis || '—'}
                   </td>
                   <td>
-                    <button
+                    <button 
                       className="pd-prescription-action-btn"
                       onClick={() => item.pdfId ? reportService.viewPdf(item.pdfId) : handleViewDetails(item)}
                       title="View Medical History"
@@ -548,22 +498,6 @@ const HistoryTab = ({ patient }) => {
         </div>
       ) : (
         <EmptyState title="No Medical History" />
-      )}
-
-      {/* Bug 27: Placeholder Modal for Add Action */}
-      {isAddModalOpen && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 10001, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setIsAddModalOpen(false)}>
-          <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '12px', width: '400px', maxWidth: '90%' }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '18px', fontWeight: 'bold' }}>Add Medical History</h3>
-            <div style={{ padding: '32px 0', textAlign: 'center', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px dashed #cbd5e1' }}>
-              <p style={{ color: '#64748b', fontSize: '14px', margin: 0 }}>Form component goes here.</p>
-            </div>
-            <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-              <button style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer' }} onClick={() => setIsAddModalOpen(false)}>Cancel</button>
-              <button style={{ padding: '8px 16px', borderRadius: '6px', border: 'none', background: '#0f766e', color: 'white', cursor: 'not-allowed', opacity: 0.5 }}>Save</button>
-            </div>
-          </div>
-        </div>
       )}
 
       {/* Medical History Detail Modal */}
@@ -677,10 +611,6 @@ const HistoryTab = ({ patient }) => {
 const PrescriptionsTab = ({ patient }) => {
   const [prescriptions, setPrescriptions] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  // Bug 27: Add New state
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-
   const patientId = patient.id || patient._id || patient.patientId;
 
   useEffect(() => {
@@ -717,16 +647,7 @@ const PrescriptionsTab = ({ patient }) => {
 
   return (
     <div className="pd-tab-inner">
-      {/* Bug 27: Interactive Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-        <h3 className="pd-section-title-flutter" style={{ marginBottom: 0 }}>Prescriptions</h3>
-        <button
-          onClick={() => setIsAddModalOpen(true)}
-          className="pv-btn-primary flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors shadow-sm text-sm font-medium"
-        >
-          <span>+ Add Prescription</span>
-        </button>
-      </div>
+      <h3 className="pd-section-title-flutter">Prescriptions</h3>
       {prescriptions.length > 0 ? (
         <div className="pd-prescriptions-table-wrapper">
           <table className="pd-prescriptions-table">
@@ -751,7 +672,7 @@ const PrescriptionsTab = ({ patient }) => {
                     {item.prescriptionSummary || item.diagnosis || '—'}
                   </td>
                   <td>
-                    <button
+                    <button 
                       className="pd-prescription-action-btn"
                       onClick={() => item.pdfId ? reportService.viewPdf(item.pdfId) : null}
                       disabled={!item.pdfId}
@@ -768,22 +689,6 @@ const PrescriptionsTab = ({ patient }) => {
       ) : (
         <EmptyState title="No Prescriptions Found" />
       )}
-
-      {/* Bug 27: Placeholder Modal for Add Action */}
-      {isAddModalOpen && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 10001, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setIsAddModalOpen(false)}>
-          <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '12px', width: '500px', maxWidth: '90%' }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '18px', fontWeight: 'bold' }}>Add Prescription</h3>
-            <div style={{ padding: '32px 0', textAlign: 'center', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px dashed #cbd5e1' }}>
-              <p style={{ color: '#64748b', fontSize: '14px', margin: 0 }}>Prescription form structure (Drug, Dose, Route, Frequency) goes here.</p>
-            </div>
-            <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-              <button style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer' }} onClick={() => setIsAddModalOpen(false)}>Cancel</button>
-              <button style={{ padding: '8px 16px', borderRadius: '6px', border: 'none', background: '#0f766e', color: 'white', cursor: 'not-allowed', opacity: 0.5 }}>Save Prescription</button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
@@ -791,10 +696,6 @@ const PrescriptionsTab = ({ patient }) => {
 const LabTab = ({ patient }) => {
   const [labs, setLabs] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  // Bug 27: Add New state
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-
   const patientId = patient.id || patient._id || patient.patientId;
 
   useEffect(() => {
@@ -818,16 +719,7 @@ const LabTab = ({ patient }) => {
 
   return (
     <div className="pd-tab-inner">
-      {/* Bug 27: Interactive Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-        <h3 className="pd-section-title-flutter" style={{ marginBottom: 0 }}>Lab Reports</h3>
-        <button
-          onClick={() => setIsAddModalOpen(true)}
-          className="pv-btn-primary flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors shadow-sm text-sm font-medium"
-        >
-          <span>+ Upload Lab Result</span>
-        </button>
-      </div>
+      <h3 className="pd-section-title-flutter">Lab Reports</h3>
       {labs.length > 0 ? (
         <div className="pd-grid-flutter">
           {labs.map((item, i) => (
@@ -835,8 +727,8 @@ const LabTab = ({ patient }) => {
               <div className="pd-card-header-flex">
                 <h4 className="pd-card-title">{item.testType || 'Lab Test'}</h4>
                 {item.pdfId && (
-                  <button
-                    className="pd-view-pdf-btn"
+                  <button 
+                    className="pd-view-pdf-btn" 
                     onClick={() => reportService.viewPdf(item.pdfId)}
                     title="View Lab Report Image"
                   >
@@ -844,11 +736,11 @@ const LabTab = ({ patient }) => {
                   </button>
                 )}
               </div>
-
+              
               <p><strong>Lab:</strong> {item.labName || '—'}</p>
               <p><strong>Date:</strong> {item.reportDate ? new Date(item.reportDate).toLocaleDateString() : '—'}</p>
               <p><strong>Category:</strong> {item.testCategory || '—'}</p>
-
+              
               {item.results && item.results.length > 0 && (
                 <div className="pd-lab-results">
                   <strong>Test Results:</strong>
@@ -867,7 +759,7 @@ const LabTab = ({ patient }) => {
                   </div>
                 </div>
               )}
-
+              
               <span className={`pd-status-badge ${item.status || 'completed'}`}>
                 {item.status || 'Completed'}
               </span>
@@ -876,22 +768,6 @@ const LabTab = ({ patient }) => {
         </div>
       ) : (
         <EmptyState title="No Lab Results Found" />
-      )}
-
-      {/* Bug 27: Placeholder Modal for Add Action */}
-      {isAddModalOpen && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 10001, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setIsAddModalOpen(false)}>
-          <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '12px', width: '400px', maxWidth: '90%' }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '18px', fontWeight: 'bold' }}>Upload Lab Result</h3>
-            <div style={{ padding: '32px 0', textAlign: 'center', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px dashed #cbd5e1' }}>
-              <p style={{ color: '#64748b', fontSize: '14px', margin: 0 }}>File upload & Test Details form goes here.</p>
-            </div>
-            <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-              <button style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer' }} onClick={() => setIsAddModalOpen(false)}>Cancel</button>
-              <button style={{ padding: '8px 16px', borderRadius: '6px', border: 'none', background: '#0f766e', color: 'white', cursor: 'not-allowed', opacity: 0.5 }}>Upload Report</button>
-            </div>
-          </div>
-        </div>
       )}
     </div>
   );
@@ -912,7 +788,7 @@ const BillingTab = ({ patient }) => {
             'Content-Type': 'application/json'
           }
         });
-
+        
         if (response.ok) {
           const data = await response.json();
           setBills(data.bills || []);
@@ -936,7 +812,7 @@ const BillingTab = ({ patient }) => {
   return (
     <div className="pd-tab-inner">
       <h3 className="pd-section-title-flutter">Billing & Payments</h3>
-
+      
       {loading ? (
         <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
           Loading bills...
@@ -950,14 +826,14 @@ const BillingTab = ({ patient }) => {
                   {bill.billNumber}
                 </h4>
                 <span style={{ fontSize: '0.875rem', color: '#666' }}>
-                  {new Date(bill.date).toLocaleDateString('en-GB', {
-                    day: 'numeric',
-                    month: 'short',
-                    year: 'numeric'
+                  {new Date(bill.date).toLocaleDateString('en-GB', { 
+                    day: 'numeric', 
+                    month: 'short', 
+                    year: 'numeric' 
                   })}
                 </span>
               </div>
-
+              
               <div style={{ marginTop: '0.75rem', display: 'grid', gap: '0.5rem' }}>
                 <p style={{ margin: 0, fontSize: '0.875rem' }}>
                   <strong>Total Amount:</strong> ₹{bill.totalAmount?.toFixed(2) || '0.00'}
@@ -990,7 +866,7 @@ const BillingTab = ({ patient }) => {
                   </div>
                 </div>
               )}
-
+              
               <span className={`pd-status-badge ${bill.status?.toLowerCase().replace(' ', '-') || 'pending'}`}>
                 {bill.status || 'Pending'}
               </span>

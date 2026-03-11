@@ -5,13 +5,8 @@
  */
 
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @keyframes slideUp {
@@ -19,7 +14,6 @@
     transform: translateY(30px);
     opacity: 0;
   }
-
   to {
     transform: translateY(0);
     opacity: 1;
@@ -66,10 +60,8 @@
 
 .billing-modal-content,
 .billing-service-items {
-  scrollbar-width: none;
-  /* Firefox */
-  -ms-overflow-style: none;
-  /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
 }
 
 .billing-modal-content::-webkit-scrollbar-track,
@@ -88,7 +80,7 @@
     background: white;
     position: static;
   }
-
+  
   .billing-modal-container {
     box-shadow: none;
     max-width: 100%;

@@ -4,8 +4,8 @@
  */
 
 const config = {
-  // Roles with access - Added 'doctor' for intake access
-  AUTHORIZED_ROLES: ['admin', 'pharmacist', 'superadmin', 'doctor'],
+  // Roles with access
+  AUTHORIZED_ROLES: ['admin', 'pharmacist', 'superadmin'],
   
   // Stock thresholds
   LOW_STOCK_THRESHOLD: 10,

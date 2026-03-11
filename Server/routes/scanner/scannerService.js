@@ -9,7 +9,6 @@ const { PatientPDF, ScannedDataVerification } = require('../../Models');
 const { convertExtractedDataToRows } = require('./dataConverter');
 const { logh } = require('./utils');
 const config = require('./config');
-const { detectSections, mergeSectionData } = require('./sectionDetector');
 
 // Initialize LandingAI scanner
 let landingAIScanner = null;

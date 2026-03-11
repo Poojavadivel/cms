@@ -14,7 +14,7 @@ const config = {
   TEMP_UPLOAD_DIR: path.join(__dirname, '../../uploads/temp'),
   
   // API keys
-  LANDINGAI_API_KEY: 'bm9ibnowenNqZ3A0NWN1dmRjOGZtOndjblBTRGIzSmNKVm9mVGttYXlvd3JmM1V4bGVtSWFr',
+  LANDINGAI_API_KEY: process.env.LANDINGAI_API_KEY || 'pat_XlbvTpObJfmlCvLPHjbSWTh2vzCciqZT',
   
   // Allowed file types
   ALLOWED_FILE_TYPES: ['application/pdf', 'image/jpeg', 'image/png'],
