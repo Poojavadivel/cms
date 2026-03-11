@@ -111,6 +111,7 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
   const designations = [
     'Doctor',
     'Admin',
+    'Pathologist',
     'Staff Nurse',
     'Head Nurse',
     'Nursing Assistant',
