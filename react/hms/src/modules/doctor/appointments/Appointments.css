@@ -211,18 +211,18 @@ body {
   font-weight: 600;
   font-size: 13px;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(14, 74, 75, 0.2);
+  box-shadow: 0 4px 12px rgba(32, 125, 192, 0.2);
   transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   display: flex;
   align-items: center;
   gap: 8px;
-  border: 1px solid #047857;
+  border: 1px solid #207DC0;
 }
 
 .btn-approve-all:hover {
-  background-color: #047857;
+  background-color: #165a8a;
   transform: translateY(-2px) scale(1.02);
-  box-shadow: 0 6px 15px rgba(14, 74, 75, 0.3);
+  box-shadow: 0 6px 15px rgba(32, 125, 192, 0.3);
 }
 
 .btn-approve-all:active {
@@ -729,8 +729,8 @@ body {
 }
 
 .status-pill.confirmed {
-  background: rgba(16, 185, 129, 0.1);
-  color: #059669;
+  background: rgba(32, 125, 192, 0.1);
+  color: #207DC0;
 }
 
 .status-pill.pending {

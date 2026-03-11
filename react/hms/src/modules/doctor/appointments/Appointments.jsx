@@ -364,7 +364,7 @@ const StatusBadge = ({ status, onClick }) => {
   if (['scheduled', 'pending'].includes(s)) {
     styles = 'bg-blue-50 text-blue-700 border-blue-100';
   } else if (['confirmed', 'completed'].includes(s)) {
-    styles = 'bg-emerald-50 text-emerald-700 border-emerald-100';
+    styles = 'bg-blue-50 text-blue-700 border-blue-100';
   } else if (['cancelled', 'no-show', 'noshow'].includes(s)) {
     styles = 'bg-red-50 text-red-700 border-red-100';
   } else if (['rescheduled'].includes(s)) {
