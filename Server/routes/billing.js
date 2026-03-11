@@ -14,7 +14,7 @@ const express = require('express');
 const router = express.Router();
 const Billing = require('../Models/Billing');
 const Patient = require('../Models/Patient');
-const auth = require('../Middleware/auth');
+const auth = require('../Middleware/Auth');
 
 /**
  * @route   GET /api/billing
