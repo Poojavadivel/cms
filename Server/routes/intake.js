@@ -392,6 +392,10 @@ router.post('/:id/intake', auth, async (req, res) => {
           } else {
             appt.vitals = Object.assign({}, appt.vitals || {}, intakePayload.triage?.vitals || {});
 
+            // Mark appointment as completed when intake is saved
+            appt.status = 'completed';
+            console.log('INTAKE POST: marking appointment as completed');
+
             // Update followUp data if provided
             if (data.followUp) {
               console.log('INTAKE POST: updating followUp data for appointment');
