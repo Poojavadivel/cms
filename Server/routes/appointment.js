@@ -767,6 +767,7 @@ router.post('/check-availability', auth, async (req, res) => {
       const doctorQuery = {
         doctorId,
         status: { $nin: ['Cancelled', 'No-Show'] }, // Exclude cancelled appointments
+        isDeleted: { $ne: true }, // Exclude soft-deleted appointments
         $or: [
           // Appointment starts during the requested time
           { startAt: { $gte: startTime, $lt: endTime } },
@@ -856,6 +857,7 @@ router.post('/check-availability', auth, async (req, res) => {
       const patientQuery = {
         patientId,
         status: { $nin: ['Cancelled', 'No-Show'] },
+        isDeleted: { $ne: true }, // Exclude soft-deleted appointments
         $or: [
           { startAt: { $gte: startTime, $lt: endTime } },
           { endAt: { $gt: startTime, $lte: endTime } },
