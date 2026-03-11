@@ -26,6 +26,7 @@ const departments = [
 const designations = [
     'Doctor',
     'Admin',
+    'Pathologist',
     'Staff Nurse',
     'Head Nurse',
     'Nursing Assistant',
@@ -102,13 +103,20 @@ const AddStaffDialog = ({ initial = null, onSubmit, onCancel }) => {
         }
     }, [initial]);
 
-    // Auto-check createUserAccount when Doctor/Admin is selected
+    // Auto-check createUserAccount when Doctor/Admin/Pharmacist/Pathologist is selected
     useEffect(() => {
-        if (formData.designation === 'Doctor' || formData.designation === 'Admin') {
+        const roleMap = {
+            'Doctor': 'doctor',
+            'Admin': 'admin',
+            'Pharmacist': 'pharmacist',
+            'Pathologist': 'pathologist'
+        };
+
+        if (roleMap[formData.designation]) {
             setFormData(prev => ({
                 ...prev,
                 createUserAccount: true,
-                userRole: formData.designation === 'Doctor' ? 'doctor' : 'admin'
+                userRole: roleMap[formData.designation]
             }));
         } else {
             setFormData(prev => ({
