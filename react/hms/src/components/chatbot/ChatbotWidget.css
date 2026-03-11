@@ -21,7 +21,7 @@
 }
 
 .chatbot-widget.maximized {
-  width: 500px;
+  width: 700px;
   height: 600px;
   animation: scaleUp 0.3s ease-out;
 }
