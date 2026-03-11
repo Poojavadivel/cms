@@ -79,7 +79,7 @@ function getStatus(pct) {
   return 'Critical'
 }
 
-export default function AttendancePage() {
+export default function AttendancePage({ noLayout = false }) {
   const [activeTab, setActiveTab] = useState('students')
   const [statusFilter, setStatusFilter] = useState('All')
   const [filterOpen, setFilterOpen] = useState(false)
@@ -94,8 +94,8 @@ export default function AttendancePage() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  return (
-    <Layout title="Attendance">
+  const inner = (
+    <>
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
         <div>
           <h1 className="text-3xl font-bold text-slate-900">Attendance Register</h1>
@@ -224,6 +224,7 @@ export default function AttendancePage() {
         )}
         type={activeTab === 'students' ? 'student' : 'staff'}
       />
-    </Layout>
+    </>
   )
+  return noLayout ? inner : <Layout title="Attendance">{inner}</Layout>
 }

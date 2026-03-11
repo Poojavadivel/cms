@@ -9,7 +9,7 @@ const initialExamsData = [
   { id: 5, code: 'CS406', name: 'Operating Systems',    date: '2023-11-20', time: '10:00', room: 'Room 304',  type: 'Quiz',     status: 'Completed', duration: '60', maxMarks: '25' },
 ]
 
-export default function ExamsPage() {
+export default function ExamsPage({ noLayout = false }) {
   const [exams, setExams] = useState(initialExamsData)
   const [showModal, setShowModal] = useState(false)
   const [editingExam, setEditingExam] = useState(null)
@@ -105,8 +105,8 @@ export default function ExamsPage() {
     return `${displayHour}:${minutes} ${ampm}`
   }
 
-  return (
-    <Layout title="Exams">
+  const inner = (
+    <>
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
         <div>
           <h1 className="text-3xl font-bold text-slate-900">Exam Schedule</h1>
@@ -407,6 +407,7 @@ export default function ExamsPage() {
           </div>
         </div>
       )}
-    </Layout>
+    </>
   )
+  return noLayout ? inner : <Layout title="Exams">{inner}</Layout>
 }

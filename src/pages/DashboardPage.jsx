@@ -2,6 +2,11 @@ import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { destroyUserSession, getUserSession } from '../auth/sessionController';
 import { cmsRoles, roleMenuGroups } from '../data/roleConfig';
+import TimetablePage from './TimetablePage';
+import AttendancePage from './AttendancePage';
+import ExamsPage from './ExamsPage';
+import PlacementPage from './PlacementPage';
+import FacilityPage from './FacilityPage';
 
 function GraduationIcon() {
   return (
@@ -31,6 +36,23 @@ export default function DashboardPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [activePage, setActivePage] = useState(null);
+
+  const pageMap = {
+    '/timetable': TimetablePage,
+    '/attendance': AttendancePage,
+    '/exams': ExamsPage,
+    '/placement': PlacementPage,
+    '/facility': FacilityPage,
+  };
+  const pageTitles = {
+    '/timetable': 'Timetable',
+    '/attendance': 'Attendance',
+    '/exams': 'Exams',
+    '/placement': 'Placement',
+    '/facility': 'Facility',
+  };
+  const ActivePage = activePage ? pageMap[activePage] : null;
 
   const session = getUserSession();
   const sessionRole = session?.role || null;
@@ -105,10 +127,19 @@ export default function DashboardPage() {
                     <li key={item}>
                       <a
                         href="#"
-                        className={groupIndex === 0 && itemIndex === 0 ? 'active' : ''}
+                        className={
+                          (activePage === null && groupIndex === 0 && itemIndex === 0) ||
+                          (activePage !== null && academicRoutes[item] === activePage)
+                            ? 'active' : ''
+                        }
                         onClick={(event) => {
                           event.preventDefault();
-                          if (academicRoutes[item]) navigate(academicRoutes[item]);
+                          if (academicRoutes[item]) {
+                            setActivePage(academicRoutes[item]);
+                          } else {
+                            setActivePage(null);
+                          }
+                          setSidebarOpen(false);
                         }}
                       >
                         {item}
@@ -141,7 +172,7 @@ export default function DashboardPage() {
                 <MenuIcon />
               </button>
               <div className="topbar-left">
-                <h2>{data.label} Dashboard</h2>
+                <h2>{activePage ? pageTitles[activePage] : `${data.label} Dashboard`}</h2>
                 <p>{data.subtitle}</p>
               </div>
             </div>
@@ -150,6 +181,8 @@ export default function DashboardPage() {
             </div>
           </div>
 
+          {ActivePage && <ActivePage noLayout />}
+          {!ActivePage && (<>
           <div className="profile-header">
             <div className="profile-left">
               <div className="profile-avatar-wrap">
@@ -249,6 +282,7 @@ export default function DashboardPage() {
               </div>
             </div>
           </div>
+          </>)}
         </main>
       </div>
     </>
