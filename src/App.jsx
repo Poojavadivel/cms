@@ -8,6 +8,7 @@ import AttendancePage from './pages/AttendancePage';
 import ExamsPage from './pages/ExamsPage';
 import PlacementPage from './pages/PlacementPage';
 import FacilityPage from './pages/FacilityPage';
+import SettingsPage from './pages/SettingsPage';
 
 export default function App() {
   const session = getUserSession();
@@ -33,6 +34,14 @@ export default function App() {
       <Route path="/exams" element={<ProtectedRoute><ExamsPage /></ProtectedRoute>} />
       <Route path="/placement" element={<ProtectedRoute><PlacementPage /></ProtectedRoute>} />
       <Route path="/facility" element={<ProtectedRoute><FacilityPage /></ProtectedRoute>} />
+      <Route
+        path="/settings"
+        element={
+          <ProtectedRoute>
+            <SettingsPage />
+          </ProtectedRoute>
+        }
+      />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

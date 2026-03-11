@@ -98,6 +98,15 @@ export default function DashboardPage() {
     navigate('/', { replace: true });
   }
 
+  function handleSidebarItemClick(event, item) {
+    event.preventDefault();
+
+    if (item.toLowerCase() === 'settings') {
+      setSidebarOpen(false);
+      navigate(`/settings?role=${encodeURIComponent(role)}`);
+    }
+  }
+
   return (
     <>
       <div
@@ -134,12 +143,16 @@ export default function DashboardPage() {
                         }
                         onClick={(event) => {
                           event.preventDefault();
-                          if (academicRoutes[item]) {
+                          if (item.toLowerCase() === 'settings') {
+                            setSidebarOpen(false);
+                            navigate(`/settings?role=${encodeURIComponent(role)}`);
+                          } else if (academicRoutes[item]) {
                             setActivePage(academicRoutes[item]);
+                            setSidebarOpen(false);
                           } else {
                             setActivePage(null);
+                            setSidebarOpen(false);
                           }
-                          setSidebarOpen(false);
                         }}
                       >
                         {item}
