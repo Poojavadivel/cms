@@ -142,13 +142,20 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
 
   /* Validation & Handlers */
 
-  // Auto-check createUserAccount when Doctor/Admin is selected
+  // Auto-check createUserAccount when Doctor/Admin/Pharmacist/Pathologist is selected
   useEffect(() => {
-    if (formData.designation === 'Doctor' || formData.designation === 'Admin') {
+    const roleMap = {
+      'Doctor': 'doctor',
+      'Admin': 'admin',
+      'Pharmacist': 'pharmacist',
+      'Pathologist': 'pathologist'
+    };
+    
+    if (roleMap[formData.designation]) {
       setFormData(prev => ({
         ...prev,
         createUserAccount: true,
-        userRole: formData.designation === 'Doctor' ? 'doctor' : 'admin'
+        userRole: roleMap[formData.designation]
       }));
     } else {
       setFormData(prev => ({
@@ -630,7 +637,7 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
                       />
                     </InputGroup>
 
-                    {/* User Account Section for Doctor/Admin */}
+                    {/* User Account Section for Doctor/Admin/Pharmacist/Pathologist */}
                     {formData.createUserAccount && (
                       <>
                         <div className="col-span-2 mt-6 pt-6 border-t border-slate-200">
@@ -641,7 +648,7 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
                             <div>
                               <h3 className="text-lg font-semibold text-slate-900">Login Credentials</h3>
                               <p className="text-sm text-slate-500">
-                                {formData.designation === 'Doctor' ? 'Doctor' : 'Admin'} account will be created with system access
+                                {formData.designation} account will be created with system access
                               </p>
                             </div>
                           </div>
@@ -653,11 +660,13 @@ const StaffFormEnterprise = ({ initial = null, onSubmit, onCancel }) => {
                             value={formData.userRole}
                             onChange={handleChange}
                             className="w-full bg-transparent border-none py-1 px-0 text-slate-900 focus:outline-none focus:ring-0"
-                            disabled={formData.designation === 'Doctor' || formData.designation === 'Admin'}
+                            disabled={['Doctor', 'Admin', 'Pharmacist', 'Pathologist'].includes(formData.designation)}
                           >
                             <option value="">Select Role...</option>
                             <option value="doctor">Doctor</option>
                             <option value="admin">Admin</option>
+                            <option value="pharmacist">Pharmacist</option>
+                            <option value="pathologist">Pathologist</option>
                           </select>
                         </InputGroup>
 
