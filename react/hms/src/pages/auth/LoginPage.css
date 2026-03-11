@@ -1,10 +1,8 @@
 /**
-* LoginPage.css
+ * LoginPage.css
  * Exact replica of Flutter LoginPage styling
  * Enterprise-grade design system
- * Component styling now completely handled by Tailwind CSS in the JSX.
- * This file is kept empty to preserve imports and avoid breaking changes.
-*/
+ */
 
 /* Color Variables - Matching Flutter AppColors EXACTLY */
 :root {
@@ -1116,4 +1114,3 @@ button:focus-visible {
     display: none;
   }
 }
-/* Add any emergency non-Tailwind overrides here if needed */
