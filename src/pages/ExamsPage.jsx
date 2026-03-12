@@ -1,19 +1,35 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import Layout from '../components/Layout'
 import { getUserSession } from '../auth/sessionController'
 import Modal from '../components/Modal'
+import MarksEntryModal from '../components/exam/MarksEntryModal'
+import HallTicket from '../components/exam/HallTicket'
+import ExamSessionModal from '../components/exam/ExamSessionModal'
+import TimetableDraftForm from '../components/exam/TimetableDraftForm'
+import InvigilatorAssignModal from '../components/exam/InvigilatorAssignModal'
+import RevaluationModal from '../components/exam/RevaluationModal'
+import ExamReportModal from '../components/exam/ExamReportModal'
+import AttendanceModal from '../components/exam/AttendanceModal'
+import SeatAssignmentModal from '../components/exam/SeatAssignmentModal'
+import InternalMarksModal from '../components/exam/InternalMarksModal'
+import TimetableApprovalModal from '../components/exam/TimetableApprovalModal'
+import NotificationPanel from '../components/exam/NotificationPanel'
+import { initializeExamData } from '../data/examData'
 
 const initialExamsData = [
-  { id: 1, code: 'CS401', name: 'Data Structures',      date: '2023-12-10', time: '10:00', room: 'Hall A',    type: 'Mid-Sem',  status: 'Upcoming', duration: '120', maxMarks: '100' },
-  { id: 2, code: 'MA405', name: 'Discrete Mathematics', date: '2023-12-12', time: '09:00', room: 'Hall B',    type: 'Mid-Sem',  status: 'Upcoming', duration: '120', maxMarks: '100' },
-  { id: 3, code: 'CS403', name: 'Database Systems',     date: '2023-11-28', time: '11:00', room: 'Lab 2',     type: 'Practical',status: 'Completed', duration: '180', maxMarks: '50' },
-  { id: 4, code: 'HU102', name: 'Tech Writing',         date: '2023-12-15', time: '14:00', room: 'Room 101',  type: 'Internal', status: 'Upcoming', duration: '90', maxMarks: '50' },
-  { id: 5, code: 'CS406', name: 'Operating Systems',    date: '2023-11-20', time: '10:00', room: 'Room 304',  type: 'Quiz',     status: 'Completed', duration: '60', maxMarks: '25' },
+  { id: 1, code: 'CS401', name: 'Data Structures',      date: '2023-12-10', time: '10:00', room: 'Hall A',    type: 'Mid-Sem',  status: 'Upcoming', duration: '120', maxMarks: '100', registered: false, resultsPublished: false },
+  { id: 2, code: 'MA405', name: 'Discrete Mathematics', date: '2023-12-12', time: '09:00', room: 'Hall B',    type: 'Mid-Sem',  status: 'Upcoming', duration: '120', maxMarks: '100', registered: true, resultsPublished: false },
+  { id: 3, code: 'CS403', name: 'Database Systems',     date: '2023-11-28', time: '11:00', room: 'Lab 2',     type: 'Practical',status: 'Completed', duration: '180', maxMarks: '50', registered: true, resultsPublished: true, marks: 42, grade: 'A' },
+  { id: 4, code: 'HU102', name: 'Tech Writing',         date: '2023-12-15', time: '14:00', room: 'Room 101',  type: 'Internal', status: 'Upcoming', duration: '90', maxMarks: '50', registered: false, resultsPublished: false },
+  { id: 5, code: 'CS406', name: 'Operating Systems',    date: '2023-11-20', time: '10:00', room: 'Room 304',  type: 'Quiz',     status: 'Completed', duration: '60', maxMarks: '25', registered: true, resultsPublished: true, marks: 22, grade: 'A+' },
 ]
 
 export default function ExamsPage({ noLayout = false }) {
   const session = getUserSession()
   const isStudent = session?.role === 'student'
+  const isFaculty = session?.role === 'faculty'
+  const isAdmin = session?.role === 'admin'
+  
   const [exams, setExams] = useState(initialExamsData)
   const [showModal, setShowModal] = useState(false)
   const [editingExam, setEditingExam] = useState(null)
@@ -28,6 +44,47 @@ export default function ExamsPage({ noLayout = false }) {
     duration: '',
     maxMarks: ''
   })
+  
+  // Modal states for exam features
+  const [showMarksEntryModal, setShowMarksEntryModal] = useState(false)
+  const [showHallTicket, setShowHallTicket] = useState(false)
+  const [showExamSessionModal, setShowExamSessionModal] = useState(false)
+  const [showTimetableDraftForm, setShowTimetableDraftForm] = useState(false)
+  const [showInvigilatorModal, setShowInvigilatorModal] = useState(false)
+  const [showRevaluationModal, setShowRevaluationModal] = useState(false)
+  const [showExamReportModal, setShowExamReportModal] = useState(false)
+  const [showAttendanceModal, setShowAttendanceModal] = useState(false)
+  const [showSeatAssignmentModal, setShowSeatAssignmentModal] = useState(false)
+  const [showInternalMarksModal, setShowInternalMarksModal] = useState(false)
+  const [showTimetableApprovalModal, setShowTimetableApprovalModal] = useState(false)
+  const [showNotificationPanel, setShowNotificationPanel] = useState(false)
+  const [selectedExam, setSelectedExam] = useState(null)
+  
+  // Initialize exam data on mount
+  useEffect(() => {
+    initializeExamData()
+  }, [])
+
+  // Handle exam registration
+  const handleRegister = (examId) => {
+    setExams(exams.map(exam => 
+      exam.id === examId ? { ...exam, registered: true } : exam
+    ));
+    alert('Successfully registered for the exam!');
+  }
+
+  // Handle opening unified hall ticket
+  const handleOpenAllHallTickets = () => {
+    // Get all registered exams
+    const registeredExams = exams.filter(e => e.registered);
+    if (registeredExams.length === 0) {
+      alert('No exams registered yet.');
+      return;
+    }
+    // For now, open hall ticket with first exam (can be enhanced to show all)
+    setSelectedExam(registeredExams[0]);
+    setShowHallTicket(true);
+  }
 
   // Calculate dynamic stats
   const stats = useMemo(() => {
@@ -95,6 +152,47 @@ export default function ExamsPage({ noLayout = false }) {
       setExams(exams.filter(exam => exam.id !== id))
     }
   }
+  
+  // Handlers for exam feature modals
+  const handleOpenMarksEntry = (exam) => {
+    setSelectedExam(exam)
+    setShowMarksEntryModal(true)
+  }
+  
+  const handleOpenHallTicket = (exam) => {
+    setSelectedExam(exam)
+    setShowHallTicket(true)
+  }
+  
+  const handleOpenInvigilatorAssign = (exam) => {
+    setSelectedExam(exam)
+    setShowInvigilatorModal(true)
+  }
+  
+  const handleOpenRevaluation = (exam) => {
+    setSelectedExam(exam)
+    setShowRevaluationModal(true)
+  }
+  
+  const handleOpenExamReport = (exam) => {
+    setSelectedExam(exam)
+    setShowExamReportModal(true)
+  }
+  
+  const handleOpenAttendance = (exam) => {
+    setSelectedExam(exam)
+    setShowAttendanceModal(true)
+  }
+  
+  const handleOpenSeatAssignment = (exam) => {
+    setSelectedExam(exam)
+    setShowSeatAssignmentModal(true)
+  }
+  
+  const handleOpenInternalMarks = (exam) => {
+    setSelectedExam(exam)
+    setShowInternalMarksModal(true)
+  }
 
   const formatDate = (dateStr) => {
     const date = new Date(dateStr)
@@ -116,18 +214,53 @@ export default function ExamsPage({ noLayout = false }) {
     <>
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Exam Schedule</h1>
           <p className="text-slate-500 mt-1">Department of Computer Science — Semester 4</p>
         </div>
-        {!isStudent && (
-          <button 
-            onClick={openAddModal}
-            className="flex items-center gap-2 px-4 py-2 bg-[#1162d4] text-white rounded-lg text-sm font-semibold hover:bg-[#1162d4]/90 transition-all shadow-sm active:scale-95"
-          >
-            <span className="material-symbols-outlined text-lg">calendar_add_on</span>
-            Schedule Exam
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {isStudent && (
+            <button 
+              onClick={handleOpenAllHallTickets}
+              className="flex items-center gap-2 px-4 py-2 bg-[#1162d4] text-white rounded-lg text-sm font-semibold hover:bg-[#1162d4]/90 transition-all shadow-sm active:scale-95"
+            >
+              <span className="material-symbols-outlined text-lg">badge</span>
+              Download Hall Tickets
+            </button>
+          )}
+          {isAdmin && (
+            <>
+              <button 
+                onClick={() => setShowExamSessionModal(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-200 transition-all"
+              >
+                <span className="material-symbols-outlined text-lg">calendar_month</span>
+                Manage Sessions
+              </button>
+              <button 
+                onClick={() => setShowTimetableDraftForm(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-200 transition-all"
+              >
+                <span className="material-symbols-outlined text-lg">draft</span>
+                Create Timetable
+              </button>
+              <button 
+                onClick={() => setShowTimetableApprovalModal(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-200 transition-all"
+              >
+                <span className="material-symbols-outlined text-lg">approval</span>
+                Approve Timetables
+              </button>
+            </>
+          )}
+          {(isAdmin || isFaculty) && (
+            <button 
+              onClick={openAddModal}
+              className="flex items-center gap-2 px-4 py-2 bg-[#1162d4] text-white rounded-lg text-sm font-semibold hover:bg-[#1162d4]/90 transition-all shadow-sm active:scale-95"
+            >
+              <span className="material-symbols-outlined text-lg">calendar_add_on</span>
+              Schedule Exam
+            </button>
+          )}
+        </div>
       </div>
       
       {/* Stats Cards */}
@@ -160,13 +293,16 @@ export default function ExamsPage({ noLayout = false }) {
               <th className="px-6 py-4">Type</th>
               <th className="px-6 py-4">Duration</th>
               <th className="px-6 py-4">Status</th>
-              <th className="px-6 py-4 text-right">Actions</th>
+              {isStudent && <th className="px-6 py-4 text-center">Score</th>}
+              {isStudent && <th className="px-6 py-4 text-center">Register</th>}
+              {isStudent && <th className="px-6 py-4 text-center">Revaluation</th>}
+              {!isStudent && <th className="px-6 py-4 text-right">Actions</th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {exams.length === 0 ? (
               <tr>
-                <td colSpan={isStudent ? 6 : 7} className="px-6 py-12 text-center text-slate-500">
+                <td colSpan={isStudent ? 9 : 7} className="px-6 py-12 text-center text-slate-500">
                   <span className="material-symbols-outlined text-5xl mb-2 opacity-20">quiz</span>
                   <p className="text-sm">{isStudent ? 'No exams scheduled yet.' : 'No exams scheduled yet. Click "Schedule Exam" to add one.'}</p>
                 </td>
@@ -197,23 +333,143 @@ export default function ExamsPage({ noLayout = false }) {
                       {exam.status}
                     </span>
                   </td>
+                  {/* Student Columns */}
+                  {isStudent && (
+                    <>
+                      <td className="px-6 py-4 text-center">
+                        {exam.resultsPublished && exam.marks !== undefined ? (
+                          <div>
+                            <p className="text-lg font-bold text-slate-900">{exam.marks}/{exam.maxMarks}</p>
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${
+                              exam.grade === 'A+' || exam.grade === 'A' ? 'bg-emerald-100 text-emerald-700' :
+                              exam.grade === 'B+' || exam.grade === 'B' ? 'bg-blue-100 text-blue-700' :
+                              'bg-slate-100 text-slate-700'
+                            }`}>
+                              Grade: {exam.grade}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-slate-400">—</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        {exam.status === 'Upcoming' && !exam.registered ? (
+                          <button
+                            onClick={() => handleRegister(exam.id)}
+                            className="px-3 py-1.5 bg-[#1162d4] text-white rounded-lg text-xs font-semibold hover:bg-[#1162d4]/90 transition-all"
+                          >
+                            Register
+                          </button>
+                        ) : exam.registered ? (
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">
+                            <span className="material-symbols-outlined text-sm mr-1">check_circle</span>
+                            Registered
+                          </span>
+                        ) : (
+                          <span className="text-xs text-slate-400">—</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        {exam.status === 'Completed' && exam.resultsPublished ? (
+                          <button
+                            onClick={() => handleOpenRevaluation(exam)}
+                            className="px-3 py-1.5 bg-orange-500 text-white rounded-lg text-xs font-semibold hover:bg-orange-600 transition-all"
+                            title="Apply for Revaluation"
+                          >
+                            Apply
+                          </button>
+                        ) : (
+                          <span className="text-xs text-slate-400">—</span>
+                        )}
+                      </td>
+                    </>
+                  )}
+                  {/* Faculty/Admin Actions */}
                   {!isStudent && (
                   <td className="px-6 py-4">
                     <div className="flex items-center justify-end gap-2">
-                      <button
-                        onClick={() => openEditModal(exam)}
-                        className="p-1.5 text-slate-400 hover:text-[#1162d4] hover:bg-[#1162d4]/10 rounded-lg transition-colors"
-                        title="Edit"
-                      >
-                        <span className="material-symbols-outlined text-lg">edit</span>
-                      </button>
-                      <button
-                        onClick={() => handleDelete(exam.id)}
-                        className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                        title="Delete"
-                      >
-                        <span className="material-symbols-outlined text-lg">delete</span>
-                      </button>
+                      
+                      {/* Faculty Actions */}
+                      {isFaculty && (
+                        <>
+                          <button
+                            onClick={() => handleOpenInternalMarks(exam)}
+                            className="p-1.5 text-slate-400 hover:text-[#1162d4] hover:bg-[#1162d4]/10 rounded-lg transition-colors"
+                            title="Internal Marks"
+                          >
+                            <span className="material-symbols-outlined text-lg">assignment</span>
+                          </button>
+                          <button
+                            onClick={() => handleOpenMarksEntry(exam)}
+                            className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                            title="Enter Marks"
+                          >
+                            <span className="material-symbols-outlined text-lg">edit_note</span>
+                          </button>
+                          <button
+                            onClick={() => handleOpenAttendance(exam)}
+                            className="p-1.5 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                            title="Mark Attendance"
+                          >
+                            <span className="material-symbols-outlined text-lg">fact_check</span>
+                          </button>
+                          <button
+                            onClick={() => handleOpenExamReport(exam)}
+                            className="p-1.5 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-colors"
+                            title="View Report"
+                          >
+                            <span className="material-symbols-outlined text-lg">assessment</span>
+                          </button>
+                          <button
+                            onClick={() => openEditModal(exam)}
+                            className="p-1.5 text-slate-400 hover:text-[#1162d4] hover:bg-[#1162d4]/10 rounded-lg transition-colors"
+                            title="Edit"
+                          >
+                            <span className="material-symbols-outlined text-lg">edit</span>
+                          </button>
+                        </>
+                      )}
+                      
+                      {/* Admin Actions */}
+                      {isAdmin && (
+                        <>
+                          <button
+                            onClick={() => handleOpenSeatAssignment(exam)}
+                            className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                            title="Seat Assignment"
+                          >
+                            <span className="material-symbols-outlined text-lg">event_seat</span>
+                          </button>
+                          <button
+                            onClick={() => handleOpenInvigilatorAssign(exam)}
+                            className="p-1.5 text-slate-400 hover:text-cyan-600 hover:bg-cyan-50 rounded-lg transition-colors"
+                            title="Assign Invigilators"
+                          >
+                            <span className="material-symbols-outlined text-lg">person_add</span>
+                          </button>
+                          <button
+                            onClick={() => handleOpenExamReport(exam)}
+                            className="p-1.5 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-colors"
+                            title="View Report"
+                          >
+                            <span className="material-symbols-outlined text-lg">assessment</span>
+                          </button>
+                          <button
+                            onClick={() => openEditModal(exam)}
+                            className="p-1.5 text-slate-400 hover:text-[#1162d4] hover:bg-[#1162d4]/10 rounded-lg transition-colors"
+                            title="Edit"
+                          >
+                            <span className="material-symbols-outlined text-lg">edit</span>
+                          </button>
+                          <button
+                            onClick={() => handleDelete(exam.id)}
+                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Delete"
+                          >
+                            <span className="material-symbols-outlined text-lg">delete</span>
+                          </button>
+                        </>
+                      )}
                     </div>
                   </td>
                   )}
@@ -229,7 +485,7 @@ export default function ExamsPage({ noLayout = false }) {
         onClose={closeModal}
         title={editingExam ? 'Edit Exam' : 'Schedule New Exam'}
         icon="calendar_add_on"
-        maxWidth="max-w-2xl"
+        maxWidth="w-[1050px]"
         footer={
           <div className="flex items-center justify-end gap-3 w-full">
             <button
@@ -317,6 +573,122 @@ export default function ExamsPage({ noLayout = false }) {
           </div>
         </div>
       </Modal>
+
+      {/* Exam Module Components */}
+      {showMarksEntryModal && selectedExam && (
+        <MarksEntryModal
+          isOpen={showMarksEntryModal}
+          onClose={() => setShowMarksEntryModal(false)}
+          exam={selectedExam}
+          currentUserId={session?.userId}
+        />
+      )}
+
+      {showHallTicket && selectedExam && (
+        <HallTicket
+          exam={selectedExam}
+          studentInfo={{
+            name: session?.name || 'Student Name',
+            rollNo: session?.userId || 'N/A',
+            department: session?.team || 'Computer Science',
+            semester: '4',
+            photo: null
+          }}
+          onClose={() => setShowHallTicket(false)}
+        />
+      )}
+
+      {showExamSessionModal && (
+        <ExamSessionModal
+          onClose={() => setShowExamSessionModal(false)}
+          onSave={() => {
+            setShowExamSessionModal(false);
+          }}
+        />
+      )}
+
+      {showTimetableDraftForm && (
+        <TimetableDraftForm
+          onClose={() => setShowTimetableDraftForm(false)}
+          onSave={() => {
+            setShowTimetableDraftForm(false);
+          }}
+        />
+      )}
+
+      {showInvigilatorModal && selectedExam && (
+        <InvigilatorAssignModal
+          isOpen={showInvigilatorModal}
+          onClose={() => setShowInvigilatorModal(false)}
+          exam={selectedExam}
+          currentUserId={session?.userId}
+        />
+      )}
+
+      {showRevaluationModal && selectedExam && (
+        <RevaluationModal
+          isOpen={showRevaluationModal}
+          onClose={() => setShowRevaluationModal(false)}
+          exam={selectedExam}
+          studentId={session?.userId}
+          studentName={session?.name || 'Student Name'}
+        />
+      )}
+
+      {showExamReportModal && selectedExam && (
+        <ExamReportModal
+          isOpen={showExamReportModal}
+          onClose={() => setShowExamReportModal(false)}
+          exam={selectedExam}
+        />
+      )}
+
+      {showAttendanceModal && selectedExam && (
+        <AttendanceModal
+          exam={selectedExam}
+          onClose={() => setShowAttendanceModal(false)}
+          onSave={() => {
+            setShowAttendanceModal(false);
+          }}
+        />
+      )}
+
+      {showSeatAssignmentModal && selectedExam && (
+        <SeatAssignmentModal
+          exam={selectedExam}
+          onClose={() => setShowSeatAssignmentModal(false)}
+          onSave={() => {
+            setShowSeatAssignmentModal(false);
+          }}
+        />
+      )}
+
+      {showInternalMarksModal && selectedExam && (
+        <InternalMarksModal
+          exam={selectedExam}
+          onClose={() => setShowInternalMarksModal(false)}
+          onSave={() => {
+            setShowInternalMarksModal(false);
+          }}
+        />
+      )}
+
+      {showTimetableApprovalModal && (
+        <TimetableApprovalModal
+          onClose={() => setShowTimetableApprovalModal(false)}
+          onApprove={() => {
+            setShowTimetableApprovalModal(false);
+          }}
+        />
+      )}
+
+      {showNotificationPanel && (
+        <NotificationPanel
+          studentId={session?.userId}
+          isOpen={showNotificationPanel}
+          onClose={() => setShowNotificationPanel(false)}
+        />
+      )}
     </>
   )
   return noLayout ? inner : <Layout title="Exams">{inner}</Layout>
