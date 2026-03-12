@@ -34,6 +34,22 @@ const notificationSchema = new mongoose.Schema({
 
 const Notification = mongoose.model('Notification', notificationSchema);
 
+// ── Exam Model ──────────────────────────────────────────────────────────────
+
+const examSchema = new mongoose.Schema({
+  code: { type: String, required: true },
+  name: { type: String, required: true },
+  date: { type: String, required: true },
+  time: { type: String, required: true },
+  room: { type: String, required: true },
+  type: { type: String, required: true },
+  status: { type: String, default: 'Upcoming' },
+  duration: { type: String, required: true },
+  maxMarks: { type: String, required: true },
+}, { timestamps: true });
+
+const Exam = mongoose.model('Exam', examSchema);
+
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 function clone(value) {
@@ -763,6 +779,113 @@ app.post('/api/notifications/:role/clear-all', async (req, res) => {
       $or: [{ receiverRole: role }, { receiverRole: 'ALL' }]
     });
     res.json({ success: true, message: 'All notifications cleared', deletedCount: result.deletedCount });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ── Exam Routes ────────────────────────────────────────────────────────────────
+
+// Seed default exams if collection is empty
+async function seedExams() {
+  const count = await Exam.countDocuments();
+  if (count === 0) {
+    await Exam.insertMany([
+      { code: 'CS401', name: 'Data Structures',      date: '2023-12-10', time: '10:00', room: 'Hall A',    type: 'Mid-Sem',  status: 'Upcoming', duration: '120', maxMarks: '100' },
+      { code: 'MA405', name: 'Discrete Mathematics', date: '2023-12-12', time: '09:00', room: 'Hall B',    type: 'Mid-Sem',  status: 'Upcoming', duration: '120', maxMarks: '100' },
+      { code: 'CS403', name: 'Database Systems',     date: '2023-11-28', time: '11:00', room: 'Lab 2',     type: 'Practical',status: 'Completed', duration: '180', maxMarks: '50' },
+      { code: 'HU102', name: 'Tech Writing',         date: '2023-12-15', time: '14:00', room: 'Room 101',  type: 'Internal', status: 'Upcoming', duration: '90', maxMarks: '50' },
+      { code: 'CS406', name: 'Operating Systems',    date: '2023-11-20', time: '10:00', room: 'Room 304',  type: 'Quiz',     status: 'Completed', duration: '60', maxMarks: '25' },
+    ]);
+    console.log('Seeded 5 default exams');
+  }
+}
+
+mongoose.connection.once('open', () => seedExams().catch(console.error));
+
+// Get all exams
+app.get('/api/exams', async (req, res) => {
+  try {
+    const exams = await Exam.find().sort({ date: 1, time: 1 });
+    res.json({ success: true, data: exams });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Create exam + auto-notify students
+app.post('/api/exams', async (req, res) => {
+  try {
+    const { code, name, date, time, room, type, status, duration, maxMarks, senderRole } = req.body;
+    if (!code || !name || !date || !time || !room || !type || !duration || !maxMarks) {
+      return res.status(400).json({ success: false, error: 'Missing required fields' });
+    }
+
+    const exam = await Exam.create({ code, name, date, time, room, type, status: status || 'Upcoming', duration, maxMarks });
+
+    // Auto-create notification for students
+    const examDate = new Date(date);
+    const formattedDate = examDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    await Notification.create({
+      title: `New Exam Scheduled: ${code} — ${name}`,
+      message: `A ${type} exam for ${code} (${name}) has been scheduled on ${formattedDate} at ${time} in ${room}. Duration: ${duration} min, Max Marks: ${maxMarks}.`,
+      senderRole: senderRole || 'faculty',
+      receiverRole: 'student',
+      module: 'Exams',
+      priority: 'high',
+      relatedData: { examId: exam._id.toString(), code, name, date, time, room },
+    });
+
+    res.status(201).json({ success: true, data: exam });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Update exam + auto-notify students
+app.put('/api/exams/:id', async (req, res) => {
+  try {
+    const { code, name, date, time, room, type, status, duration, maxMarks, senderRole } = req.body;
+    const exam = await Exam.findByIdAndUpdate(req.params.id, { code, name, date, time, room, type, status, duration, maxMarks }, { new: true });
+    if (!exam) return res.status(404).json({ success: false, error: 'Exam not found' });
+
+    // Auto-create notification for students about the update
+    const examDate = new Date(date);
+    const formattedDate = examDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    await Notification.create({
+      title: `Exam Updated: ${code} — ${name}`,
+      message: `The ${type} exam for ${code} (${name}) has been updated. Date: ${formattedDate}, Time: ${time}, Room: ${room}. Duration: ${duration} min, Max Marks: ${maxMarks}.`,
+      senderRole: senderRole || 'faculty',
+      receiverRole: 'student',
+      module: 'Exams',
+      priority: 'medium',
+      relatedData: { examId: exam._id.toString(), code, name, date, time, room },
+    });
+
+    res.json({ success: true, data: exam });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Delete exam + notify students
+app.delete('/api/exams/:id', async (req, res) => {
+  try {
+    const exam = await Exam.findByIdAndDelete(req.params.id);
+    if (!exam) return res.status(404).json({ success: false, error: 'Exam not found' });
+
+    // Notify students about cancellation
+    await Notification.create({
+      title: `Exam Cancelled: ${exam.code} — ${exam.name}`,
+      message: `The ${exam.type} exam for ${exam.code} (${exam.name}) has been cancelled.`,
+      senderRole: 'admin',
+      receiverRole: 'student',
+      module: 'Exams',
+      priority: 'high',
+      relatedData: { code: exam.code, name: exam.name },
+    });
+
+    res.json({ success: true, message: 'Exam deleted' });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
