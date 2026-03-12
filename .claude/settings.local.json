@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find:*)",
+      "Bash(node test-enterprise-parser.js:*)",
+      "Bash(git checkout:*)",
+      "Bash(npm install:*)",
+      "Bash(node -c:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

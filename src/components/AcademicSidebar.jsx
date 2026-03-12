@@ -1,32 +1,55 @@
 import { NavLink, useNavigate } from 'react-router-dom'
-import { destroyUserSession, getUserSession } from '../auth/sessionController'
+import { getUserSession } from '../auth/sessionController'
+import { destroyUserSession } from '../auth/sessionController'
 import { roleMenuGroups } from '../data/roleConfig'
 
-const NAV_ITEM_MAP = {
-  'Dashboard':     { to: '/dashboard',     icon: 'dashboard' },
-  'My Courses':    { to: '/courses',       icon: 'menu_book' },
-  'Department':    { to: '/department',    icon: 'domain' },
-  'Students':      { to: '/students',      icon: 'group' },
-  'Faculty':       { to: '/faculty',       icon: 'person' },
-  'Exams':         { to: '/exams',         icon: 'quiz' },
-  'Timetable':     { to: '/timetable',     icon: 'calendar_today' },
-  'Attendance':    { to: '/attendance',    icon: 'fact_check' },
-  'Placement':     { to: '/placement',     icon: 'work' },
-  'Facility':      { to: '/facility',      icon: 'apartment' },
-  'Fees':          { to: '/fees',          icon: 'payments' },
-  'Invoices':      { to: '/invoices',      icon: 'receipt' },
-  'Admission':     { to: '/admission',     icon: 'how_to_reg' },
-  'Payroll':       { to: '/payroll',       icon: 'account_balance_wallet' },
-  'Analytics':     { to: '/analytics',     icon: 'analytics' },
-  'Notifications': { to: '/notifications', icon: 'notifications' },
-  'Settings':      { to: '/settings',      icon: 'settings' },
+const iconMap = {
+  Dashboard: 'dashboard',
+  Students: 'group',
+  Faculty: 'person',
+  Department: 'domain',
+  Exams: 'school',
+  Timetable: 'calendar_today',
+  Attendance: 'rule',
+  Placement: 'work',
+  Facility: 'apartment',
+  Fees: 'payments',
+  Reports: 'assessment',
+  Admission: 'person_add',
+  Payroll: 'receipt_long',
+  Invoices: 'description',
+  Analytics: 'query_stats',
+  Notifications: 'notifications',
+  Settings: 'settings',
+  'My Courses': 'menu_book',
+}
+
+const routeMap = {
+  Dashboard: '/dashboard',
+  Students: '/students',
+  Faculty: '/faculty',
+  Department: '/departments',
+  Exams: '/exams',
+  Timetable: '/timetable',
+  Attendance: '/attendance',
+  Placement: '/placement',
+  Facility: '/facility',
+  Fees: '/fees',
+  Reports: '/reports',
+  Admission: '/admission',
+  Payroll: '/payroll',
+  Invoices: '/invoices',
+  Analytics: '/analytics',
+  Notifications: '/notifications',
+  Settings: '/settings',
+  'My Courses': '/my-courses',
 }
 
 export default function AcademicSidebar() {
   const navigate = useNavigate()
   const session = getUserSession()
-  const role = session?.role ?? 'student'
-  const groups = roleMenuGroups[role] ?? roleMenuGroups.student
+  const role = session?.role || 'student'
+  const menuGroups = roleMenuGroups[role] || []
 
   function handleLogout() {
     destroyUserSession()
@@ -41,36 +64,27 @@ export default function AcademicSidebar() {
         </div>
         <div>
           <h1 className="font-extrabold text-[#1e293b] text-xl tracking-tight leading-none">EduCore</h1>
-          <p className="text-[10px] font-bold text-[#64748b] uppercase tracking-[0.1em] mt-1">
-            {role.charAt(0).toUpperCase() + role.slice(1)} Portal
-          </p>
+          <p className="text-[10px] font-bold text-[#64748b] uppercase tracking-[0.1em] mt-1">Admin Portal</p>
         </div>
       </div>
 
       <nav className="flex-1 px-4 space-y-6 overflow-y-auto">
-        {groups.map((group) => (
+        {menuGroups.map((group) => (
           <div key={group.title}>
             <p className="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">
               {group.title}
             </p>
             <div className="space-y-1">
-              {group.items.map((itemName) => {
-                const config = NAV_ITEM_MAP[itemName]
-                if (!config) return null
+              {group.items.map((item) => {
+                const to = `${routeMap[item] || '#'}${role !== 'student' && item !== 'Settings' ? `?role=${encodeURIComponent(role)}` : ''}`
                 return (
                   <NavLink
-                    key={config.to}
-                    to={config.to}
-                    className={({ isActive }) =>
-                      `flex items-center gap-3 px-4 py-3 rounded-xl text-sm transition-all duration-200 ${
-                        isActive
-                          ? 'bg-[#2563eb]/10 text-[#2563eb] font-semibold shadow-sm'
-                          : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
-                      }`
-                    }
+                    key={item}
+                    to={to}
+                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm transition-all duration-200 text-slate-500 hover:bg-slate-50 hover:text-slate-900"
                   >
-                    <span className="material-symbols-outlined text-[22px]">{config.icon}</span>
-                    <span>{itemName}</span>
+                    <span className="material-symbols-outlined text-[22px]">{iconMap[item] || 'circle'}</span>
+                    <span>{item}</span>
                   </NavLink>
                 )
               })}
@@ -91,5 +105,3 @@ export default function AcademicSidebar() {
     </aside>
   )
 }
-
-
