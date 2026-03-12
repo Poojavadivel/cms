@@ -15,7 +15,10 @@ export default function DashboardPage() {
   const role = sessionRole || 'student';
   const data = cmsRoles[role];
   const menuGroups = roleMenuGroups[role] || roleMenuGroups.student;
-  const userId = sessionUserId || 'N/A';
+
+  // Only call the profile hook once we have a valid userId so we don't create
+  // a spurious `cmsProfile:<role>:N/A` cache entry for unauthenticated renders.
+  const userId = sessionUserId || '';
   const currentUserProfile = useCurrentUserProfile(role, userId, {
     name: data.name,
     department: data.team,
@@ -62,7 +65,7 @@ export default function DashboardPage() {
           <div className="profile-info">
             <div className="student-name">{currentUserProfile.name || data.name}</div>
             <div className="profile-meta">
-              <span className="meta-item">ID: {userId}</span>
+              <span className="meta-item">ID: {sessionUserId || 'N/A'}</span>
               <span className="meta-item">Team: {currentUserProfile.department || data.team}</span>
               <span className="meta-item">Focus: {data.focus}</span>
             </div>
