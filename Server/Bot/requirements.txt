@@ -1,0 +1,26 @@
+# Upgrade pip and build tools first
+pip==25.2
+setuptools>=70.0.0
+wheel
+
+# Core dependencies
+streamlit==1.38.0
+pymongo==4.10.1
+openai==1.47.0
+python-dotenv==1.0.1
+nest_asyncio==1.6.0
+streamlit-webrtc==0.47.9
+azure-cognitiveservices-speech==1.38.0
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+dateparser==1.2.0
+langdetect==1.0.9
+
+# NLP / ML stack (CPU-only, prebuilt wheels)
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.5.1+cpu
+transformers==4.44.2
+spacy==3.7.2
+blis==0.7.11
+
+# spaCy models (auto-download handled in app.py)

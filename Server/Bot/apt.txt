@@ -1,0 +1,23 @@
+# ==============================
+# Core build tools
+# ==============================
+build-essential
+python3-dev
+gcc
+g++
+make
+cmake
+
+# ==============================
+# Libraries for ML / NLP packages
+# ==============================
+libpq-dev         # PostgreSQL support if needed
+libjpeg-dev       # Pillow / image processing
+zlib1g-dev        # Compression support
+libffi-dev        # Needed by some Python cryptography packages
+libssl-dev        # Crypto / SSL libraries
+libbz2-dev        # Compression support
+liblzma-dev       # For xz compression support
+libncurses5-dev   # For readline support
+libncursesw5-dev  # For readline support
+libreadline-dev   # Optional, sometimes needed by numpy/scipy

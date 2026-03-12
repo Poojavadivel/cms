@@ -1,0 +1,88 @@
+/* Prescription Table Styles */
+.appt-prescriptions-table-wrapper,
+.pd-prescriptions-table-wrapper {
+  overflow-x: auto;
+  margin-top: 16px;
+}
+
+.appt-prescriptions-table,
+.pd-prescriptions-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.appt-prescriptions-table thead,
+.pd-prescriptions-table thead {
+  background: linear-gradient(135deg, #207DC0 0%, #165a8a 100%);
+  color: white;
+}
+
+.appt-prescriptions-table th,
+.pd-prescriptions-table th {
+  padding: 12px 16px;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.appt-prescriptions-table td,
+.pd-prescriptions-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #E5E7EB;
+  font-size: 14px;
+  color: #1F2937;
+}
+
+.appt-prescriptions-table tbody tr:hover,
+.pd-prescriptions-table tbody tr:hover {
+  background-color: #F3F4F6;
+}
+
+.appt-prescriptions-table tbody tr:last-child td,
+.pd-prescriptions-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.appt-prescription-action-btn,
+.pd-prescription-action-btn {
+  padding: 6px 16px;
+  background: linear-gradient(135deg, #207DC0 0%, #165a8a 100%);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+
+.appt-prescription-action-btn:hover:not(:disabled),
+.pd-prescription-action-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(32, 125, 192, 0.3);
+}
+
+.appt-prescription-action-btn:disabled,
+.pd-prescription-action-btn:disabled {
+  background: #9CA3AF;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Reason column - allow text wrapping */
+.appt-prescriptions-table td:nth-child(5),
+.pd-prescriptions-table td:nth-child(5) {
+  max-width: 300px;
+  white-space: normal;
+  word-wrap: break-word;
+  line-height: 1.5;
+}

@@ -1,0 +1,960 @@
+/**
+ * PatientsReal.jsx
+ * Patients page with REAL API integration
+ * React equivalent of Flutter's PatientsScreen with live backend data
+ */
+
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { MdChevronLeft, MdChevronRight, MdSearch } from 'react-icons/md';
+import axios from 'axios';
+import patientsService from '../../../services/patientsService';
+import reportService from '../../../services/reportService';
+import './Patients.css';
+import AddPatientModal from '../../../components/patient/addpatient';
+import PatientView from '../../../components/patient/patientview';
+
+// Toast notification helper (replace with react-toastify if available)
+const toast = {
+  success: (msg) => {
+    console.log('✅ SUCCESS:', msg);
+    // TODO: Implement proper toast notification
+    alert(msg);
+  },
+  error: (msg) => {
+    console.error('❌ ERROR:', msg);
+    // TODO: Implement proper toast notification
+    alert(msg);
+  },
+  info: (msg) => {
+    console.log('ℹ️ INFO:', msg);
+  }
+};
+
+
+// Custom SVG Icons (matching Appointments)
+const Icons = {
+  Doctor: () => (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path>
+    </svg>
+  ),
+  Billing: () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="5" width="20" height="14" rx="2"></rect>
+      <line x1="2" y1="10" x2="22" y2="10"></line>
+    </svg>
+  ),
+  Edit: () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+    </svg>
+  ),
+  Delete: () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="3 6 5 6 21 6"></polyline>
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+    </svg>
+  ),
+  Download: () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+      <polyline points="7 10 12 15 17 10"></polyline>
+      <line x1="12" y1="15" x2="12" y2="3"></line>
+    </svg>
+  ),
+  Calendar: () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+      <line x1="16" y1="2" x2="16" y2="6"></line>
+      <line x1="8" y1="2" x2="8" y2="6"></line>
+      <line x1="3" y1="10" x2="21" y2="10"></line>
+    </svg>
+  ),
+  Plus: () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="12" y1="5" x2="12" y2="19"></line>
+      <line x1="5" y1="12" x2="19" y2="12"></line>
+    </svg>
+  )
+};
+
+// Configuration constants
+const CONFIG = {
+  ITEMS_PER_PAGE: 10,
+  MAX_FETCH_LIMIT: 100,
+  DEBOUNCE_DELAY: 300
+};
+
+const Patients = () => {
+  const navigate = useNavigate();
+  // State management
+  const [patients, setPatients] = useState([]);
+  const [filteredPatients, setFilteredPatients] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [downloadingPatients, setDownloadingPatients] = useState(new Set());
+  const [loadingPatientId, setLoadingPatientId] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [currentPage, setCurrentPage] = useState(0);
+  const [doctorFilter, setDoctorFilter] = useState('All');
+  const [genderFilter, setGenderFilter] = useState('All');
+  const [ageRangeFilter, setAgeRangeFilter] = useState('All');
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+
+  // Modal state management - use single state to prevent multiple modals
+  const [activeModal, setActiveModal] = useState(null);
+  const [modalData, setModalData] = useState(null);
+  
+  // Edit patient modal states
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editPatientId, setEditPatientId] = useState(null);
+
+  // Doctor dialog states (same as Appointments page)
+  const [selectedDoctor, setSelectedDoctor] = useState(null);
+  const [showDoctorDialog, setShowDoctorDialog] = useState(false);
+
+  // Refs for cleanup
+  const abortControllerRef = useRef(null);
+
+  const itemsPerPage = CONFIG.ITEMS_PER_PAGE;
+
+  // Fetch patients from API
+  const fetchPatients = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const data = await patientsService.fetchPatients({ limit: CONFIG.MAX_FETCH_LIMIT });
+
+      if (process.env.NODE_ENV === 'development') {
+        console.log('✅ Fetched patients:', data);
+      }
+
+      // Helper functions for data extraction
+      const normalizeGender = (gender) => {
+        if (!gender) return 'Other';
+        const normalized = gender.toString().trim();
+        const lower = normalized.toLowerCase();
+        if (lower === 'male' || lower === 'm') return 'Male';
+        if (lower === 'female' || lower === 'f') return 'Female';
+        return normalized;
+      };
+
+      const extractDoctorName = (patient) => {
+        if (!patient) return '';
+        const doctor = patient.doctor;
+        if (!doctor) return patient.assignedDoctor || patient.doctorName || patient.doctorId || '';
+        if (typeof doctor === 'object' && doctor !== null) {
+          return doctor.name || doctor.fullName || '';
+        }
+        return String(doctor);
+      };
+
+      const extractDoctorId = (patient) => {
+        if (!patient) return '';
+        const doctor = patient.doctor;
+        if (doctor && typeof doctor === 'object' && doctor !== null) {
+          return doctor._id || doctor.id || '';
+        }
+        return patient.doctorId || '';
+      };
+
+      const extractDoctorGender = (patient) => {
+        if (!patient) return 'Male';
+        if (patient.doctor && typeof patient.doctor === 'object' && patient.doctor !== null) {
+          return patient.doctor.gender || 'Male';
+        }
+        return patient.doctorGender || 'Male';
+      };
+
+      const formatCondition = (value) => {
+        if (!value) return null;
+        if (typeof value === 'string') {
+          const trimmed = value.trim();
+          if (!trimmed) return null;
+          return trimmed.length > 30 ? `${trimmed.substring(0, 30)}...` : trimmed;
+        }
+        if (Array.isArray(value) && value.length > 0) {
+          return value.length === 1 ? value[0] : `${value[0]} +${value.length - 1}`;
+        }
+        return null;
+      };
+
+      const extractCondition = (patient) => {
+        if (!patient) return 'N/A';
+        const sources = [
+          patient.condition,
+          patient.medicalHistory,
+          patient.metadata?.medicalHistory,
+          patient.metadata?.condition,
+          patient.notes
+        ];
+        for (const source of sources) {
+          const condition = formatCondition(source);
+          if (condition) return condition;
+        }
+        return 'N/A';
+      };
+
+      // Transform data to match expected structure with proper ID handling
+      const transformedData = data.map((patient, index) => ({
+        id: patient._id || patient.id || patient.patientId || `temp-${index}-${Date.now()}`,
+        name: patient.name || `${patient.firstName || ''} ${patient.lastName || ''}`.trim() || 'Unknown',
+        age: patient.age || 0,
+        gender: normalizeGender(patient.gender),
+        lastVisit: patient.lastVisit || patient.lastVisitDate || patient.updatedAt || '',
+        doctor: extractDoctorName(patient),
+        doctorId: extractDoctorId(patient),
+        doctorGender: extractDoctorGender(patient),
+        doctorObj: patient.doctor && typeof patient.doctor === 'object' ? patient.doctor : null, // Store full doctor object
+        condition: extractCondition(patient),
+        reason: patient.reason || '',
+        patientId: patient.patientId || patient._id || patient.id,
+        patientCode: patient.patientCode || patient.patient_code || patient.metadata?.patientCode || null,
+      }));
+
+      setPatients(transformedData);
+      setFilteredPatients(transformedData);
+    } catch (error) {
+      console.error('❌ Failed to fetch patients:', error);
+      toast.error('Failed to load patients: ' + error.message);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // Load patients on mount and cleanup on unmount
+  useEffect(() => {
+    fetchPatients();
+
+    // Cleanup function to cancel pending requests
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, [fetchPatients]);
+
+  // Debounce search input
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, CONFIG.DEBOUNCE_DELAY);
+
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
+
+  // Filter patients - using debounced search
+  useEffect(() => {
+    let filtered = [...patients];
+
+    // Apply search filter with debounced value
+    if (debouncedSearch.trim()) {
+      const query = debouncedSearch.toLowerCase();
+      filtered = filtered.filter(patient => {
+        const name = (patient.name || '').toLowerCase();
+        const doctor = (patient.doctor || '').toLowerCase();
+        const id = (patient.id || '').toLowerCase();
+        const patientId = (patient.patientId || '').toLowerCase();
+        const condition = (patient.condition || '').toLowerCase();
+
+        return name.includes(query) ||
+          doctor.includes(query) ||
+          id.includes(query) ||
+          patientId.includes(query) ||
+          condition.includes(query);
+      });
+    }
+
+    // Apply doctor filter
+    if (doctorFilter !== 'All') {
+      filtered = filtered.filter(patient =>
+        patient.doctor === doctorFilter
+      );
+    }
+
+    // Apply gender filter with proper case handling
+    if (genderFilter !== 'All') {
+      filtered = filtered.filter(patient => {
+        const patientGender = (patient.gender || '').trim();
+        return patientGender.toLowerCase() === genderFilter.toLowerCase();
+      });
+    }
+
+    // Apply age range filter with fixed edge cases
+    if (ageRangeFilter !== 'All') {
+      filtered = filtered.filter(patient => {
+        const age = patient.age || 0;
+        if (age < 0) return false; // Invalid age
+
+        switch (ageRangeFilter) {
+          case '0-18': return age <= 18;
+          case '19-35': return age >= 19 && age <= 35;
+          case '36-50': return age >= 36 && age <= 50;
+          case '51-65': return age >= 51 && age <= 65;
+          case '65+': return age >= 66; // Fixed: no overlap with 51-65
+          default: return true;
+        }
+      });
+    }
+
+    // Sort alphabetically by name
+    filtered.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
+    setFilteredPatients(filtered);
+    setCurrentPage(0); // Reset to first page
+  }, [debouncedSearch, doctorFilter, genderFilter, ageRangeFilter, patients]);
+
+  // Get unique doctors for filter with proper IDs
+  const uniqueDoctors = useMemo(() => {
+    const doctorMap = new Map();
+
+    patients.forEach(patient => {
+      if (patient.doctor && patient.doctor.trim()) {
+        const doctorName = patient.doctor;
+        if (!doctorMap.has(doctorName)) {
+          doctorMap.set(doctorName, {
+            id: patient.doctorId || doctorName,
+            name: doctorName
+          });
+        }
+      }
+    });
+
+    const doctors = Array.from(doctorMap.values());
+    return ['All', ...doctors.map(d => d.name)];
+  }, [patients]);
+
+  // Age range options
+  const ageRanges = ['All', '0-18', '19-35', '36-50', '51-65', '65+'];
+
+  // Clear all filters
+  const clearAllFilters = useCallback(() => {
+    setSearchQuery('');
+    setDebouncedSearch('');
+    setDoctorFilter('All');
+    setGenderFilter('All');
+    setAgeRangeFilter('All');
+    setShowAdvancedFilters(false);
+  }, []);
+
+  // Check if any filter is active
+  const hasActiveFilters = useMemo(() =>
+    searchQuery ||
+    doctorFilter !== 'All' ||
+    genderFilter !== 'All' ||
+    ageRangeFilter !== 'All',
+    [searchQuery, doctorFilter, genderFilter, ageRangeFilter]
+  );
+
+  // Pagination
+  const startIndex = currentPage * itemsPerPage;
+  const endIndex = Math.min(startIndex + itemsPerPage, filteredPatients.length);
+  const paginatedPatients = filteredPatients.slice(startIndex, endIndex);
+  const totalPages = Math.ceil(filteredPatients.length / itemsPerPage);
+
+  // Handlers - memoized for performance
+  const handleSearchChange = useCallback((e) => {
+    setSearchQuery(e.target.value);
+  }, []);
+
+  const handlePreviousPage = useCallback(() => {
+    if (currentPage > 0) {
+      setCurrentPage(prev => prev - 1);
+    }
+  }, [currentPage]);
+
+  const handleNextPage = useCallback(() => {
+    if (currentPage < totalPages - 1) {
+      setCurrentPage(prev => prev + 1);
+    }
+  }, [currentPage, totalPages]);
+
+  const handleAdd = useCallback(() => {
+    setActiveModal('add');
+    setModalData(null);
+  }, []);
+
+  const handleView = useCallback((patient) => {
+    setActiveModal('view');
+    setModalData(patient);
+  }, []);
+
+  const handleBilling = useCallback((patient) => {
+    // Billing modal not available in doctor module
+    toast.info('Billing feature available in admin module');
+    console.log('Billing requested for patient:', patient);
+  }, []);
+
+  const handleEdit = useCallback(async (patient) => {
+    const id = patient.id || patient.patientId || patient._id;
+    if (!id) {
+      toast.error('Invalid patient data');
+      return;
+    }
+
+    // Use AddPatientModal for editing (it supports patientId prop for edit mode)
+    setShowEditModal(true);
+    setEditPatientId(id);
+  }, []);
+
+  const handleDelete = useCallback(async (patient, retryCount = 0) => {
+    const id = patient?.id || patient?.patientId || patient?._id;
+    if (!patient || !id) {
+      toast.error('Invalid patient data');
+      return;
+    }
+
+    // Only show confirmation on first attempt, not on retries
+    if (retryCount === 0) {
+      const confirmed = window.confirm(
+        `Are you sure you want to delete patient ${patient.name}?\n\nThis action cannot be undone.`
+      );
+
+      if (!confirmed) return;
+    }
+
+    // Show which patient is being deleted
+    console.log(`Attempting to delete patient (attempt ${retryCount + 1}):`, {
+      id: patient.id,
+      name: patient.name,
+      patientId: patient.patientId
+    });
+
+    // Store original data for rollback (only on first attempt)
+    const originalPatients = retryCount === 0 ? [...patients] : null;
+    const originalFiltered = retryCount === 0 ? [...filteredPatients] : null;
+
+    try {
+      setIsLoading(true);
+
+      // Optimistic update - remove from UI immediately (only on first attempt)
+      if (retryCount === 0) {
+        setPatients(prev => prev.filter(p => (p.id || p.patientId || p._id) !== id));
+        setFilteredPatients(prev => prev.filter(p => (p.id || p.patientId || p._id) !== id));
+      }
+
+      // Attempt to delete from backend
+      const result = await patientsService.deletePatient(id);
+
+      console.log('Delete result:', result);
+
+      if (process.env.NODE_ENV === 'development') {
+        console.log('✅ Deleted patient:', id);
+      }
+
+      toast.success(`Successfully deleted patient: ${patient.name}`);
+
+      // Reset to first page
+      setCurrentPage(0);
+
+      // Refresh patient list from backend to ensure sync
+      await fetchPatients();
+
+    } catch (error) {
+      console.error(`❌ Failed to delete patient (attempt ${retryCount + 1}):`, {
+        error: error,
+        message: error.message,
+        response: error.response?.data,
+        patientId: id
+      });
+
+      // Rollback on error (if we have original data)
+      if (originalPatients && originalFiltered) {
+        setPatients(originalPatients);
+        setFilteredPatients(originalFiltered);
+      }
+
+      const errorMessage = error.response?.data?.message
+        || error.message
+        || 'Failed to delete patient';
+
+      // Retry logic - max 3 attempts with exponential backoff
+      const maxRetries = 2;
+      if (retryCount < maxRetries) {
+        const retryDelay = Math.pow(2, retryCount) * 1000; // 1s, 2s, 4s
+
+        toast.error(`${errorMessage}. Retrying in ${retryDelay / 1000} seconds... (${retryCount + 1}/${maxRetries})`);
+
+        setTimeout(() => {
+          handleDelete(patient, retryCount + 1);
+        }, retryDelay);
+      } else {
+        // Final failure after all retries
+        toast.error(`Delete failed after ${maxRetries + 1} attempts: ${errorMessage}`);
+
+        // Offer manual retry option
+        const retry = window.confirm(
+          `Failed to delete patient ${patient.name} after multiple attempts.\n\nWould you like to try again?`
+        );
+
+        if (retry) {
+          handleDelete(patient, 0); // Start fresh
+        } else {
+          // Ensure we refresh to show accurate data
+          await fetchPatients();
+        }
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  }, [fetchPatients, patients, filteredPatients]);
+
+  /**
+   * Handle Patient Report Download
+   * Uses centralized reportService
+   */
+  const handleDownload = useCallback(async (patient) => {
+    const id = patient?.id || patient?.patientId || patient?._id;
+    if (!patient || !id) {
+      toast.error('Invalid patient data for download');
+      return;
+    }
+
+    // Add patient ID to downloading set
+    setDownloadingPatients(prev => new Set(prev).add(id));
+
+    try {
+      const result = await reportService.downloadPatientReport(id);
+
+      if (result.success) {
+        toast.success(result.message || 'Patient report downloaded successfully');
+      } else {
+        toast.error(result.message || 'Failed to download report');
+      }
+    } catch (error) {
+      console.error('❌ Failed to download report:', error);
+      toast.error('Error downloading report: ' + error.message);
+    } finally {
+      // Remove patient ID from downloading set
+      setDownloadingPatients(prev => {
+        const next = new Set(prev);
+        next.delete(patient.id);
+        return next;
+      });
+    }
+  }, []);
+
+  // Modal close handler
+  const handleCloseModal = useCallback(() => {
+    setActiveModal(null);
+    setModalData(null);
+  }, []);
+
+  // Modal success handler
+  const handleModalSuccess = useCallback(async (newPatientData, appointmentCreated) => {
+    const wasAddMode = activeModal === 'add'; // Capture if we were adding
+
+    setCurrentPage(0);
+    await fetchPatients();
+    handleCloseModal();
+
+    // If we just added a new patient, navigate to appointments booking
+    if (wasAddMode && newPatientData && typeof newPatientData === 'object') {
+      if (appointmentCreated) {
+        console.log('Redirecting to appointments list (appointment already created)');
+        navigate('/admin/appointments');
+      } else {
+        console.log('Redirecting to new appointment form for:', newPatientData);
+        navigate('/admin/appointments', {
+          state: { newPatient: newPatientData }
+        });
+      }
+    }
+  }, [fetchPatients, handleCloseModal, activeModal, navigate]);
+
+  // Doctor dialog handlers - Disabled for doctor module (admin only feature)
+  const handleDoctorClick = async (patient) => {
+    toast.info('Doctor assignment feature available in admin module');
+    console.log('Doctor click requested for patient:', patient);
+  };
+
+  const handleCloseDoctorDialog = () => {
+    setShowDoctorDialog(false);
+    setSelectedDoctor(null);
+  };
+
+  const handleCloseEditModal = useCallback(() => {
+    setShowEditModal(false);
+    setEditPatientId(null);
+  }, []);
+
+  const handleEditSuccess = useCallback(() => {
+    setShowEditModal(false);
+    setEditPatientId(null);
+    toast.success('Patient updated successfully');
+    fetchPatients(); // Refresh the list
+  }, [fetchPatients]);
+
+  // Format date with proper validation
+  const formatLastVisit = useCallback((dateString) => {
+    if (!dateString) return 'N/A';
+
+    try {
+      const date = new Date(dateString);
+
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        return 'Invalid date';
+      }
+
+      return date.toLocaleDateString('en-GB'); // dd/mm/yyyy
+    } catch (error) {
+      console.error('Date formatting error:', error);
+      return 'Invalid date';
+    }
+  }, []);
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyPress = (e) => {
+      // Only handle if no modal is open
+      if (activeModal) return;
+
+      if (e.key === 'ArrowLeft' && currentPage > 0) {
+        handlePreviousPage();
+      }
+      if (e.key === 'ArrowRight' && currentPage < totalPages - 1) {
+        handleNextPage();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [currentPage, totalPages, activeModal, handlePreviousPage, handleNextPage]);
+
+  return (
+    <div className="patients-page dashboard-container">
+      {/* Header */}
+      <div className="dashboard-header">
+        <div className="header-content">
+          <h1 className="main-title">PATIENTS</h1>
+          <p className="main-subtitle">Manage patient records, medical history, and appointments.</p>
+        </div>
+        <div className="header-actions">
+          <button className="btn-new-appointment" onClick={handleAdd}>
+            <Icons.Plus /> New Patient
+          </button>
+        </div>
+      </div>
+
+      {/* Search & Filter Bar */}
+      <div className="filter-bar-container">
+        <div className="filter-right-group">
+          <div className="tabs-wrapper">
+            <button
+              className={`tab-btn ${genderFilter === 'All' ? 'active' : ''}`}
+              onClick={() => setGenderFilter('All')}
+            >
+              All
+            </button>
+            <button
+              className={`tab-btn ${genderFilter === 'Male' ? 'active' : ''}`}
+              onClick={() => setGenderFilter('Male')}
+            >
+              Male
+            </button>
+            <button
+              className={`tab-btn ${genderFilter === 'Female' ? 'active' : ''}`}
+              onClick={() => setGenderFilter('Female')}
+            >
+              Female
+            </button>
+          </div>
+          <button
+            className="btn-filter-date"
+            onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+          >
+            More Filters <span style={{ fontSize: '11px', marginLeft: '2px' }}>▼</span>
+          </button>
+        </div>
+
+        <div className="search-group">
+          <div className="search-wrapper">
+            <span className="search-icon-lg"><MdSearch size={18} /></span>
+            <input
+              type="text"
+              placeholder="Search by patient name, doctor, or ID..."
+              className="search-input-lg"
+              value={searchQuery}
+              onChange={handleSearchChange}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Advanced Filters Panel */}
+      {showAdvancedFilters && (
+        <div className="filter-bar-container" style={{ marginTop: '12px' }}>
+          <div className="filter-right-group" style={{ flex: 1, justifyContent: 'flex-start', gap: '16px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '200px' }}>
+              <label style={{ fontSize: '12px', fontWeight: 600, color: '#64748B' }}>Doctor</label>
+              <select
+                value={doctorFilter}
+                onChange={(e) => setDoctorFilter(e.target.value)}
+                style={{ padding: '8px 12px', border: '1.5px solid #E2E8F0', borderRadius: '8px', fontSize: '13px' }}
+              >
+                {uniqueDoctors.map(doctor => (
+                  <option key={doctor} value={doctor}>{doctor}</option>
+                ))}
+              </select>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '200px' }}>
+              <label style={{ fontSize: '12px', fontWeight: 600, color: '#64748B' }}>Age Range</label>
+              <select
+                value={ageRangeFilter}
+                onChange={(e) => setAgeRangeFilter(e.target.value)}
+                style={{ padding: '8px 12px', border: '1.5px solid #E2E8F0', borderRadius: '8px', fontSize: '13px' }}
+              >
+                {ageRanges.map(range => (
+                  <option key={range} value={range}>{range === 'All' ? 'All Ages' : range}</option>
+                ))}
+              </select>
+            </div>
+            {hasActiveFilters && (
+              <button
+                onClick={clearAllFilters}
+                style={{ alignSelf: 'flex-end', padding: '8px 16px', background: '#FEF2F2', border: '1.5px solid #FECACA', borderRadius: '8px', fontSize: '13px', fontWeight: 600, color: '#EF4444', cursor: 'pointer' }}
+              >
+                Clear Filters
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Table Card */}
+      <div className="table-card">
+        <div className="modern-table-wrapper">
+          <table className="modern-table">
+            <thead>
+              <tr>
+                <th style={{ width: '25%' }}>Patient Name</th>
+                <th style={{ width: '10%' }}>Age</th>
+                <th style={{ width: '12%' }}>Gender</th>
+                <th style={{ width: '15%' }}>Last Visit</th>
+                <th style={{ width: '18%' }}>Doctor</th>
+                <th style={{ width: '15%' }}>Condition</th>
+                <th style={{ width: '15%' }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {paginatedPatients.map((patient) => {
+                const genderStr = (patient.gender || '').toLowerCase().trim();
+                const avatarSrc = genderStr.includes('female') || genderStr.startsWith('f')
+                  ? '/girlicon.png'
+                  : '/boyicon.png';
+
+                return (
+                  <tr key={patient.id}>
+                    {/* PATIENT COLUMN */}
+                    <td>
+                      <div className="cell-patient">
+                        <img
+                          src={avatarSrc}
+                          alt={patient.gender}
+                          className="patient-avatar"
+                        />
+                        <div className="info-group">
+                          <span 
+                            className="primary font-semibold"
+                            style={{ cursor: 'pointer', color: '#207DC0' }}
+                            onClick={() => handleView(patient)}
+                            title="Click to view patient details"
+                          >
+                            {patient.name}
+                          </span>
+                          <span className="secondary opacity-60 text-xs">
+                            {patient.patientCode || 'PAT-SYNCING...'}
+                          </span>
+                        </div>
+                      </div>
+                    </td>
+
+                    {/* AGE */}
+                    <td style={{ fontWeight: 500, color: '#334155' }}>{patient.age}</td>
+
+                    {/* GENDER */}
+                    <td style={{ fontWeight: 500, color: '#334155' }}>{patient.gender}</td>
+
+                    {/* LAST VISIT */}
+                    <td>
+                      <span className="primary">{formatLastVisit(patient.lastVisit)}</span>
+                    </td>
+
+                    {/* DOCTOR - Match Appointments page style */}
+                    <td>
+                      <div className="cell-doctor">
+                        <img
+                          src="/boyicon.png"
+                          alt={patient.doctor}
+                          className="patient-avatar"
+                          style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }}
+                        />
+                        <span
+                          className="doctor-name-clickable"
+                          onClick={() => handleDoctorClick(patient)}
+                        >
+                          {patient.doctor || 'Not Assigned'}
+                        </span>
+                      </div>
+                    </td>
+
+                    {/* CONDITION */}
+                    <td style={{ fontWeight: 500, color: '#334155' }}>{patient.condition}</td>
+
+                    {/* ACTIONS */}
+                    <td>
+                      <div className="action-buttons-group">
+                        <button
+                          className="btn-action billing"
+                          title="View billing"
+                          aria-label={`View billing for ${patient.name}`}
+                          onClick={() => handleBilling(patient)}
+                          disabled={loadingPatientId === patient.id}
+                        >
+                          {loadingPatientId === patient.id ? '...' : <Icons.Billing />}
+                        </button>
+                        <button
+                          className="btn-action edit"
+                          title="Edit patient"
+                          aria-label={`Edit ${patient.name}`}
+                          onClick={() => handleEdit(patient)}
+                          disabled={loadingPatientId === patient.id}
+                        >
+                          <Icons.Edit />
+                        </button>
+                        <button
+                          className="btn-action delete"
+                          title="Delete patient"
+                          aria-label={`Delete ${patient.name}`}
+                          onClick={() => handleDelete(patient)}
+                          disabled={isLoading}
+                        >
+                          <Icons.Delete />
+                        </button>
+                        <button
+                          className="btn-action download"
+                          title="Download report"
+                          aria-label={`Download report for ${patient.name}`}
+                          onClick={() => handleDownload(patient)}
+                          disabled={downloadingPatients.has(patient.id)}
+                        >
+                          {downloadingPatients.has(patient.id) ? '...' : <Icons.Download />}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+              {isLoading && (
+                <tr>
+                  <td colSpan="7" style={{ textAlign: 'center', padding: '48px', color: '#9CA3AF' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                      <div style={{ width: '32px', height: '32px', border: '3px solid #e5e7eb', borderTopColor: '#207DC0', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }}></div>
+                      <span>Loading patients...</span>
+                    </div>
+                  </td>
+                </tr>
+              )}
+              {!isLoading && paginatedPatients.length === 0 && (
+                <tr>
+                  <td colSpan="7" style={{ textAlign: 'center', padding: '48px', color: '#9CA3AF' }}>
+                    No patients found matching your criteria.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* PAGINATION */}
+        <div className="pagination-footer">
+          <button
+            className="page-arrow-circle leading"
+            disabled={currentPage === 0}
+            onClick={handlePreviousPage}
+          >
+            <MdChevronLeft size={20} />
+          </button>
+
+          <div className="page-indicator-box">
+            Page {currentPage + 1} of {totalPages || 1}
+          </div>
+
+          <button
+            className="page-arrow-circle trailing"
+            disabled={currentPage >= totalPages - 1 || totalPages === 0}
+            onClick={handleNextPage}
+          >
+            <MdChevronRight size={20} />
+          </button>
+        </div>
+      </div>
+      {/* Modals - Single state management */}
+      {activeModal === 'add' && (
+        <AddPatientModal
+          isOpen={true}
+          onClose={handleCloseModal}
+          onSuccess={handleModalSuccess}
+          patientId={null}
+        />
+      )}
+
+      {activeModal === 'view' && modalData && (
+        <PatientView
+          patientId={modalData.id || modalData._id || modalData.patientId}
+          isOpen={true}
+          onClose={handleCloseModal}
+          onEdit={handleEdit}
+        />
+      )}
+
+      {/* Edit and Billing modals commented out - use AddPatientModal for editing */}
+      {/* 
+      {activeModal === 'edit' && modalData && (
+        <EditPatientModal
+          patient={modalData}
+          isOpen={true}
+          onClose={handleCloseModal}
+          onSuccess={handleModalSuccess}
+        />
+      )}
+
+      {activeModal === 'billing' && modalData && (
+        <PatientBillingModal
+          isOpen={true}
+          onClose={handleCloseModal}
+          patientId={modalData.id || modalData._id || modalData.patientId}
+          patientData={modalData}
+        />
+      )}
+
+      {showDoctorDialog && selectedDoctor && (
+        <StaffDetailEnterprise
+          staffId={selectedDoctor.id || selectedDoctor._id}
+          initial={selectedDoctor}
+          onClose={handleCloseDoctorDialog}
+          onUpdate={(updatedStaff) => {
+            console.log('Doctor updated:', updatedStaff);
+            handleCloseDoctorDialog();
+            fetchPatients(); // Refresh patient list
+          }}
+        />
+      )}
+      */}
+
+      {/* Edit Patient Modal - Uses AddPatientModal in edit mode */}
+      {showEditModal && editPatientId && (
+        <AddPatientModal
+          isOpen={showEditModal}
+          onClose={handleCloseEditModal}
+          onSuccess={handleEditSuccess}
+          patientId={editPatientId}
+        />
+      )}
+    </div>
+  );
+};
+
+export default Patients;

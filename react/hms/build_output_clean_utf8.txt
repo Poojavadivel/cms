@@ -1,0 +1,21 @@
+﻿
+> hms@0.1.0 build
+> react-scripts build
+
+Creating an optimized production build...
+Failed to compile.
+
+[eslint] 
+src\components\appointments\AppointmentIntakeModal.jsx
+  Line 22:1:  Import in body of module; reorder to top  import/first
+  Line 23:1:  Import in body of module; reorder to top  import/first
+  Line 24:1:  Import in body of module; reorder to top  import/first
+  Line 25:1:  Import in body of module; reorder to top  import/first
+  Line 26:1:  Import in body of module; reorder to top  import/first
+  Line 27:1:  Import in body of module; reorder to top  import/first
+  Line 28:1:  Import in body of module; reorder to top  import/first
+  Line 29:1:  Import in body of module; reorder to top  import/first
+
+Search for the keywords to learn more about each error.
+
+

@@ -988,6 +988,260 @@ a {
   display: block;
 }
 
+/* ===== Students Page ===== */
+
+.students-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.students-search-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 220px;
+}
+
+.students-search-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  color: #9ca3af;
+  pointer-events: none;
+}
+
+.students-search-input {
+  width: 100%;
+  height: 42px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 0 16px 0 40px;
+  font-size: 14px;
+  color: #1f2937;
+  background: #ffffff;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.students-search-input:focus {
+  border-color: var(--brand-blue);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.students-search-input::placeholder {
+  color: #9ca3af;
+}
+
+.students-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Students Table */
+
+.students-table {
+  width: 100%;
+  text-align: left;
+  border-collapse: collapse;
+}
+
+.students-table thead tr {
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.students-table thead th {
+  padding: 14px 20px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.students-table tbody tr {
+  border-bottom: 1px solid #f3f4f6;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.students-table tbody tr:hover {
+  background: #f9fafb;
+}
+
+.students-table tbody td {
+  padding: 14px 20px;
+  font-size: 14px;
+  color: #374151;
+  font-weight: 500;
+}
+
+.stu-info-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.stu-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  overflow: hidden;
+  flex-shrink: 0;
+  border: 1px solid #e5e7eb;
+}
+
+.stu-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.stu-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.stu-id {
+  font-size: 12px;
+  color: #9ca3af;
+  margin-top: 1px;
+}
+
+.stu-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.stu-badge-green {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.stu-badge-orange {
+  background: #ffedd5;
+  color: #c2410c;
+}
+
+.stu-badge-red {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.stu-badge-blue {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.stu-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.stu-action-btn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9ca3af;
+  transition: background 0.15s, color 0.15s;
+}
+
+.stu-action-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.stu-action-btn:hover {
+  background: #eff6ff;
+  color: var(--brand-blue);
+}
+
+.stu-action-btn-danger:hover {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+/* Pagination */
+
+.students-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 24px;
+  padding: 0 4px 20px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.students-pagination-info {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.students-pagination-info strong {
+  color: #1f2937;
+}
+
+.students-pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.students-page-numbers {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.students-page-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #6b7280;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.students-page-btn:hover {
+  background: #f3f4f6;
+}
+
+.students-page-btn.active {
+  background: var(--brand-blue);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
+}
+
 ::-webkit-scrollbar {
   width: 5px;
 }
