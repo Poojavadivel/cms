@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import Layout from '../components/Layout'
 import Modal from '../components/Modal'
+import { getUserSession } from '../auth/sessionController'
 
 const initialData = [
   { name: 'Johnathan Doe', company: 'Google',    role: 'SWE Intern',     package: '$12,000/yr', status: 'Selected', date: '2023-11-05'  },
@@ -13,6 +14,10 @@ const initialData = [
 const emptyForm = { name: '', company: '', role: '', package: '', status: 'Selected', date: '' }
 
 export default function PlacementPage({ noLayout = false }) {
+  const session = getUserSession()
+  const role = session?.role || 'student'
+  const isAdmin = role === 'admin'
+
   const [entries, setEntries] = useState(initialData)
   const [showModal, setShowModal] = useState(false)
   const [form, setForm] = useState(emptyForm)
@@ -38,12 +43,14 @@ export default function PlacementPage({ noLayout = false }) {
           <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Placement Tracker</h1>
           <p className="text-slate-500 mt-1">Campus Recruitment — Batch 2024</p>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-[#1162d4] text-white rounded-lg text-sm font-semibold hover:bg-[#1162d4]/90 transition-all shadow-sm active:scale-95"
-        >
-          <span className="material-symbols-outlined text-lg">add</span>Add Entry
-        </button>
+        {isAdmin && (
+          <button
+            onClick={() => setShowModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-[#1162d4] text-white rounded-lg text-sm font-semibold hover:bg-[#1162d4]/90 transition-all shadow-sm active:scale-95"
+          >
+            <span className="material-symbols-outlined text-lg">add</span>Add Entry
+          </button>
+        )}
       </div>
 
       {/* Stats Cards */}
