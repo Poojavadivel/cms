@@ -76,6 +76,44 @@ export default function DashboardPage() {
     Placement: '/placement',
     Facility: '/facility',
   };
+  const directRoutes = {
+    Dashboard: '/dashboard',
+    Students: '/students',
+    Settings: '/settings',
+    Analytics: '/analytics',
+    Notifications: '/notifications',
+    Faculty: '/faculty',
+    Department: '/department',
+    Fees: '/fees',
+    Invoices: '/invoices',
+    Admission: '/admission',
+    Payroll: '/payroll',
+    'My Courses': '/courses',
+  };
+
+  function handleMenuItemClick(item) {
+    const directRoute = directRoutes[item];
+
+    if (directRoute) {
+      setSidebarOpen(false);
+      setActivePage(null);
+      if (directRoute === '/dashboard') {
+        navigate(`/dashboard?role=${encodeURIComponent(role)}`);
+      } else {
+        navigate(`${directRoute}?role=${encodeURIComponent(role)}`);
+      }
+      return;
+    }
+
+    if (academicRoutes[item]) {
+      setActivePage(academicRoutes[item]);
+      setSidebarOpen(false);
+      return;
+    }
+
+    setActivePage(null);
+    setSidebarOpen(false);
+  }
 
   useEffect(() => {
     if (!sessionRole || !sessionUserId) {
@@ -141,19 +179,7 @@ export default function DashboardPage() {
                         }
                         onClick={(event) => {
                           event.preventDefault();
-                          if (item.toLowerCase() === 'settings') {
-                            setSidebarOpen(false);
-                            navigate(`/settings?role=${encodeURIComponent(role)}`);
-                          } else if (item.toLowerCase() === 'students') {
-                            setSidebarOpen(false);
-                            navigate(`/students?role=${encodeURIComponent(role)}`);
-                          } else if (academicRoutes[item]) {
-                            setActivePage(academicRoutes[item]);
-                            setSidebarOpen(false);
-                          } else {
-                            setActivePage(null);
-                            setSidebarOpen(false);
-                          }
+                          handleMenuItemClick(item);
                         }}
                       >
                         {item}
@@ -251,9 +277,15 @@ export default function DashboardPage() {
                   <h4>{group.title}</h4>
                   <div className="role-chip-wrap">
                     {group.items.map((item) => (
-                      <span key={item} className="badge badge-gray">
+                      <button
+                        key={item}
+                        type="button"
+                        className="badge badge-gray"
+                        onClick={() => handleMenuItemClick(item)}
+                        style={{ border: 'none', cursor: 'pointer' }}
+                      >
                         {item}
-                      </span>
+                      </button>
                     ))}
                   </div>
                 </div>
