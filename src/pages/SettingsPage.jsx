@@ -33,6 +33,11 @@ export default function SettingsPage() {
 
   const title = role === 'student' || role === 'faculty' ? 'Settings' : 'System Settings';
 
+  const knownRoles = ['student', 'faculty', 'admin', 'finance'];
+  if (!knownRoles.includes(role)) {
+    return <Navigate to="/" replace />;
+  }
+
   return (
     <Layout title={title}>
       {(role === 'student' || role === 'faculty') && (

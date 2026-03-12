@@ -88,21 +88,41 @@ export default function ProfileSettings({ role, userId }) {
       return;
     }
 
+    const maxSizeBytes = 2 * 1024 * 1024; // 2 MB
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+
+    if (!allowedTypes.includes(file.type)) {
+      setProfileError('Please upload a JPEG, PNG, or GIF image.');
+      event.target.value = '';
+      return;
+    }
+
+    if (file.size > maxSizeBytes) {
+      setProfileError('Profile photos must be smaller than 2 MB.');
+      event.target.value = '';
+      return;
+    }
+
+    setProfileError('');
+
     const reader = new FileReader();
     reader.onload = () => {
       const imageData = String(reader.result || '');
-      const nextProfile = {
-        ...profile,
-        profilePhoto: imageData,
-        avatar: imageData,
-      };
 
-      setProfile((current) => ({
-        ...current,
-        profilePhoto: imageData,
-        avatar: imageData,
-      }));
-      saveCurrentUserProfile(role, userId, nextProfile);
+      setProfile((current) => {
+        if (!current) {
+          return current;
+        }
+
+        const updatedProfile = {
+          ...current,
+          profilePhoto: imageData,
+          avatar: imageData,
+        };
+
+        saveCurrentUserProfile(role, userId, updatedProfile);
+        return updatedProfile;
+      });
     };
     reader.readAsDataURL(file);
   }

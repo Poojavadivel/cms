@@ -857,7 +857,7 @@ app.put('/api/notifications/:role/read-all', (req, res) => {
     let count = 0;
 
     notificationsDB.data.forEach(n => {
-      if ((n.receiverRole === 'ALL' || n.receiverRole === role) && n.status === 'unread') {
+      if (n.receiverRole === role && n.status === 'unread') {
         n.status = 'read';
         count++;
       }
@@ -893,7 +893,7 @@ app.post('/api/notifications/:role/clear-all', (req, res) => {
     const initialCount = notificationsDB.data.length;
 
     notificationsDB.data = notificationsDB.data.filter(n => 
-      n.receiverRole !== 'ALL' && n.receiverRole !== role
+      n.receiverRole !== role
     );
 
     const deletedCount = initialCount - notificationsDB.data.length;
