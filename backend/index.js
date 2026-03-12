@@ -3,107 +3,122 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 require('dotenv').config();
 
+// ── Model imports ──
+const Department    = require('./models/Department');
+const Faculty       = require('./models/Faculty');
+const Student       = require('./models/Student');
+const Attendance    = require('./models/Attendance');
+const AcademicResult = require('./models/AcademicResult');
+const Fee           = require('./models/Fee');
+const Document      = require('./models/Document');
+const Report        = require('./models/Report');
+const SystemSetting = require('./models/SystemSetting');
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middleware
+// ── Middleware ──
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
-// MongoDB Connection
+// ── MongoDB Connection ──
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log('Connected to MongoDB Atlas (CMS Database)'))
   .catch(err => console.error('Error connecting to MongoDB:', err));
 
-// Student Schema
-const studentSchema = new mongoose.Schema({
-  id: { type: String, required: true, unique: true },
-  name: { type: String, required: true },
-  email: { type: String, required: true },
-  phone: String,
-  department: String,
-  year: String,
-  semester: Number,
-  section: String,
-  cgpa: Number,
-  attendancePct: Number,
-  feeStatus: String,
-  status: { type: String, default: 'Active' },
-  avatar: String,
-  enrollDate: Date,
-  dob: Date,
-  gender: String,
-  address: String,
-  guardian: String,
-  guardianPhone: String,
-  subjects: [{
-    code: String,
-    name: String,
-    internal: Number,
-    external: Number,
-    total: Number,
-    grade: String
-  }],
-  fees: [{
-    id: String,
-    type: String,
-    amount: Number,
-    paid: Number,
-    due: Number,
-    date: String,
-    status: String
-  }],
-  documents: [{
-    id: String,
-    name: String,
-    type: String,
-    uploadDate: Date,
-    size: String
-  }],
-  attendanceMonthly: [{
-    month: String,
-    present: Number,
-    total: Number
-  }]
-}, { timestamps: true });
+// ═══════════════════════════════════════════════════════════
+//  CRUD helper – keeps route definitions DRY
+// ═══════════════════════════════════════════════════════════
+function registerCrud(router, path, Model, idField) {
+  // GET all
+  router.get(path, async (_req, res) => {
+    try { res.json(await Model.find().sort({ createdAt: -1 })); }
+    catch (e) { res.status(500).json({ message: e.message }); }
+  });
 
-const Student = mongoose.model('Student', studentSchema);
-
-// API Routes
-app.get('/api/students', async (req, res) => {
-  try {
-    const students = await Student.find();
-    res.json(students);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+  // GET one
+  if (idField) {
+    router.get(`${path}/:id`, async (req, res) => {
+      try {
+        const query = idField === '_id'
+          ? { _id: req.params.id }
+          : { [idField]: req.params.id };
+        const doc = await Model.findOne(query);
+        if (!doc) return res.status(404).json({ message: 'Not found' });
+        res.json(doc);
+      } catch (e) { res.status(500).json({ message: e.message }); }
+    });
   }
-});
 
-app.get('/api/students/:id', async (req, res) => {
-  try {
-    const student = await Student.findOne({ id: req.params.id });
-    if (!student) return res.status(404).json({ message: 'Student not found' });
-    res.json(student);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+  // POST create
+  router.post(path, async (req, res) => {
+    try { res.status(201).json(await Model.create(req.body)); }
+    catch (e) { res.status(400).json({ message: e.message }); }
+  });
+
+  // PUT update
+  if (idField) {
+    router.put(`${path}/:id`, async (req, res) => {
+      try {
+        const query = idField === '_id'
+          ? { _id: req.params.id }
+          : { [idField]: req.params.id };
+        const doc = await Model.findOneAndUpdate(query, req.body, { new: true, runValidators: true });
+        if (!doc) return res.status(404).json({ message: 'Not found' });
+        res.json(doc);
+      } catch (e) { res.status(400).json({ message: e.message }); }
+    });
   }
-});
 
-app.post('/api/students', async (req, res) => {
-  const student = new Student(req.body);
-  try {
-    const newStudent = await student.save();
-    res.status(201).json(newStudent);
-  } catch (err) {
-    res.status(400).json({ message: err.message });
+  // DELETE
+  if (idField) {
+    router.delete(`${path}/:id`, async (req, res) => {
+      try {
+        const query = idField === '_id'
+          ? { _id: req.params.id }
+          : { [idField]: req.params.id };
+        const doc = await Model.findOneAndDelete(query);
+        if (!doc) return res.status(404).json({ message: 'Not found' });
+        res.json({ message: 'Deleted successfully' });
+      } catch (e) { res.status(500).json({ message: e.message }); }
+    });
   }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  Register all routes
+// ═══════════════════════════════════════════════════════════
+registerCrud(app, '/api/departments',      Department,     'code');
+registerCrud(app, '/api/faculty',          Faculty,        '_id');
+registerCrud(app, '/api/students',         Student,        'rollNumber');
+registerCrud(app, '/api/attendance',       Attendance,     '_id');
+registerCrud(app, '/api/academic-results', AcademicResult, '_id');
+registerCrud(app, '/api/fees',             Fee,            '_id');
+registerCrud(app, '/api/documents',        Document,       '_id');
+registerCrud(app, '/api/reports',          Report,         '_id');
+registerCrud(app, '/api/settings',         SystemSetting,  'key');
+
+// ── Extra: get attendance / results / fees / documents by studentId ──
+app.get('/api/attendance/student/:studentId', async (req, res) => {
+  try { res.json(await Attendance.find({ studentId: req.params.studentId }).sort({ date: -1 })); }
+  catch (e) { res.status(500).json({ message: e.message }); }
+});
+app.get('/api/academic-results/student/:studentId', async (req, res) => {
+  try { res.json(await AcademicResult.find({ studentId: req.params.studentId }).sort({ semester: 1 })); }
+  catch (e) { res.status(500).json({ message: e.message }); }
+});
+app.get('/api/fees/student/:studentId', async (req, res) => {
+  try { res.json(await Fee.find({ studentId: req.params.studentId }).sort({ date: -1 })); }
+  catch (e) { res.status(500).json({ message: e.message }); }
+});
+app.get('/api/documents/student/:studentId', async (req, res) => {
+  try { res.json(await Document.find({ studentId: req.params.studentId })); }
+  catch (e) { res.status(500).json({ message: e.message }); }
 });
 
-// Root Route
-app.get('/', (req, res) => {
-  res.send('CMS Backend API is running...');
-});
+// ── Root ──
+app.get('/', (_req, res) => res.send('CMS Backend API is running...'));
 
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+// ── Start server ──
+app.listen(PORT, () => console.log(`Server is running on port ${PORT}`));

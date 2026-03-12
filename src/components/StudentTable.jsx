@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 
-export default function StudentTable({ students }) {
+export default function StudentTable({ students, onEdit, onDelete }) {
   const navigate = useNavigate()
 
   const statusStyles = {
@@ -44,9 +44,9 @@ export default function StudentTable({ students }) {
           ) : (
             students.map((s) => (
               <tr
-                key={s.id}
+                key={s.rollNumber || s._id}
                 className="hover:bg-slate-50 transition-colors cursor-pointer"
-                onClick={() => navigate(`/students/${encodeURIComponent(s.id)}`)}
+                onClick={() => navigate(`/students/${encodeURIComponent(s.rollNumber || s._id)}`)}
               >
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
@@ -59,14 +59,14 @@ export default function StudentTable({ students }) {
                     </div>
                     <div>
                       <p className="text-sm font-semibold text-slate-900">{s.name}</p>
-                      <p className="text-xs text-slate-500">{s.id}</p>
+                      <p className="text-xs text-slate-500">{s.rollNumber || s.id}</p>
                     </div>
                   </div>
                 </td>
-                <td className="px-6 py-4 text-sm text-slate-600">{s.department}</td>
+                <td className="px-6 py-4 text-sm text-slate-600 font-medium">{s.departmentId || s.department}</td>
                 <td className="px-6 py-4">
-                   <p className="text-sm font-medium text-slate-900">Sem {s.semester || 'N/A'}</p>
-                   <p className="text-xs text-slate-500">{s.year}</p>
+                   <p className="text-sm font-medium text-slate-900">Sem {s.semester || '1'}</p>
+                   <p className="text-xs text-slate-500">{s.year ? `${s.year}${s.year === 1 ? 'st' : s.year === 2 ? 'nd' : s.year === 3 ? 'rd' : 'th'} Year` : '1st Year'}</p>
                 </td>
                 <td className="px-6 py-4">
                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusStyles[s.status.toUpperCase()] || 'bg-slate-100 text-slate-700'}`}>
@@ -80,10 +80,18 @@ export default function StudentTable({ students }) {
                 </td>
                 <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
                   <div className="flex items-center justify-end gap-2">
-                    <button className="p-1.5 text-slate-400 hover:text-[#1162d4] hover:bg-[#1162d4]/10 rounded-lg transition-colors">
+                    <button 
+                      onClick={() => onEdit && onEdit(s)}
+                      className="p-1.5 text-slate-400 hover:text-[#1162d4] hover:bg-[#1162d4]/10 rounded-lg transition-colors"
+                      title="Edit Student"
+                    >
                       <span className="material-symbols-outlined text-lg">edit</span>
                     </button>
-                    <button className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                    <button 
+                      onClick={() => onDelete && onDelete(s)}
+                      className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      title="Delete Student"
+                    >
                       <span className="material-symbols-outlined text-lg">delete</span>
                     </button>
                   </div>

@@ -590,6 +590,319 @@ app.post('/api/settings/:userId/delete-request', (req, res) => {
   res.status(201).json({ message: 'Account deletion request submitted.', data: entry });
 });
 
+// ── Notifications API ──────────────────────────────────────────────────────────
+
+// Notifications database (in-memory)
+const notificationsDB = {
+  data: [
+    {
+      id: 1,
+      title: 'Assignment Posted',
+      message: 'Assignment 3: Data Structures uploaded for CS201',
+      senderRole: 'faculty',
+      receiverRole: 'student',
+      module: 'Academic',
+      priority: 'Medium',
+      status: 'unread',
+      createdAt: '2026-03-12T10:30:00Z',
+      actionId: 'assignment_posted_1'
+    },
+    {
+      id: 2,
+      title: 'Fee Payment Reminder',
+      message: 'Your spring semester fees of ₹85,000 are due by 2026-03-25.',
+      senderRole: 'finance',
+      receiverRole: 'student',
+      module: 'Finance',
+      priority: 'High',
+      status: 'unread',
+      createdAt: '2026-03-12T07:30:00Z',
+      actionId: 'fee_reminder_1'
+    },
+    {
+      id: 3,
+      title: 'Class Cancellation',
+      message: 'CS201 class scheduled for today is cancelled due to faculty emergency.',
+      senderRole: 'faculty',
+      receiverRole: 'student',
+      module: 'Academic',
+      priority: 'High',
+      status: 'read',
+      createdAt: '2026-03-12T09:00:00Z',
+      actionId: 'class_cancelled_1'
+    },
+    {
+      id: 4,
+      title: 'Internal Marks Released',
+      message: 'Internal exam marks for CS201 have been released.',
+      senderRole: 'faculty',
+      receiverRole: 'student',
+      module: 'Academic',
+      priority: 'Medium',
+      status: 'read',
+      createdAt: '2026-03-10T11:20:00Z',
+      actionId: 'marks_released_1'
+    },
+    {
+      id: 5,
+      title: 'Semester Registration Open',
+      message: 'Spring 2026 semester registration is now open.',
+      senderRole: 'admin',
+      receiverRole: 'student',
+      module: 'Administrative',
+      priority: 'High',
+      status: 'unread',
+      createdAt: '2026-03-12T08:00:00Z',
+      actionId: 'sem_registration_open_1'
+    },
+    {
+      id: 6,
+      title: 'Placement Campaign Alert',
+      message: 'Tech Corp is recruiting! Register before 2026-03-18 for campus interview.',
+      senderRole: 'admin',
+      receiverRole: 'student',
+      module: 'Administrative',
+      priority: 'High',
+      status: 'unread',
+      createdAt: '2026-03-12T12:00:00Z',
+      actionId: 'placement_alert_1'
+    },
+    {
+      id: 7,
+      title: 'Scholarship Approval',
+      message: 'Congratulations! Your merit scholarship of ₹10,000 has been approved.',
+      senderRole: 'finance',
+      receiverRole: 'student',
+      module: 'Finance',
+      priority: 'Medium',
+      status: 'read',
+      createdAt: '2026-03-10T10:20:00Z',
+      actionId: 'scholarship_approval_1'
+    },
+    {
+      id: 8,
+      title: 'Faculty Meeting Scheduled',
+      message: 'Department meeting scheduled for 2026-03-15 at 2:00 PM. Attendance mandatory.',
+      senderRole: 'admin',
+      receiverRole: 'faculty',
+      module: 'Administrative',
+      priority: 'High',
+      status: 'unread',
+      createdAt: '2026-03-12T08:45:00Z',
+      actionId: 'faculty_meeting_1'
+    },
+    {
+      id: 9,
+      title: 'Salary Credited',
+      message: 'Your March 2026 salary of ₹75,000 has been credited to your account.',
+      senderRole: 'finance',
+      receiverRole: 'faculty',
+      module: 'Finance',
+      priority: 'Medium',
+      status: 'read',
+      createdAt: '2026-03-01T05:30:00Z',
+      actionId: 'salary_credited_1'
+    },
+    {
+      id: 10,
+      title: 'Department Spending Alert',
+      message: 'CS department has exceeded budget by 15%.',
+      senderRole: 'finance',
+      receiverRole: 'admin',
+      module: 'Finance',
+      priority: 'Critical',
+      status: 'unread',
+      createdAt: '2026-03-12T15:45:00Z',
+      actionId: 'spending_alert_1'
+    },
+    {
+      id: 11,
+      title: 'Emergency Announcement',
+      message: 'Campus will remain closed on 2026-03-13 due to severe weather.',
+      senderRole: 'admin',
+      receiverRole: 'ALL',
+      module: 'Alerts',
+      priority: 'Critical',
+      status: 'unread',
+      createdAt: '2026-03-12T17:30:00Z',
+      actionId: 'emergency_announce_1'
+    },
+    {
+      id: 12,
+      title: 'System Maintenance Alert',
+      message: 'Scheduled system maintenance on 2026-03-14 from 11:00 PM to 1:00 AM.',
+      senderRole: 'admin',
+      receiverRole: 'ALL',
+      module: 'System',
+      priority: 'Medium',
+      status: 'unread',
+      createdAt: '2026-03-12T16:20:00Z',
+      actionId: 'maintenance_alert_1'
+    }
+  ]
+};
+
+// Get notifications for a role
+app.get('/api/notifications/:role', (req, res) => {
+  try {
+    const { role } = req.params;
+    const { category, priority, status, search } = req.query;
+    
+    let notifications = notificationsDB.data.filter(n => 
+      n.receiverRole === 'ALL' || n.receiverRole === role
+    );
+
+    if (category) {
+      notifications = notifications.filter(n => n.module === category);
+    }
+    if (priority) {
+      notifications = notifications.filter(n => n.priority === priority);
+    }
+    if (status) {
+      notifications = notifications.filter(n => n.status === status);
+    }
+    if (search) {
+      notifications = notifications.filter(n =>
+        n.title.toLowerCase().includes(search.toLowerCase()) ||
+        n.message.toLowerCase().includes(search.toLowerCase())
+      );
+    }
+
+    notifications.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    const unreadCount = notificationsDB.data.filter(n => 
+      (n.receiverRole === 'ALL' || n.receiverRole === role) && n.status === 'unread'
+    ).length;
+
+    res.json({
+      success: true,
+      role,
+      data: notifications,
+      count: notifications.length,
+      unreadCount
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Get unread count
+app.get('/api/notifications/:role/unread', (req, res) => {
+  try {
+    const { role } = req.params;
+    const unreadCount = notificationsDB.data.filter(n => 
+      (n.receiverRole === 'ALL' || n.receiverRole === role) && n.status === 'unread'
+    ).length;
+
+    res.json({ success: true, role, unreadCount });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Create notification
+app.post('/api/notifications', (req, res) => {
+  try {
+    const { title, message, senderRole, receiverRole, module, priority, actionId, relatedData } = req.body;
+
+    if (!title || !message || !senderRole || !receiverRole || !module || !priority) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields'
+      });
+    }
+
+    const newNotification = {
+      id: Math.max(...notificationsDB.data.map(n => n.id), 0) + 1,
+      title,
+      message,
+      senderRole,
+      receiverRole,
+      module,
+      priority,
+      status: 'unread',
+      createdAt: new Date().toISOString(),
+      actionId: actionId || null,
+      relatedData: relatedData || {}
+    };
+
+    notificationsDB.data.unshift(newNotification);
+    res.status(201).json({ success: true, message: 'Notification created', data: newNotification });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Mark notification as read
+app.put('/api/notifications/:id/read', (req, res) => {
+  try {
+    const { id } = req.params;
+    const notification = notificationsDB.data.find(n => n.id === parseInt(id));
+
+    if (!notification) {
+      return res.status(404).json({ success: false, error: 'Notification not found' });
+    }
+
+    notification.status = 'read';
+    res.json({ success: true, message: 'Notification marked as read', data: notification });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Mark all as read for a role
+app.put('/api/notifications/:role/read-all', (req, res) => {
+  try {
+    const { role } = req.params;
+    let count = 0;
+
+    notificationsDB.data.forEach(n => {
+      if ((n.receiverRole === 'ALL' || n.receiverRole === role) && n.status === 'unread') {
+        n.status = 'read';
+        count++;
+      }
+    });
+
+    res.json({ success: true, message: 'All notifications marked as read', count });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Delete notification
+app.delete('/api/notifications/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const index = notificationsDB.data.findIndex(n => n.id === parseInt(id));
+
+    if (index === -1) {
+      return res.status(404).json({ success: false, error: 'Notification not found' });
+    }
+
+    const deleted = notificationsDB.data.splice(index, 1);
+    res.json({ success: true, message: 'Notification deleted', data: deleted[0] });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Clear all notifications for a role
+app.post('/api/notifications/:role/clear-all', (req, res) => {
+  try {
+    const { role } = req.params;
+    const initialCount = notificationsDB.data.length;
+
+    notificationsDB.data = notificationsDB.data.filter(n => 
+      n.receiverRole !== 'ALL' && n.receiverRole !== role
+    );
+
+    const deletedCount = initialCount - notificationsDB.data.length;
+    res.json({ success: true, message: 'All notifications cleared', deletedCount });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // ── 404 Fallback ───────────────────────────────────────────────────────────────
 
 app.use((req, res) => {
