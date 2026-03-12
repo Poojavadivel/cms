@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { cmsRoles, getValidRole, roleMenuGroups } from '../data/roleConfig';
+import Layout from '../components/Layout';
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 const Icon = {
@@ -414,7 +415,7 @@ export default function NotificationsPage({ role: propRole }) {
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <>
+    <Layout title="Notifications">
       <style>{`
         @keyframes pulse-dot {
           0%, 100% { box-shadow: 0 0 0 3px #fee2e2; }
@@ -445,104 +446,6 @@ export default function NotificationsPage({ role: propRole }) {
       )}
 
       <div className={`sidebar-overlay${sidebarOpen ? ' active' : ''}`} onClick={() => setSidebarOpen(false)} aria-hidden="true" />
-
-      <div className="dashboard-wrapper role-layout">
-        {/* ── Sidebar ── */}
-        <aside className={`sidebar${sidebarOpen ? ' open' : ''}`} id="sidebar">
-          <div className="sidebar-logo">
-            <div className="logo-mark"><Icon.Graduation /></div>
-            <div className="logo-text-wrap">
-              <div className="logo-title">MIT Connect</div>
-              <div className="logo-sub">{data.label} Portal</div>
-            </div>
-          </div>
-          <nav className="sidebar-nav">
-            {menuGroups.map((group, gi) => (
-              <div key={group.title}>
-                <div className="nav-section-label">{group.title}</div>
-                <ul>
-  {group.items.map((item) => (
-  <li key={item}>
-    <a
-      href="#"
-      className={item === "Notifications" ? "active" : ""}
-      onClick={(e) => {
-        e.preventDefault();
-
-        if (item === "Notifications") {
-          navigate(`/notifications?role=${role}`);
-        } else {
-          navigate(`/${item.toLowerCase().replace(/\s+/g, "-")}?role=${role}`);
-        }
-      }}
-      style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
-    >
-      {item}
-
-      {item === "Notifications" && unreadCount > 0 && (
-        <span
-          style={{
-            background: "#ef4444",
-            color: "#fff",
-            fontSize: "11px",
-            fontWeight: "700",
-            padding: "2px 7px",
-            borderRadius: "50%",
-          }}
-        >
-          {unreadCount}
-        </span>
-      )}
-    </a>
-  </li>
-))}
-                </ul>
-              </div>
-            ))}
-          </nav>
-          <div className="sidebar-footer">
-            <a href="#" onClick={(e) => { e.preventDefault(); handleLogout(); }}>
-              <Icon.Logout /> Logout
-            </a>
-          </div>
-        </aside>
-
-        {/* ── Main ── */}
-        <main className="main-content">
-
-          {/* Topbar */}
-          <div className="topbar">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <button className="mobile-menu-btn" onClick={() => setSidebarOpen(true)} aria-label="Toggle menu"><Icon.Menu /></button>
-              <button type="button" onClick={() => navigate(-1)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8, padding: '0 12px', height: 36, fontSize: 13, fontWeight: 500, color: '#6b7280', cursor: 'pointer' }}>
-                <Icon.Back /> Back
-              </button>
-              <div className="topbar-left">
-                <h2 style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ position: 'relative', display: 'inline-flex' }}>
-                    <Icon.Bell />
-                    {unreadCount > 0 && (
-                      <span style={{
-                        position: 'absolute', top: -6, right: -8,
-                        background: '#ef4444', color: '#fff',
-                        fontSize: 10, fontWeight: 800,
-                        width: 18, height: 18, borderRadius: '50%',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        border: '2px solid #fff',
-                      }}>{unreadCount}</span>
-                    )}
-                  </span>
-                  Notifications
-                  {unreadCount > 0 && (
-                    <span style={{ fontSize: 13, fontWeight: 500, color: '#ef4444', background: '#fef2f2', padding: '2px 10px', borderRadius: 999 }}>
-                      {unreadCount} unread
-                    </span>
-                  )}
-                </h2>
-                <p>All your alerts, reminders, and updates</p>
-              </div>
-            </div>
-          </div>
 
           {/* ── Control bar ── */}
           <div className="content-card" style={{ marginBottom: 20, padding: '14px 18px' }}>
@@ -773,8 +676,6 @@ export default function NotificationsPage({ role: propRole }) {
               </span>
             </div>
           )}
-        </main>
-      </div>
-    </>
+    </Layout>
   );
 }
