@@ -10,6 +10,14 @@ function studentSeed(overrides = {}) {
       phone: '9876543210',
       bio: 'Computer Science Student',
       address: 'Chennai',
+      dob: '2004-05-15',
+      gender: 'Male',
+      guardian: 'Ramesh Kumar',
+      guardianPhone: '9876543200',
+      tenth_mark: 88,
+      twelfth_mark: 90,
+      department: 'Computer Science',
+      year: '3rd Year',
     },
     notifications: {
       email: true,
@@ -91,6 +99,32 @@ function facultySeed(overrides = {}) {
   };
 }
 
+function staffSeed(role, overrides = {}) {
+  const defaults = {
+    admin: {
+      name: 'Nisha Verma',
+      email: 'admin@mitconnect.edu',
+      phone: '9012345678',
+      department: 'Campus Administration',
+      address: 'Main Administrative Block, MIT Connect Campus',
+    },
+    finance: {
+      name: 'Arun Kumar',
+      email: 'finance@mitconnect.edu',
+      phone: '9098765432',
+      department: 'Accounts & Billing',
+      address: 'Finance Office, MIT Connect Campus',
+    },
+  };
+
+  return {
+    profile: {
+      ...(defaults[role] || defaults.admin),
+    },
+    ...overrides,
+  };
+}
+
 const now = new Date().toISOString();
 
 export const settingsDB = {
@@ -103,6 +137,14 @@ export const settingsDB = {
         phone: '9876543211',
         bio: 'Final Year CSE Student',
         address: 'Coimbatore',
+        dob: '2004-08-22',
+        gender: 'Male',
+        guardian: 'Michael Anderson',
+        guardianPhone: '9876543201',
+        tenth_mark: 92,
+        twelfth_mark: 95,
+        department: 'Computer Science',
+        year: '3rd Year',
       },
     }),
   },
@@ -123,11 +165,19 @@ export const settingsDB = {
       },
     }),
   },
+  admin: {
+    'ADM-0001': staffSeed('admin'),
+  },
+  finance: {
+    'FIN-880': staffSeed('finance'),
+  },
   credentials: {
     stu_101: 'student123',
     'STU-2024-1547': 'student123',
     fac_201: 'faculty123',
     'FAC-204': 'faculty123',
+    'ADM-0001': 'admin123',
+    'FIN-880': 'finance123',
   },
   sessions: {
     stu_101: [
@@ -141,6 +191,8 @@ export const settingsDB = {
     'FAC-204': [
       { id: 'sess-fac-2', device: 'Chrome on Windows', location: 'Chennai', active: true, lastSeen: now },
     ],
+    'ADM-0001': [{ id: 'sess-admin-1', device: 'Edge on Windows', location: 'Bengaluru', active: true, lastSeen: now }],
+    'FIN-880': [{ id: 'sess-fin-1', device: 'Chrome on Windows', location: 'Bengaluru', active: true, lastSeen: now }],
   },
   loginHistory: {
     stu_101: [
@@ -160,6 +212,14 @@ export const settingsDB = {
       { timestamp: now, status: 'success', ip: '10.10.5.89' },
       { timestamp: '2026-03-09T07:40:00Z', status: 'failed', ip: '10.10.5.89' },
     ],
+    'ADM-0001': [
+      { timestamp: now, status: 'success', ip: '10.10.1.11' },
+      { timestamp: '2026-03-10T07:30:00Z', status: 'success', ip: '10.10.1.11' },
+    ],
+    'FIN-880': [
+      { timestamp: now, status: 'success', ip: '10.10.1.22' },
+      { timestamp: '2026-03-09T11:15:00Z', status: 'success', ip: '10.10.1.22' },
+    ],
   },
   deleteRequests: [],
 };
@@ -178,11 +238,32 @@ export function normalizeRole(role) {
     return 'faculty';
   }
 
+  if (value === 'admin') {
+    return 'admin';
+  }
+
+  if (value === 'finance') {
+    return 'finance';
+  }
+
   return null;
 }
 
 export function roleBucket(role) {
-  return normalizeRole(role) === 'faculty' ? 'faculty' : 'students';
+  const normalized = normalizeRole(role);
+  if (normalized === 'faculty') {
+    return 'faculty';
+  }
+
+  if (normalized === 'admin') {
+    return 'admin';
+  }
+
+  if (normalized === 'finance') {
+    return 'finance';
+  }
+
+  return 'students';
 }
 
 export function inferRoleByUserId(userId) {
@@ -194,6 +275,14 @@ export function inferRoleByUserId(userId) {
     return 'faculty';
   }
 
+  if (settingsDB.admin[userId]) {
+    return 'admin';
+  }
+
+  if (settingsDB.finance[userId]) {
+    return 'finance';
+  }
+
   return null;
 }
 
@@ -203,7 +292,14 @@ export function getUserRecord(role, userId) {
     return null;
   }
 
-  const collection = resolvedRole === 'faculty' ? settingsDB.faculty : settingsDB.students;
+  const collection =
+    resolvedRole === 'faculty'
+      ? settingsDB.faculty
+      : resolvedRole === 'admin'
+        ? settingsDB.admin
+        : resolvedRole === 'finance'
+          ? settingsDB.finance
+          : settingsDB.students;
   const record = collection[userId];
 
   if (!record) {

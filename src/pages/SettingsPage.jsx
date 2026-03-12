@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { getUserSession } from '../auth/sessionController';
+import Layout from '../components/Layout';
 import RoleGuard from '../components/RoleGuard';
 import SettingsLayout from '../components/settings/SettingsLayout';
 import UserSettingsPage from '../components/user-settings/SettingsPage';
@@ -22,7 +23,7 @@ export default function SettingsPage() {
   useEffect(() => {
     const roleLabel = cmsRoles[role]?.label || 'System';
     const titlePrefix = role === 'student' || role === 'faculty' ? 'User Settings' : 'System Settings';
-    document.title = `MIT Connect - ${roleLabel} ${titlePrefix}`;
+    document.title = `EduCore - ${roleLabel} ${titlePrefix}`;
 
     const expectedSearch = `?role=${encodeURIComponent(role)}`;
     if (location.search !== expectedSearch) {
@@ -30,21 +31,20 @@ export default function SettingsPage() {
     }
   }, [location.search, navigate, role]);
 
-  if (role === 'student' || role === 'faculty') {
-    return (
-      <RoleGuard roles={['student', 'faculty']}>
-        <UserSettingsPage role={role} userId={session.userId} />
-      </RoleGuard>
-    );
-  }
+  const title = role === 'student' || role === 'faculty' ? 'Settings' : 'System Settings';
 
-  if (role === 'admin' || role === 'finance') {
-    return (
-      <RoleGuard roles={['admin', 'finance']}>
-        <SettingsLayout role={role} userId={session.userId} />
-      </RoleGuard>
-    );
-  }
-
-  return <Navigate to="/" replace />;
+  return (
+    <Layout title={title}>
+      {(role === 'student' || role === 'faculty') && (
+        <RoleGuard roles={['student', 'faculty']}>
+          <UserSettingsPage role={role} userId={session.userId} />
+        </RoleGuard>
+      )}
+      {(role === 'admin' || role === 'finance') && (
+        <RoleGuard roles={['admin', 'finance']}>
+          <SettingsLayout role={role} userId={session.userId} />
+        </RoleGuard>
+      )}
+    </Layout>
+  );
 }

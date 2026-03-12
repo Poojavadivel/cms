@@ -19,6 +19,8 @@ export const students = [
     address: '12, MG Road, Bangalore, Karnataka',
     guardian: 'Rajesh Kumar',
     guardianPhone: '+91 98765 43200',
+    tenth_mark: 92,
+    twelfth_mark: 95,
     avatar: 'https://ui-avatars.com/api/?name=Aarav+Kumar&background=2563eb&color=fff&size=128',
     subjects: [
       { code: 'CS301', name: 'Data Structures', internal: 42, external: 48, total: 90, grade: 'A+' },
@@ -68,6 +70,8 @@ export const students = [
     address: '45, Residency Road, Bangalore',
     guardian: 'Suresh Sharma',
     guardianPhone: '+91 87654 32100',
+    tenth_mark: 94,
+    twelfth_mark: 96,
     avatar: 'https://ui-avatars.com/api/?name=Priya+Sharma&background=7c3aed&color=fff&size=128',
     subjects: [
       { code: 'CS301', name: 'Data Structures', internal: 46, external: 48, total: 94, grade: 'A+' },
