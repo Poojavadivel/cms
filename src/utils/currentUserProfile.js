@@ -40,12 +40,16 @@ export function saveCurrentUserProfile(role, userId, profile) {
     return;
   }
 
-  window.localStorage.setItem(getProfileStorageKey(role, userId), JSON.stringify(profile));
-  window.dispatchEvent(
-    new window.CustomEvent(PROFILE_EVENT, {
-      detail: { role, userId, profile },
-    })
-  );
+  try {
+    window.localStorage.setItem(getProfileStorageKey(role, userId), JSON.stringify(profile));
+    window.dispatchEvent(
+      new window.CustomEvent(PROFILE_EVENT, {
+        detail: { role, userId, profile },
+      })
+    );
+  } catch {
+    // Silently ignore storage errors (quota exceeded, private mode, etc.)
+  }
 }
 
 export function useCurrentUserProfile(role, userId, fallbackProfile = {}) {

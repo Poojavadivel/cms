@@ -15,7 +15,9 @@ export default function DashboardPage() {
   const role = sessionRole || 'student';
   const data = cmsRoles[role];
   const menuGroups = roleMenuGroups[role] || roleMenuGroups.student;
-  const userId = sessionUserId || 'N/A';
+  // Keep userId null when session is not yet validated to avoid storing a
+  // spurious cmsProfile:<role>:N/A entry in localStorage.
+  const userId = sessionUserId || null;
   const currentUserProfile = useCurrentUserProfile(role, userId, {
     name: data.name,
     department: data.team,
