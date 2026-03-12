@@ -15,7 +15,7 @@ export default function DashboardPage() {
   const role = sessionRole || 'student';
   const data = cmsRoles[role];
   const menuGroups = roleMenuGroups[role] || roleMenuGroups.student;
-  const userId = sessionUserId || 'N/A';
+  const userId = sessionUserId || '';
   const currentUserProfile = useCurrentUserProfile(role, userId, {
     name: data.name,
     department: data.team,

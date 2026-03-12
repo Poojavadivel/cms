@@ -63,9 +63,9 @@ export default function NotificationCenter({ role = 'student' }) {
   const handleMarkAsRead = async (notificationId) => {
     try {
       await fetch(`/api/notifications/${notificationId}/read`, { method: 'PUT' });
-      setNotifications(notifications.map(n =>
-        n.id === notificationId ? { ...n, status: 'read' } : n
-      ));
+      setNotifications(current =>
+        current.map(n => n.id === notificationId ? { ...n, status: 'read' } : n)
+      );
     } catch (error) {
       console.error('Error marking notification as read:', error);
     }
@@ -106,7 +106,7 @@ export default function NotificationCenter({ role = 'student' }) {
   };
 
   const handleNotificationCreated = (newNotification) => {
-    setNotifications([newNotification, ...notifications]);
+    setNotifications(current => [newNotification, ...current]);
     setShowCreateForm(false);
   };
 

@@ -211,10 +211,6 @@
   opacity: 0.7;
 }
 
-.user-settings-grid-span-2 {
-  grid-column: span 2;
-}
-
 .user-settings-field-error {
   color: #b91c1c;
   font-size: 12px;

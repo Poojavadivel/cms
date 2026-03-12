@@ -95,7 +95,8 @@ export default function RolePortalLayout({ role, title, subtitle, children }) {
                 <div className="nav-section-label">{group.title}</div>
                 <ul>
                   {group.items.map((item) => {
-                    const active = item === 'Settings';
+                    const itemRoute = itemRoutes[item];
+                    const active = Boolean(itemRoute && location.pathname === itemRoute);
 
                     return (
                       <li key={item}>
