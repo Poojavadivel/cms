@@ -1,7 +1,5 @@
 import { useState, useMemo } from 'react'
 import Layout from '../components/Layout'
-import { getUserSession } from '../auth/sessionController'
-import Modal from '../components/Modal'
 
 const initialExamsData = [
   { id: 1, code: 'CS401', name: 'Data Structures',      date: '2023-12-10', time: '10:00', room: 'Hall A',    type: 'Mid-Sem',  status: 'Upcoming', duration: '120', maxMarks: '100' },
@@ -12,8 +10,6 @@ const initialExamsData = [
 ]
 
 export default function ExamsPage({ noLayout = false }) {
-  const session = getUserSession()
-  const isStudent = session?.role === 'student'
   const [exams, setExams] = useState(initialExamsData)
   const [showModal, setShowModal] = useState(false)
   const [editingExam, setEditingExam] = useState(null)
@@ -71,7 +67,7 @@ export default function ExamsPage({ noLayout = false }) {
   }
 
   const handleSubmit = (e) => {
-    if (e) e.preventDefault()
+    e.preventDefault()
     
     if (editingExam) {
       // Update existing exam
@@ -109,25 +105,19 @@ export default function ExamsPage({ noLayout = false }) {
     return `${displayHour}:${minutes} ${ampm}`
   }
 
-  const inputClasses = "w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#1162d4]/10 focus:border-[#1162d4] outline-none transition-all text-sm text-slate-700 bg-white";
-  const labelClasses = "block text-sm font-semibold text-slate-700 mb-1.5 ml-0.5";
-
   const inner = (
     <>
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Exam Schedule</h1>
+          <h1 className="text-3xl font-bold text-slate-900">Exam Schedule</h1>
           <p className="text-slate-500 mt-1">Department of Computer Science — Semester 4</p>
         </div>
-        {!isStudent && (
-          <button 
-            onClick={openAddModal}
-            className="flex items-center gap-2 px-4 py-2 bg-[#1162d4] text-white rounded-lg text-sm font-semibold hover:bg-[#1162d4]/90 transition-all shadow-sm active:scale-95"
-          >
-            <span className="material-symbols-outlined text-lg">calendar_add_on</span>
-            Schedule Exam
-          </button>
-        )}
+        <button 
+          onClick={openAddModal}
+          className="flex items-center gap-2 px-4 py-2 bg-[#1162d4] text-white rounded-lg text-sm font-semibold hover:bg-[#1162d4]/90 transition-colors"
+        >
+          <span className="material-symbols-outlined text-lg">add</span>Schedule Exam
+        </button>
       </div>
       
       {/* Stats Cards */}
@@ -166,9 +156,9 @@ export default function ExamsPage({ noLayout = false }) {
           <tbody className="divide-y divide-slate-100">
             {exams.length === 0 ? (
               <tr>
-                <td colSpan={isStudent ? 6 : 7} className="px-6 py-12 text-center text-slate-500">
+                <td colSpan="7" className="px-6 py-12 text-center text-slate-500">
                   <span className="material-symbols-outlined text-5xl mb-2 opacity-20">quiz</span>
-                  <p className="text-sm">{isStudent ? 'No exams scheduled yet.' : 'No exams scheduled yet. Click "Schedule Exam" to add one.'}</p>
+                  <p className="text-sm">No exams scheduled yet. Click "Schedule Exam" to add one.</p>
                 </td>
               </tr>
             ) : (
@@ -191,13 +181,11 @@ export default function ExamsPage({ noLayout = false }) {
                   <td className="px-6 py-4 text-sm text-slate-600">{exam.duration} min</td>
                   <td className="px-6 py-4">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      exam.status === 'Completed' ? 'bg-emerald-50 text-emerald-600' : 
-                      exam.status === 'Upcoming' ? 'bg-blue-50 text-[#1162d4]' : 'bg-slate-100 text-slate-600'
+                      exam.status === 'Completed' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
                     }`}>
                       {exam.status}
                     </span>
                   </td>
-                  {!isStudent && (
                   <td className="px-6 py-4">
                     <div className="flex items-center justify-end gap-2">
                       <button
@@ -216,7 +204,6 @@ export default function ExamsPage({ noLayout = false }) {
                       </button>
                     </div>
                   </td>
-                  )}
                 </tr>
               ))
             )}
@@ -224,99 +211,202 @@ export default function ExamsPage({ noLayout = false }) {
         </table>
       </div>
 
-      <Modal
-        isOpen={showModal}
-        onClose={closeModal}
-        title={editingExam ? 'Edit Exam' : 'Schedule New Exam'}
-        icon="calendar_add_on"
-        maxWidth="max-w-2xl"
-        footer={
-          <div className="flex items-center justify-end gap-3 w-full">
-            <button
-              onClick={closeModal}
-              className="px-6 py-2 text-sm font-semibold text-slate-400 hover:text-slate-600"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSubmit}
-              className="px-6 py-2 bg-[#1162d4] text-white rounded-lg text-sm font-semibold hover:bg-[#1162d4]/90 transition-all shadow-sm active:scale-95"
-            >
-              {editingExam ? 'Save Changes' : 'Schedule Exam'}
-            </button>
-          </div>
-        }
-      >
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-1.5">
-            <label className={labelClasses}>Course Code *</label>
-            <input
-              type="text" name="code" value={formData.code} onChange={handleInputChange} required
-              placeholder="e.g., CS401" className={inputClasses}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label className={labelClasses}>Course Name *</label>
-            <input
-              type="text" name="name" value={formData.name} onChange={handleInputChange} required
-              placeholder="e.g., Data Structures" className={inputClasses}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label className={labelClasses}>Date *</label>
-            <input
-              type="date" name="date" value={formData.date} onChange={handleInputChange} required
-              className={inputClasses}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label className={labelClasses}>Start Time *</label>
-            <input
-              type="time" name="time" value={formData.time} onChange={handleInputChange} required
-              className={inputClasses}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label className={labelClasses}>Room / Venue *</label>
-            <input
-              type="text" name="room" value={formData.room} onChange={handleInputChange} required
-              placeholder="e.g., Hall A" className={inputClasses}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label className={labelClasses}>Exam Type</label>
-            <select name="type" value={formData.type} onChange={handleInputChange} className={inputClasses}>
-              <option value="Mid-Sem">Mid-Semester</option>
-              <option value="End-Sem">End-Semester</option>
-              <option value="Practical">Practical</option>
-              <option value="Internal">Internal Assessment</option>
-              <option value="Quiz">Quiz</option>
-            </select>
-          </div>
-          <div className="space-y-1.5">
-            <label className={labelClasses}>Duration (mins)</label>
-            <input
-              type="number" name="duration" value={formData.duration} onChange={handleInputChange}
-              className={inputClasses} placeholder="e.g., 120"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label className={labelClasses}>Maximum Marks</label>
-            <input
-              type="number" name="maxMarks" value={formData.maxMarks} onChange={handleInputChange}
-              className={inputClasses} placeholder="e.g., 100"
-            />
-          </div>
-          <div className="space-y-1.5 md:col-span-2">
-            <label className={labelClasses}>Status</label>
-            <select name="status" value={formData.status} onChange={handleInputChange} className={inputClasses}>
-              <option value="Upcoming">Upcoming</option>
-              <option value="Completed">Completed</option>
-              <option value="Cancelled">Cancelled</option>
-            </select>
+      {/* Add/Edit Modal */}
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-slate-200 flex items-center justify-between sticky top-0 bg-white">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-[#1162d4]/10 rounded-lg">
+                  <span className="material-symbols-outlined text-[#1162d4]">calendar_add_on</span>
+                </div>
+                <h3 className="text-xl font-bold text-slate-900">
+                  {editingExam ? 'Edit Exam' : 'Schedule New Exam'}
+                </h3>
+              </div>
+              <button
+                onClick={closeModal}
+                className="p-1 hover:bg-slate-100 rounded-full transition-colors"
+              >
+                <span className="material-symbols-outlined text-slate-400">close</span>
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Course Code */}
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-semibold text-slate-700">
+                    Course Code <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="code"
+                    value={formData.code}
+                    onChange={handleInputChange}
+                    required
+                    placeholder="e.g., CS401"
+                    className="px-4 py-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#1162d4]/20 focus:border-[#1162d4] outline-none transition-colors"
+                  />
+                </div>
+
+                {/* Course Name */}
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-semibold text-slate-700">
+                    Course Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    required
+                    placeholder="e.g., Data Structures"
+                    className="px-4 py-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#1162d4]/20 focus:border-[#1162d4] outline-none transition-colors"
+                  />
+                </div>
+
+                {/* Exam Date */}
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-semibold text-slate-700">
+                    Exam Date <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    name="date"
+                    value={formData.date}
+                    onChange={handleInputChange}
+                    required
+                    className="px-4 py-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#1162d4]/20 focus:border-[#1162d4] outline-none transition-colors"
+                  />
+                </div>
+
+                {/* Exam Time */}
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-semibold text-slate-700">
+                    Start Time <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="time"
+                    name="time"
+                    value={formData.time}
+                    onChange={handleInputChange}
+                    required
+                    className="px-4 py-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#1162d4]/20 focus:border-[#1162d4] outline-none transition-colors"
+                  />
+                </div>
+
+                {/* Room */}
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-semibold text-slate-700">
+                    Room/Venue <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="room"
+                    value={formData.room}
+                    onChange={handleInputChange}
+                    required
+                    placeholder="e.g., Hall A"
+                    className="px-4 py-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#1162d4]/20 focus:border-[#1162d4] outline-none transition-colors"
+                  />
+                </div>
+
+                {/* Exam Type */}
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-semibold text-slate-700">
+                    Exam Type <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    name="type"
+                    value={formData.type}
+                    onChange={handleInputChange}
+                    required
+                    className="px-4 py-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#1162d4]/20 focus:border-[#1162d4] outline-none transition-colors"
+                  >
+                    <option value="Mid-Sem">Mid-Semester</option>
+                    <option value="Final">Final Exam</option>
+                    <option value="Quiz">Quiz</option>
+                    <option value="Practical">Practical</option>
+                    <option value="Internal">Internal Assessment</option>
+                    <option value="Assignment">Assignment</option>
+                  </select>
+                </div>
+
+                {/* Duration */}
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-semibold text-slate-700">
+                    Duration (minutes) <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    name="duration"
+                    value={formData.duration}
+                    onChange={handleInputChange}
+                    required
+                    min="15"
+                    max="300"
+                    placeholder="e.g., 120"
+                    className="px-4 py-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#1162d4]/20 focus:border-[#1162d4] outline-none transition-colors"
+                  />
+                </div>
+
+                {/* Max Marks */}
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-semibold text-slate-700">
+                    Maximum Marks <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    name="maxMarks"
+                    value={formData.maxMarks}
+                    onChange={handleInputChange}
+                    required
+                    min="1"
+                    placeholder="e.g., 100"
+                    className="px-4 py-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#1162d4]/20 focus:border-[#1162d4] outline-none transition-colors"
+                  />
+                </div>
+
+                {/* Status */}
+                <div className="flex flex-col gap-2 md:col-span-2">
+                  <label className="text-sm font-semibold text-slate-700">
+                    Status <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    name="status"
+                    value={formData.status}
+                    onChange={handleInputChange}
+                    required
+                    className="px-4 py-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#1162d4]/20 focus:border-[#1162d4] outline-none transition-colors"
+                  >
+                    <option value="Upcoming">Upcoming</option>
+                    <option value="Completed">Completed</option>
+                    <option value="Cancelled">Cancelled</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Form Actions */}
+              <div className="flex items-center gap-3 mt-6 pt-6 border-t border-slate-200">
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  className="flex-1 px-4 py-2.5 border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 px-4 py-2.5 bg-[#1162d4] text-white rounded-lg text-sm font-semibold hover:bg-[#1162d4]/90 transition-colors"
+                >
+                  {editingExam ? 'Update Exam' : 'Schedule Exam'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
-      </Modal>
+      )}
     </>
   )
   return noLayout ? inner : <Layout title="Exams">{inner}</Layout>

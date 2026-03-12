@@ -1,6 +1,0 @@
-﻿
-S:\MoviCloud\HMS-DEV\react\hms\src\components\appointments\AppointmentIntakeModal.jsx
-  21:8  warning  'pathologyService' is defined but never used  no-unused-vars
-
-Γ£û 1 problem (0 errors, 1 warning)
-

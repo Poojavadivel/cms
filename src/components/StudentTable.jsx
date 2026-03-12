@@ -1,122 +1,90 @@
 import { useNavigate } from 'react-router-dom'
 
-export default function StudentTable({ students, onEdit, onDelete }) {
+export default function StudentTable({ students }) {
   const navigate = useNavigate()
 
-  function getStatusClass(status) {
-    switch ((status || '').toUpperCase()) {
-      case 'ACTIVE': return 'stu-badge stu-badge-green'
-      case 'PENDING': return 'stu-badge stu-badge-orange'
-      case 'INACTIVE': return 'stu-badge stu-badge-red'
-      case 'GRADUATED': return 'stu-badge stu-badge-blue'
-      default: return 'stu-badge'
-    }
+  const statusStyles = {
+    ACTIVE:   'bg-[#10b981]/10 text-[#10b981]',
+    PENDING:  'bg-[#f59e0b]/10 text-[#f59e0b]',
+    INACTIVE: 'bg-[#ef4444]/10 text-[#ef4444]',
+    GRADUATED: 'bg-blue-100 text-blue-800',
   }
 
-  function getFeeClass(feeStatus) {
-    switch ((feeStatus || 'PENDING').toUpperCase()) {
-      case 'PAID': return 'stu-badge stu-badge-green'
-      case 'OVERDUE': return 'stu-badge stu-badge-red'
-      case 'PARTIAL':
-      case 'PENDING': return 'stu-badge stu-badge-orange'
-      default: return 'stu-badge'
-    }
+  const feeStyles = {
+    PAID:     'bg-green-100 text-green-800',
+    OVERDUE:  'bg-red-100 text-red-800',
+    PARTIAL:  'bg-orange-100 text-orange-800',
+    PENDING:  'bg-orange-100 text-orange-800',
   }
-
-  const isProfileComplete = (student) => {
-    const requiredFields = [
-      'name',
-      'email',
-      'phone',
-      'guardian',
-      'guardianPhone',
-      'dob',
-      'departmentId',
-      'year',
-      'semester'
-    ];
-    return requiredFields.every(field => {
-      const val = student[field];
-      return val !== undefined && val !== null && val !== '';
-    });
-  };
-
-  const handleRowClick = (s) => {
-    if (isProfileComplete(s)) {
-      navigate(`/students/${encodeURIComponent(s.rollNumber || s._id)}`);
-    } else {
-      alert(`Profile Incomplete: ${s.name}'s profile is missing required information. Please edit the student to complete their profile before viewing the detail page.`);
-    }
-  };
 
   return (
-    <div className="content-card" style={{ padding: 0, overflow: 'hidden' }}>
-      <table className="students-table">
+    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+      <table className="w-full text-left">
         <thead>
-          <tr>
-            <th>Student Information</th>
-            <th>Department</th>
-            <th>Semester</th>
-            <th>Status</th>
-            <th>Fee Status</th>
-            <th style={{ textAlign: 'right' }}>Actions</th>
+          <tr className="bg-slate-50 text-slate-500 text-xs font-semibold uppercase tracking-wider border-b border-slate-200">
+            <th className="px-6 py-4">Student Information</th>
+            <th className="px-6 py-4">Department</th>
+            <th className="px-6 py-4">Semester</th>
+            <th className="px-6 py-4">Status</th>
+            <th className="px-6 py-4">Fee Status</th>
+            <th className="px-6 py-4 text-right">Actions</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody className="divide-y divide-slate-50">
           {students.length === 0 ? (
             <tr>
-              <td colSpan={6} style={{ textAlign: 'center', padding: '64px 20px', color: '#9ca3af' }}>
-                <div style={{ fontSize: 14, fontWeight: 600 }}>No students found matching your search</div>
-                <div style={{ fontSize: 12, marginTop: 4 }}>Try adjusting your filters or search terms</div>
+              <td colSpan={6} className="px-10 py-24 text-center text-slate-400 bg-slate-50/30">
+                <div className="flex flex-col items-center">
+                  <span className="material-symbols-outlined text-6xl mb-4 opacity-10 text-slate-900">group_off</span>
+                  <p className="text-base font-bold text-slate-500">No students found matching your search</p>
+                  <p className="text-xs font-medium text-slate-400 mt-1">Try adjusting your filters or search terms</p>
+                </div>
               </td>
             </tr>
           ) : (
             students.map((s) => (
               <tr
-                key={s.rollNumber || s._id}
-                onClick={() => handleRowClick(s)}
-                style={{ cursor: isProfileComplete(s) ? 'pointer' : 'not-allowed', opacity: isProfileComplete(s) ? 1 : 0.8 }}
+                key={s.id}
+                className="hover:bg-slate-50 transition-colors cursor-pointer"
+                onClick={() => navigate(`/students/${encodeURIComponent(s.id)}`)}
               >
-                <td>
-                  <div className="stu-info-cell">
-                    <div className="stu-avatar">
+                <td className="px-6 py-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg overflow-hidden border border-slate-200 flex-shrink-0">
                       <img
-                        src={s.avatar || `https://ui-avatars.com/api/?name=${s.name}&background=2563eb&color=fff&bold=true`}
+                        src={s.avatar || `https://ui-avatars.com/api/?name=${s.name}&background=1162d4&color=fff`}
                         alt={s.name}
+                        className="w-full h-full object-cover"
                       />
                     </div>
                     <div>
-                      <div className="stu-name">{s.name}</div>
-                      <div className="stu-id">{s.rollNumber || s.id}</div>
+                      <p className="text-sm font-semibold text-slate-900">{s.name}</p>
+                      <p className="text-xs text-slate-500">{s.id}</p>
                     </div>
                   </div>
                 </td>
-                <td>{s.departmentId || s.department}</td>
-                <td>
-                  <div className="stu-name">Sem {s.semester || '1'}</div>
-                  <div className="stu-id">{s.year ? `${s.year}${s.year === 1 ? 'st' : s.year === 2 ? 'nd' : s.year === 3 ? 'rd' : 'th'} Year` : '1st Year'}</div>
+                <td className="px-6 py-4 text-sm text-slate-600">{s.department}</td>
+                <td className="px-6 py-4">
+                   <p className="text-sm font-medium text-slate-900">Sem {s.semester || 'N/A'}</p>
+                   <p className="text-xs text-slate-500">{s.year}</p>
                 </td>
-                <td>
-                  <span className={getStatusClass(s.status)}>{s.status}</span>
+                <td className="px-6 py-4">
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusStyles[s.status.toUpperCase()] || 'bg-slate-100 text-slate-700'}`}>
+                    {s.status}
+                  </span>
                 </td>
-                <td>
-                  <span className={getFeeClass(s.feeStatus)}>{s.feeStatus || 'pending'}</span>
+                <td className="px-6 py-4">
+                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${feeStyles[(s.feeStatus || 'PENDING').toUpperCase()] || 'bg-slate-100 text-slate-700'}`}>
+                    {s.feeStatus || 'PENDING'}
+                  </span>
                 </td>
-                <td style={{ textAlign: 'right' }} onClick={(e) => e.stopPropagation()}>
-                  <div className="stu-actions">
-                    <button
-                      onClick={() => onEdit && onEdit(s)}
-                      className="stu-action-btn"
-                      title="Edit Student"
-                    >
-                      <svg viewBox="0 0 20 20" fill="currentColor"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/></svg>
+                <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex items-center justify-end gap-2">
+                    <button className="p-1.5 text-slate-400 hover:text-[#1162d4] hover:bg-[#1162d4]/10 rounded-lg transition-colors">
+                      <span className="material-symbols-outlined text-lg">edit</span>
                     </button>
-                    <button
-                      onClick={() => onDelete && onDelete(s)}
-                      className="stu-action-btn stu-action-btn-danger"
-                      title="Delete Student"
-                    >
-                      <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd"/></svg>
+                    <button className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                      <span className="material-symbols-outlined text-lg">delete</span>
                     </button>
                   </div>
                 </td>

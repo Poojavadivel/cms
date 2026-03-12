@@ -1,60 +1,55 @@
-import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
-import { destroyUserSession, getUserSession } from '../auth/sessionController'
+import { getUserSession } from '../auth/sessionController'
+import { destroyUserSession } from '../auth/sessionController'
 import { roleMenuGroups } from '../data/roleConfig'
 
-function GraduationIcon() {
-  return (
-    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-      <path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3zm0 2.26L19.02 9 12 12.74 4.98 9 12 5.26zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z" />
-    </svg>
-  )
+const iconMap = {
+  Dashboard: 'dashboard',
+  Students: 'group',
+  Faculty: 'person',
+  Department: 'domain',
+  Exams: 'school',
+  Timetable: 'calendar_today',
+  Attendance: 'rule',
+  Placement: 'work',
+  Facility: 'apartment',
+  Fees: 'payments',
+  Reports: 'assessment',
+  Admission: 'person_add',
+  Payroll: 'receipt_long',
+  Invoices: 'description',
+  Analytics: 'query_stats',
+  Notifications: 'notifications',
+  Settings: 'settings',
+  'My Courses': 'menu_book',
 }
 
-function LogoutIcon() {
-  return (
-    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-      <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z" />
-    </svg>
-  )
+const routeMap = {
+  Dashboard: '/dashboard',
+  Students: '/students',
+  Faculty: '/faculty',
+  Department: '/departments',
+  Exams: '/exams',
+  Timetable: '/timetable',
+  Attendance: '/attendance',
+  Placement: '/placement',
+  Facility: '/facility',
+  Fees: '/fees',
+  Reports: '/reports',
+  Admission: '/admission',
+  Payroll: '/payroll',
+  Invoices: '/invoices',
+  Analytics: '/analytics',
+  Notifications: '/notifications',
+  Settings: '/settings',
+  'My Courses': '/my-courses',
 }
 
-function MenuIcon() {
-  return (
-    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-      <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z" />
-    </svg>
-  )
-}
-
-const NAV_ITEM_MAP = {
-  'Dashboard':     { to: '/dashboard',     icon: 'dashboard' },
-  'My Courses':    { to: '/courses',       icon: 'menu_book' },
-  'Department':    { to: '/department',    icon: 'domain' },
-  'Students':      { to: '/students',      icon: 'group' },
-  'Faculty':       { to: '/faculty',       icon: 'person' },
-  'Exams':         { to: '/exams',         icon: 'quiz' },
-  'Timetable':     { to: '/timetable',     icon: 'calendar_today' },
-  'Attendance':    { to: '/attendance',    icon: 'fact_check' },
-  'Placement':     { to: '/placement',     icon: 'work' },
-  'Facility':      { to: '/facility',      icon: 'apartment' },
-  'Fees':          { to: '/fees',          icon: 'payments' },
-  'Invoices':      { to: '/invoices',      icon: 'receipt' },
-  'Admission':     { to: '/admission',     icon: 'how_to_reg' },
-  'Payroll':       { to: '/payroll',       icon: 'account_balance_wallet' },
-  'Analytics':     { to: '/analytics',     icon: 'analytics' },
-  'Notifications': { to: '/notifications', icon: 'notifications' },
-  'Settings':      { to: '/settings',      icon: 'settings' },
-}
-
-export { MenuIcon }
-
-export default function AcademicSidebar({ sidebarOpen, setSidebarOpen }) {
+export default function AcademicSidebar() {
   const navigate = useNavigate()
   const session = getUserSession()
-  const role = session?.role ?? 'student'
-  const data = { label: role.charAt(0).toUpperCase() + role.slice(1) }
-  const groups = roleMenuGroups[role] ?? roleMenuGroups.student
+  const role = session?.role || 'student'
+  const menuGroups = roleMenuGroups[role] || []
 
   function handleLogout() {
     destroyUserSession()
@@ -62,61 +57,51 @@ export default function AcademicSidebar({ sidebarOpen, setSidebarOpen }) {
   }
 
   return (
-    <>
-      <div
-        className={`sidebar-overlay${sidebarOpen ? ' active' : ''}`}
-        onClick={() => setSidebarOpen && setSidebarOpen(false)}
-        aria-hidden="true"
-      />
-      <aside className={`sidebar${sidebarOpen ? ' open' : ''}`} id="sidebar">
-        <div className="sidebar-logo">
-          <div className="logo-mark">
-            <GraduationIcon />
-          </div>
-          <div className="logo-text-wrap">
-            <div className="logo-title">MIT Connect</div>
-            <div className="logo-sub">MIT Connect - {data.label} Portal</div>
-          </div>
+    <aside className="w-64 border-r border-slate-200 bg-white flex flex-col fixed h-full overflow-y-auto z-20">
+      <div className="p-6 flex items-center gap-3">
+        <div className="bg-[#2563eb] w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-100">
+          <span className="material-symbols-outlined text-2xl font-bold">school</span>
         </div>
+        <div>
+          <h1 className="font-extrabold text-[#1e293b] text-xl tracking-tight leading-none">EduCore</h1>
+          <p className="text-[10px] font-bold text-[#64748b] uppercase tracking-[0.1em] mt-1">Admin Portal</p>
+        </div>
+      </div>
 
-        <nav className="sidebar-nav">
-          {groups.map((group) => (
-            <div key={group.title}>
-              <div className="nav-section-label">{group.title}</div>
-              <ul>
-                {group.items.map((itemName) => {
-                  const config = NAV_ITEM_MAP[itemName]
-                  if (!config) return null
-                  return (
-                    <li key={config.to}>
-                      <NavLink
-                        to={config.to}
-                        className={({ isActive }) => isActive ? 'active' : ''}
-                        onClick={() => setSidebarOpen && setSidebarOpen(false)}
-                      >
-                        {itemName}
-                      </NavLink>
-                    </li>
-                  )
-                })}
-              </ul>
+      <nav className="flex-1 px-4 space-y-6 overflow-y-auto">
+        {menuGroups.map((group) => (
+          <div key={group.title}>
+            <p className="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">
+              {group.title}
+            </p>
+            <div className="space-y-1">
+              {group.items.map((item) => {
+                const to = `${routeMap[item] || '#'}${role !== 'student' && item !== 'Settings' ? `?role=${encodeURIComponent(role)}` : ''}`
+                return (
+                  <NavLink
+                    key={item}
+                    to={to}
+                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm transition-all duration-200 text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+                  >
+                    <span className="material-symbols-outlined text-[22px]">{iconMap[item] || 'circle'}</span>
+                    <span>{item}</span>
+                  </NavLink>
+                )
+              })}
             </div>
-          ))}
-        </nav>
+          </div>
+        ))}
+      </nav>
 
-        <div className="sidebar-footer">
-          <a
-            href="#"
-            onClick={(event) => {
-              event.preventDefault()
-              handleLogout()
-            }}
-          >
-            <LogoutIcon />
-            Logout
-          </a>
-        </div>
-      </aside>
-    </>
+      <div className="p-4 border-t border-slate-100 mt-auto">
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center gap-3 px-4 py-3 text-slate-500 hover:text-red-500 hover:bg-red-50 rounded-xl text-sm font-medium transition-all duration-200"
+        >
+          <span className="material-symbols-outlined text-[22px]">logout</span>
+          <span>Logout</span>
+        </button>
+      </div>
+    </aside>
   )
 }
