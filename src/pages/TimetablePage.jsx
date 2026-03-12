@@ -154,7 +154,8 @@ export default function TimetablePage({ noLayout = false }) {
     <>
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
         <div>
-          <p className="text-slate-500">Department of Computer Science — Semester 4 (Section A)</p>
+          <h1 className="text-3xl font-bold text-slate-900">Weekly Timetable</h1>
+          <p className="text-slate-500 mt-1">Department of Computer Science — Semester 4 (Section A)</p>
         </div>
         <div className="flex gap-3">
           <div className="flex items-center bg-white px-3 py-2 rounded-lg border border-slate-200">
