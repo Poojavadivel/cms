@@ -23,6 +23,32 @@ export default function StudentTable({ students, onEdit, onDelete }) {
     }
   }
 
+  const isProfileComplete = (student) => {
+    const requiredFields = [
+      'name',
+      'email',
+      'phone',
+      'guardian',
+      'guardianPhone',
+      'dob',
+      'departmentId',
+      'year',
+      'semester'
+    ];
+    return requiredFields.every(field => {
+      const val = student[field];
+      return val !== undefined && val !== null && val !== '';
+    });
+  };
+
+  const handleRowClick = (s) => {
+    if (isProfileComplete(s)) {
+      navigate(`/students/${encodeURIComponent(s.rollNumber || s._id)}`);
+    } else {
+      alert(`Profile Incomplete: ${s.name}'s profile is missing required information. Please edit the student to complete their profile before viewing the detail page.`);
+    }
+  };
+
   return (
     <div className="content-card" style={{ padding: 0, overflow: 'hidden' }}>
       <table className="students-table">
@@ -48,7 +74,8 @@ export default function StudentTable({ students, onEdit, onDelete }) {
             students.map((s) => (
               <tr
                 key={s.rollNumber || s._id}
-                onClick={() => navigate(`/students/${encodeURIComponent(s.rollNumber || s._id)}`)}
+                onClick={() => handleRowClick(s)}
+                style={{ cursor: isProfileComplete(s) ? 'pointer' : 'not-allowed', opacity: isProfileComplete(s) ? 1 : 0.8 }}
               >
                 <td>
                   <div className="stu-info-cell">

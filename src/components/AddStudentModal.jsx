@@ -179,11 +179,12 @@ export default function AddStudentModal({ isOpen, onClose, onSuccess, editStuden
 
         if (!editStudent) {
           localStorage.removeItem('add_student_draft');
-          alert('Student Enrollment Submitted Successfully!');
+          alert(`Success! ${formData.name} has been enrolled with ID ${formData.id}.`);
         } else {
-          alert('Student Information Updated Successfully!');
+          alert(`Success! Student record for ${formData.name} has been updated.`);
         }
-        if (onSuccess) onSuccess(); // Notify parent to refresh list
+        
+        if (onSuccess) onSuccess(); 
         onClose();
         
         // Reset after closing
