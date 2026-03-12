@@ -11,9 +11,7 @@ import FacilityPage from './pages/FacilityPage';
 import SettingsPage from './pages/SettingsPage';
 import StudentsPage from './pages/StudentsPage';
 import StudentDetailPage from './pages/StudentDetailPage';
-import AnalyticsPage from './pages/AnalyticsPage';
-import NotificationPage from './pages/NotificationPage';
-
+import NotificationsPage from './pages/NotificationsPage';
 
 export default function App() {
   const session = getUserSession();
@@ -37,15 +35,21 @@ export default function App() {
       <Route path="/timetable" element={<ProtectedRoute><TimetablePage /></ProtectedRoute>} />
       <Route path="/attendance" element={<ProtectedRoute><AttendancePage /></ProtectedRoute>} />
       <Route path="/exams" element={<ProtectedRoute><ExamsPage /></ProtectedRoute>} />
-      <Route path="/placement" element={<ProtectedRoute><PlacementPage /></ProtectedRoute>} />
-      <Route path="/facility" element={<ProtectedRoute><FacilityPage /></ProtectedRoute>} />
-      <Route path="/analytics" element={<ProtectedRoute><AnalyticsPage /></ProtectedRoute>} />
-      <Route path="/notifications" element={<ProtectedRoute><NotificationPage /></ProtectedRoute>} />
+      <Route path="/placement" element={<ProtectedRoute allowedRoles={['admin', 'faculty']}><PlacementPage /></ProtectedRoute>} />
+      <Route path="/facility" element={<ProtectedRoute allowedRoles={['admin']}><FacilityPage /></ProtectedRoute>} />
       <Route
         path="/settings"
         element={
           <ProtectedRoute>
             <SettingsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/notifications"
+        element={
+          <ProtectedRoute>
+            <NotificationsPage />
           </ProtectedRoute>
         }
       />

@@ -1,0 +1,12 @@
+// lib/Modules/Admin/PharmacyPage.dart
+import 'package:flutter/material.dart';
+import '../Common/unified_medicines_page.dart';
+
+class PharmacyScreen extends StatelessWidget {
+  const PharmacyScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const UnifiedMedicinesPage(isAdmin: true);
+  }
+}

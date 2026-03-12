@@ -1,0 +1,33 @@
+.priority-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+
+.priority-critical {
+  background-color: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.priority-high {
+  background-color: #fed7aa;
+  color: #7c2d12;
+  border: 1px solid #fdba74;
+}
+
+.priority-medium {
+  background-color: #bfdbfe;
+  color: #1e40af;
+  border: 1px solid #93c5fd;
+}
+
+.priority-low {
+  background-color: #e5e7eb;
+  color: #374151;
+  border: 1px solid #d1d5db;
+}

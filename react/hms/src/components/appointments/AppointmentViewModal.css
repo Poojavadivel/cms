@@ -1,0 +1,768 @@
+/* =============================================================================
+   AppointmentViewModal.css — Amazon/AWS Enterprise Design System
+   Color Palette:
+     Primary: #232F3E (Amazon dark navy)
+     Accent:  #FF9900 (Amazon signature orange)
+     BG:      #F8F9FA (off-white)
+     Surface: #FFFFFF with border #E8EDF2
+     Text:    #0F1111 / #565959 / #8D9096
+   ============================================================================= */
+
+/* ── Overlay ─────────────────────────────────────────────────────────────────── */
+.appointment-view-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 17, 17, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 2vh 2vw;
+  backdrop-filter: blur(6px);
+  animation: amzFadeIn 0.25s ease-out;
+}
+
+/* ── Modal Container ─────────────────────────────────────────────────────────── */
+.appointment-view-container {
+  background: #F8F9FA;
+  border-radius: 14px;
+  width: 92vw;
+  height: 90vh;
+  max-width: 1050px;
+  max-height: 90vh;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.25), 0 12px 40px rgba(0, 0, 0, 0.12);
+  animation: amzSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+  border: 1px solid #D5D9D9;
+}
+
+/* ── Floating Close Button (outside container) ───────────────────────────────── */
+.appointment-close-floating {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: transparent;
+  border: none;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #FFFFFF;
+  padding: 0;
+  z-index: 11000;
+}
+
+.appointment-close-floating:hover {
+  background: rgba(255, 255, 255, 0.28);
+  transform: scale(1.08) rotate(90deg);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.appointment-close-floating svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* ── Tabs Section ────────────────────────────────────────────────────────────── */
+.appointment-tabs-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #F8F9FA;
+}
+
+.tabs-header {
+  display: flex;
+  background: #FFFFFF;
+  border-bottom: 2px solid #E3E6E6;
+  padding: 0 28px;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.tab-button {
+  background: transparent;
+  border: none;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  font-family: 'Amazon Ember', 'Inter', 'Segoe UI', 'SF Pro', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: #565959;
+  cursor: pointer;
+  position: relative;
+  border-bottom: 2.5px solid transparent;
+  margin-bottom: -2px;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
+}
+
+.tab-button:hover {
+  color: #0F1111;
+  background: rgba(255, 153, 0, 0.04);
+}
+
+.tab-button.active {
+  color: #0F1111;
+  font-weight: 700;
+  border-bottom-color: #FF9900;
+}
+
+.tab-button.active svg {
+  color: #FF9900;
+}
+
+/* ── Tabs Content Area ───────────────────────────────────────────────────────── */
+.tabs-content {
+  flex: 1;
+  overflow-y: auto;
+  background: #F8F9FA;
+  scrollbar-width: thin;
+  scrollbar-color: #D5D9D9 transparent;
+}
+
+.tabs-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.tabs-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.tabs-content::-webkit-scrollbar-thumb {
+  background: #D5D9D9;
+  border-radius: 3px;
+}
+
+.tab-content-wrapper {
+  padding: 24px 28px;
+  max-width: 100%;
+}
+
+.full-width-content {
+  max-width: 100%;
+}
+
+/* ── Filter / Search Bar ─────────────────────────────────────────────────────── */
+.appointments-filter-bar {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+  width: fit-content;
+}
+
+.appointments-filter-bar.simple {
+  width: 100%;
+  max-width: 400px;
+}
+
+.search-box {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-box svg {
+  position: absolute;
+  left: 14px;
+  color: #8D9096;
+  width: 16px;
+  height: 16px;
+}
+
+.search-box input {
+  width: 100%;
+  height: 38px;
+  padding: 0 16px 0 38px;
+  border: 1.5px solid #D5D9D9;
+  border-radius: 10px;
+  font-family: 'Amazon Ember', 'Inter', 'Segoe UI', 'SF Pro', sans-serif;
+  font-size: 14px;
+  color: #0F1111;
+  outline: none;
+  background: #FFFFFF;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.search-box input::placeholder {
+  color: #8D9096;
+}
+
+.search-box input:focus {
+  border-color: #FF9900;
+  box-shadow: 0 0 0 3px rgba(255, 153, 0, 0.15), 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+/* ── Appointments Table ──────────────────────────────────────────────────────── */
+.appointments-list-container {
+  overflow-x: auto;
+  border: 1px solid #D5D9D9;
+  border-radius: 10px;
+  background: #FFFFFF;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.appointments-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.appointments-table th {
+  background: #F0F2F2;
+  padding: 12px 20px;
+  text-align: left;
+  font-family: 'Amazon Ember', 'Inter', 'Segoe UI', 'SF Pro', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  color: #565959;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  border-bottom: 1.5px solid #E8EDF2;
+}
+
+.appointments-table td {
+  padding: 14px 20px;
+  border-bottom: 1px solid #E8EDF2;
+  font-family: 'Amazon Ember', 'Inter', 'Segoe UI', 'SF Pro', sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #0F1111;
+  background: #FFFFFF;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.appointments-table tbody tr:hover td {
+  background: #F7F8F8;
+}
+
+/* Date/Time Cell */
+.appt-date-time {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.appt-date {
+  font-weight: 600;
+  color: #0F1111;
+  display: block;
+  font-size: 14px;
+}
+
+.appt-time-sub {
+  font-size: 12px;
+  color: #8D9096;
+  font-weight: 500;
+}
+
+/* Doctor Cell */
+.appt-doctor-cell {
+  font-weight: 500;
+  color: #0F1111;
+}
+
+/* Service Cell */
+.appt-service-cell {
+  background: #F0F2F2;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #565959;
+  border: 1px solid #E8EDF2;
+}
+
+/* Condition Cell */
+.appt-condition {
+  color: #565959;
+  font-weight: 500;
+}
+
+/* ── Status Badges — Clinical Style ─────────────────────────────────────────── */
+.status-badge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-family: 'Amazon Ember', 'Inter', 'Segoe UI', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: capitalize;
+  display: inline-block;
+  letter-spacing: 0.02em;
+  transition: transform 0.15s ease;
+}
+
+.status-badge.scheduled {
+  background: #EBF5FF;
+  color: #006BB5;
+  border: 1px solid #B8DAFF;
+}
+
+.status-badge.confirmed {
+  background: #E6F4EA;
+  color: #1A7F37;
+  border: 1px solid #A8D5B5;
+}
+
+.status-badge.cancelled {
+  background: #FEE8E8;
+  color: #B91C1C;
+  border: 1px solid #F5A5A5;
+}
+
+.status-badge.pending {
+  background: #FFF7E0;
+  color: #B45309;
+  border: 1px solid #F5CC6A;
+}
+
+.status-badge.completed {
+  background: #E6F4EA;
+  color: #1A7F37;
+  border: 1px solid #A8D5B5;
+}
+
+.status-badge.rescheduled {
+  background: #F3EEFF;
+  color: #6B21A8;
+  border: 1px solid #D8C8F5;
+}
+
+.status-badge.no-show {
+  background: #FEE8E8;
+  color: #B91C1C;
+  border: 1px solid #F5A5A5;
+}
+
+/* ── Empty State ─────────────────────────────────────────────────────────────── */
+.no-appointments {
+  padding: 60px 20px;
+  text-align: center;
+  background: #FFFFFF;
+  border-radius: 8px;
+}
+
+.no-results-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.no-results-icon {
+  color: #D5D9D9;
+  margin-bottom: 8px;
+}
+
+.no-results-content h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #0F1111;
+  font-weight: 700;
+}
+
+.no-results-content p {
+  margin: 0;
+  color: #565959;
+  font-size: 14px;
+}
+
+.clear-search-btn {
+  margin-top: 12px;
+  padding: 8px 16px;
+  background: #FFFFFF;
+  border: 1px solid #D5D9D9;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #0F1111;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.clear-search-btn:hover {
+  background: #F0F2F2;
+  border-color: #ADB1B1;
+}
+
+/* ── Loading / Error States ──────────────────────────────────────────────────── */
+.appointment-view-loading,
+.appointment-view-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 16px;
+  color: #565959;
+  font-family: 'Amazon Ember', 'Inter', 'Segoe UI', sans-serif;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #E3E6E6;
+  border-top-color: #FF9900;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+.btn-error-close {
+  margin-top: 8px;
+  padding: 8px 20px;
+  background: #FFFFFF;
+  border: 1px solid #D5D9D9;
+  border-radius: 8px;
+  color: #0F1111;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btn-error-close:hover {
+  background: #F0F2F2;
+}
+
+/* ── Animations ──────────────────────────────────────────────────────────────── */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes amzSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes amzFadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+/* ── Responsive ──────────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .appointment-view-container {
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+  }
+
+  .tabs-header {
+    padding: 0 16px;
+  }
+
+  .tab-content-wrapper {
+    padding: 16px;
+  }
+
+  .tab-button {
+    font-size: 11px;
+    padding: 12px 6px;
+    gap: 4px;
+  }
+
+  .avm-cards-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .avm-details-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .pv-header-right {
+    min-width: 100%;
+    max-width: 100%;
+    align-items: stretch;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   MODERNIZED HEADER RIGHT SECTION
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+.pv-header-right {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: flex-end;
+  flex-shrink: 0;
+  min-width: 260px;
+}
+
+.pv-header-actions-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  padding-bottom: 2px;
+}
+
+.pv-header-tags-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.pv-edit-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: #FF9900;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #FFFFFF !important;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  font-family: 'Amazon Ember', 'Inter', sans-serif;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  width: fit-content;
+  align-self: flex-end;
+}
+
+.pv-edit-btn:hover {
+  background: #E47911;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.pv-edit-btn:active {
+  transform: translateY(0);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   NEW TAB CONTENT STYLES — Medical Info, Appt Details, Prescriptions, Lab Reports
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+/* ── Medical Info — 2-column card grid ──────────────────────────────────────── */
+.avm-cards-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.avm-section-card {
+  background: #FFFFFF;
+  border: 1px solid #E8EDF2;
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.avm-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #565959;
+  margin-bottom: 2px;
+  font-family: 'Amazon Ember', 'Inter', 'Segoe UI', 'SF Pro', sans-serif;
+}
+
+.avm-tags-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+/* ── Tag / Pill Variants ────────────────────────────────────────────────────── */
+.avm-tag {
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: 'Amazon Ember', 'Inter', 'Segoe UI', 'SF Pro', sans-serif;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.avm-tag-red {
+  background: #FEE8E8;
+  color: #B91C1C;
+  border: 1px solid #F5A5A5;
+}
+
+.avm-tag-blue {
+  background: #EBF4FF;
+  color: #1D4ED8;
+  border: 1px solid #BFDBFE;
+}
+
+.avm-tag-purple {
+  background: #F3E8FF;
+  color: #7C3AED;
+  border: 1px solid #DDD6FE;
+}
+
+.avm-tag-amber {
+  background: #FFF7E0;
+  color: #B45309;
+  border: 1px solid #F5CC6A;
+}
+
+.avm-tag-green {
+  background: #E6F4EA;
+  color: #1A7F37;
+  border: 1px solid #A8D5B5;
+}
+
+.avm-muted {
+  font-size: 13px;
+  color: #8D9096;
+  font-style: italic;
+  font-family: 'Amazon Ember', 'Inter', 'Segoe UI', 'SF Pro', sans-serif;
+}
+
+/* ── Medical Info — Insurance info grid ──────────────────────────────────────── */
+.avm-info-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.avm-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid #F1F5F9;
+}
+
+.avm-info-row:last-child {
+  border-bottom: none;
+}
+
+.avm-info-label {
+  font-size: 11px;
+  color: #8D9096;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+  font-family: 'Amazon Ember', 'Inter', 'Segoe UI', 'SF Pro', sans-serif;
+}
+
+.avm-info-value {
+  font-size: 13px;
+  color: #0F1111;
+  font-weight: 500;
+  font-family: 'Amazon Ember', 'Inter', 'Segoe UI', 'SF Pro', sans-serif;
+}
+
+/* ── Appointment Details — 2-column info grid ───────────────────────────────── */
+.avm-details-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  background: #FFFFFF;
+  border: 1px solid #E8EDF2;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+}
+
+.avm-detail-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 20px;
+  border-bottom: 1px solid #F1F5F9;
+  border-right: 1px solid #F1F5F9;
+}
+
+.avm-detail-row:nth-child(even) {
+  border-right: none;
+}
+
+.avm-detail-full {
+  grid-column: 1 / -1;
+  border-right: none;
+}
+
+/* ── Empty State ────────────────────────────────────────────────────────────── */
+.avm-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+  color: #8D9096;
+  gap: 12px;
+}
+
+.avm-empty-state p {
+  font-size: 14px;
+  font-weight: 500;
+  color: #8D9096;
+  margin: 0;
+  font-family: 'Amazon Ember', 'Inter', 'Segoe UI', 'SF Pro', sans-serif;
+}
+
+/* ── Tab Loading Spinner ────────────────────────────────────────────────────── */
+.avm-tab-spinner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  gap: 12px;
+  color: #8D9096;
+}
+
+.avm-tab-spinner p {
+  font-size: 13px;
+  font-weight: 500;
+  margin: 0;
+  font-family: 'Amazon Ember', 'Inter', 'Segoe UI', 'SF Pro', sans-serif;
+}
+
+.avm-tab-spinner .spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #E8EDF2;
+  border-top-color: #FF9900;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

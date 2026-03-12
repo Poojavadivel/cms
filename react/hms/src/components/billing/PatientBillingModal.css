@@ -1,0 +1,89 @@
+/**
+ * PatientBillingModal.css
+ * Matching Other Modals - Using Tailwind CSS
+ * Consistent 1050px max-width, 90vh height
+ */
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Modal Overlay */
+.billing-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.2s ease-out;
+}
+
+/* Modal Container - MATCH OTHER MODALS */
+.billing-modal-container {
+  background: white;
+  border-radius: 20px;
+  width: 95%;
+  max-width: 1050px;
+  height: 90vh;
+  max-height: 90vh;
+  box-shadow: 0 25px 70px rgba(0, 0, 0, 0.25), 0 10px 25px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Scrollbar - HIDDEN */
+.billing-modal-content::-webkit-scrollbar,
+.billing-service-items::-webkit-scrollbar {
+  width: 0px;
+  display: none;
+}
+
+.billing-modal-content,
+.billing-service-items {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.billing-modal-content::-webkit-scrollbar-track,
+.billing-service-items::-webkit-scrollbar-track {
+  display: none;
+}
+
+.billing-modal-content::-webkit-scrollbar-thumb,
+.billing-service-items::-webkit-scrollbar-thumb {
+  display: none;
+}
+
+/* Print Styles */
+@media print {
+  .billing-modal-overlay {
+    background: white;
+    position: static;
+  }
+  
+  .billing-modal-container {
+    box-shadow: none;
+    max-width: 100%;
+    max-height: none;
+  }
+}

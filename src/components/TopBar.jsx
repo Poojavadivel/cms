@@ -1,16 +1,35 @@
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import NotificationBell from './NotificationBell';
+import NotificationDropdown from './NotificationDropdown';
+import { getUserSession } from '../auth/sessionController';
+
 export default function TopBar({ title }) {
+  const navigate = useNavigate();
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const session = getUserSession();
+  const role = session?.role || 'student';
+
   return (
     <header className="h-20 bg-white border-b border-slate-100 px-10 flex items-center justify-between sticky top-0 z-10 backdrop-blur-md bg-white/80">
       <div className="flex items-center gap-4 flex-1">
         <h2 className="text-[20px] font-bold text-[#2563eb] tracking-tight">EduCore Admin Portal</h2>
       </div>
       <div className="flex items-center gap-6">
-        <div className="flex items-center gap-2">
-          <button className="p-2.5 text-slate-400 hover:bg-slate-50 rounded-xl transition-all relative">
-            <span className="material-symbols-outlined text-[24px]">notifications</span>
-            <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
-          </button>
-          <button className="p-2.5 text-slate-400 hover:bg-slate-50 rounded-xl transition-all">
+        <div className="flex items-center gap-2 relative">
+          <NotificationBell 
+            role={role} 
+            onBellClick={() => setIsNotificationOpen(!isNotificationOpen)}
+          />
+          <NotificationDropdown 
+            role={role} 
+            isOpen={isNotificationOpen}
+            onClose={() => setIsNotificationOpen(false)}
+          />
+          <button 
+            className="p-2.5 text-slate-400 hover:bg-slate-50 rounded-xl transition-all"
+            onClick={() => navigate(`/settings?role=${encodeURIComponent(role)}`)}
+          >
             <span className="material-symbols-outlined text-[24px]">settings</span>
           </button>
         </div>

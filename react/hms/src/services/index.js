@@ -1,0 +1,31 @@
+/**
+ * Services Index
+ * Central export file for all services
+ */
+
+// Auth service (singleton) - import the instance directly
+import authServiceInstance from './authService';
+export { authServiceInstance as authService };
+export { AuthResult, ApiException } from './authService';
+
+// Splash screen component
+export { default as SplashScreen } from './SplashScreen';
+
+// API constants
+export * from './apiConstants';
+export { default as apiConstants } from './apiConstants';
+
+// Logger service
+export { default as logger } from './loggerService';
+
+// Appointments service
+export { default as appointmentsService } from './appointmentsService';
+
+// Patients service
+export { default as patientsService } from './patientsService';
+
+// Report service (NEW - equivalent to Flutter's ReportService)
+export { default as reportService } from './reportService';
+
+// Pathology service (Lab Reports Management)
+export { default as pathologyService } from './pathologyService';
