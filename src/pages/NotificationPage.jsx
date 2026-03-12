@@ -202,17 +202,46 @@ export default function NotificationsPage({ role: propRole }) {
   const filters    = ROLE_FILTERS[role] || ROLE_FILTERS.student;
 
   // ── State
-  const [notifications, setNotifications] = useState(() =>
-    [...(SAMPLE_NOTIFICATIONS[role] || SAMPLE_NOTIFICATIONS.student)].sort(
-      (a, b) => new Date(b.date) - new Date(a.date)
-    )
-  );
+  const [notifications, setNotifications] = useState([]);
   const [activeFilter, setActiveFilter]   = useState('all');
   const [searchQuery, setSearchQuery]     = useState('');
   const [expandedId, setExpandedId]       = useState(null);
   const [showArchived, setShowArchived]   = useState(false);
   const [statusFilter, setStatusFilter]   = useState('all'); // 'all' | 'unread' | 'read'
   const [toastMsg, setToastMsg]           = useState('');
+
+  // ── Fetch from MongoDB API
+  useEffect(() => {
+    async function loadNotifications() {
+      try {
+        const res = await fetch(`/api/notifications/${role}`);
+        const json = await res.json();
+        if (json.success && json.data) {
+          const mapped = json.data.map(n => ({
+            id: n._id,
+            title: n.title,
+            message: n.message,
+            category: (n.module || 'system').toLowerCase(),
+            sender: n.senderRole || 'System',
+            date: n.createdAt,
+            read: n.status === 'read',
+            pinned: false,
+            archived: false,
+          }));
+          setNotifications(mapped.sort((a, b) => new Date(b.date) - new Date(a.date)));
+        }
+      } catch (err) {
+        console.error('Failed to load notifications:', err);
+        // Fallback to sample data
+        setNotifications(
+          [...(SAMPLE_NOTIFICATIONS[role] || SAMPLE_NOTIFICATIONS.student)].sort(
+            (a, b) => new Date(b.date) - new Date(a.date)
+          )
+        );
+      }
+    }
+    loadNotifications();
+  }, [role]);
   const [justMarked, setJustMarked]       = useState(null); // for micro-animation
 
   useEffect(() => {
@@ -260,11 +289,13 @@ export default function NotificationsPage({ role: propRole }) {
     setJustMarked(id);
     setTimeout(() => setJustMarked(null), 500);
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+    fetch(`/api/notifications/${id}/read`, { method: 'PUT' }).catch(() => {});
     toast('Marked as read');
   }
 
   function markAllRead() {
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    fetch(`/api/notifications/${role}/read-all`, { method: 'PUT' }).catch(() => {});
     toast('All notifications marked as read');
   }
 
@@ -281,6 +312,7 @@ export default function NotificationsPage({ role: propRole }) {
   function deleteNotif(id) {
     setNotifications(prev => prev.filter(n => n.id !== id));
     if (expandedId === id) setExpandedId(null);
+    fetch(`/api/notifications/${id}`, { method: 'DELETE' }).catch(() => {});
     toast('Notification deleted');
   }
 
