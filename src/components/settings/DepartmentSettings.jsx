@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { settingsApi } from '../../api/settingsApi';
 import SettingsActionBar from './SettingsActionBar';
 import SettingsToast from './SettingsToast';
+import Modal from '../Modal';
 
 const EMPTY_DEPARTMENT = {
   id: null,
@@ -75,6 +76,9 @@ export default function DepartmentSettings() {
     setToast({ type: 'success', message: 'Department settings reset to last saved state.' });
   }
 
+  const inputClasses = "w-full px-4 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#1162d4]/10 focus:border-[#1162d4] outline-none transition-all text-sm text-slate-700";
+  const labelClasses = "block text-sm font-semibold text-slate-700 mb-1.5 ml-0.5";
+
   return (
     <section className="settings-card-grid">
       <article className="settings-card">
@@ -130,64 +134,79 @@ export default function DepartmentSettings() {
         <SettingsActionBar onSave={handleSave} onReset={handleReset} saving={saving} />
       </article>
 
-      {modalOpen ? (
-        <div className="settings-modal-backdrop" onClick={closeModal} aria-hidden="true">
-          <div className="settings-modal" onClick={(event) => event.stopPropagation()}>
-            <h3>{activeDepartment.id ? 'Edit Department' : 'Create Department'}</h3>
-            <div className="settings-form-grid compact">
-              <label>
-                Department Code
-                <input
-                  type="text"
-                  value={activeDepartment.code}
-                  onChange={(event) =>
-                    setActiveDepartment((current) => ({ ...current, code: event.target.value.toUpperCase() }))
-                  }
-                />
-              </label>
+      <Modal
+        isOpen={modalOpen}
+        onClose={closeModal}
+        title={activeDepartment.id ? 'Edit Department' : 'Create Department'}
+        icon="corporate_fare"
+        maxWidth="max-w-2xl"
+        footer={
+          <div className="flex items-center justify-end gap-3 w-full">
+            <button
+              onClick={closeModal}
+              className="px-6 py-2 text-sm font-semibold text-slate-400 hover:text-slate-600"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={saveDepartmentLocally}
+              className="px-6 py-2 bg-[#1162d4] text-white rounded-lg text-sm font-semibold hover:bg-[#1162d4]/90 transition-all shadow-sm active:scale-95"
+            >
+              Save Department
+            </button>
+          </div>
+        }
+      >
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-1.5">
+            <label className={labelClasses}>Department Code *</label>
+            <input
+              type="text"
+              value={activeDepartment.code}
+              onChange={(event) =>
+                setActiveDepartment((current) => ({ ...current, code: event.target.value.toUpperCase() }))
+              }
+              placeholder="e.g. CS"
+              className={inputClasses}
+            />
+          </div>
 
-              <label>
-                Department Name
-                <input
-                  type="text"
-                  value={activeDepartment.name}
-                  onChange={(event) => setActiveDepartment((current) => ({ ...current, name: event.target.value }))}
-                />
-              </label>
+          <div className="space-y-1.5">
+            <label className={labelClasses}>Department Name *</label>
+            <input
+              type="text"
+              value={activeDepartment.name}
+              onChange={(event) => setActiveDepartment((current) => ({ ...current, name: event.target.value }))}
+              placeholder="e.g. Computer Science"
+              className={inputClasses}
+            />
+          </div>
 
-              <label>
-                Head Of Department
-                <input
-                  type="text"
-                  value={activeDepartment.hod}
-                  onChange={(event) => setActiveDepartment((current) => ({ ...current, hod: event.target.value }))}
-                />
-              </label>
+          <div className="space-y-1.5">
+            <label className={labelClasses}>Head Of Department</label>
+            <input
+              type="text"
+              value={activeDepartment.hod}
+              onChange={(event) => setActiveDepartment((current) => ({ ...current, hod: event.target.value }))}
+              placeholder="e.g. Dr. Robert Wilson"
+              className={inputClasses}
+            />
+          </div>
 
-              <label>
-                Staff Mapped
-                <input
-                  type="number"
-                  min="0"
-                  value={activeDepartment.mappedStaff}
-                  onChange={(event) =>
-                    setActiveDepartment((current) => ({ ...current, mappedStaff: Number(event.target.value) || 0 }))
-                  }
-                />
-              </label>
-            </div>
-
-            <div className="settings-actions">
-              <button type="button" className="settings-btn settings-btn-ghost" onClick={closeModal}>
-                Cancel
-              </button>
-              <button type="button" className="settings-btn settings-btn-primary" onClick={saveDepartmentLocally}>
-                Save Department
-              </button>
-            </div>
+          <div className="space-y-1.5">
+            <label className={labelClasses}>Staff Mapped</label>
+            <input
+              type="number"
+              min="0"
+              value={activeDepartment.mappedStaff}
+              onChange={(event) =>
+                setActiveDepartment((current) => ({ ...current, mappedStaff: Number(event.target.value) || 0 }))
+              }
+              className={inputClasses}
+            />
           </div>
         </div>
-      ) : null}
+      </Modal>
 
       <SettingsToast toast={toast} onDismiss={() => setToast(null)} />
     </section>
