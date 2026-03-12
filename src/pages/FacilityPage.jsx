@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
 import Layout from '../components/Layout'
-import Modal from '../components/Modal'
 
 const facilities = [
   { name: 'Computer Lab 4', type: 'Laboratory',   capacity: 40,  status: 'Available',   amenities: ['AC', 'Projector', '40 PCs'] },
@@ -12,9 +11,9 @@ const facilities = [
 ]
 
 const statusStyle = {
-  Available:   'bg-emerald-50 text-emerald-600',
-  'In Use':    'bg-blue-50 text-[#1162d4]',
-  Maintenance: 'bg-red-50 text-red-600',
+  Available:   'bg-green-100 text-green-800',
+  'In Use':    'bg-blue-100 text-blue-800',
+  Maintenance: 'bg-red-100 text-red-800',
 }
 
 export default function FacilityPage({ noLayout = false }) {
@@ -42,7 +41,7 @@ export default function FacilityPage({ noLayout = false }) {
   const availableRooms = facilities.filter(f => f.status === 'Available')
 
   function handleBookRoom(e) {
-    if (e) e.preventDefault()
+    e.preventDefault()
     setBookingSuccess(true)
     setTimeout(() => {
       setBookingOpen(false)
@@ -51,24 +50,20 @@ export default function FacilityPage({ noLayout = false }) {
     }, 1500)
   }
 
-  const inputClasses = "w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#1162d4]/10 focus:border-[#1162d4] outline-none transition-all text-sm text-slate-700 bg-white";
-  const labelClasses = "block text-sm font-semibold text-slate-700 mb-1.5 ml-0.5";
-
   const inner = (
     <>
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Facility Management</h1>
+          <h1 className="text-3xl font-bold text-slate-900">Facility Management</h1>
           <p className="text-slate-500 mt-1">Room & Lab availability — Real-time status</p>
         </div>
         <button
           onClick={() => setBookingOpen(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-[#1162d4] text-white rounded-lg text-sm font-semibold hover:bg-[#1162d4]/90 transition-all shadow-sm active:scale-95"
+          className="flex items-center gap-2 px-4 py-2 bg-[#1162d4] text-white rounded-lg text-sm font-semibold hover:bg-[#1162d4]/90 transition-colors"
         >
-          <span className="material-symbols-outlined text-lg">meeting_room</span>Book Room
+          <span className="material-symbols-outlined text-lg">add</span>Book Room
         </button>
       </div>
-
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         {[
           { icon: 'meeting_room', label: 'Available',   value: '3', color: 'text-emerald-600 bg-emerald-100' },
@@ -87,7 +82,7 @@ export default function FacilityPage({ noLayout = false }) {
         ))}
       </div>
 
-      {/* Search & Filter */}
+      {/* Search & Filter — right-aligned like attendance page */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
         <div />
         <div className="flex items-center gap-3">
@@ -98,7 +93,7 @@ export default function FacilityPage({ noLayout = false }) {
               placeholder="Search by name..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 pr-4 py-2 w-56 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#1162d4]/10 focus:border-[#1162d4] transition-all duration-200"
+              className="pl-9 pr-4 py-2 w-56 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#1162d4]/30 focus:border-[#1162d4] transition-all duration-200"
             />
           </div>
 
@@ -116,7 +111,7 @@ export default function FacilityPage({ noLayout = false }) {
             </button>
 
             {filterOpen && (
-              <div className="absolute right-0 mt-2 w-44 bg-white border border-slate-200 rounded-xl shadow-lg z-20 py-1 origin-top-right">
+              <div className="absolute right-0 mt-2 w-44 bg-white border border-slate-200 rounded-xl shadow-lg z-20 py-1 animate-dropIn origin-top-right">
                 {['All', 'Available', 'In Use', 'Maintenance'].map((opt) => (
                   <button
                     key={opt}
@@ -129,7 +124,7 @@ export default function FacilityPage({ noLayout = false }) {
                   >
                     {opt !== 'All' && (
                       <span className={`w-2 h-2 rounded-full ${
-                        opt === 'Available' ? 'bg-emerald-500' : opt === 'In Use' ? 'bg-[#1162d4]' : 'bg-red-500'
+                        opt === 'Available' ? 'bg-green-500' : opt === 'In Use' ? 'bg-blue-500' : 'bg-red-500'
                       }`} />
                     )}
                     {opt}
@@ -146,117 +141,134 @@ export default function FacilityPage({ noLayout = false }) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {filtered.length === 0 && (
-          <div className="col-span-full text-center text-slate-400 text-sm py-12">
-            <span className="material-symbols-outlined text-5xl mb-2 opacity-20">search_off</span>
-            <p>No facilities found matching your criteria</p>
-          </div>
+          <div className="col-span-full text-center text-slate-400 text-sm py-10">No facilities found</div>
         )}
         {filtered.map((f, i) => (
-          <div key={f.name} className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm flex flex-col gap-3 hover:border-[#1162d4]/30 transition-all group">
+          <div key={f.name} className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm flex flex-col gap-3 animate-fadeIn" style={{ animationDelay: `${i * 50}ms` }}>
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-sm font-bold text-slate-900 group-hover:text-[#1162d4] transition-colors">{f.name}</p>
+                <p className="text-sm font-bold text-slate-900">{f.name}</p>
                 <p className="text-xs text-slate-500">{f.type}</p>
               </div>
               <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${statusStyle[f.status]}`}>{f.status}</span>
             </div>
             <div className="flex items-center gap-2 text-xs text-slate-500">
-              <span className="material-symbols-outlined text-sm text-slate-400">group</span>
-              Capacity: <span className="font-semibold text-slate-700">{f.capacity} Seats</span>
+              <span className="material-symbols-outlined text-sm text-slate-400">people</span>
+              Capacity: <span className="font-semibold text-slate-700">{f.capacity}</span>
             </div>
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap gap-1">
               {f.amenities.map((a) => (
-                <span key={a} className="px-2 py-0.5 bg-slate-50 text-slate-500 border border-slate-100 rounded text-[10px] font-semibold uppercase tracking-wider">{a}</span>
+                <span key={a} className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-[11px] font-medium">{a}</span>
               ))}
             </div>
           </div>
         ))}
       </div>
 
-      <Modal
-        isOpen={bookingOpen}
-        onClose={() => setBookingOpen(false)}
-        title="Book a Room"
-        icon="meeting_room"
-        maxWidth="max-w-2xl"
-        footer={
-          !bookingSuccess && (
-            <div className="flex items-center justify-end gap-3 w-full">
-              <button
-                onClick={() => setBookingOpen(false)}
-                className="px-6 py-2 text-sm font-semibold text-slate-400 hover:text-slate-600"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleBookRoom}
-                className="px-6 py-2 bg-[#1162d4] text-white rounded-lg text-sm font-semibold hover:bg-[#1162d4]/90 transition-all shadow-sm active:scale-95"
-              >
-                Confirm Booking
-              </button>
-            </div>
-          )
-        }
-      >
-        {bookingSuccess ? (
-          <div className="py-8 text-center animate-in zoom-in-95 duration-300">
-            <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-emerald-100">
-              <span className="material-symbols-outlined text-3xl text-emerald-600">check_circle</span>
-            </div>
-            <h3 className="text-xl font-bold text-slate-900">Booking Confirmed!</h3>
-            <p className="text-sm text-slate-500 mt-2">The room has been successfully reserved for your schedule.</p>
+      {/* Book Room Modal */}
+      {bookingOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm" onClick={() => setBookingOpen(false)}>
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            {bookingSuccess ? (
+              <div className="p-8 text-center">
+                <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <span className="material-symbols-outlined text-3xl text-green-600">check_circle</span>
+                </div>
+                <h3 className="text-lg font-bold text-slate-900">Room Booked!</h3>
+                <p className="text-sm text-slate-500 mt-1">Your booking has been confirmed.</p>
+              </div>
+            ) : (
+              <>
+                <div className="p-6 border-b border-slate-200 flex items-center justify-between sticky top-0 bg-white">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-[#1162d4]/10 rounded-lg">
+                      <span className="material-symbols-outlined text-[#1162d4]">meeting_room</span>
+                    </div>
+                    <h3 className="text-xl font-bold text-slate-900">Book a Room</h3>
+                  </div>
+                  <button onClick={() => setBookingOpen(false)} className="p-1 hover:bg-slate-100 rounded-full transition-colors">
+                    <span className="material-symbols-outlined text-slate-400">close</span>
+                  </button>
+                </div>
+                <form onSubmit={handleBookRoom} className="p-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="md:col-span-2 flex flex-col gap-2">
+                      <label className="text-sm font-semibold text-slate-700">Room <span className="text-red-500">*</span></label>
+                      <select
+                        required
+                        value={bookingForm.room}
+                        onChange={e => setBookingForm({ ...bookingForm, room: e.target.value })}
+                        className="px-4 py-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#1162d4]/20 focus:border-[#1162d4] outline-none transition-colors"
+                      >
+                        <option value="">Select a room</option>
+                        {availableRooms.map(r => (
+                          <option key={r.name} value={r.name}>{r.name} — {r.type} (Cap: {r.capacity})</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <label className="text-sm font-semibold text-slate-700">Date <span className="text-red-500">*</span></label>
+                      <input
+                        type="date"
+                        required
+                        value={bookingForm.date}
+                        onChange={e => setBookingForm({ ...bookingForm, date: e.target.value })}
+                        className="px-4 py-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#1162d4]/20 focus:border-[#1162d4] outline-none transition-colors"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <label className="text-sm font-semibold text-slate-700">Purpose <span className="text-red-500">*</span></label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Guest Lecture, Lab Session"
+                        value={bookingForm.purpose}
+                        onChange={e => setBookingForm({ ...bookingForm, purpose: e.target.value })}
+                        className="px-4 py-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#1162d4]/20 focus:border-[#1162d4] outline-none transition-colors"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <label className="text-sm font-semibold text-slate-700">From <span className="text-red-500">*</span></label>
+                      <input
+                        type="time"
+                        required
+                        value={bookingForm.timeFrom}
+                        onChange={e => setBookingForm({ ...bookingForm, timeFrom: e.target.value })}
+                        className="px-4 py-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#1162d4]/20 focus:border-[#1162d4] outline-none transition-colors"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <label className="text-sm font-semibold text-slate-700">To <span className="text-red-500">*</span></label>
+                      <input
+                        type="time"
+                        required
+                        value={bookingForm.timeTo}
+                        onChange={e => setBookingForm({ ...bookingForm, timeTo: e.target.value })}
+                        className="px-4 py-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#1162d4]/20 focus:border-[#1162d4] outline-none transition-colors"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 mt-6 pt-6 border-t border-slate-200">
+                    <button
+                      type="button"
+                      onClick={() => setBookingOpen(false)}
+                      className="flex-1 px-4 py-2.5 border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="flex-1 px-4 py-2.5 bg-[#1162d4] text-white rounded-lg text-sm font-semibold hover:bg-[#1162d4]/90 transition-colors"
+                    >
+                      Confirm Booking
+                    </button>
+                  </div>
+                </form>
+              </>
+            )}
           </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="md:col-span-2 space-y-1.5">
-              <label className={labelClasses}>Select Room *</label>
-              <select
-                required
-                value={bookingForm.room}
-                onChange={e => setBookingForm({ ...bookingForm, room: e.target.value })}
-                className={inputClasses}
-              >
-                <option value="">Choose an available room...</option>
-                {availableRooms.map(r => (
-                  <option key={r.name} value={r.name}>{r.name} — {r.type} (Cap: {r.capacity} Seats)</option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-1.5">
-              <label className={labelClasses}>Booking Date *</label>
-              <input
-                type="date" required value={bookingForm.date}
-                onChange={e => setBookingForm({ ...bookingForm, date: e.target.value })}
-                className={inputClasses}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className={labelClasses}>Purpose *</label>
-              <input
-                type="text" required placeholder="e.g. Guest Lecture" value={bookingForm.purpose}
-                onChange={e => setBookingForm({ ...bookingForm, purpose: e.target.value })}
-                className={inputClasses}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className={labelClasses}>Time (From) *</label>
-              <input
-                type="time" required value={bookingForm.timeFrom}
-                onChange={e => setBookingForm({ ...bookingForm, timeFrom: e.target.value })}
-                className={inputClasses}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className={labelClasses}>Time (To) *</label>
-              <input
-                type="time" required value={bookingForm.timeTo}
-                onChange={e => setBookingForm({ ...bookingForm, timeTo: e.target.value })}
-                className={inputClasses}
-              />
-            </div>
-          </div>
-        )}
-      </Modal>
+        </div>
+      )}
     </>
   )
   return noLayout ? inner : <Layout title="Facility">{inner}</Layout>
