@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { destroyUserSession, getUserSession } from '../auth/sessionController';
 import { cmsRoles, roleMenuGroups } from '../data/roleConfig';
+import NotificationBell from '../components/NotificationBell';
+import NotificationDropdown from '../components/NotificationDropdown';
 import TimetablePage from './TimetablePage';
 import AttendancePage from './AttendancePage';
 import ExamsPage from './ExamsPage';
@@ -37,6 +39,7 @@ export default function DashboardPage() {
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activePage, setActivePage] = useState(null);
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
 
   const pageMap = {
     '/timetable': TimetablePage,
@@ -144,6 +147,9 @@ export default function DashboardPage() {
                           if (item.toLowerCase() === 'settings') {
                             setSidebarOpen(false);
                             navigate(`/settings?role=${encodeURIComponent(role)}`);
+                          } else if (item.toLowerCase() === 'notifications') {
+                            setSidebarOpen(false);
+                            navigate(`/notifications?role=${encodeURIComponent(role)}`);
                           } else if (item.toLowerCase() === 'students') {
                             setSidebarOpen(false);
                             navigate(`/students?role=${encodeURIComponent(role)}`);
@@ -191,6 +197,17 @@ export default function DashboardPage() {
               </div>
             </div>
             <div className="topbar-right">
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <NotificationBell
+                  role={role}
+                  onBellClick={() => setIsNotificationOpen(!isNotificationOpen)}
+                />
+                <NotificationDropdown
+                  role={role}
+                  isOpen={isNotificationOpen}
+                  onClose={() => setIsNotificationOpen(false)}
+                />
+              </div>
               <span className="badge badge-info">{data.label}</span>
             </div>
           </div>
