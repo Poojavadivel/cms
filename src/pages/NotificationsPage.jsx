@@ -41,7 +41,7 @@ export default function NotificationsPage() {
           ← Back to Dashboard
         </button>
         <span style={{ color: '#94a3b8', fontSize: '13px' }}>
-          MIT Connect — <strong style={{ color: '#1e293b', textTransform: 'capitalize' }}>{role}</strong> Notifications
+          EduCore — <strong style={{ color: '#1e293b', textTransform: 'capitalize' }}>{role}</strong> Notifications
         </span>
       </div>
       <div style={{ padding: '20px' }}>
