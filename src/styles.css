@@ -584,6 +584,22 @@ a {
   min-height: 100vh;
 }
 
+.role-portal-main {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+.role-portal-content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scrollbar-gutter: stable;
+}
+
 .topbar {
   display: flex;
   align-items: center;

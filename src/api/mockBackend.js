@@ -3,12 +3,18 @@ const NETWORK_DELAY_MS = 280;
 // Dummy backend variables requested for current API simulation.
 export const generalSettings = {
   portalName: 'MIT Connect',
+  collegeName: 'MIT Connect',
   language: 'English',
   timezone: 'Asia/Kolkata',
   dateFormat: 'DD/MM/YYYY',
   theme: 'Ocean Blue',
+  collegeLogo: '',
+  collegeLogoFileName: 'mit-logo.png',
   logoFileName: 'mit-logo.png',
   faviconFileName: 'mit-favicon.ico',
+  address: 'Main Administrative Block, Coimbatore',
+  contactEmail: 'info@mitconnect.edu',
+  phoneNumber: '9876543210',
 };
 
 export const users = [
@@ -25,6 +31,8 @@ export const departments = [
 export const academicConfig = {
   currentYear: '2025-2026',
   semesters: 2,
+  departments: 'Computer Science, Mechanical, Civil, ECE',
+  courses: 'B.Tech CSE, B.Tech ECE, MBA',
   creditSystem: 'CBCS',
   attendanceRule: 'Minimum 75% attendance is mandatory.',
   gradeRule: 'A+ >= 90, A >= 80, B >= 70, C >= 60',

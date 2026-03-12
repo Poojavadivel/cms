@@ -112,15 +112,11 @@ export const roleMenuGroups = {
     },
     {
       title: 'Academics',
-      items: ['Exams', 'Timetable', 'Attendance', 'Placement', 'Facility'],
+      items: ['Exams', 'Timetable', 'Attendance', 'Placement', 'Facility', 'Analytics', 'Notifications', 'Settings'],
     },
     {
       title: 'Administration',
       items: ['Fees', 'Invoices'],
-    },
-    {
-      title: 'Intelligence',
-      items: ['Notifications', 'Settings'],
     },
   ],
   admin: [
@@ -133,12 +129,8 @@ export const roleMenuGroups = {
       items: ['Admission', 'Fees', 'Payroll', 'Invoices'],
     },
     {
-      title: 'Intelligence',
-      items: ['Analytics', 'Notifications', 'Settings'],
-    },
-    {
       title: 'Academics',
-      items: ['Exams', 'Timetable', 'Attendance', 'Placement', 'Facility'],
+      items: ['Exams', 'Timetable', 'Attendance', 'Placement', 'Facility', 'Analytics', 'Notifications', 'Settings'],
     },
   ],
   faculty: [
@@ -148,11 +140,7 @@ export const roleMenuGroups = {
     },
     {
       title: 'Academics',
-      items: ['Exams', 'Timetable', 'Attendance', 'Placement'],
-    },
-    {
-      title: 'Intelligence',
-      items: ['Analytics', 'Notifications', 'Settings'],
+      items: ['Exams', 'Timetable', 'Attendance', 'Placement', 'Analytics', 'Notifications', 'Settings'],
     },
   ],
   finance: [
@@ -165,7 +153,7 @@ export const roleMenuGroups = {
       items: ['Fees', 'Payroll', 'Invoices'],
     },
     {
-      title: 'Intelligence',
+      title: 'Academics',
       items: ['Analytics', 'Notifications', 'Settings'],
     },
   ],
