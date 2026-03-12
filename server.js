@@ -668,7 +668,11 @@ app.get('/api/notifications/:role', async (req, res) => {
     const { category, priority, status, search } = req.query;
 
     const filter = {
-      $or: [{ receiverRole: role }, { receiverRole: 'ALL' }]
+      $or: [
+        { receiverRole: role },
+        { receiverRole: 'ALL' },
+        { senderRole: role }
+      ]
     };
     if (category) filter.module = category;
     if (priority) filter.priority = priority;
@@ -685,7 +689,7 @@ app.get('/api/notifications/:role', async (req, res) => {
     const notifications = await Notification.find(filter).sort({ createdAt: -1 });
 
     const unreadCount = await Notification.countDocuments({
-      $or: [{ receiverRole: role }, { receiverRole: 'ALL' }],
+      $or: [{ receiverRole: role }, { receiverRole: 'ALL' }, { senderRole: role }],
       status: 'unread'
     });
 
@@ -700,7 +704,7 @@ app.get('/api/notifications/:role/unread', async (req, res) => {
   try {
     const { role } = req.params;
     const unreadCount = await Notification.countDocuments({
-      $or: [{ receiverRole: role }, { receiverRole: 'ALL' }],
+      $or: [{ receiverRole: role }, { receiverRole: 'ALL' }, { senderRole: role }],
       status: 'unread'
     });
     res.json({ success: true, role, unreadCount });
