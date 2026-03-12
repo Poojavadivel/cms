@@ -1,14 +1,5 @@
 import { SettingsProvider } from '../../context/SettingsContext';
-import AccessibilitySettings from './AccessibilitySettings';
-import AccountManagement from './AccountManagement';
-import AccountSettings from './AccountSettings';
-import AppearanceSettings from './AppearanceSettings';
-import LanguageSettings from './LanguageSettings';
-import NotificationSettings from './NotificationSettings';
-import PrivacySettings from './PrivacySettings';
 import ProfileSettings from './ProfileSettings';
-import SecuritySettings from './SecuritySettings';
-import TeachingPreferences from './TeachingPreferences';
 
 function SettingsContent({ role, userId }) {
   function renderSection() {
