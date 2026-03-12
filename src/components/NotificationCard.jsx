@@ -49,7 +49,7 @@ export default function NotificationCard({ notification, onMarkRead, onDelete, o
           {notification.status === 'unread' && (
             <button
               className="notification-card-action-btn primary"
-              onClick={() => onMarkRead(notification.id)}
+              onClick={() => onMarkRead(notification._id)}
               title="Mark as read"
             >
               Mark as Read
@@ -64,7 +64,7 @@ export default function NotificationCard({ notification, onMarkRead, onDelete, o
           </button>
           <button
             className="notification-card-action-btn danger"
-            onClick={() => onDelete(notification.id)}
+            onClick={() => onDelete(notification._id)}
             title="Delete notification"
           >
             Delete
