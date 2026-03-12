@@ -3,7 +3,7 @@ import { settingsApi } from '../../api/settingsApi';
 import SettingsActionBar from './SettingsActionBar';
 import SettingsToast from './SettingsToast';
 
-export default function NotificationSettings() {
+export default function AdminNotificationSettings() {
   const [form, setForm] = useState(null);
   const [baseline, setBaseline] = useState(null);
   const [saving, setSaving] = useState(false);

@@ -27,6 +27,18 @@ export default function TopBar({ title }) {
     .join('')
     .toUpperCase();
 
+  function getSettingsRouteForRole(currentRole) {
+    if (currentRole === 'faculty') {
+      return '/faculty/settings';
+    }
+
+    if (currentRole === 'finance') {
+      return '/finance/settings';
+    }
+
+    return `/settings?role=${encodeURIComponent(currentRole)}`;
+  }
+
   return (
     <header className="h-20 bg-white border-b border-slate-100 px-10 flex items-center justify-between sticky top-0 z-10 backdrop-blur-md bg-white/80">
       <div className="flex items-center gap-4 flex-1">
@@ -46,7 +58,7 @@ export default function TopBar({ title }) {
           <button 
             type="button"
             className="p-2.5 text-slate-400 hover:bg-slate-50 rounded-xl transition-all"
-            onClick={() => navigate(`/settings?role=${encodeURIComponent(role)}`)}
+            onClick={() => navigate(getSettingsRouteForRole(role))}
             aria-label="Open settings"
           >
             <span className="material-symbols-outlined text-[24px]">settings</span>

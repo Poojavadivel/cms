@@ -90,6 +90,44 @@ export const monitoring = {
   errorLogs: 2,
 };
 
+export const facultyProfile = {
+  name: 'Dr Kumar',
+  email: 'kumar@mit.edu',
+  department: 'Computer Science',
+  phone: '+91 9876543210',
+  profilePhotoName: '',
+};
+
+export const facultyCourseNotifications = {
+  assignmentSubmission: true,
+  studentDoubtRequests: true,
+};
+
+export const facultyReminderSettings = {
+  assignmentReminder: true,
+};
+
+export const financeProfile = {
+  name: 'Anita Sharma',
+  email: 'finance@mit.edu',
+  role: 'Finance Manager',
+  phone: '+91 9876501234',
+  profilePhotoName: '',
+};
+
+export const financePaymentNotifications = {
+  newPaymentAlerts: true,
+};
+
+export const financeRefundAlerts = {
+  refundRequests: true,
+};
+
+export const securityChangeAudit = {
+  facultyPasswordUpdatedAt: null,
+  financePasswordUpdatedAt: null,
+};
+
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
 }
@@ -106,6 +144,13 @@ function createSeedDatabase() {
     integrationSettings: clone(integrationSettings),
     dataManagementSettings: clone(dataManagementSettings),
     monitoring: clone(monitoring),
+    facultyProfile: clone(facultyProfile),
+    facultyCourseNotifications: clone(facultyCourseNotifications),
+    facultyReminderSettings: clone(facultyReminderSettings),
+    financeProfile: clone(financeProfile),
+    financePaymentNotifications: clone(financePaymentNotifications),
+    financeRefundAlerts: clone(financeRefundAlerts),
+    securityChangeAudit: clone(securityChangeAudit),
   };
 }
 
@@ -153,6 +198,18 @@ export function apiGet(endpoint) {
       return resolveWithDelay(db.integrationSettings);
     case '/api/settings/data-management':
       return resolveWithDelay(db.dataManagementSettings);
+    case '/api/faculty/profile':
+      return resolveWithDelay(db.facultyProfile);
+    case '/api/faculty/course-notifications':
+      return resolveWithDelay(db.facultyCourseNotifications);
+    case '/api/faculty/reminder-settings':
+      return resolveWithDelay(db.facultyReminderSettings);
+    case '/api/finance/profile':
+      return resolveWithDelay(db.financeProfile);
+    case '/api/finance/payment-notifications':
+      return resolveWithDelay(db.financePaymentNotifications);
+    case '/api/finance/refund-alerts':
+      return resolveWithDelay(db.financeRefundAlerts);
     case '/api/system/export':
       return resolveWithDelay({
         fileName: `mit-connect-export-${Date.now()}.csv`,
@@ -277,6 +334,57 @@ export function apiPut(endpoint, payload) {
   if (endpoint === '/api/settings/data-management') {
     db.dataManagementSettings = { ...db.dataManagementSettings, ...payload };
     return resolveWithDelay(db.dataManagementSettings);
+  }
+
+  if (endpoint === '/api/faculty/profile') {
+    db.facultyProfile = { ...db.facultyProfile, ...payload };
+    return resolveWithDelay(db.facultyProfile);
+  }
+
+  if (endpoint === '/api/faculty/course-notifications') {
+    db.facultyCourseNotifications = { ...db.facultyCourseNotifications, ...payload };
+    return resolveWithDelay(db.facultyCourseNotifications);
+  }
+
+  if (endpoint === '/api/faculty/reminder-settings') {
+    db.facultyReminderSettings = { ...db.facultyReminderSettings, ...payload };
+    return resolveWithDelay(db.facultyReminderSettings);
+  }
+
+  if (endpoint === '/api/finance/profile') {
+    db.financeProfile = { ...db.financeProfile, ...payload };
+    return resolveWithDelay(db.financeProfile);
+  }
+
+  if (endpoint === '/api/finance/payment-notifications') {
+    db.financePaymentNotifications = { ...db.financePaymentNotifications, ...payload };
+    return resolveWithDelay(db.financePaymentNotifications);
+  }
+
+  if (endpoint === '/api/finance/refund-alerts') {
+    db.financeRefundAlerts = { ...db.financeRefundAlerts, ...payload };
+    return resolveWithDelay(db.financeRefundAlerts);
+  }
+
+  if (endpoint === '/api/security/change-password') {
+    const role = payload?.role === 'finance' ? 'finance' : 'faculty';
+    const newPassword = typeof payload?.newPassword === 'string' ? payload.newPassword : '';
+    if (newPassword.length < 8) {
+      return rejectWithDelay('New password must be at least 8 characters.', 400);
+    }
+
+    const passwordUpdatedAt = new Date().toISOString();
+    if (role === 'finance') {
+      db.securityChangeAudit.financePasswordUpdatedAt = passwordUpdatedAt;
+    } else {
+      db.securityChangeAudit.facultyPasswordUpdatedAt = passwordUpdatedAt;
+    }
+
+    return resolveWithDelay({
+      changed: true,
+      role,
+      passwordUpdatedAt,
+    });
   }
 
   return rejectWithDelay(`Unknown PUT endpoint: ${endpoint}`, 404);

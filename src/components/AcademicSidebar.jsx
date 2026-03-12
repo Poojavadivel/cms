@@ -29,6 +29,25 @@ export default function AcademicSidebar() {
   const roleLabel = cmsRoles[role]?.label || 'Admin'
   const groups = roleMenuGroups[role] || roleMenuGroups.student
 
+  function resolveNavItem(itemName) {
+    const base = NAV_ITEM_MAP[itemName]
+    if (!base) return null
+
+    if (itemName === 'Settings') {
+      if (role === 'faculty') {
+        return { ...base, to: '/faculty/settings' }
+      }
+
+      if (role === 'finance') {
+        return { ...base, to: '/finance/settings' }
+      }
+
+      return { ...base, to: `/settings?role=${encodeURIComponent(role)}` }
+    }
+
+    return base
+  }
+
   function handleLogout() {
     destroyUserSession()
     navigate('/', { replace: true })
@@ -54,7 +73,7 @@ export default function AcademicSidebar() {
             </p>
             <div className="space-y-1">
               {group.items.map((itemName) => {
-                const config = NAV_ITEM_MAP[itemName]
+                const config = resolveNavItem(itemName)
                 if (!config) return null
                 return (
                   <NavLink

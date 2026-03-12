@@ -40,7 +40,7 @@ const SETTINGS_SECTIONS = [
   {
     id: 'finance',
     label: 'Finance',
-    roles: ['admin', 'finance'],
+    roles: ['admin'],
     children: [
       { id: 'fee-structure', label: 'Fee Structure' },
       { id: 'payment-plans', label: 'Payment Plans' },

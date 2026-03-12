@@ -1,0 +1,310 @@
+:root {
+  --role-settings-bg: #f3f6fb;
+  --role-settings-card: #ffffff;
+  --role-settings-border: #dbe4f3;
+  --role-settings-text: #10243f;
+  --role-settings-muted: #64748b;
+  --role-settings-primary: #0f5fe3;
+  --role-settings-primary-dark: #0d4db6;
+  --role-settings-success-bg: #ecfdf5;
+  --role-settings-success-border: #86efac;
+  --role-settings-success-text: #166534;
+  --role-settings-error-bg: #fef2f2;
+  --role-settings-error-border: #fca5a5;
+  --role-settings-error-text: #991b1b;
+}
+
+.role-settings-page {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 0% 0%, rgba(125, 211, 252, 0.36) 0%, transparent 34%),
+    radial-gradient(circle at 95% 8%, rgba(191, 219, 254, 0.4) 0%, transparent 30%),
+    var(--role-settings-bg);
+  padding: 28px 18px 52px;
+}
+
+.role-settings-shell {
+  width: min(1080px, 100%);
+  margin: 0 auto;
+}
+
+.role-settings-hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.role-settings-kicker {
+  color: #1d4ed8;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.role-settings-hero h1 {
+  font-size: 34px;
+  letter-spacing: -0.03em;
+  color: var(--role-settings-text);
+  margin-bottom: 8px;
+}
+
+.role-settings-hero p {
+  color: var(--role-settings-muted);
+  max-width: 660px;
+  line-height: 1.6;
+}
+
+.role-settings-card-list {
+  display: grid;
+  gap: 16px;
+}
+
+.role-settings-card {
+  background: var(--role-settings-card);
+  border: 1px solid var(--role-settings-border);
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: 0 10px 26px rgba(15, 95, 227, 0.08);
+}
+
+.role-settings-card-head h2 {
+  font-size: 22px;
+  color: var(--role-settings-text);
+  letter-spacing: -0.02em;
+}
+
+.role-settings-card-head p {
+  margin-top: 7px;
+  color: var(--role-settings-muted);
+  line-height: 1.6;
+}
+
+.role-settings-grid {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.role-settings-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+  color: #334155;
+}
+
+.role-settings-span-2 {
+  grid-column: span 2;
+}
+
+.role-settings-grid input,
+.role-settings-grid select,
+.role-settings-grid textarea {
+  width: 100%;
+  border: 1px solid #dbe4f3;
+  background: #f8fbff;
+  border-radius: 10px;
+  padding: 10px 12px;
+  color: var(--role-settings-text);
+  outline: none;
+}
+
+.role-settings-grid input:focus,
+.role-settings-grid select:focus,
+.role-settings-grid textarea:focus {
+  border-color: #93c5fd;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.role-settings-grid small {
+  color: var(--role-settings-muted);
+}
+
+.role-settings-toggle-list {
+  margin-top: 16px;
+  display: grid;
+  gap: 10px;
+}
+
+.role-settings-toggle {
+  border: 1px solid #e2e8f0;
+  background: #f8fbff;
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.role-settings-toggle-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.role-settings-toggle-copy strong {
+  font-size: 14px;
+  color: var(--role-settings-text);
+}
+
+.role-settings-toggle-copy small {
+  color: var(--role-settings-muted);
+  font-size: 12px;
+}
+
+.role-settings-toggle-control {
+  position: relative;
+  display: inline-flex;
+}
+
+.role-settings-toggle-control input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.role-settings-toggle-track {
+  width: 48px;
+  height: 28px;
+  border-radius: 999px;
+  background: #cbd5e1;
+  position: relative;
+  transition: background 0.2s ease;
+}
+
+.role-settings-toggle-track::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 4px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.2);
+  transition: transform 0.2s ease;
+}
+
+.role-settings-toggle-control input:checked + .role-settings-toggle-track {
+  background: linear-gradient(90deg, #2563eb, #0ea5e9);
+}
+
+.role-settings-toggle-control input:checked + .role-settings-toggle-track::after {
+  transform: translateX(18px);
+}
+
+.role-settings-actions {
+  margin-top: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.role-settings-inline-actions {
+  margin-top: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.role-settings-btn {
+  height: 38px;
+  border-radius: 10px;
+  border: none;
+  padding: 0 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.role-settings-btn-primary {
+  background: linear-gradient(90deg, var(--role-settings-primary), #0ea5c9);
+  color: #ffffff;
+}
+
+.role-settings-btn-primary:hover {
+  background: linear-gradient(90deg, var(--role-settings-primary-dark), #0891b2);
+}
+
+.role-settings-btn-subtle {
+  background: #f8faff;
+  color: #334155;
+  border: 1px solid #dbe4f3;
+}
+
+.role-settings-btn-outline {
+  background: #ffffff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+
+.role-settings-btn:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.role-settings-loading,
+.role-settings-alert {
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 14px;
+}
+
+.role-settings-loading {
+  border: 1px dashed #bfdbfe;
+  background: #f8fbff;
+  color: #334155;
+}
+
+.role-settings-alert-error {
+  background: var(--role-settings-error-bg);
+  border: 1px solid var(--role-settings-error-border);
+  color: var(--role-settings-error-text);
+}
+
+.role-settings-toast {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  max-width: 420px;
+  border-radius: 12px;
+  padding: 12px 14px;
+  box-shadow: 0 14px 32px rgba(15, 95, 227, 0.18);
+  z-index: 130;
+}
+
+.role-settings-toast-success {
+  background: var(--role-settings-success-bg);
+  border: 1px solid var(--role-settings-success-border);
+  color: var(--role-settings-success-text);
+}
+
+.role-settings-toast-error {
+  background: var(--role-settings-error-bg);
+  border: 1px solid var(--role-settings-error-border);
+  color: var(--role-settings-error-text);
+}
+
+@media (max-width: 900px) {
+  .role-settings-hero {
+    flex-direction: column;
+  }
+
+  .role-settings-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .role-settings-span-2 {
+    grid-column: span 1;
+  }
+
+  .role-settings-page {
+    padding: 18px 14px 44px;
+  }
+}

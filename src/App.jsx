@@ -1,6 +1,9 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { getUserSession } from './auth/sessionController';
 import ProtectedRoute from './components/ProtectedRoute';
+import RoleGuard from './components/RoleGuard';
+import FacultySettings from './components/settings/FacultySettings';
+import FinanceSettings from './components/settings/FinanceSettings';
 import DashboardPage from './pages/DashboardPage';
 import LoginPage from './pages/LoginPage';
 import TimetablePage from './pages/TimetablePage';
@@ -42,6 +45,26 @@ export default function App() {
         element={
           <ProtectedRoute>
             <SettingsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/faculty/settings"
+        element={
+          <ProtectedRoute allowedRoles={['faculty']}>
+            <RoleGuard roles={['faculty']}>
+              <FacultySettings />
+            </RoleGuard>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/finance/settings"
+        element={
+          <ProtectedRoute allowedRoles={['finance']}>
+            <RoleGuard roles={['finance']}>
+              <FinanceSettings />
+            </RoleGuard>
           </ProtectedRoute>
         }
       />

@@ -21,9 +21,19 @@ export default function SettingsPage() {
   const role = session.role;
 
   useEffect(() => {
+    if (role === 'faculty') {
+      navigate('/faculty/settings', { replace: true });
+      return;
+    }
+
+    if (role === 'finance') {
+      navigate('/finance/settings', { replace: true });
+      return;
+    }
+
     const roleLabel = cmsRoles[role]?.label || 'System';
-    const titlePrefix = role === 'student' || role === 'faculty' ? 'User Settings' : 'System Settings';
-    document.title = `EduCore - ${roleLabel} ${titlePrefix}`;
+    const titlePrefix = role === 'student' ? 'User Settings' : 'System Settings';
+    document.title = `MIT Connect - ${roleLabel} ${titlePrefix}`;
 
     const expectedSearch = `?role=${encodeURIComponent(role)}`;
     if (location.search !== expectedSearch) {
@@ -31,17 +41,21 @@ export default function SettingsPage() {
     }
   }, [location.search, navigate, role]);
 
-  const title = role === 'student' || role === 'faculty' ? 'Settings' : 'System Settings';
+  if (role === 'faculty' || role === 'finance') {
+    return null;
+  }
+
+  const title = role === 'student' ? 'Settings' : 'System Settings';
 
   return (
     <Layout title={title}>
-      {(role === 'student' || role === 'faculty') && (
-        <RoleGuard roles={['student', 'faculty']}>
+      {role === 'student' && (
+        <RoleGuard roles={['student']}>
           <UserSettingsPage role={role} userId={session.userId} />
         </RoleGuard>
       )}
-      {(role === 'admin' || role === 'finance') && (
-        <RoleGuard roles={['admin', 'finance']}>
+      {role === 'admin' && (
+        <RoleGuard roles={['admin']}>
           <SettingsLayout role={role} userId={session.userId} />
         </RoleGuard>
       )}

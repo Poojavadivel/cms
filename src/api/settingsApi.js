@@ -5,6 +5,21 @@ export const settingsApi = {
   getGeneralSettings: () => apiGet('/api/settings/general'),
   updateGeneralSettings: (payload) => apiPut('/api/settings/general', payload),
 
+  getFacultyProfile: () => apiGet('/api/faculty/profile'),
+  updateFacultyProfile: (payload) => apiPut('/api/faculty/profile', payload),
+  getFacultyCourseNotifications: () => apiGet('/api/faculty/course-notifications'),
+  updateFacultyCourseNotifications: (payload) => apiPut('/api/faculty/course-notifications', payload),
+  getFacultyReminderSettings: () => apiGet('/api/faculty/reminder-settings'),
+  updateFacultyReminderSettings: (payload) => apiPut('/api/faculty/reminder-settings', payload),
+
+  getFinanceProfile: () => apiGet('/api/finance/profile'),
+  updateFinanceProfile: (payload) => apiPut('/api/finance/profile', payload),
+  getFinancePaymentNotifications: () => apiGet('/api/finance/payment-notifications'),
+  updateFinancePaymentNotifications: (payload) => apiPut('/api/finance/payment-notifications', payload),
+  getFinanceRefundAlerts: () => apiGet('/api/finance/refund-alerts'),
+  updateFinanceRefundAlerts: (payload) => apiPut('/api/finance/refund-alerts', payload),
+  changePassword: (payload) => apiPut('/api/security/change-password', payload),
+
   getUsers: () => apiGet('/api/users'),
   createUser: (payload) => apiPost('/api/users', payload),
   updateUser: (id, payload) => apiPut(`/api/users/${id}`, payload),

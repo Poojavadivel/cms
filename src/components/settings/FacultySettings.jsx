@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { settingsApi } from '../../api/settingsApi';
-import FinancePaymentNotifications from './FinancePaymentNotifications';
-import FinanceRefundAlerts from './FinanceRefundAlerts';
+import FacultyCourseNotifications from './FacultyCourseNotifications';
+import FacultyReminderSettings from './FacultyReminderSettings';
 import ProfileSettings from './ProfileSettings';
 import SecuritySettings from './SecuritySettings';
 import '../../faculty-finance-settings.css';
@@ -11,7 +11,7 @@ const DEFAULT_PROFILE = {
   name: '',
   email: '',
   phone: '',
-  role: '',
+  department: '',
   profilePhotoName: '',
 };
 
@@ -19,23 +19,24 @@ const DEFAULT_SECURITY = {
   newPassword: '',
 };
 
-const DEFAULT_PAYMENT_NOTIFICATIONS = {
-  newPaymentAlerts: true,
+const DEFAULT_COURSE_NOTIFICATIONS = {
+  assignmentSubmission: true,
+  studentDoubtRequests: true,
 };
 
-const DEFAULT_REFUND_ALERTS = {
-  refundRequests: true,
+const DEFAULT_REMINDER_SETTINGS = {
+  assignmentReminder: true,
 };
 
-export default function FinanceSettings() {
+export default function FacultySettings() {
   const navigate = useNavigate();
   const [profile, setProfile] = useState(DEFAULT_PROFILE);
   const [profileBaseline, setProfileBaseline] = useState(DEFAULT_PROFILE);
   const [security, setSecurity] = useState(DEFAULT_SECURITY);
-  const [paymentNotifications, setPaymentNotifications] = useState(DEFAULT_PAYMENT_NOTIFICATIONS);
-  const [paymentNotificationsBaseline, setPaymentNotificationsBaseline] = useState(DEFAULT_PAYMENT_NOTIFICATIONS);
-  const [refundAlerts, setRefundAlerts] = useState(DEFAULT_REFUND_ALERTS);
-  const [refundAlertsBaseline, setRefundAlertsBaseline] = useState(DEFAULT_REFUND_ALERTS);
+  const [courseNotifications, setCourseNotifications] = useState(DEFAULT_COURSE_NOTIFICATIONS);
+  const [courseNotificationsBaseline, setCourseNotificationsBaseline] = useState(DEFAULT_COURSE_NOTIFICATIONS);
+  const [reminderSettings, setReminderSettings] = useState(DEFAULT_REMINDER_SETTINGS);
+  const [reminderSettingsBaseline, setReminderSettingsBaseline] = useState(DEFAULT_REMINDER_SETTINGS);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -43,32 +44,32 @@ export default function FinanceSettings() {
   const [savingSection, setSavingSection] = useState('');
 
   useEffect(() => {
-    document.title = 'MIT Connect - Finance Settings';
+    document.title = 'MIT Connect - Faculty Settings';
 
     async function load() {
       setLoading(true);
       setError('');
 
       try {
-        const [profileData, paymentNotificationData, refundAlertData] = await Promise.all([
-          settingsApi.getFinanceProfile(),
-          settingsApi.getFinancePaymentNotifications(),
-          settingsApi.getFinanceRefundAlerts(),
+        const [profileData, courseNotificationData, reminderData] = await Promise.all([
+          settingsApi.getFacultyProfile(),
+          settingsApi.getFacultyCourseNotifications(),
+          settingsApi.getFacultyReminderSettings(),
         ]);
 
         const nextProfile = { ...DEFAULT_PROFILE, ...profileData };
-        const nextPaymentNotifications = { ...DEFAULT_PAYMENT_NOTIFICATIONS, ...paymentNotificationData };
-        const nextRefundAlerts = { ...DEFAULT_REFUND_ALERTS, ...refundAlertData };
+        const nextCourseNotifications = { ...DEFAULT_COURSE_NOTIFICATIONS, ...courseNotificationData };
+        const nextReminderSettings = { ...DEFAULT_REMINDER_SETTINGS, ...reminderData };
 
         setProfile(nextProfile);
         setProfileBaseline(nextProfile);
         setSecurity(DEFAULT_SECURITY);
-        setPaymentNotifications(nextPaymentNotifications);
-        setPaymentNotificationsBaseline(nextPaymentNotifications);
-        setRefundAlerts(nextRefundAlerts);
-        setRefundAlertsBaseline(nextRefundAlerts);
+        setCourseNotifications(nextCourseNotifications);
+        setCourseNotificationsBaseline(nextCourseNotifications);
+        setReminderSettings(nextReminderSettings);
+        setReminderSettingsBaseline(nextReminderSettings);
       } catch (requestError) {
-        setError(requestError?.message || 'Unable to load finance settings.');
+        setError(requestError?.message || 'Unable to load faculty settings.');
       } finally {
         setLoading(false);
       }
@@ -93,19 +94,19 @@ export default function FinanceSettings() {
   async function saveProfile() {
     setSavingSection('profile');
     try {
-      const updated = await settingsApi.updateFinanceProfile({
+      const updated = await settingsApi.updateFacultyProfile({
         name: profile.name.trim(),
         email: profile.email.trim(),
         phone: profile.phone.trim(),
-        role: profile.role.trim(),
+        department: profile.department.trim(),
         profilePhotoName: profile.profilePhotoName,
       });
       const next = { ...DEFAULT_PROFILE, ...updated };
       setProfile(next);
       setProfileBaseline(next);
-      showToast('success', 'Finance profile saved successfully.');
+      showToast('success', 'Faculty profile saved successfully.');
     } catch (saveError) {
-      showToast('error', saveError?.message || 'Failed to save finance profile.');
+      showToast('error', saveError?.message || 'Failed to save faculty profile.');
     } finally {
       setSavingSection('');
     }
@@ -128,7 +129,7 @@ export default function FinanceSettings() {
     setSavingSection('security');
     try {
       await settingsApi.changePassword({
-        role: 'finance',
+        role: 'faculty',
         newPassword: security.newPassword,
       });
       setSecurity(DEFAULT_SECURITY);
@@ -140,42 +141,42 @@ export default function FinanceSettings() {
     }
   }
 
-  async function savePaymentNotifications() {
-    setSavingSection('paymentNotifications');
+  async function saveCourseNotifications() {
+    setSavingSection('courseNotifications');
     try {
-      const updated = await settingsApi.updateFinancePaymentNotifications(paymentNotifications);
-      const next = { ...DEFAULT_PAYMENT_NOTIFICATIONS, ...updated };
-      setPaymentNotifications(next);
-      setPaymentNotificationsBaseline(next);
-      showToast('success', 'Payment notification settings saved.');
+      const updated = await settingsApi.updateFacultyCourseNotifications(courseNotifications);
+      const next = { ...DEFAULT_COURSE_NOTIFICATIONS, ...updated };
+      setCourseNotifications(next);
+      setCourseNotificationsBaseline(next);
+      showToast('success', 'Course notification settings saved.');
     } catch (saveError) {
-      showToast('error', saveError?.message || 'Failed to save payment notification settings.');
+      showToast('error', saveError?.message || 'Failed to save course notifications.');
     } finally {
       setSavingSection('');
     }
   }
 
-  function resetPaymentNotifications() {
-    setPaymentNotifications(paymentNotificationsBaseline);
+  function resetCourseNotifications() {
+    setCourseNotifications(courseNotificationsBaseline);
   }
 
-  async function saveRefundAlerts() {
-    setSavingSection('refundAlerts');
+  async function saveReminderSettings() {
+    setSavingSection('reminderSettings');
     try {
-      const updated = await settingsApi.updateFinanceRefundAlerts(refundAlerts);
-      const next = { ...DEFAULT_REFUND_ALERTS, ...updated };
-      setRefundAlerts(next);
-      setRefundAlertsBaseline(next);
-      showToast('success', 'Refund alert settings saved.');
+      const updated = await settingsApi.updateFacultyReminderSettings(reminderSettings);
+      const next = { ...DEFAULT_REMINDER_SETTINGS, ...updated };
+      setReminderSettings(next);
+      setReminderSettingsBaseline(next);
+      showToast('success', 'Assignment reminder settings saved.');
     } catch (saveError) {
-      showToast('error', saveError?.message || 'Failed to save refund alert settings.');
+      showToast('error', saveError?.message || 'Failed to save assignment reminder settings.');
     } finally {
       setSavingSection('');
     }
   }
 
-  function resetRefundAlerts() {
-    setRefundAlerts(refundAlertsBaseline);
+  function resetReminderSettings() {
+    setReminderSettings(reminderSettingsBaseline);
   }
 
   return (
@@ -183,14 +184,14 @@ export default function FinanceSettings() {
       <div className="role-settings-shell">
         <header className="role-settings-hero">
           <div>
-            <p className="role-settings-kicker">Finance Workspace</p>
-            <h1>Finance Settings</h1>
-            <p>Manage profile, password, and finance workflow alerts in one page.</p>
+            <p className="role-settings-kicker">Faculty Workspace</p>
+            <h1>Faculty Settings</h1>
+            <p>Manage profile, password, and faculty-specific teaching alerts in one place.</p>
           </div>
           <button
             type="button"
             className="role-settings-btn role-settings-btn-subtle"
-            onClick={() => navigate('/dashboard?role=finance')}
+            onClick={() => navigate('/dashboard?role=faculty')}
           >
             Back to Dashboard
           </button>
@@ -199,15 +200,14 @@ export default function FinanceSettings() {
         {error ? <div className="role-settings-alert role-settings-alert-error">{error}</div> : null}
 
         {loading ? (
-          <div className="role-settings-loading">Loading finance settings...</div>
+          <div className="role-settings-loading">Loading faculty settings...</div>
         ) : (
           <div className="role-settings-card-list">
             <ProfileSettings
-              description="Update your finance account profile details and communication contact info."
+              description="Update basic profile details used across classes and communication."
               profile={profile}
-              extraFieldKey="role"
-              extraFieldLabel="Finance Department Role"
-              phoneLabel="Phone"
+              extraFieldKey="department"
+              extraFieldLabel="Department"
               saveLabel="Save Profile"
               cancelLabel="Cancel"
               saving={savingSection === 'profile'}
@@ -228,26 +228,26 @@ export default function FinanceSettings() {
               onReset={resetSecurity}
             />
 
-            <FinancePaymentNotifications
-              description="Control alerts when new fee payments are received."
-              values={paymentNotifications}
+            <FacultyCourseNotifications
+              description="Choose which academic alerts you want while handling course activities."
+              values={courseNotifications}
               saveLabel="Save Settings"
               resetLabel="Reset"
-              saving={savingSection === 'paymentNotifications'}
-              onToggle={(key, value) => setPaymentNotifications((current) => ({ ...current, [key]: value }))}
-              onSave={savePaymentNotifications}
-              onReset={resetPaymentNotifications}
+              saving={savingSection === 'courseNotifications'}
+              onToggle={(key, value) => setCourseNotifications((current) => ({ ...current, [key]: value }))}
+              onSave={saveCourseNotifications}
+              onReset={resetCourseNotifications}
             />
 
-            <FinanceRefundAlerts
-              description="Control alerts for incoming student refund requests."
-              values={refundAlerts}
+            <FacultyReminderSettings
+              description="Control reminder alerts for assignment deadlines."
+              values={reminderSettings}
               saveLabel="Save Settings"
               resetLabel="Reset"
-              saving={savingSection === 'refundAlerts'}
-              onToggle={(key, value) => setRefundAlerts((current) => ({ ...current, [key]: value }))}
-              onSave={saveRefundAlerts}
-              onReset={resetRefundAlerts}
+              saving={savingSection === 'reminderSettings'}
+              onToggle={(key, value) => setReminderSettings((current) => ({ ...current, [key]: value }))}
+              onSave={saveReminderSettings}
+              onReset={resetReminderSettings}
             />
           </div>
         )}

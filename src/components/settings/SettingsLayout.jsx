@@ -1,12 +1,119 @@
-import { SettingsProvider } from '../../context/SettingsContext';
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import AdminFinanceSettings from './AdminFinanceSettings';
+import AdminNotificationSettings from './AdminNotificationSettings';
+import AdminSecuritySettings from './AdminSecuritySettings';
 import RoleGuard from '../RoleGuard';
 import { cmsRoles } from '../../data/roleConfig';
-import AdminModuleSettings from './AdminModuleSettings';
+import { findSettingsSelection, getDefaultSettingsItemId, getSettingsSectionsByRole } from '../../data/settingsConfig';
+import AcademicSettings from './AcademicSettings';
+import DataManagement from './DataManagement';
+import DepartmentSettings from './DepartmentSettings';
 import GeneralSettings from './GeneralSettings';
-import ProfileSettings from '../user-settings/ProfileSettings';
+import IntegrationSettings from './IntegrationSettings';
+import MonitoringDashboard from './MonitoringDashboard';
+import SettingsHeader from './SettingsHeader';
+import SettingsSidebar from './SettingsSidebar';
+import UserManagement from './UserManagement';
+
+function matchesSearch(section, query) {
+  if (!query) {
+    return true;
+  }
+
+  const text = `${section.label} ${section.children.map((child) => child.label).join(' ')}`.toLowerCase();
+  return text.includes(query.toLowerCase());
+}
 
 export default function SettingsLayout({ role, userId }) {
   const roleLabel = cmsRoles[role]?.label || role;
+  const sections = useMemo(() => getSettingsSectionsByRole(role), [role]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [activeItemId, setActiveItemId] = useState(() => getDefaultSettingsItemId(sections));
+
+  useEffect(() => {
+    const currentSelection = findSettingsSelection(sections, activeItemId);
+    if (!currentSelection) {
+      setActiveItemId(getDefaultSettingsItemId(sections));
+    }
+  }, [activeItemId, sections]);
+
+  const visibleSections = useMemo(
+    () => sections.filter((section) => matchesSearch(section, searchTerm)),
+    [searchTerm, sections]
+  );
+
+  const selection = findSettingsSelection(sections, activeItemId) || {
+    section: sections[0],
+    child: sections[0]?.children[0],
+  };
+
+  function renderSection() {
+    switch (selection?.section?.id) {
+      case 'general':
+        return (
+          <RoleGuard roles={['admin']}>
+            <GeneralSettings />
+          </RoleGuard>
+        );
+      case 'users':
+        return (
+          <RoleGuard roles={['admin']}>
+            <UserManagement />
+          </RoleGuard>
+        );
+      case 'departments':
+        return (
+          <RoleGuard roles={['admin']}>
+            <DepartmentSettings />
+          </RoleGuard>
+        );
+      case 'academic':
+        return (
+          <RoleGuard roles={['admin']}>
+            <AcademicSettings />
+          </RoleGuard>
+        );
+      case 'finance':
+        return (
+          <RoleGuard roles={['admin']}>
+            <AdminFinanceSettings activeItemId={selection?.child?.id} />
+          </RoleGuard>
+        );
+      case 'notifications':
+        return (
+          <RoleGuard roles={['admin']}>
+            <AdminNotificationSettings />
+          </RoleGuard>
+        );
+      case 'security':
+        return (
+          <RoleGuard roles={['admin']}>
+            <AdminSecuritySettings />
+          </RoleGuard>
+        );
+      case 'integrations':
+        return (
+          <RoleGuard roles={['admin']}>
+            <IntegrationSettings />
+          </RoleGuard>
+        );
+      case 'data-management':
+        return (
+          <RoleGuard roles={['admin']}>
+            <DataManagement />
+          </RoleGuard>
+        );
+      case 'monitoring':
+        return (
+          <RoleGuard roles={['admin']}>
+            <MonitoringDashboard />
+          </RoleGuard>
+        );
+      default:
+        return <div className="settings-empty-panel">No settings section selected.</div>;
+    }
+  }
 
   return (
     <div className="settings-content-wrapper">
