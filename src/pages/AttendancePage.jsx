@@ -197,7 +197,7 @@ export default function AttendancePage({ noLayout = false }) {
   const inner = (
     <>
       {isAdmin && (
-        <div className="flex justify-end mb-6">
+        <div className="flex justify-start mb-6">
           <button className="flex items-center gap-2 px-4 py-2 bg-[#1162d4] text-white rounded-lg text-sm font-semibold hover:bg-[#1162d4]/90">
             <span className="material-symbols-outlined text-lg">download</span>Export Report
           </button>

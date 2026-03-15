@@ -88,9 +88,10 @@ export default function ExamsPage({ noLayout = false }) {
 
     try {
       const res = await fetch('/api/exams')
-      const json = await res.json()
+      const raw = await res.text()
+      const json = raw ? JSON.parse(raw) : null
 
-      if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+      if (res.ok && json?.success && Array.isArray(json.data) && json.data.length > 0) {
         setExams(json.data)
       } else {
         setExams(localSampleExams)

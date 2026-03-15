@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Layout from '../components/Layout'
 import { getUserSession } from '../auth/sessionController'
 
@@ -47,6 +47,37 @@ const C = {
   indigo:  { color: 'border-indigo-500 bg-indigo-50', textColor: 'text-indigo-700' },
   amber:   { color: 'border-amber-500 bg-amber-50',  textColor: 'text-amber-700' },
   rose:    { color: 'border-rose-500 bg-rose-50',    textColor: 'text-rose-700' },
+}
+
+function withTheme(entry) {
+  if (!entry || !entry.code) {
+    return entry
+  }
+
+  const theme = entry.theme || 'blue'
+  return {
+    ...entry,
+    ...(THEMES[theme] || THEMES.blue),
+  }
+}
+
+function normalizeSlots(slots = []) {
+  return Array.from({ length: 7 }, (_, slotIndex) => (
+    Array.from({ length: 5 }, (_, dayIndex) => {
+      const entry = slots?.[slotIndex]?.[dayIndex] ?? null
+      return entry ? withTheme(entry) : null
+    })
+  ))
+}
+
+function normalizeTimetableRecord(record) {
+  return {
+    label: record.label,
+    dept: record.dept,
+    semester: record.semester,
+    section: record.section,
+    slots: normalizeSlots(record.slots),
+  }
 }
 
 function mk(code, name, room, instructor, credits, type, theme) {
@@ -327,32 +358,98 @@ export default function TimetablePage({ noLayout = false }) {
   const [editMode,     setEditMode]     = useState(false)
   const [editTarget,   setEditTarget]   = useState(null)   // { slotIdx, dayIdx }
   const [showNewClass, setShowNewClass] = useState(false)
+  const [isSyncing,    setIsSyncing]    = useState(false)
 
   const current = timetables[activeClass]
 
+  useEffect(() => {
+    let isMounted = true
+
+    async function fetchTimetables() {
+      try {
+        const response = await fetch('/api/academics/timetable')
+        const payload = await response.json().catch(() => null)
+
+        if (!response.ok || !payload?.success || !Array.isArray(payload.data) || payload.data.length === 0) {
+          return
+        }
+
+        const mapped = payload.data.reduce((accumulator, record) => {
+          accumulator[record.classId] = normalizeTimetableRecord(record)
+          return accumulator
+        }, {})
+
+        if (isMounted && Object.keys(mapped).length > 0) {
+          setTimetables(mapped)
+          if (!mapped[activeClass]) {
+            setActiveClass(Object.keys(mapped)[0])
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch timetables:', error)
+      }
+    }
+
+    fetchTimetables()
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
+  async function persistTimetable(classId, timetable) {
+    try {
+      setIsSyncing(true)
+      await fetch(`/api/academics/timetable/${encodeURIComponent(classId)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          classId,
+          label: timetable.label,
+          dept: timetable.dept,
+          semester: timetable.semester,
+          section: timetable.section,
+          slots: timetable.slots,
+        }),
+      })
+    } catch (error) {
+      console.error('Failed to sync timetable:', error)
+    } finally {
+      setIsSyncing(false)
+    }
+  }
+
   function handleEntrySave(entry) {
-    setTimetables(prev => {
-      const slots = prev[activeClass].slots.map(row => [...row])
-      slots[editTarget.slotIdx][editTarget.dayIdx] = entry
-      return { ...prev, [activeClass]: { ...prev[activeClass], slots } }
-    })
+    const slots = current.slots.map(row => [...row])
+    slots[editTarget.slotIdx][editTarget.dayIdx] = withTheme(entry)
+    const updated = { ...current, slots }
+    setTimetables(prev => ({ ...prev, [activeClass]: updated }))
+    void persistTimetable(activeClass, updated)
     setEditTarget(null)
   }
 
   function handleClearCell(slotIdx, dayIdx) {
-    setTimetables(prev => {
-      const slots = prev[activeClass].slots.map(row => [...row])
-      slots[slotIdx][dayIdx] = null
-      return { ...prev, [activeClass]: { ...prev[activeClass], slots } }
-    })
+    const slots = current.slots.map(row => [...row])
+    slots[slotIdx][dayIdx] = null
+    const updated = { ...current, slots }
+    setTimetables(prev => ({ ...prev, [activeClass]: updated }))
+    void persistTimetable(activeClass, updated)
   }
 
   function handleCreateClass({ id, label, dept, semester, section }) {
     if (!timetables[id]) {
+      const created = {
+        label,
+        dept,
+        semester,
+        section,
+        slots: Array.from({ length: 7 }, () => Array(5).fill(null)),
+      }
       setTimetables(prev => ({
         ...prev,
-        [id]: { label, dept, semester, section, slots: Array(7).fill(null).map(() => Array(5).fill(null)) },
+        [id]: created,
       }))
+      void persistTimetable(id, created)
     }
     setActiveClass(id)
     setShowNewClass(false)
@@ -394,6 +491,9 @@ export default function TimetablePage({ noLayout = false }) {
           {current.dept} — {current.semester} ({current.section})
         </p>
         <div className="flex gap-3 items-center">
+          {isSyncing && (
+            <span className="text-xs font-medium text-slate-500">Syncing changes...</span>
+          )}
           {canEdit && (
             <button
               onClick={() => setEditMode(prev => !prev)}

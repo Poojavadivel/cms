@@ -1,55 +1,25 @@
 import os
-from contextlib import asynccontextmanager
-from typing import Optional, List
-from dotenv import load_dotenv
+from pathlib import Path
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-from motor.motor_asyncio import AsyncIOMotorClient
-from pydantic import BaseModel
-from bson import ObjectId
+from fastapi.staticfiles import StaticFiles
 
-load_dotenv()
+from backend.db import lifespan
+from backend.routes.academics.attendance import router as attendance_router
+from backend.routes.academics.exams import router as exams_router
+from backend.routes.academics.facility import router as facility_router
+from backend.routes.academics.placement import router as placement_router
+from backend.routes.academics.timetable import router as timetable_router
+from backend.routes.notifications import router as notifications_router
+from backend.routes.payroll import router as payroll_router
+from backend.routes.staff import router as staff_router
+from backend.routes.students import router as students_router
 
-MONGODB_URI = os.getenv("MONGODB_URI")
 PORT = int(os.getenv("PORT", 5000))
 
-client: AsyncIOMotorClient = None
-db = None
-
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    global client, db
-    print(f"Connecting to MongoDB at {MONGODB_URI}...")
-    try:
-        client = AsyncIOMotorClient(MONGODB_URI, serverSelectionTimeoutMS=5000)
-
-        # Verify connection
-        await client.admin.command("ping")
-
-        # Get database
-        try:
-            db = client.get_database()
-            if db.name == "test" and "/test" not in MONGODB_URI:
-                db = client["cms"]
-        except Exception:
-            db = client["cms"]
-
-        print(f"Connected to MongoDB successfully (Database: {db.name})!")
-
-    except Exception as e:
-        print(f"FAILED to connect to MongoDB: {e}")
-
-    yield
-
-    if client:
-        client.close()
-        print("Disconnected from MongoDB.")
-
-
-app = FastAPI(title="CMS Payroll API", lifespan=lifespan)
+app = FastAPI(title="CMS API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -63,176 +33,41 @@ app.add_middleware(
 # Serve Vite Frontend
 # -------------------------------
 
-app.mount("/assets", StaticFiles(directory="dist/assets"), name="assets")
+BASE_DIR = Path(__file__).resolve().parent.parent
+DIST_DIR = BASE_DIR / "dist"
+DIST_ASSETS_DIR = DIST_DIR / "assets"
+DIST_INDEX_FILE = DIST_DIR / "index.html"
+
+if DIST_ASSETS_DIR.exists():
+    app.mount("/assets", StaticFiles(directory=str(DIST_ASSETS_DIR)), name="assets")
 
 
 @app.get("/")
 async def serve_frontend():
-    return FileResponse("dist/index.html")
+    if DIST_INDEX_FILE.exists():
+        return FileResponse(str(DIST_INDEX_FILE))
+    return {
+        "message": "Frontend build not found. Run `npm run build` to serve static UI from FastAPI, or run Vite dev server for frontend development."
+    }
+
+app.include_router(staff_router)
+app.include_router(payroll_router)
+app.include_router(exams_router)
+app.include_router(timetable_router)
+app.include_router(attendance_router)
+app.include_router(placement_router)
+app.include_router(facility_router)
+app.include_router(notifications_router)
+app.include_router(students_router)
 
 
 @app.get("/{full_path:path}")
 async def serve_react_app(full_path: str):
     if full_path.startswith("api") or full_path.startswith("docs"):
         raise HTTPException(status_code=404)
-    return FileResponse("dist/index.html")
-
-
-# -------------------------------
-# Helper function
-# -------------------------------
-
-
-def fix_id(record: dict) -> dict:
-    if not record:
-        return record
-    if "_id" in record:
-        record["id"] = str(record["_id"])
-        del record["_id"]
-
-    if "staffType" in record and "category" not in record:
-        record["category"] = record["staffType"]
-
-    if "role" in record and "designation" not in record:
-        record["designation"] = record["role"]
-
-    if "name" in record and "staffName" not in record:
-        record["staffName"] = record["name"]
-
-    return record
-
-
-# -------------------------------
-# Pydantic Models
-# -------------------------------
-
-
-class PayrollRecord(BaseModel):
-    staffName: str
-    staffId: str
-    name: Optional[str] = None
-    designation: Optional[str] = None
-    role: Optional[str] = None
-    department: Optional[str] = None
-    category: Optional[str] = None
-    staffType: Optional[str] = None
-    payMonth: Optional[str] = None
-    payPeriodDetailed: Optional[str] = None
-    grossPay: Optional[float] = 0
-    deductions: Optional[float] = 0
-    netPay: Optional[float] = 0
-    status: Optional[str] = "Draft"
-    basicSalary: Optional[float] = 0
-    hra: Optional[float] = 0
-    allowance: Optional[float] = 0
-    bonus: Optional[float] = 0
-    pf: Optional[float] = 0
-    tax: Optional[float] = 0
-    esi: Optional[float] = 0
-    professionalTax: Optional[float] = 0
-    tds: Optional[float] = 0
-
-
-class PayrollUpdate(PayrollRecord):
-    staffName: Optional[str] = None
-    staffId: Optional[str] = None
-
-
-# -------------------------------
-# Staff Routes
-# -------------------------------
-
-
-@app.get("/api/staff")
-async def get_all_staff():
-    staff = []
-    async for member in db["staff_Details"].find():
-        staff.append(fix_id(member))
-    return staff
-
-
-# -------------------------------
-# Payroll Routes
-# -------------------------------
-
-
-@app.get("/api/payroll")
-async def get_all_payroll():
-    records = []
-    async for record in db["payroll"].find().sort("_id", -1):
-        records.append(fix_id(record))
-    return records
-
-
-@app.post("/api/payroll", status_code=201)
-async def create_payroll(record: PayrollRecord):
-    data = record.model_dump()
-
-    if not data.get("name"):
-        data["name"] = data.get("staffName")
-
-    if not data.get("staffType"):
-        data["staffType"] = data.get("category")
-
-    if not data.get("role"):
-        data["role"] = data.get("designation")
-
-    result = await db["payroll"].insert_one(data)
-    created = await db["payroll"].find_one({"_id": result.inserted_id})
-
-    return fix_id(created)
-
-
-@app.post("/api/payroll/batch", status_code=201)
-async def create_payroll_batch(records: List[PayrollRecord]):
-    if not records:
-        raise HTTPException(status_code=400, detail="Empty list provided")
-
-    docs = [r.model_dump() for r in records]
-
-    result = await db["payroll"].insert_many(docs)
-
-    inserted = []
-    async for record in db["payroll"].find({"_id": {"$in": result.inserted_ids}}):
-        inserted.append(fix_id(record))
-
-    return inserted
-
-
-@app.put("/api/payroll/{record_id}")
-async def update_payroll(record_id: str, update: PayrollUpdate):
-    try:
-        oid = ObjectId(record_id)
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid ID format")
-
-    update_data = {k: v for k, v in update.model_dump().items() if v is not None}
-
-    result = await db["payroll"].find_one_and_update(
-        {"_id": oid},
-        {"$set": update_data},
-        return_document=True,
-    )
-
-    if not result:
-        raise HTTPException(status_code=404, detail="Record not found")
-
-    return fix_id(result)
-
-
-@app.delete("/api/payroll/{record_id}")
-async def delete_payroll(record_id: str):
-    try:
-        oid = ObjectId(record_id)
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid ID format")
-
-    result = await db["payroll"].delete_one({"_id": oid})
-
-    if result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail="Record not found")
-
-    return {"message": "Record deleted"}
+    if DIST_INDEX_FILE.exists():
+        return FileResponse(str(DIST_INDEX_FILE))
+    raise HTTPException(status_code=404, detail="Frontend build not found")
 
 
 if __name__ == "__main__":

@@ -1,13 +1,27 @@
 import os
 from pymongo import MongoClient
 from dotenv import load_dotenv
+from urllib.parse import urlsplit
 
 load_dotenv()
 
 MONGODB_URI = os.getenv("MONGODB_URI", "mongodb://localhost:27017/cms")
 
+
+def mask_mongodb_uri(uri: str | None) -> str:
+    if not uri:
+        return "<not configured>"
+
+    try:
+        parts = urlsplit(uri)
+        host = parts.hostname or "unknown-host"
+        scheme = parts.scheme or "mongodb"
+        return f"{scheme}://{host}"
+    except Exception:
+        return "<configured>"
+
 def seed():
-    print(f"Connecting to {MONGODB_URI}...")
+    print(f"Connecting to {mask_mongodb_uri(MONGODB_URI)}...")
     client = MongoClient(MONGODB_URI)
     db = client.get_database()
     

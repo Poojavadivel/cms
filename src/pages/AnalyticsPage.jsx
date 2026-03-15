@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { destroyUserSession } from '../auth/sessionController';
 import {
   AreaChart, Area, BarChart, Bar, LineChart, Line,
   PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid,
@@ -1476,7 +1477,7 @@ export default function AnalyticsPage({role:propRole}){
   const triggerLabel = myToKey(startMY)===myToKey(endMY)?myLabel(startMY):`${myLabel(startMY)} \u2192 ${myLabel(endMY)}`;
 
   useEffect(()=>{document.title=`MIT Connect \u2013 ${data.label} Analytics`;localStorage.setItem('cmsRole',role);},[data.label,role]);
-  function handleLogout(){localStorage.removeItem('cmsRole');localStorage.removeItem('cmsUserId');navigate('/');}
+  function handleLogout(){destroyUserSession();navigate('/',{replace:true});}
 
   function FilterBar(){
     return(
