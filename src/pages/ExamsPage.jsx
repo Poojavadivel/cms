@@ -1,16 +1,12 @@
-import { useState, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import Layout from '../components/Layout'
-
-const initialExamsData = [
-  { id: 1, code: 'CS401', name: 'Data Structures',      date: '2023-12-10', time: '10:00', room: 'Hall A',    type: 'Mid-Sem',  status: 'Upcoming', duration: '120', maxMarks: '100' },
-  { id: 2, code: 'MA405', name: 'Discrete Mathematics', date: '2023-12-12', time: '09:00', room: 'Hall B',    type: 'Mid-Sem',  status: 'Upcoming', duration: '120', maxMarks: '100' },
-  { id: 3, code: 'CS403', name: 'Database Systems',     date: '2023-11-28', time: '11:00', room: 'Lab 2',     type: 'Practical',status: 'Completed', duration: '180', maxMarks: '50' },
-  { id: 4, code: 'HU102', name: 'Tech Writing',         date: '2023-12-15', time: '14:00', room: 'Room 101',  type: 'Internal', status: 'Upcoming', duration: '90', maxMarks: '50' },
-  { id: 5, code: 'CS406', name: 'Operating Systems',    date: '2023-11-20', time: '10:00', room: 'Room 304',  type: 'Quiz',     status: 'Completed', duration: '60', maxMarks: '25' },
-]
+import { getUserSession } from '../auth/sessionController'
 
 export default function ExamsPage({ noLayout = false }) {
-  const [exams, setExams] = useState(initialExamsData)
+  const session = getUserSession()
+  const isStudent = session?.role === 'student'
+  const [exams, setExams] = useState([])
+  const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [editingExam, setEditingExam] = useState(null)
   const [formData, setFormData] = useState({
@@ -24,6 +20,23 @@ export default function ExamsPage({ noLayout = false }) {
     duration: '',
     maxMarks: ''
   })
+
+  // Fetch exams from backend
+  useEffect(() => {
+    fetchExams()
+  }, [])
+
+  const fetchExams = async () => {
+    try {
+      const res = await fetch('/api/exams')
+      const json = await res.json()
+      if (json.success) setExams(json.data)
+    } catch (err) {
+      console.error('Failed to fetch exams:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   // Calculate dynamic stats
   const stats = useMemo(() => {
@@ -66,29 +79,49 @@ export default function ExamsPage({ noLayout = false }) {
     setEditingExam(null)
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     
-    if (editingExam) {
-      // Update existing exam
-      setExams(exams.map(exam => 
-        exam.id === editingExam.id ? { ...formData, id: exam.id } : exam
-      ))
-    } else {
-      // Add new exam
-      const newExam = {
-        ...formData,
-        id: Math.max(...exams.map(e => e.id), 0) + 1
+    try {
+      if (editingExam) {
+        const res = await fetch(`/api/exams/${editingExam._id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...formData, senderRole: session?.role || 'faculty' })
+        })
+        const json = await res.json()
+        if (json.success) {
+          setExams(exams.map(exam => exam._id === editingExam._id ? json.data : exam))
+        }
+      } else {
+        const res = await fetch('/api/exams', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...formData, senderRole: session?.role || 'faculty' })
+        })
+        const json = await res.json()
+        if (json.success) {
+          setExams([...exams, json.data])
+        }
       }
-      setExams([...exams, newExam])
+    } catch (err) {
+      console.error('Failed to save exam:', err)
     }
     
     closeModal()
   }
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (confirm('Are you sure you want to delete this exam?')) {
-      setExams(exams.filter(exam => exam.id !== id))
+      try {
+        const res = await fetch(`/api/exams/${id}`, { method: 'DELETE' })
+        const json = await res.json()
+        if (json.success) {
+          setExams(exams.filter(exam => exam._id !== id))
+        }
+      } catch (err) {
+        console.error('Failed to delete exam:', err)
+      }
     }
   }
 
@@ -109,15 +142,16 @@ export default function ExamsPage({ noLayout = false }) {
     <>
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Exam Schedule</h1>
-          <p className="text-slate-500 mt-1">Department of Computer Science — Semester 4</p>
+          <p className="text-slate-500">Department of Computer Science — Semester 4</p>
         </div>
-        <button 
-          onClick={openAddModal}
-          className="flex items-center gap-2 px-4 py-2 bg-[#1162d4] text-white rounded-lg text-sm font-semibold hover:bg-[#1162d4]/90 transition-colors"
-        >
-          <span className="material-symbols-outlined text-lg">add</span>Schedule Exam
-        </button>
+        {!isStudent && (
+          <button
+            onClick={openAddModal}
+            className="flex items-center gap-2 px-4 py-2 bg-[#1162d4] text-white rounded-lg text-sm font-semibold hover:bg-[#1162d4]/90 transition-colors"
+          >
+            <span className="material-symbols-outlined text-lg">add</span>Schedule Exam
+          </button>
+        )}
       </div>
       
       {/* Stats Cards */}
@@ -154,16 +188,22 @@ export default function ExamsPage({ noLayout = false }) {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {exams.length === 0 ? (
+            {loading ? (
               <tr>
-                <td colSpan="7" className="px-6 py-12 text-center text-slate-500">
+                <td colSpan={isStudent ? 6 : 7} className="px-6 py-12 text-center text-slate-500">
+                  <p className="text-sm">Loading exams...</p>
+                </td>
+              </tr>
+            ) : exams.length === 0 ? (
+              <tr>
+                <td colSpan={isStudent ? 6 : 7} className="px-6 py-12 text-center text-slate-500">
                   <span className="material-symbols-outlined text-5xl mb-2 opacity-20">quiz</span>
-                  <p className="text-sm">No exams scheduled yet. Click "Schedule Exam" to add one.</p>
+                  <p className="text-sm">{isStudent ? 'No exams scheduled yet.' : 'No exams scheduled yet. Click "Schedule Exam" to add one.'}</p>
                 </td>
               </tr>
             ) : (
               exams.map((exam) => (
-                <tr key={exam.id} className="hover:bg-slate-50 transition-colors">
+                <tr key={exam._id} className="hover:bg-slate-50 transition-colors">
                   <td className="px-6 py-4">
                     <p className="text-xs font-bold text-[#1162d4] uppercase">{exam.code}</p>
                     <p className="text-sm font-semibold text-slate-900">{exam.name}</p>
@@ -186,6 +226,7 @@ export default function ExamsPage({ noLayout = false }) {
                       {exam.status}
                     </span>
                   </td>
+                  {!isStudent && (
                   <td className="px-6 py-4">
                     <div className="flex items-center justify-end gap-2">
                       <button
@@ -196,7 +237,7 @@ export default function ExamsPage({ noLayout = false }) {
                         <span className="material-symbols-outlined text-lg">edit</span>
                       </button>
                       <button
-                        onClick={() => handleDelete(exam.id)}
+                        onClick={() => handleDelete(exam._id)}
                         className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                         title="Delete"
                       >
@@ -204,6 +245,7 @@ export default function ExamsPage({ noLayout = false }) {
                       </button>
                     </div>
                   </td>
+                  )}
                 </tr>
               ))
             )}

@@ -1,19 +1,29 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Layout from '../components/Layout'
 import StatCard from '../components/StatCard'
 import SearchFilter from '../components/SearchFilter'
 import StudentTable from '../components/StudentTable'
 import AddStudentModal from '../components/AddStudentModal'
-import { students, getStudentStats } from '../data/studentData'
+import { fetchStudents, createStudent } from '../api/studentsApi'
 
 export default function StudentsPage() {
-  const [studentsList, setStudentsList] = useState(students)
+  const [studentsList, setStudentsList] = useState([])
+  const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const itemsPerPage = 8
 
-  const stats = getStudentStats()
+  useEffect(() => {
+    fetchStudents().then(data => {
+      setStudentsList(data)
+      setLoading(false)
+    })
+  }, [])
+
+  const total = studentsList.length
+  const active = studentsList.filter(s => s.status === 'Active').length
+  const stats = { total, active }
 
   // Filter logic
   const filtered = studentsList.filter(s => {
@@ -29,7 +39,7 @@ export default function StudentsPage() {
 
   const handleSearch = (val) => { setSearchQuery(val); setCurrentPage(1) }
 
-  const handleEnrollSuccess = (newStudent) => {
+  const handleEnrollSuccess = async (newStudent) => {
     const enrichedStudent = {
       ...newStudent,
       cgpa: 0.0,
@@ -37,9 +47,10 @@ export default function StudentsPage() {
       feeStatus: 'Pending',
       status: 'Active',
       semester: newStudent.semester || '1',
-      avatar: newStudent.avatar || `https://ui-avatars.com/api/?name=${newStudent.name}&background=4f46e5&color=fff`
+      avatar: newStudent.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(newStudent.name)}&background=4f46e5&color=fff`
     }
-    setStudentsList(prev => [enrichedStudent, ...prev])
+    const saved = await createStudent(enrichedStudent)
+    setStudentsList(prev => [saved, ...prev])
     setIsModalOpen(false)
     setCurrentPage(1)
   }

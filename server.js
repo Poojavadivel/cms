@@ -5,7 +5,50 @@
  */
 
 import cors from 'cors';
+import dotenv from 'dotenv';
 import express from 'express';
+import mongoose from 'mongoose';
+
+dotenv.config({ path: './backend/.env' });
+
+// ── MongoDB Connection ─────────────────────────────────────────────────────────
+
+mongoose.connect(process.env.MONGODB_URI)
+  .then(() => console.log('Connected to MongoDB Atlas'))
+  .catch(err => console.error('MongoDB connection error:', err.message));
+
+// ── Notification Model ─────────────────────────────────────────────────────────
+
+const notificationSchema = new mongoose.Schema({
+  title: { type: String, required: true },
+  message: { type: String, required: true },
+  senderRole: { type: String, required: true },
+  receiverRole: { type: String, required: true },
+  module: { type: String, required: true },
+  priority: { type: String, required: true },
+  status: { type: String, default: 'unread' },
+  actionId: String,
+  relatedData: { type: mongoose.Schema.Types.Mixed, default: {} },
+  department: String,
+}, { timestamps: true });
+
+const Notification = mongoose.model('Notification', notificationSchema);
+
+// ── Exam Model ──────────────────────────────────────────────────────────────
+
+const examSchema = new mongoose.Schema({
+  code: { type: String, required: true },
+  name: { type: String, required: true },
+  date: { type: String, required: true },
+  time: { type: String, required: true },
+  room: { type: String, required: true },
+  type: { type: String, required: true },
+  status: { type: String, default: 'Upcoming' },
+  duration: { type: String, required: true },
+  maxMarks: { type: String, required: true },
+}, { timestamps: true });
+
+const Exam = mongoose.model('Exam', examSchema);
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -588,6 +631,268 @@ app.post('/api/settings/:userId/delete-request', (req, res) => {
   if (!user) return sendError(res, 404, 'User not found.');
   const entry = createDeleteRequest(req.params.userId, user.role, req.body?.reason);
   res.status(201).json({ message: 'Account deletion request submitted.', data: entry });
+});
+
+// ── Notifications API (MongoDB-backed) ─────────────────────────────────────────
+
+// Seed default notifications if collection is empty
+async function seedNotifications() {
+  const count = await Notification.countDocuments();
+  if (count > 0) return;
+
+  const seeds = [
+    { title: 'Assignment Posted', message: 'Assignment 3: Data Structures uploaded for CS201', senderRole: 'faculty', receiverRole: 'student', module: 'Academic', priority: 'Medium', status: 'unread', actionId: 'assignment_posted_1' },
+    { title: 'Fee Payment Reminder', message: 'Your spring semester fees of ₹85,000 are due by 2026-03-25.', senderRole: 'finance', receiverRole: 'student', module: 'Finance', priority: 'High', status: 'unread', actionId: 'fee_reminder_1' },
+    { title: 'Class Cancellation', message: 'CS201 class scheduled for today is cancelled due to faculty emergency.', senderRole: 'faculty', receiverRole: 'student', module: 'Academic', priority: 'High', status: 'read', actionId: 'class_cancelled_1' },
+    { title: 'Internal Marks Released', message: 'Internal exam marks for CS201 have been released.', senderRole: 'faculty', receiverRole: 'student', module: 'Academic', priority: 'Medium', status: 'read', actionId: 'marks_released_1' },
+    { title: 'Semester Registration Open', message: 'Spring 2026 semester registration is now open.', senderRole: 'admin', receiverRole: 'student', module: 'Administrative', priority: 'High', status: 'unread', actionId: 'sem_registration_open_1' },
+    { title: 'Placement Campaign Alert', message: 'Tech Corp is recruiting! Register before 2026-03-18 for campus interview.', senderRole: 'admin', receiverRole: 'student', module: 'Administrative', priority: 'High', status: 'unread', actionId: 'placement_alert_1' },
+    { title: 'Scholarship Approval', message: 'Congratulations! Your merit scholarship of ₹10,000 has been approved.', senderRole: 'finance', receiverRole: 'student', module: 'Finance', priority: 'Medium', status: 'read', actionId: 'scholarship_approval_1' },
+    { title: 'Faculty Meeting Scheduled', message: 'Department meeting scheduled for 2026-03-15 at 2:00 PM. Attendance mandatory.', senderRole: 'admin', receiverRole: 'faculty', module: 'Administrative', priority: 'High', status: 'unread', actionId: 'faculty_meeting_1' },
+    { title: 'Salary Credited', message: 'Your March 2026 salary of ₹75,000 has been credited to your account.', senderRole: 'finance', receiverRole: 'faculty', module: 'Finance', priority: 'Medium', status: 'read', actionId: 'salary_credited_1' },
+    { title: 'Department Spending Alert', message: 'CS department has exceeded budget by 15%.', senderRole: 'finance', receiverRole: 'admin', module: 'Finance', priority: 'Critical', status: 'unread', actionId: 'spending_alert_1' },
+    { title: 'Emergency Announcement', message: 'Campus will remain closed on 2026-03-13 due to severe weather.', senderRole: 'admin', receiverRole: 'ALL', module: 'Alerts', priority: 'Critical', status: 'unread', actionId: 'emergency_announce_1' },
+    { title: 'System Maintenance Alert', message: 'Scheduled system maintenance on 2026-03-14 from 11:00 PM to 1:00 AM.', senderRole: 'admin', receiverRole: 'ALL', module: 'System', priority: 'Medium', status: 'unread', actionId: 'maintenance_alert_1' },
+  ];
+
+  await Notification.insertMany(seeds);
+  console.log(`Seeded ${seeds.length} default notifications`);
+}
+
+mongoose.connection.once('open', () => seedNotifications().catch(console.error));
+
+// Get notifications for a role
+app.get('/api/notifications/:role', async (req, res) => {
+  try {
+    const { role } = req.params;
+    const { category, priority, status, search } = req.query;
+
+    const filter = {
+      $or: [
+        { receiverRole: role },
+        { receiverRole: 'ALL' },
+        { senderRole: role }
+      ]
+    };
+    if (category) filter.module = category;
+    if (priority) filter.priority = priority;
+    if (status) filter.status = status;
+    if (search) {
+      filter.$and = [{
+        $or: [
+          { title: { $regex: search, $options: 'i' } },
+          { message: { $regex: search, $options: 'i' } }
+        ]
+      }];
+    }
+
+    const notifications = await Notification.find(filter).sort({ createdAt: -1 });
+
+    const unreadCount = await Notification.countDocuments({
+      $or: [{ receiverRole: role }, { receiverRole: 'ALL' }, { senderRole: role }],
+      status: 'unread'
+    });
+
+    res.json({ success: true, role, data: notifications, count: notifications.length, unreadCount });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Get unread count
+app.get('/api/notifications/:role/unread', async (req, res) => {
+  try {
+    const { role } = req.params;
+    const unreadCount = await Notification.countDocuments({
+      $or: [{ receiverRole: role }, { receiverRole: 'ALL' }, { senderRole: role }],
+      status: 'unread'
+    });
+    res.json({ success: true, role, unreadCount });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Create notification
+app.post('/api/notifications', async (req, res) => {
+  try {
+    const { title, message, senderRole, receiverRole, module, priority, actionId, relatedData, department } = req.body;
+
+    if (!title || !message || !senderRole || !receiverRole || !module || !priority) {
+      return res.status(400).json({ success: false, error: 'Missing required fields' });
+    }
+
+    const notification = await Notification.create({
+      title, message, senderRole, receiverRole, module, priority,
+      actionId: actionId || null,
+      relatedData: relatedData || {},
+      department: department || null,
+    });
+
+    res.status(201).json({ success: true, message: 'Notification created', data: notification });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Mark notification as read
+app.put('/api/notifications/:id/read', async (req, res) => {
+  try {
+    const notification = await Notification.findByIdAndUpdate(
+      req.params.id,
+      { status: 'read' },
+      { new: true }
+    );
+    if (!notification) return res.status(404).json({ success: false, error: 'Notification not found' });
+    res.json({ success: true, message: 'Notification marked as read', data: notification });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Mark all as read for a role
+app.put('/api/notifications/:role/read-all', async (req, res) => {
+  try {
+    const { role } = req.params;
+    const result = await Notification.updateMany(
+      { $or: [{ receiverRole: role }, { receiverRole: 'ALL' }], status: 'unread' },
+      { status: 'read' }
+    );
+    res.json({ success: true, message: 'All notifications marked as read', count: result.modifiedCount });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Delete notification
+app.delete('/api/notifications/:id', async (req, res) => {
+  try {
+    const notification = await Notification.findByIdAndDelete(req.params.id);
+    if (!notification) return res.status(404).json({ success: false, error: 'Notification not found' });
+    res.json({ success: true, message: 'Notification deleted', data: notification });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Clear all notifications for a role
+app.post('/api/notifications/:role/clear-all', async (req, res) => {
+  try {
+    const { role } = req.params;
+    const result = await Notification.deleteMany({
+      $or: [{ receiverRole: role }, { receiverRole: 'ALL' }]
+    });
+    res.json({ success: true, message: 'All notifications cleared', deletedCount: result.deletedCount });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ── Exam Routes ────────────────────────────────────────────────────────────────
+
+// Seed default exams if collection is empty
+async function seedExams() {
+  const count = await Exam.countDocuments();
+  if (count === 0) {
+    await Exam.insertMany([
+      { code: 'CS401', name: 'Data Structures',      date: '2023-12-10', time: '10:00', room: 'Hall A',    type: 'Mid-Sem',  status: 'Upcoming', duration: '120', maxMarks: '100' },
+      { code: 'MA405', name: 'Discrete Mathematics', date: '2023-12-12', time: '09:00', room: 'Hall B',    type: 'Mid-Sem',  status: 'Upcoming', duration: '120', maxMarks: '100' },
+      { code: 'CS403', name: 'Database Systems',     date: '2023-11-28', time: '11:00', room: 'Lab 2',     type: 'Practical',status: 'Completed', duration: '180', maxMarks: '50' },
+      { code: 'HU102', name: 'Tech Writing',         date: '2023-12-15', time: '14:00', room: 'Room 101',  type: 'Internal', status: 'Upcoming', duration: '90', maxMarks: '50' },
+      { code: 'CS406', name: 'Operating Systems',    date: '2023-11-20', time: '10:00', room: 'Room 304',  type: 'Quiz',     status: 'Completed', duration: '60', maxMarks: '25' },
+    ]);
+    console.log('Seeded 5 default exams');
+  }
+}
+
+mongoose.connection.once('open', () => seedExams().catch(console.error));
+
+// Get all exams
+app.get('/api/exams', async (req, res) => {
+  try {
+    const exams = await Exam.find().sort({ date: 1, time: 1 });
+    res.json({ success: true, data: exams });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Create exam + auto-notify students
+app.post('/api/exams', async (req, res) => {
+  try {
+    const { code, name, date, time, room, type, status, duration, maxMarks, senderRole } = req.body;
+    if (!code || !name || !date || !time || !room || !type || !duration || !maxMarks) {
+      return res.status(400).json({ success: false, error: 'Missing required fields' });
+    }
+
+    const exam = await Exam.create({ code, name, date, time, room, type, status: status || 'Upcoming', duration, maxMarks });
+
+    // Auto-create notification for students
+    const examDate = new Date(date);
+    const formattedDate = examDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    await Notification.create({
+      title: `New Exam Scheduled: ${code} — ${name}`,
+      message: `A ${type} exam for ${code} (${name}) has been scheduled on ${formattedDate} at ${time} in ${room}. Duration: ${duration} min, Max Marks: ${maxMarks}.`,
+      senderRole: senderRole || 'faculty',
+      receiverRole: 'student',
+      module: 'Exams',
+      priority: 'high',
+      relatedData: { examId: exam._id.toString(), code, name, date, time, room },
+    });
+
+    res.status(201).json({ success: true, data: exam });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Update exam + auto-notify students
+app.put('/api/exams/:id', async (req, res) => {
+  try {
+    const { code, name, date, time, room, type, status, duration, maxMarks, senderRole } = req.body;
+    const exam = await Exam.findByIdAndUpdate(req.params.id, { code, name, date, time, room, type, status, duration, maxMarks }, { new: true });
+    if (!exam) return res.status(404).json({ success: false, error: 'Exam not found' });
+
+    // Auto-create notification for students about the update
+    const examDate = new Date(date);
+    const formattedDate = examDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    await Notification.create({
+      title: `Exam Updated: ${code} — ${name}`,
+      message: `The ${type} exam for ${code} (${name}) has been updated. Date: ${formattedDate}, Time: ${time}, Room: ${room}. Duration: ${duration} min, Max Marks: ${maxMarks}.`,
+      senderRole: senderRole || 'faculty',
+      receiverRole: 'student',
+      module: 'Exams',
+      priority: 'medium',
+      relatedData: { examId: exam._id.toString(), code, name, date, time, room },
+    });
+
+    res.json({ success: true, data: exam });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Delete exam + notify students
+app.delete('/api/exams/:id', async (req, res) => {
+  try {
+    const exam = await Exam.findByIdAndDelete(req.params.id);
+    if (!exam) return res.status(404).json({ success: false, error: 'Exam not found' });
+
+    // Notify students about cancellation
+    await Notification.create({
+      title: `Exam Cancelled: ${exam.code} — ${exam.name}`,
+      message: `The ${exam.type} exam for ${exam.code} (${exam.name}) has been cancelled.`,
+      senderRole: 'admin',
+      receiverRole: 'student',
+      module: 'Exams',
+      priority: 'high',
+      relatedData: { code: exam.code, name: exam.name },
+    });
+
+    res.json({ success: true, message: 'Exam deleted' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
 });
 
 // ── 404 Fallback ───────────────────────────────────────────────────────────────

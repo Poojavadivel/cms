@@ -1,6 +1,15 @@
+<<<<<<< HEAD
 fastapi
 uvicorn
 python-dotenv
 motor
 pydantic
 pymongo
+=======
+Flask==3.0.3
+Flask-Cors==4.0.1
+gunicorn==23.0.0
+pymongo==4.8.0
+python-dotenv==1.0.1
+dnspython==2.6.1
+>>>>>>> 5a5a2ee43592ee1b19440097a8279a536d92e21d

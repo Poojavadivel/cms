@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import Layout from '../components/Layout'
+import { getUserSession } from '../auth/sessionController'
 
 const facilities = [
   { name: 'Computer Lab 4', type: 'Laboratory',   capacity: 40,  status: 'Available',   amenities: ['AC', 'Projector', '40 PCs'] },
@@ -17,6 +18,9 @@ const statusStyle = {
 }
 
 export default function FacilityPage({ noLayout = false }) {
+  const session = getUserSession()
+  const role = localStorage.getItem('role') || session?.role || 'student'
+
   const [statusFilter, setStatusFilter] = useState('All')
   const [filterOpen, setFilterOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
@@ -24,6 +28,10 @@ export default function FacilityPage({ noLayout = false }) {
   const [bookingForm, setBookingForm] = useState({ room: '', date: '', timeFrom: '', timeTo: '', purpose: '' })
   const [bookingSuccess, setBookingSuccess] = useState(false)
   const filterRef = useRef(null)
+
+  const visibleFacilities = role === 'admin'
+    ? facilities
+    : facilities.filter((facility) => facility.status === 'Available')
 
   useEffect(() => {
     function handleClickOutside(e) {
@@ -33,12 +41,12 @@ export default function FacilityPage({ noLayout = false }) {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  const filtered = facilities.filter(
+  const filtered = visibleFacilities.filter(
     f => (statusFilter === 'All' || f.status === statusFilter) &&
          f.name.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
-  const availableRooms = facilities.filter(f => f.status === 'Available')
+  const availableRooms = visibleFacilities.filter(f => f.status === 'Available')
 
   function handleBookRoom(e) {
     e.preventDefault()
@@ -57,18 +65,20 @@ export default function FacilityPage({ noLayout = false }) {
           <h1 className="text-3xl font-bold text-slate-900">Facility Management</h1>
           <p className="text-slate-500 mt-1">Room & Lab availability — Real-time status</p>
         </div>
-        <button
-          onClick={() => setBookingOpen(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-[#1162d4] text-white rounded-lg text-sm font-semibold hover:bg-[#1162d4]/90 transition-colors"
-        >
-          <span className="material-symbols-outlined text-lg">add</span>Book Room
-        </button>
+        {role === 'admin' && (
+          <button
+            onClick={() => setBookingOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-[#1162d4] text-white rounded-lg text-sm font-semibold hover:bg-[#1162d4]/90 transition-colors"
+          >
+            <span className="material-symbols-outlined text-lg">add</span>Book Room
+          </button>
+        )}
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         {[
-          { icon: 'meeting_room', label: 'Available',   value: '3', color: 'text-emerald-600 bg-emerald-100' },
-          { icon: 'groups',       label: 'In Use',      value: '2', color: 'text-blue-600 bg-blue-100' },
-          { icon: 'build',        label: 'Maintenance', value: '1', color: 'text-red-600 bg-red-100' },
+          { icon: 'meeting_room', label: 'Available',   value: visibleFacilities.filter(f => f.status === 'Available').length, color: 'text-emerald-600 bg-emerald-100' },
+          { icon: 'groups',       label: 'In Use',      value: visibleFacilities.filter(f => f.status === 'In Use').length,    color: 'text-blue-600 bg-blue-100' },
+          { icon: 'build',        label: 'Maintenance', value: visibleFacilities.filter(f => f.status === 'Maintenance').length, color: 'text-red-600 bg-red-100' },
         ].map((s) => (
           <div key={s.label} className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm flex items-center gap-4">
             <div className={`p-3 rounded-xl ${s.color}`}>
@@ -166,9 +176,9 @@ export default function FacilityPage({ noLayout = false }) {
       </div>
 
       {/* Book Room Modal */}
-      {bookingOpen && (
+      {role === 'admin' && bookingOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm" onClick={() => setBookingOpen(false)}>
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl md:min-h-[31rem] max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             {bookingSuccess ? (
               <div className="p-8 text-center">
                 <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
