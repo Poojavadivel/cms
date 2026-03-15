@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import { useState, useMemo, useEffect } from 'react'
 import Layout from '../components/Layout'
 import { getUserSession } from '../auth/sessionController'
@@ -15,33 +14,15 @@ import SeatAssignmentModal from '../components/exam/SeatAssignmentModal'
 import InternalMarksModal from '../components/exam/InternalMarksModal'
 import TimetableApprovalModal from '../components/exam/TimetableApprovalModal'
 import NotificationPanel from '../components/exam/NotificationPanel'
-import { initializeExamData } from '../data/examData'
-
-const initialExamsData = [
-  { id: 1, code: 'CS401', name: 'Data Structures',      date: '2023-12-10', time: '10:00', room: 'Hall A',    type: 'Mid-Sem',  status: 'Upcoming', duration: '120', maxMarks: '100', registered: false, resultsPublished: false },
-  { id: 2, code: 'MA405', name: 'Discrete Mathematics', date: '2023-12-12', time: '09:00', room: 'Hall B',    type: 'Mid-Sem',  status: 'Upcoming', duration: '120', maxMarks: '100', registered: true, resultsPublished: false },
-  { id: 3, code: 'CS403', name: 'Database Systems',     date: '2023-11-28', time: '11:00', room: 'Lab 2',     type: 'Practical',status: 'Completed', duration: '180', maxMarks: '50', registered: true, resultsPublished: true, marks: 42, grade: 'A' },
-  { id: 4, code: 'HU102', name: 'Tech Writing',         date: '2023-12-15', time: '14:00', room: 'Room 101',  type: 'Internal', status: 'Upcoming', duration: '90', maxMarks: '50', registered: false, resultsPublished: false },
-  { id: 5, code: 'CS406', name: 'Operating Systems',    date: '2023-11-20', time: '10:00', room: 'Room 304',  type: 'Quiz',     status: 'Completed', duration: '60', maxMarks: '25', registered: true, resultsPublished: true, marks: 22, grade: 'A+' },
-]
-=======
-import { useState, useEffect, useMemo } from 'react'
-import Layout from '../components/Layout'
-import { getUserSession } from '../auth/sessionController'
->>>>>>> 43d408575a0cc40b3f2d3ba79d220c995eb75eb3
+import { initializeExamData, getAllExams } from '../data/examData'
 
 export default function ExamsPage({ noLayout = false }) {
   const session = getUserSession()
   const isStudent = session?.role === 'student'
-<<<<<<< HEAD
   const isFaculty = session?.role === 'faculty'
   const isAdmin = session?.role === 'admin'
-  
-  const [exams, setExams] = useState(initialExamsData)
-=======
   const [exams, setExams] = useState([])
   const [loading, setLoading] = useState(true)
->>>>>>> 43d408575a0cc40b3f2d3ba79d220c995eb75eb3
   const [showModal, setShowModal] = useState(false)
   const [editingExam, setEditingExam] = useState(null)
   const [formData, setFormData] = useState({
@@ -79,7 +60,7 @@ export default function ExamsPage({ noLayout = false }) {
   // Handle exam registration
   const handleRegister = (examId) => {
     setExams(exams.map(exam => 
-      exam.id === examId ? { ...exam, registered: true } : exam
+      (exam._id || exam.id) === examId ? { ...exam, registered: true } : exam
     ));
     alert('Successfully registered for the exam!');
   }
@@ -103,12 +84,20 @@ export default function ExamsPage({ noLayout = false }) {
   }, [])
 
   const fetchExams = async () => {
+    const localSampleExams = getAllExams()
+
     try {
       const res = await fetch('/api/exams')
       const json = await res.json()
-      if (json.success) setExams(json.data)
+
+      if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+        setExams(json.data)
+      } else {
+        setExams(localSampleExams)
+      }
     } catch (err) {
       console.error('Failed to fetch exams:', err)
+      setExams(localSampleExams)
     } finally {
       setLoading(false)
     }
@@ -155,13 +144,8 @@ export default function ExamsPage({ noLayout = false }) {
     setEditingExam(null)
   }
 
-<<<<<<< HEAD
-  const handleSubmit = (e) => {
-    if (e) e.preventDefault()
-=======
   const handleSubmit = async (e) => {
-    e.preventDefault()
->>>>>>> 43d408575a0cc40b3f2d3ba79d220c995eb75eb3
+    if (e) e.preventDefault()
     
     try {
       if (editingExam) {
@@ -172,7 +156,8 @@ export default function ExamsPage({ noLayout = false }) {
         })
         const json = await res.json()
         if (json.success) {
-          setExams(exams.map(exam => exam._id === editingExam._id ? json.data : exam))
+          const editingId = editingExam._id || editingExam.id
+          setExams(exams.map(exam => (exam._id || exam.id) === editingId ? json.data : exam))
         }
       } else {
         const res = await fetch('/api/exams', {
@@ -198,7 +183,7 @@ export default function ExamsPage({ noLayout = false }) {
         const res = await fetch(`/api/exams/${id}`, { method: 'DELETE' })
         const json = await res.json()
         if (json.success) {
-          setExams(exams.filter(exam => exam._id !== id))
+          setExams(exams.filter(exam => (exam._id || exam.id) !== id))
         }
       } catch (err) {
         console.error('Failed to delete exam:', err)
@@ -267,7 +252,6 @@ export default function ExamsPage({ noLayout = false }) {
     <>
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
         <div>
-<<<<<<< HEAD
           <p className="text-slate-500 mt-1">Department of Computer Science — Semester 4</p>
         </div>
         <div className="flex items-center gap-2">
@@ -315,18 +299,6 @@ export default function ExamsPage({ noLayout = false }) {
             </button>
           )}
         </div>
-=======
-          <p className="text-slate-500">Department of Computer Science — Semester 4</p>
-        </div>
-        {!isStudent && (
-          <button
-            onClick={openAddModal}
-            className="flex items-center gap-2 px-4 py-2 bg-[#1162d4] text-white rounded-lg text-sm font-semibold hover:bg-[#1162d4]/90 transition-colors"
-          >
-            <span className="material-symbols-outlined text-lg">add</span>Schedule Exam
-          </button>
-        )}
->>>>>>> 43d408575a0cc40b3f2d3ba79d220c995eb75eb3
       </div>
       
       {/* Stats Cards */}
@@ -368,24 +340,21 @@ export default function ExamsPage({ noLayout = false }) {
           <tbody className="divide-y divide-slate-100">
             {loading ? (
               <tr>
-<<<<<<< HEAD
                 <td colSpan={isStudent ? 9 : 7} className="px-6 py-12 text-center text-slate-500">
-=======
-                <td colSpan={isStudent ? 6 : 7} className="px-6 py-12 text-center text-slate-500">
+                  <span className="material-symbols-outlined text-5xl mb-2 opacity-20">quiz</span>
                   <p className="text-sm">Loading exams...</p>
                 </td>
               </tr>
             ) : exams.length === 0 ? (
               <tr>
-                <td colSpan={isStudent ? 6 : 7} className="px-6 py-12 text-center text-slate-500">
->>>>>>> 43d408575a0cc40b3f2d3ba79d220c995eb75eb3
+                <td colSpan={isStudent ? 9 : 7} className="px-6 py-12 text-center text-slate-500">
                   <span className="material-symbols-outlined text-5xl mb-2 opacity-20">quiz</span>
                   <p className="text-sm">{isStudent ? 'No exams scheduled yet.' : 'No exams scheduled yet. Click "Schedule Exam" to add one.'}</p>
                 </td>
               </tr>
             ) : (
               exams.map((exam) => (
-                <tr key={exam._id} className="hover:bg-slate-50 transition-colors">
+                <tr key={exam._id || exam.id} className="hover:bg-slate-50 transition-colors">
                   <td className="px-6 py-4">
                     <p className="text-xs font-bold text-[#1162d4] uppercase">{exam.code}</p>
                     <p className="text-sm font-semibold text-slate-900">{exam.name}</p>
@@ -409,7 +378,6 @@ export default function ExamsPage({ noLayout = false }) {
                       {exam.status}
                     </span>
                   </td>
-<<<<<<< HEAD
                   {/* Student Columns */}
                   {isStudent && (
                     <>
@@ -432,7 +400,7 @@ export default function ExamsPage({ noLayout = false }) {
                       <td className="px-6 py-4 text-center">
                         {exam.status === 'Upcoming' && !exam.registered ? (
                           <button
-                            onClick={() => handleRegister(exam.id)}
+                            onClick={() => handleRegister(exam._id || exam.id)}
                             className="px-3 py-1.5 bg-[#1162d4] text-white rounded-lg text-xs font-semibold hover:bg-[#1162d4]/90 transition-all"
                           >
                             Register
@@ -539,7 +507,7 @@ export default function ExamsPage({ noLayout = false }) {
                             <span className="material-symbols-outlined text-lg">edit</span>
                           </button>
                           <button
-                            onClick={() => handleDelete(exam.id)}
+                            onClick={() => handleDelete(exam._id || exam.id)}
                             className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                             title="Delete"
                           >
@@ -547,25 +515,6 @@ export default function ExamsPage({ noLayout = false }) {
                           </button>
                         </>
                       )}
-=======
-                  {!isStudent && (
-                  <td className="px-6 py-4">
-                    <div className="flex items-center justify-end gap-2">
-                      <button
-                        onClick={() => openEditModal(exam)}
-                        className="p-1.5 text-slate-400 hover:text-[#1162d4] hover:bg-[#1162d4]/10 rounded-lg transition-colors"
-                        title="Edit"
-                      >
-                        <span className="material-symbols-outlined text-lg">edit</span>
-                      </button>
-                      <button
-                        onClick={() => handleDelete(exam._id)}
-                        className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                        title="Delete"
-                      >
-                        <span className="material-symbols-outlined text-lg">delete</span>
-                      </button>
->>>>>>> 43d408575a0cc40b3f2d3ba79d220c995eb75eb3
                     </div>
                   </td>
                   )}
@@ -581,18 +530,18 @@ export default function ExamsPage({ noLayout = false }) {
         onClose={closeModal}
         title={editingExam ? 'Edit Exam' : 'Schedule New Exam'}
         icon="calendar_add_on"
-        maxWidth="w-[1050px]"
+        maxWidth="max-w-2xl"
         footer={
           <div className="flex items-center justify-end gap-3 w-full">
             <button
               onClick={closeModal}
-              className="px-6 py-2 text-sm font-semibold text-slate-400 hover:text-slate-600"
+              className="btn-secondary-sm"
             >
               Cancel
             </button>
             <button
               onClick={handleSubmit}
-              className="px-6 py-2 bg-[#1162d4] text-white rounded-lg text-sm font-semibold hover:bg-[#1162d4]/90 transition-all shadow-sm active:scale-95"
+              className="btn-primary-sm"
             >
               {editingExam ? 'Save Changes' : 'Schedule Exam'}
             </button>
