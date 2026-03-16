@@ -1,7 +1,5 @@
-import { useEffect } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { getUserSession } from './auth/sessionController';
-import { initializeSemesterFees } from './services/dataService';
 import ProtectedRoute from './components/ProtectedRoute';
 import DashboardPage from './pages/DashboardPage';
 import LoginPage from './pages/LoginPage';
@@ -13,24 +11,13 @@ import FacilityPage from './pages/FacilityPage';
 import SettingsPage from './pages/SettingsPage';
 import StudentsPage from './pages/StudentsPage';
 import StudentDetailPage from './pages/StudentDetailPage';
-import NotificationsPage from './pages/NotificationsPage';
 import AnalyticsPage from './pages/AnalyticsPage';
-import AdmissionPage from './pages/AdmissionPage';
-import AdmissionDashboardPage from './pages/AdmissionDashboardPage';
-import AdmissionStatusTrackingPage from './pages/AdmissionStatusTrackingPage';
-import StaffAdmissionPage from './pages/StaffAdmissionPage';
-import EnrollmentPage from './pages/EnrollmentPage';
-import SemesterFeesPage from './pages/SemesterFeesPage';
-import FeesPage from './pages/FeesPage';
-import PayrollPage from './pages/PayrollPage';
-import InvoicesPage from './pages/InvoicesPage';
+import NotificationPage from './pages/NotificationPage';
+import ModulePlaceholderPage from './pages/ModulePlaceholderPage';
+
 
 export default function App() {
   const session = getUserSession();
-
-  useEffect(() => {
-    initializeSemesterFees();
-  }, []);
 
   return (
     <Routes>
@@ -51,9 +38,38 @@ export default function App() {
       <Route path="/timetable" element={<ProtectedRoute><TimetablePage /></ProtectedRoute>} />
       <Route path="/attendance" element={<ProtectedRoute><AttendancePage /></ProtectedRoute>} />
       <Route path="/exams" element={<ProtectedRoute><ExamsPage /></ProtectedRoute>} />
-      <Route path="/placement" element={<ProtectedRoute allowedRoles={['admin', 'faculty']}><PlacementPage /></ProtectedRoute>} />
-      <Route path="/facility" element={<ProtectedRoute allowedRoles={['admin']}><FacilityPage /></ProtectedRoute>} />
+      <Route path="/placement" element={<ProtectedRoute><PlacementPage /></ProtectedRoute>} />
+      <Route path="/facility" element={<ProtectedRoute><FacilityPage /></ProtectedRoute>} />
       <Route path="/analytics" element={<ProtectedRoute><AnalyticsPage /></ProtectedRoute>} />
+      <Route path="/notifications" element={<ProtectedRoute><NotificationPage /></ProtectedRoute>} />
+      <Route
+        path="/courses"
+        element={<ProtectedRoute><ModulePlaceholderPage title="My Courses" description="Course overview and registrations will appear here." /></ProtectedRoute>}
+      />
+      <Route
+        path="/department"
+        element={<ProtectedRoute><ModulePlaceholderPage title="Department" description="Department announcements, structure, and members will appear here." /></ProtectedRoute>}
+      />
+      <Route
+        path="/faculty"
+        element={<ProtectedRoute><ModulePlaceholderPage title="Faculty" description="Faculty listing and management dashboard will appear here." /></ProtectedRoute>}
+      />
+      <Route
+        path="/fees"
+        element={<ProtectedRoute><ModulePlaceholderPage title="Fees" description="Fee summaries, due dates, and payment actions will appear here." /></ProtectedRoute>}
+      />
+      <Route
+        path="/invoices"
+        element={<ProtectedRoute><ModulePlaceholderPage title="Invoices" description="Invoice generation and history will appear here." /></ProtectedRoute>}
+      />
+      <Route
+        path="/admission"
+        element={<ProtectedRoute><ModulePlaceholderPage title="Admission" description="Admission workflows and approvals will appear here." /></ProtectedRoute>}
+      />
+      <Route
+        path="/payroll"
+        element={<ProtectedRoute><ModulePlaceholderPage title="Payroll" description="Payroll processing and records will appear here." /></ProtectedRoute>}
+      />
       <Route
         path="/settings"
         element={
@@ -62,25 +78,8 @@ export default function App() {
           </ProtectedRoute>
         }
       />
-      <Route
-        path="/notifications"
-        element={
-          <ProtectedRoute>
-            <NotificationsPage />
-          </ProtectedRoute>
-        }
-      />
       <Route path="/students" element={<ProtectedRoute><StudentsPage /></ProtectedRoute>} />
       <Route path="/students/:id" element={<ProtectedRoute><StudentDetailPage /></ProtectedRoute>} />
-      <Route path="/admission" element={<ProtectedRoute><AdmissionPage /></ProtectedRoute>} />
-      <Route path="/admission-dashboard" element={<ProtectedRoute><AdmissionDashboardPage /></ProtectedRoute>} />
-      <Route path="/admission-status" element={<ProtectedRoute><AdmissionStatusTrackingPage /></ProtectedRoute>} />
-      <Route path="/staff-admission" element={<ProtectedRoute><StaffAdmissionPage /></ProtectedRoute>} />
-      <Route path="/enrollment" element={<ProtectedRoute><EnrollmentPage /></ProtectedRoute>} />
-      <Route path="/semester-fees" element={<ProtectedRoute><SemesterFeesPage /></ProtectedRoute>} />
-      <Route path="/fees" element={<ProtectedRoute><FeesPage /></ProtectedRoute>} />
-      <Route path="/payroll" element={<ProtectedRoute><PayrollPage /></ProtectedRoute>} />
-      <Route path="/invoices" element={<ProtectedRoute><InvoicesPage /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

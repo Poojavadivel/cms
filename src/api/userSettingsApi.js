@@ -7,7 +7,13 @@ function resolveRoleAndUserId(roleOrUserId, maybeUserId) {
       ? roleOrUserId.toLowerCase()
       : '';
 
-  if ((normalizedRole === 'student' || normalizedRole === 'faculty') && typeof maybeUserId === 'string') {
+  if (
+    (normalizedRole === 'student' ||
+      normalizedRole === 'faculty' ||
+      normalizedRole === 'admin' ||
+      normalizedRole === 'finance') &&
+    typeof maybeUserId === 'string'
+  ) {
     return {
       role: roleOrUserId,
       userId: maybeUserId,

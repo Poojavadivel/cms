@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import NotificationCard from './NotificationCard';
-import CreateNotification from './CreateNotification';
+import NotificationSenderModal from './NotificationSenderModal';
+import { useRealtimeNotifications } from '../hooks/useRealtimeNotifications';
+import { getUserSession } from '../auth/sessionController';
 import './NotificationCenter.css';
 
 const CATEGORIES = [
@@ -27,19 +29,40 @@ export default function NotificationCenter({ role = 'student' }) {
   const [selectedPriority, setSelectedPriority] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showSenderModal, setShowSenderModal] = useState(false);
   const [selectedNotification, setSelectedNotification] = useState(null);
   const [showDetails, setShowDetails] = useState(false);
+
+  const session = getUserSession();
+  const userId = session?.userId;
+  
+  // Real-time WebSocket notifications
+  const { notifications: wsNotifications, isConnected } = useRealtimeNotifications(userId);
 
   useEffect(() => {
     fetchNotifications();
   }, [role, selectedCategory, selectedPriority, selectedStatus, searchQuery]);
+
+  // Listen for real-time notifications from WebSocket
+  useEffect(() => {
+    if (wsNotifications.length > 0) {
+      // Add new WebSocket notifications to the list
+      const lastNotif = wsNotifications[0];
+      setNotifications((prev) => {
+        const alreadyExists = prev.some((n) => (n.id || n._id) === (lastNotif.id || lastNotif._id));
+        if (alreadyExists) return prev;
+        return [lastNotif, ...prev];
+      });
+    }
+  }, [wsNotifications]);
 
   const fetchNotifications = async () => {
     setLoading(true);
     try {
       let url = `/api/notifications/${role}`;
       const params = new URLSearchParams();
+
+      if (userId) params.append('userId', userId);
 
       if (selectedCategory) params.append('category', selectedCategory);
       if (selectedPriority) params.append('priority', selectedPriority);
@@ -64,7 +87,7 @@ export default function NotificationCenter({ role = 'student' }) {
     try {
       await fetch(`/api/notifications/${notificationId}/read`, { method: 'PUT' });
       setNotifications(notifications.map(n =>
-        n.id === notificationId ? { ...n, status: 'read' } : n
+        (n.id || n._id) === notificationId ? { ...n, status: 'read' } : n
       ));
     } catch (error) {
       console.error('Error marking notification as read:', error);
@@ -83,7 +106,7 @@ export default function NotificationCenter({ role = 'student' }) {
   const handleDelete = async (notificationId) => {
     try {
       await fetch(`/api/notifications/${notificationId}`, { method: 'DELETE' });
-      setNotifications(notifications.filter(n => n.id !== notificationId));
+      setNotifications(notifications.filter(n => (n.id || n._id) !== notificationId));
     } catch (error) {
       console.error('Error deleting notification:', error);
     }
@@ -106,8 +129,15 @@ export default function NotificationCenter({ role = 'student' }) {
   };
 
   const handleNotificationCreated = (newNotification) => {
-    setNotifications([newNotification, ...notifications]);
-    setShowCreateForm(false);
+    if (newNotification) {
+      setNotifications((prev) => {
+        const alreadyExists = prev.some((n) => (n.id || n._id) === (newNotification.id || newNotification._id));
+        if (alreadyExists) return prev;
+        return [newNotification, ...prev];
+      });
+    }
+    setShowSenderModal(false);
+    fetchNotifications();
   };
 
   const unreadCount = notifications.filter(n => n.status === 'unread').length;
@@ -170,6 +200,29 @@ export default function NotificationCenter({ role = 'student' }) {
         </div>
 
         <div className="notification-center-actions">
+          {isConnected && (
+            <span
+              style={{
+                fontSize: 11,
+                color: '#10b981',
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4,
+              }}
+            >
+              <span
+                style={{
+                  display: 'inline-block',
+                  width: 6,
+                  height: 6,
+                  borderRadius: '50%',
+                  background: '#10b981',
+                }}
+              />
+              Live
+            </span>
+          )}
           {unreadCount > 0 && (
             <button
               className="notification-center-btn secondary"
@@ -190,18 +243,20 @@ export default function NotificationCenter({ role = 'student' }) {
           {(role === 'admin' || role === 'faculty') && (
             <button
               className="notification-center-btn primary"
-              onClick={() => setShowCreateForm(!showCreateForm)}
+              onClick={() => setShowSenderModal(true)}
             >
-              {showCreateForm ? 'Cancel' : 'Create Notification'}
+              ✉ Send Notification
             </button>
           )}
         </div>
       </div>
 
-      {showCreateForm && (
-        <CreateNotification
-          senderRole={role}
-          onNotificationCreated={handleNotificationCreated}
+      {showSenderModal && (
+        <NotificationSenderModal
+          isOpen={showSenderModal}
+          onClose={() => setShowSenderModal(false)}
+          role={role}
+          onSent={handleNotificationCreated}
         />
       )}
 
@@ -217,7 +272,7 @@ export default function NotificationCenter({ role = 'student' }) {
           <div className="notification-list-container">
             {notifications.map(notification => (
               <NotificationCard
-                key={notification.id}
+                key={notification.id || notification._id}
                 notification={notification}
                 onMarkRead={handleMarkAsRead}
                 onDelete={handleDelete}

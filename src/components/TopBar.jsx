@@ -1,48 +1,49 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import NotificationBell from './NotificationBell';
 import NotificationDropdown from './NotificationDropdown';
 import { getUserSession } from '../auth/sessionController';
 import { cmsRoles } from '../data/roleConfig';
-import { getStudentById } from '../data/studentData';
+import { useCurrentUserProfile } from '../utils/currentUserProfile';
 
 export default function TopBar({ title }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const session = getUserSession();
-  const role = session?.role || 'student';
-  const roleLabel = cmsRoles[role]?.label || 'Student';
-  const roleQuery = `?role=${encodeURIComponent(role)}`;
-
-  function openProfileDetails() {
-    if (role === 'student') {
-      const studentId = session?.userId;
-      const knownStudent = studentId ? getStudentById(studentId) : null;
-      const targetStudentId = knownStudent ? studentId : 'STU-2024-1547';
-      navigate(`/students/${encodeURIComponent(targetStudentId)}${roleQuery}`);
-      return;
-    }
-
-    navigate(`/students${roleQuery}`);
-  }
+  const roleFromQuery = new URLSearchParams(location.search).get('role');
+  const role = session?.role || roleFromQuery || 'student';
+  const userId = session?.userId || '';
+  const roleData = cmsRoles[role] || cmsRoles.student;
+  const roleLabel = roleData.label;
+  const profile = useCurrentUserProfile(role, userId, { name: roleData.name });
+  const userName = profile.name || roleData.name;
+  const photoSrc = profile.profilePhoto || profile.avatar || '';
+  const initials = userName
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0])
+    .join('')
+    .toUpperCase();
 
   return (
     <header className="h-20 bg-white border-b border-slate-100 px-10 flex items-center justify-between sticky top-0 z-10 backdrop-blur-md bg-white/80">
       <div className="flex items-center gap-4 flex-1">
-        <div className="h-7" aria-hidden="true" />
+        <h2 className="text-[20px] font-bold text-[#2563eb] tracking-tight">EduCore {roleLabel} Portal</h2>
       </div>
       <div className="flex items-center gap-6">
         <div className="flex items-center gap-2 relative">
-          <NotificationBell
-            role={role}
+          <NotificationBell 
+            role={role} 
             onBellClick={() => setIsNotificationOpen(!isNotificationOpen)}
           />
-          <NotificationDropdown
-            role={role}
+          <NotificationDropdown 
+            role={role} 
             isOpen={isNotificationOpen}
             onClose={() => setIsNotificationOpen(false)}
           />
-          <button
+          <button 
             type="button"
             className="p-2.5 text-slate-400 hover:bg-slate-50 rounded-xl transition-all"
             onClick={() => navigate(`/settings?role=${encodeURIComponent(role)}`)}
@@ -51,25 +52,19 @@ export default function TopBar({ title }) {
             <span className="material-symbols-outlined text-[24px]">settings</span>
           </button>
         </div>
-        <button
-          type="button"
-          onClick={openProfileDetails}
-          className="flex items-center gap-4 border-l border-slate-100 pl-6 cursor-pointer group bg-transparent border-0"
-          aria-label="Open profile details"
-        >
+        <div className="flex items-center gap-4 border-l border-slate-100 pl-6 cursor-pointer group">
           <div className="text-right hidden sm:block">
-            <p className="text-sm font-bold text-[#1e293b]">{roleLabel} User</p>
-            <p className="text-[11px] font-bold text-[#64748b] uppercase tracking-wider">{roleLabel} Access</p>
+            <p className="text-sm font-bold text-[#1e293b]">{userName}</p>
+            <p className="text-[11px] font-bold text-[#64748b] uppercase tracking-wider">{roleLabel}</p>
           </div>
-          <div className="w-11 h-11 rounded-xl bg-slate-100 overflow-hidden border-2 border-white shadow-sm transition-transform group-hover:scale-105">
-            <img
-              src="https://img.freepik.com/free-photo/young-bearded-man-with-striped-shirt_273609-5677.jpg"
-              alt="Profile"
-              className="w-full h-full object-cover"
-            />
+          <div className="w-11 h-11 rounded-xl bg-[#2563eb]/10 overflow-hidden border-2 border-white shadow-sm transition-transform group-hover:scale-105 flex items-center justify-center">
+            {photoSrc
+              ? <img src={photoSrc} alt={userName} className="w-full h-full object-cover" />
+              : <span className="text-[#2563eb] font-bold text-sm">{initials}</span>
+            }
           </div>
-        </button>
+        </div>
       </div>
     </header>
-  );
+  )
 }

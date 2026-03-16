@@ -47,16 +47,61 @@ Use the following demo credentials on the login page:
 cms/
 ├── index.html
 ├── package.json
-└── README.md
-	src/
-	├── App.jsx
-	├── main.jsx
-	├── styles.css
-	├── data/
-	│   └── roleConfig.js
-	└── pages/
-		├── DashboardPage.jsx
-		└── LoginPage.jsx
+├── vite.config.js
+├── README.md
+├── .venv/                          # Python virtual environment
+├── src/
+│   ├── App.jsx
+│   ├── main.jsx
+│   ├── styles.css
+│   ├── components/                 # React components
+│   │   ├── Layout.jsx
+│   │   ├── TopBar.jsx
+│   │   ├── AcademicSidebar.jsx
+│   │   ├── NotificationCenter.jsx
+│   │   ├── NotificationSenderModal.jsx
+│   │   └── ...
+│   ├── pages/                      # Page components
+│   │   ├── LoginPage.jsx
+│   │   ├── DashboardPage.jsx
+│   │   ├── StudentsPage.jsx
+│   │   ├── NotificationPage.jsx
+│   │   ├── SettingsPage.jsx
+│   │   └── ...
+│   ├── hooks/
+│   │   ├── useRealtimeNotifications.js
+│   │   └── ...
+│   ├── api/
+│   │   ├── notificationsApi.js
+│   │   ├── studentsApi.js
+│   │   └── ...
+│   ├── auth/
+│   │   └── sessionController.js
+│   ├── data/
+│   │   ├── roleConfig.js
+│   │   └── settingsConfig.js
+│   └── context/
+│       └── SettingsContext.jsx
+│
+├── backend/
+│   ├── main.py                     # FastAPI app entry point
+│   ├── db.py                       # MongoDB connection
+│   ├── requirements.txt            # Python dependencies
+│   ├── routes/
+│   │   ├── notifications_enhanced.py   # Real-time notifications
+│   │   ├── academics/
+│   │   │   ├── exams.py            # Exam management with notify
+│   │   │   ├── timetable.py
+│   │   │   └── ...
+│   │   └── finance/
+│   │       └── fees.py             # Fee management with auto-triggers
+│   ├── schemas/
+│   │   ├── notifications.py        # Notification Pydantic models
+│   │   └── academics.py
+│   └── utils/
+│       ├── websocket_manager.py    # WebSocket connection manager
+│       ├── notification_scheduler.py  # Background tasks
+│       └── mongo.py                # MongoDB helpers
 ```
 
 ## Pages
@@ -118,49 +163,161 @@ cms/
 
 ## How To Run
 
-This is a Vite React project.
+### Prerequisites
 
-1. Open the project folder in VS Code.
-2. Install dependencies:
+- **Node.js** 16+ (for frontend)
+- **Python** 3.9+ (for backend)
+- **MongoDB** (optional - fallback data available if not running)
 
+### Quick Start (Both Frontend & Backend)
+
+**Option 1: Two Terminal Windows (Recommended)**
+
+**Terminal 1 — Backend (FastAPI on port 5000):**
 ```bash
-npm install
+cd g:\n drive\INTERN\new\cms
+.venv\Scripts\Activate.ps1         # Activate Python virtual environment
+python -m uvicorn backend.main:app --reload --host 127.0.0.1 --port 5000
 ```
 
-3. Start the development server:
-
+**Terminal 2 — Frontend (Vite on port 5173):**
 ```bash
+cd g:\n drive\INTERN\new\cms
+npm install                        # Install dependencies (first time only)
 npm run dev
 ```
 
-4. Open the local Vite URL shown in the terminal.
-5. Choose a role and sign in with one of the demo credentials.
+Then open: **http://localhost:5173**
 
-To create a production build:
+---
+
+**Option 2: Using npm scripts (single terminal)**
 
 ```bash
-npm run build
+npm install
+npm run dev:full    # Runs both backend and frontend (if configured)
 ```
+
+---
+
+### Running Frontend Only
+
+If you only want to run the frontend (useful for UI development):
+
+```bash
+npm install
+npm run dev
+```
+
+Open: **http://localhost:5173**
+
+---
+
+### Running Backend Only
+
+If you only want to run the backend API server:
+
+```bash
+.venv\Scripts\Activate.ps1
+python -m uvicorn backend.main:app --reload --host 127.0.0.1 --port 5000
+```
+
+API available at: **http://127.0.0.1:5000**
+
+---
+
+### Build for Production
+
+**Frontend:**
+```bash
+npm run build
+npm run preview    # Preview production build locally
+```
+
+**Backend:** For production, use a production ASGI server like Gunicorn:
+```bash
+pip install gunicorn
+gunicorn -w 4 -k uvicorn.workers.UvicornWorker backend.main:app
+```
+
+---
+
+## Backend Features
+
+### Real-Time Notifications (WebSocket)
+
+Notifications are delivered in real-time via WebSocket connections:
+- **Endpoint**: `ws://127.0.0.1:5000/api/notifications/ws/{userId}`
+- **Auto-triggers**: Exam scheduled, Fee deadlines (7 days before), Attendance warnings
+- **Manual notifications**: Admin, Faculty, Finance can broadcast to roles
+- **Student-only**: Students can receive, read, delete — cannot send
+
+### API Endpoints
+
+**Notifications:**
+- `GET /api/notifications/{role}` — List notifications for a role
+- `POST /api/notifications/send` — Send broadcast notification (admin/faculty/finance)
+- `PUT /api/notifications/{id}/read` — Mark as read
+- `DELETE /api/notifications/{id}` — Delete notification
+- `GET /api/notifications/preferences/{userId}` — Get notification preferences
+- `PUT /api/notifications/preferences/{userId}` — Update preferences
+
+**Exams:**
+- `GET /api/exams` — List all exams
+- `POST /api/exams` — Create exam (with optional `notify` to send notifications)
+- `PUT /api/exams/{id}` — Update exam
+- `DELETE /api/exams/{id}` — Delete exam
+
+**Fees:**
+- `GET /api/fees` — List all fees
+- `POST /api/fees` — Create fee (with optional `notify`)
+- `PUT /api/fees/{id}` — Update fee
+- `DELETE /api/fees/{id}` — Delete fee
+- `POST /api/fees/{id}/send-reminder` — Manually trigger fee reminder
+
+**Students:**
+- `GET /api/students` — List all students
+- `POST /api/students` — Create student
+- `GET /api/students/{id}` — Get student details
+
+---
 
 ## Technologies Used
 
-- React
+**Frontend:**
+- React 18
 - Vite
-- React Router
-- CSS3
+- React Router v6
+- Tailwind CSS v4 (CDN)
 - JavaScript (ES Modules)
 - Google Fonts (`Inter`)
 
+**Backend:**
+- FastAPI (Python)
+- Motor (async MongoDB driver)
+- Pydantic (data validation)
+- WebSocket (real-time notifications)
+- Uvicorn (ASGI server)
+
+---
+
 ## Notes
 
-- Authentication is front-end only for demo purposes.
-- There is no database or backend in this project.
-- Role access is simulated in the UI.
+- **Authentication**: Front-end only for demo purposes
+- **Database**: MongoDB optional — fallback in-memory data if not running
+- **Real-time**: WebSocket connection required for live notifications
+- **Cross-origin**: CORS enabled for localhost development
+- Each role has specific permissions (students receive-only for notifications)
 
 ## Future Improvements
 
-- Connect login to a real backend authentication system
-- Add persistent user profiles and data storage
-- Create separate pages for each sidebar module
-- Add charts and detailed analytics widgets
-- Replace demo data with API-driven content
+- MongoDB Atlas cloud database integration
+- Email notifications via SendGrid/AWS SES
+- Push notifications (browser + mobile)
+- Unsubscribe/notification preferences UI
+- Batch notifications with CSV upload
+- Notification templates
+- Attendance auto-triggers
+- Read receipts
+- Two-factor authentication
+- Role-based API access control

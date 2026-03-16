@@ -1,6 +1,17 @@
 import { useState, useRef, useEffect } from 'react'
 import Layout from '../components/Layout'
 import { getUserSession } from '../auth/sessionController'
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
+} from 'recharts'
+
+const weeklyAttendance = [
+  { day: 'Mon', attendance: 92 },
+  { day: 'Tue', attendance: 88 },
+  { day: 'Wed', attendance: 90 },
+  { day: 'Thu', attendance: 86 },
+  { day: 'Fri', attendance: 94 },
+]
 
 // ─── Attendance helpers ──────────────────────────────────────────────────────
 const REQUIRED_PCT = 75
@@ -185,17 +196,163 @@ export default function AttendancePage({ noLayout = false }) {
 
   const inner = (
     <>
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">Attendance Register</h1>
-          <p className="text-slate-500 mt-1">Department of Computer Science — Semester 4 (Section A)</p>
-        </div>
-        {isAdmin && (
+      {isAdmin && (
+        <div className="flex justify-start mb-6">
           <button className="flex items-center gap-2 px-4 py-2 bg-[#1162d4] text-white rounded-lg text-sm font-semibold hover:bg-[#1162d4]/90">
             <span className="material-symbols-outlined text-lg">download</span>Export Report
           </button>
-        )}
+        </div>
+      )}
+
+      {/* ── 1. ATTENDANCE SUMMARY CARDS ─────────────────────────────────── */}
+      {(() => {
+        if (isStudent) {
+          const my = scopedStudents[0]
+          if (!my) return null
+          const pct      = calcPct(my.present, my.total)
+          const canMiss  = safeClasses(my.present, my.total)
+          return (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm flex items-center gap-4">
+                <div className="p-3 rounded-xl text-[#1162d4] bg-[#1162d4]/10">
+                  <span className="material-symbols-outlined">calendar_today</span>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500 font-medium">Total Classes</p>
+                  <p className="text-2xl font-bold text-slate-900">{my.total}</p>
+                </div>
+              </div>
+              <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm flex items-center gap-4">
+                <div className="p-3 rounded-xl text-purple-600 bg-purple-100">
+                  <span className="material-symbols-outlined">percent</span>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500 font-medium">Attendance %</p>
+                  <p className="text-2xl font-bold text-slate-900">{pct}%</p>
+                </div>
+              </div>
+              <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm flex items-center gap-4">
+                <div className="p-3 rounded-xl text-emerald-600 bg-emerald-100">
+                  <span className="material-symbols-outlined">event_available</span>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500 font-medium">Classes Can Miss</p>
+                  <p className="text-2xl font-bold text-slate-900">{canMiss}</p>
+                </div>
+              </div>
+            </div>
+          )
+        }
+        // Faculty / Admin view
+        const allS        = studentData
+        const avgPct      = allS.length
+          ? Number((allS.reduce((acc, s) => acc + calcPct(s.present, s.total), 0) / allS.length).toFixed(1))
+          : 0
+        const below75     = allS.filter(s => calcPct(s.present, s.total) < 75).length
+        const totalTaken  = allS.length > 0 ? allS[0].total : 0
+        return (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm flex items-center gap-4">
+              <div className="p-3 rounded-xl text-[#1162d4] bg-[#1162d4]/10">
+                <span className="material-symbols-outlined">school</span>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500 font-medium">Total Classes Taken</p>
+                <p className="text-2xl font-bold text-slate-900">{totalTaken}</p>
+              </div>
+            </div>
+            <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm flex items-center gap-4">
+              <div className="p-3 rounded-xl text-purple-600 bg-purple-100">
+                <span className="material-symbols-outlined">bar_chart</span>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500 font-medium">Average Attendance %</p>
+                <p className="text-2xl font-bold text-slate-900">{avgPct}%</p>
+              </div>
+            </div>
+            <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm flex items-center gap-4">
+              <div className="p-3 rounded-xl text-red-500 bg-red-100">
+                <span className="material-symbols-outlined">warning</span>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500 font-medium">Students Below 75%</p>
+                <p className="text-2xl font-bold text-slate-900">{below75}</p>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* ── 2. WEEKLY ATTENDANCE CHART ──────────────────────────────────── */}
+      <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm mb-6">
+        <p className="text-sm font-semibold text-slate-700 mb-4">Weekly Attendance Trend</p>
+        <ResponsiveContainer width="100%" height={180}>
+          <BarChart data={weeklyAttendance} barCategoryGap="35%">
+            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+            <XAxis
+              dataKey="day"
+              tick={{ fontSize: 12, fill: '#94a3b8' }}
+              axisLine={false}
+              tickLine={false}
+            />
+            <YAxis
+              domain={[70, 100]}
+              tick={{ fontSize: 12, fill: '#94a3b8' }}
+              axisLine={false}
+              tickLine={false}
+              tickFormatter={(v) => `${v}%`}
+            />
+            <Tooltip
+              formatter={(v) => [`${v}%`, 'Attendance']}
+              contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: 12 }}
+              cursor={{ fill: '#f8fafc' }}
+            />
+            <Bar dataKey="attendance" fill="#1162d4" radius={[6, 6, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
       </div>
+
+      {/* ── 3. LOW ATTENDANCE ALERT ─────────────────────────────────────── */}
+      {(() => {
+        if (isStudent) {
+          const my  = scopedStudents[0]
+          if (!my) return null
+          const pct = calcPct(my.present, my.total)
+          return pct < 75 ? (
+            <div className="flex items-start gap-3 p-4 bg-orange-50 border border-orange-200 rounded-xl mb-6">
+              <span className="material-symbols-outlined text-orange-500 mt-0.5">warning</span>
+              <div>
+                <p className="text-sm font-semibold text-orange-700">Warning: Your attendance is below 75%.</p>
+                <p className="text-xs text-orange-600 mt-0.5">Attend upcoming classes to maintain eligibility.</p>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3 p-4 bg-emerald-50 border border-emerald-200 rounded-xl mb-6">
+              <span className="material-symbols-outlined text-emerald-500">check_circle</span>
+              <p className="text-sm font-semibold text-emerald-700">Eligible for Exams</p>
+            </div>
+          )
+        }
+        // Faculty / Admin view
+        const lowStudents = studentData.filter(s => calcPct(s.present, s.total) < 75)
+        if (lowStudents.length === 0) return null
+        return (
+          <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 mb-6">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="material-symbols-outlined text-orange-500">warning</span>
+              <p className="text-sm font-semibold text-orange-700">Students Below 75%</p>
+            </div>
+            <ul className="space-y-1">
+              {lowStudents.map((s) => (
+                <li key={s.id} className="flex items-center gap-2 text-sm text-orange-700">
+                  <span className="w-1.5 h-1.5 rounded-full bg-orange-400 inline-block" />
+                  {s.name} ({calcPct(s.present, s.total)}%)
+                </li>
+              ))}
+            </ul>
+          </div>
+        )
+      })()}
 
       {/* Summary Cards — admin only */}
       {isAdmin && (() => {
@@ -253,7 +410,7 @@ export default function AttendancePage({ noLayout = false }) {
         )}
 
         {isAdmin && (
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col items-end gap-2">
             {/* Search */}
             <div className="relative">
               <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">search</span>
