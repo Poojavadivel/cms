@@ -1,7 +1,6 @@
 """Enhanced notifications router with real-time delivery"""
 from datetime import datetime
-from fastapi import APIRouter, HTTPException, WebSocket, WebSocketException, Query, Body, Depends
-from fastapi.exceptions import WebSocketDisconnect
+from fastapi import APIRouter, HTTPException, WebSocket, Query, Body, Depends
 from pymongo import ReturnDocument
 
 from backend.db import get_db
@@ -36,9 +35,7 @@ async def websocket_endpoint(websocket: WebSocket, user_id: str):
             # Handle ping/pong or other client messages
             if data == "ping":
                 await websocket.send_text("pong")
-    except WebSocketDisconnect:
-        await connection_manager.disconnect(user_id, websocket)
-    except WebSocketException:
+    except Exception:
         await connection_manager.disconnect(user_id, websocket)
 
 

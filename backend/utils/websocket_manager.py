@@ -1,5 +1,4 @@
 """WebSocket connection manager for real-time notifications"""
-from typing import dict, set
 from fastapi import WebSocket
 
 
