@@ -1,8 +1,11 @@
 node_modules/
 dist/
+.env
 .DS_Store
 *.log
 
 # Backend
 backend/node_modules/
 backend/.env
+.venv/
+__pycache__/
