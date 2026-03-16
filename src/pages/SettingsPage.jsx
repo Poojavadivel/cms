@@ -31,6 +31,11 @@ export default function SettingsPage() {
     }
   }, [location.search, navigate, role]);
 
+  const knownRoles = Object.keys(cmsRoles);
+  if (!knownRoles.includes(role)) {
+    return <Navigate to="/" replace />;
+  }
+
   const title = role === 'student' || role === 'faculty' ? 'Settings' : 'System Settings';
 
   return (

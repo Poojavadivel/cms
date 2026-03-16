@@ -13,9 +13,13 @@ export function useRealtimeNotifications(userId) {
   useEffect(() => {
     if (!userId) return
 
-    // Construct WebSocket URL
+    // Construct WebSocket URL from env-configured API base or current host
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    const wsUrl = `${protocol}//127.0.0.1:5000/api/notifications/ws/${userId}`
+    const wsHost = import.meta.env.VITE_API_HOST || window.location.host
+    const wsUrl = `${protocol}//${wsHost}/api/notifications/ws/${userId}`
+
+    // Store the keep-alive interval ID so it can be cleared on cleanup
+    let pingInterval = null
 
     // Connect to WebSocket
     const ws = new WebSocket(wsUrl)
@@ -25,12 +29,11 @@ export function useRealtimeNotifications(userId) {
       console.log('✓ Connected to notification WebSocket')
       setIsConnected(true)
       // Send keep-alive ping every 30 seconds
-      const interval = setInterval(() => {
+      pingInterval = setInterval(() => {
         if (ws.readyState === WebSocket.OPEN) {
           ws.send('ping')
         }
       }, 30000)
-      return () => clearInterval(interval)
     }
 
     ws.onmessage = (event) => {
@@ -68,14 +71,7 @@ export function useRealtimeNotifications(userId) {
     ws.onclose = () => {
       console.log('✗ Disconnected from notification WebSocket')
       setIsConnected(false)
-      // Attempt to reconnect after 5 seconds
-      const timeout = setTimeout(() => {
-        if (wsRef.current?.readyState === WebSocket.CLOSED) {
-          console.log('Reconnecting to WebSocket...')
-          // This will be handled by the component remount or a manual reconnect
-        }
-      }, 5000)
-      return () => clearTimeout(timeout)
+      clearInterval(pingInterval)
     }
 
     ws.onerror = (error) => {
@@ -83,9 +79,10 @@ export function useRealtimeNotifications(userId) {
       setIsConnected(false)
     }
 
-    // Cleanup on unmount
+    // Cleanup on unmount: clear interval and close socket
     return () => {
-      if (ws.readyState === WebSocket.OPEN) {
+      clearInterval(pingInterval)
+      if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
         ws.close()
       }
     }

@@ -52,7 +52,12 @@ export default function TopBar({ title }) {
             <span className="material-symbols-outlined text-[24px]">settings</span>
           </button>
         </div>
-        <div className="flex items-center gap-4 border-l border-slate-100 pl-6 cursor-pointer group">
+        <button
+          type="button"
+          className="flex items-center gap-4 border-l border-slate-100 pl-6 cursor-pointer group bg-transparent border-r-0 border-t-0 border-b-0 p-0"
+          onClick={() => navigate(`/settings?role=${encodeURIComponent(role)}`)}
+          aria-label={`View profile for ${userName}`}
+        >
           <div className="text-right hidden sm:block">
             <p className="text-sm font-bold text-[#1e293b]">{userName}</p>
             <p className="text-[11px] font-bold text-[#64748b] uppercase tracking-wider">{roleLabel}</p>
@@ -63,7 +68,7 @@ export default function TopBar({ title }) {
               : <span className="text-[#2563eb] font-bold text-sm">{initials}</span>
             }
           </div>
-        </div>
+        </button>
       </div>
     </header>
   )

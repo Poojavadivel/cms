@@ -42,13 +42,6 @@ export default function AcademicSidebar() {
 
     event.preventDefault()
     navigate(target)
-
-    window.setTimeout(() => {
-      const current = `${window.location.pathname}${window.location.search}`
-      if (current !== target) {
-        window.location.assign(target)
-      }
-    }, 120)
   }
 
   function handleLogout() {

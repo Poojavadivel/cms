@@ -18,7 +18,7 @@ export default function TimetableApprovalModal({ onClose, onApprove }) {
   };
 
   const handleAction = (draftId, action) => {
-    if (action === 'Rejected' && !remarks) {
+    if (action === 'reject' && !remarks) {
       alert('Please provide remarks for rejection');
       return;
     }

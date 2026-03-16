@@ -131,7 +131,11 @@ export default function DepartmentSettings() {
       </article>
 
       {modalOpen ? (
-        <div className="settings-modal-backdrop" onClick={closeModal} aria-hidden="true">
+        <div
+          className="settings-modal-backdrop"
+          onClick={closeModal}
+          role="presentation"
+        >
           <div className="settings-modal" onClick={(event) => event.stopPropagation()}>
             <h3>{activeDepartment.id ? 'Edit Department' : 'Create Department'}</h3>
             <div className="settings-form-grid compact">
