@@ -25,23 +25,6 @@ DEV_STORE = {
 }
 
 
-def list_students():
-    return deepcopy(DEV_STORE["students"])
-
-
-def get_student(student_id: str):
-    item = next((row for row in DEV_STORE["students"] if row.get("id") == student_id), None)
-    return deepcopy(item) if item else None
-
-
-def create_student(data: dict):
-    item = deepcopy(data)
-    if not item.get("id"):
-        item["id"] = _make_id("student")
-    DEV_STORE["students"].append(item)
-    return deepcopy(item)
-
-
 def list_items(key: str):
     return deepcopy(DEV_STORE[key])
 

@@ -2,6 +2,8 @@ import PriorityBadge from './PriorityBadge';
 import './NotificationCard.css';
 
 export default function NotificationCard({ notification, onMarkRead, onDelete, onViewDetails }) {
+  const notificationId = notification.id || notification._id;
+
   const formatDate = (dateString) => {
     const date = new Date(dateString);
     const today = new Date();
@@ -49,7 +51,7 @@ export default function NotificationCard({ notification, onMarkRead, onDelete, o
           {notification.status === 'unread' && (
             <button
               className="notification-card-action-btn primary"
-              onClick={() => onMarkRead(notification._id)}
+              onClick={() => onMarkRead(notificationId)}
               title="Mark as read"
             >
               Mark as Read
@@ -64,7 +66,7 @@ export default function NotificationCard({ notification, onMarkRead, onDelete, o
           </button>
           <button
             className="notification-card-action-btn danger"
-            onClick={() => onDelete(notification._id)}
+            onClick={() => onDelete(notificationId)}
             title="Delete notification"
           >
             Delete

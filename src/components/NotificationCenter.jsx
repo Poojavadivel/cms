@@ -64,7 +64,7 @@ export default function NotificationCenter({ role = 'student' }) {
     try {
       await fetch(`/api/notifications/${notificationId}/read`, { method: 'PUT' });
       setNotifications(notifications.map(n =>
-        n._id === notificationId ? { ...n, status: 'read' } : n
+        (n.id || n._id) === notificationId ? { ...n, status: 'read' } : n
       ));
     } catch (error) {
       console.error('Error marking notification as read:', error);
@@ -83,7 +83,7 @@ export default function NotificationCenter({ role = 'student' }) {
   const handleDelete = async (notificationId) => {
     try {
       await fetch(`/api/notifications/${notificationId}`, { method: 'DELETE' });
-      setNotifications(notifications.filter(n => n._id !== notificationId));
+      setNotifications(notifications.filter(n => (n.id || n._id) !== notificationId));
     } catch (error) {
       console.error('Error deleting notification:', error);
     }
@@ -217,7 +217,7 @@ export default function NotificationCenter({ role = 'student' }) {
           <div className="notification-list-container">
             {notifications.map(notification => (
               <NotificationCard
-                key={notification._id}
+                key={notification.id || notification._id}
                 notification={notification}
                 onMarkRead={handleMarkAsRead}
                 onDelete={handleDelete}

@@ -47,21 +47,16 @@ Use the following demo credentials on the login page:
 cms/
 ├── index.html
 ├── package.json
-├── vite.config.js
-├── start.bat
-├── src/
-│   ├── App.jsx
-│   ├── main.jsx
-│   ├── components/
-│   ├── pages/
-│   ├── api/
-│   └── data/
-└── backend/
-    ├── main.py
-    ├── db.py
-    ├── routes/
-    ├── schemas/
-    └── requirements.txt
+└── README.md
+	src/
+	├── App.jsx
+	├── main.jsx
+	├── styles.css
+	├── data/
+	│   └── roleConfig.js
+	└── pages/
+		├── DashboardPage.jsx
+		└── LoginPage.jsx
 ```
 
 ## Pages
@@ -123,40 +118,23 @@ cms/
 
 ## How To Run
 
-This project uses a Vite frontend and FastAPI backend.
+This is a Vite React project.
 
 1. Open the project folder in VS Code.
-2. Install frontend dependencies:
+2. Install dependencies:
 
 ```bash
 npm install
 ```
 
-3. Install backend dependencies:
-
-```bash
-py -m pip install -r backend/requirements.txt
-```
-
-4. Start backend API (Terminal 1):
-
-```bash
-py -m uvicorn backend.main:app --reload --host 127.0.0.1 --port 5000
-```
-
-5. Start frontend dev server (Terminal 2):
+3. Start the development server:
 
 ```bash
 npm run dev
 ```
 
-6. Open the local Vite URL shown in the terminal.
-
-Optional one-step Windows startup:
-
-```bash
-start.bat
-```
+4. Open the local Vite URL shown in the terminal.
+5. Choose a role and sign in with one of the demo credentials.
 
 To create a production build:
 
@@ -175,9 +153,9 @@ npm run build
 
 ## Notes
 
-- Authentication is still front-end demo oriented.
-- Backend API is served with FastAPI under `/api/*`.
-- If MongoDB is unavailable, some modules use in-memory fallback data for local development.
+- Authentication is front-end only for demo purposes.
+- There is no database or backend in this project.
+- Role access is simulated in the UI.
 
 ## Future Improvements
 

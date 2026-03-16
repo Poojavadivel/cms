@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 const PROFILE_EVENT = 'cms-profile-updated';
 
@@ -15,6 +15,18 @@ function mergeProfile(fallbackProfile, storedProfile) {
     ...fallbackProfile,
     ...storedProfile,
   };
+}
+
+function safeSerialize(value) {
+  try {
+    return JSON.stringify(value ?? {});
+  } catch {
+    return '{}';
+  }
+}
+
+function profilesEqual(current, next) {
+  return safeSerialize(current) === safeSerialize(next);
 }
 
 export function getCurrentUserProfile(role, userId, fallbackProfile = {}) {
@@ -49,11 +61,16 @@ export function saveCurrentUserProfile(role, userId, profile) {
 }
 
 export function useCurrentUserProfile(role, userId, fallbackProfile = {}) {
-  const [profile, setProfile] = useState(() => getCurrentUserProfile(role, userId, fallbackProfile));
+  const fallbackSignature = useMemo(() => safeSerialize(fallbackProfile), [fallbackProfile]);
+  const fallbackRef = useRef(fallbackProfile);
+  fallbackRef.current = fallbackProfile;
+
+  const [profile, setProfile] = useState(() => getCurrentUserProfile(role, userId, fallbackRef.current));
 
   useEffect(() => {
-    setProfile(getCurrentUserProfile(role, userId, fallbackProfile));
-  }, [fallbackProfile, role, userId]);
+    const nextProfile = getCurrentUserProfile(role, userId, fallbackRef.current);
+    setProfile((current) => (profilesEqual(current, nextProfile) ? current : nextProfile));
+  }, [fallbackSignature, role, userId]);
 
   useEffect(() => {
     function syncProfile(event) {
@@ -71,7 +88,8 @@ export function useCurrentUserProfile(role, userId, fallbackProfile = {}) {
         }
       }
 
-      setProfile(getCurrentUserProfile(role, userId, fallbackProfile));
+      const nextProfile = getCurrentUserProfile(role, userId, fallbackRef.current);
+      setProfile((current) => (profilesEqual(current, nextProfile) ? current : nextProfile));
     }
 
     window.addEventListener('storage', syncProfile);
@@ -81,7 +99,7 @@ export function useCurrentUserProfile(role, userId, fallbackProfile = {}) {
       window.removeEventListener('storage', syncProfile);
       window.removeEventListener(PROFILE_EVENT, syncProfile);
     };
-  }, [fallbackProfile, role, userId]);
+  }, [role, userId]);
 
   return profile;
 }

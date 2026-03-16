@@ -13,6 +13,7 @@ import StudentsPage from './pages/StudentsPage';
 import StudentDetailPage from './pages/StudentDetailPage';
 import AnalyticsPage from './pages/AnalyticsPage';
 import NotificationPage from './pages/NotificationPage';
+import ModulePlaceholderPage from './pages/ModulePlaceholderPage';
 
 
 export default function App() {
@@ -41,6 +42,34 @@ export default function App() {
       <Route path="/facility" element={<ProtectedRoute><FacilityPage /></ProtectedRoute>} />
       <Route path="/analytics" element={<ProtectedRoute><AnalyticsPage /></ProtectedRoute>} />
       <Route path="/notifications" element={<ProtectedRoute><NotificationPage /></ProtectedRoute>} />
+      <Route
+        path="/courses"
+        element={<ProtectedRoute><ModulePlaceholderPage title="My Courses" description="Course overview and registrations will appear here." /></ProtectedRoute>}
+      />
+      <Route
+        path="/department"
+        element={<ProtectedRoute><ModulePlaceholderPage title="Department" description="Department announcements, structure, and members will appear here." /></ProtectedRoute>}
+      />
+      <Route
+        path="/faculty"
+        element={<ProtectedRoute><ModulePlaceholderPage title="Faculty" description="Faculty listing and management dashboard will appear here." /></ProtectedRoute>}
+      />
+      <Route
+        path="/fees"
+        element={<ProtectedRoute><ModulePlaceholderPage title="Fees" description="Fee summaries, due dates, and payment actions will appear here." /></ProtectedRoute>}
+      />
+      <Route
+        path="/invoices"
+        element={<ProtectedRoute><ModulePlaceholderPage title="Invoices" description="Invoice generation and history will appear here." /></ProtectedRoute>}
+      />
+      <Route
+        path="/admission"
+        element={<ProtectedRoute><ModulePlaceholderPage title="Admission" description="Admission workflows and approvals will appear here." /></ProtectedRoute>}
+      />
+      <Route
+        path="/payroll"
+        element={<ProtectedRoute><ModulePlaceholderPage title="Payroll" description="Payroll processing and records will appear here." /></ProtectedRoute>}
+      />
       <Route
         path="/settings"
         element={

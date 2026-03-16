@@ -1,4 +1,4 @@
-import { NavLink, useNavigate } from 'react-router-dom'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { destroyUserSession, getUserSession } from '../auth/sessionController'
 import { cmsRoles, roleMenuGroups } from '../data/roleConfig'
 
@@ -24,10 +24,32 @@ const NAV_ITEM_MAP = {
 
 export default function AcademicSidebar() {
   const navigate = useNavigate()
+  const location = useLocation()
   const session = getUserSession()
   const role = session?.role || 'student'
   const roleLabel = cmsRoles[role]?.label || 'Admin'
   const groups = roleMenuGroups[role] || roleMenuGroups.student
+
+  function withRolePath(path) {
+    return `${path}?role=${encodeURIComponent(role)}`
+  }
+
+  function handleModuleNavigate(event, path) {
+    const target = withRolePath(path)
+    if (`${location.pathname}${location.search}` === target) {
+      return
+    }
+
+    event.preventDefault()
+    navigate(target)
+
+    window.setTimeout(() => {
+      const current = `${window.location.pathname}${window.location.search}`
+      if (current !== target) {
+        window.location.assign(target)
+      }
+    }, 120)
+  }
 
   function handleLogout() {
     destroyUserSession()
@@ -59,7 +81,8 @@ export default function AcademicSidebar() {
                 return (
                   <NavLink
                     key={config.to}
-                    to={config.to}
+                    to={withRolePath(config.to)}
+                    onClick={(event) => handleModuleNavigate(event, config.to)}
                     className={({ isActive }) =>
                       `flex items-center gap-3 px-4 py-3 rounded-xl text-sm transition-all duration-200 ${
                         isActive
