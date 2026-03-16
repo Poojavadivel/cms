@@ -14,6 +14,7 @@ from backend.routes.academics.placement import router as placement_router
 from backend.routes.academics.timetable import router as timetable_router
 from backend.routes.notifications import router as notifications_router
 from backend.routes.payroll import router as payroll_router
+from backend.routes.settings import router as settings_router
 from backend.routes.staff import router as staff_router
 from backend.routes.students import router as students_router
 
@@ -59,6 +60,7 @@ app.include_router(placement_router)
 app.include_router(facility_router)
 app.include_router(notifications_router)
 app.include_router(students_router)
+app.include_router(settings_router)
 
 
 @app.get("/{full_path:path}")
