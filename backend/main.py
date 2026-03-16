@@ -13,9 +13,11 @@ from backend.routes.academics.facility import router as facility_router
 from backend.routes.academics.placement import router as placement_router
 from backend.routes.academics.timetable import router as timetable_router
 from backend.routes.notifications import router as notifications_router
+from backend.routes.notifications_enhanced import router as notifications_enhanced_router
 from backend.routes.payroll import router as payroll_router
 from backend.routes.staff import router as staff_router
 from backend.routes.students import router as students_router
+from backend.routes.finance.fees import router as fees_router
 
 PORT = int(os.getenv("PORT", 5000))
 
@@ -58,6 +60,8 @@ app.include_router(attendance_router)
 app.include_router(placement_router)
 app.include_router(facility_router)
 app.include_router(notifications_router)
+app.include_router(notifications_enhanced_router)
+app.include_router(fees_router)
 app.include_router(students_router)
 
 

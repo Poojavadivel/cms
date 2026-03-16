@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from pymongo import ReturnDocument
+from datetime import datetime
 
 from backend.db import get_db
 from backend.dev_store import create_exam as create_dev_exam
@@ -7,7 +8,9 @@ from backend.dev_store import delete_exam as delete_dev_exam
 from backend.dev_store import list_items
 from backend.dev_store import update_exam as update_dev_exam
 from backend.schemas.academics import ExamCreate, ExamUpdate
+from backend.schemas.notifications import NotificationAutoTrigger
 from backend.utils.mongo import parse_object_id, serialize_doc
+from backend.utils.websocket_manager import connection_manager
 
 router = APIRouter(prefix="/api/exams", tags=["academics:exams"])
 
@@ -34,14 +37,58 @@ async def create_exam(payload: ExamCreate):
         if error.status_code == 503:
             return {"success": True, "data": create_dev_exam(payload.model_dump())}
         raise
-    result = await db["exams"].insert_one(payload.model_dump())
+    
+    # Prepare exam document (exclude notify flag)
+    exam_data = payload.model_dump(exclude={'notify'})
+    
+    result = await db["exams"].insert_one(exam_data)
     created = await db["exams"].find_one({"_id": result.inserted_id})
-    return {"success": True, "data": serialize_doc(created)}
+    created_doc = serialize_doc(created)
+    
+    # Send auto-notification if requested
+    if payload.notify and payload.affectedStudentIds:
+        notification = NotificationAutoTrigger(
+            title=f"Exam Scheduled: {payload.name}",
+            message=f"An exam '{payload.name}' has been scheduled on {payload.date} at {payload.time} in room {payload.room}. Duration: {payload.duration}. Max Marks: {payload.maxMarks}.",
+            category="exam",
+            priority="high",
+            triggerType="exam_scheduled",
+            relatedId=str(result.inserted_id),
+            receiverIds=payload.affectedStudentIds,
+        )
+        
+        notification_doc = {
+            "title": notification.title,
+            "message": notification.message,
+            "category": notification.category,
+            "priority": notification.priority,
+            "senderRole": "system",
+            "receiverRole": None,
+            "receiverIds": notification.receiverIds,
+            "status": "unread",
+            "triggerType": notification.triggerType,
+            "relatedId": notification.relatedId,
+            "createdAt": datetime.utcnow(),
+            "updatedAt": None,
+        }
+        
+        notif_result = await db["notifications"].insert_one(notification_doc)
+        
+        # Broadcast in real-time
+        notification_payload = {
+            "type": "notification",
+            "notification": serialize_doc(await db["notifications"].find_one({"_id": notif_result.inserted_id})),
+        }
+        await connection_manager.broadcast_to_many(payload.affectedStudentIds, notification_payload)
+    
+    return {"success": True, "data": created_doc}
 
 
 @router.put("/{exam_id}")
 async def update_exam(exam_id: str, payload: ExamUpdate):
-    update_data = {key: value for key, value in payload.model_dump().items() if value is not None}
+    update_data = {key: value for key, value in payload.model_dump().items() if value is not None and key != 'notify'}
+    notify = payload.notify
+    
     if not update_data:
         raise HTTPException(status_code=400, detail="No fields provided for update")
 
@@ -63,6 +110,46 @@ async def update_exam(exam_id: str, payload: ExamUpdate):
 
     if not updated:
         raise HTTPException(status_code=404, detail="Exam not found")
+
+    # Send notification if requested
+    if notify and payload.affectedStudentIds:
+        exam_name = updated.get("name", "Exam")
+        exam_date = updated.get("date", "TBD")
+        exam_time = updated.get("time", "TBD")
+        
+        notification = NotificationAutoTrigger(
+            title=f"Exam Updated: {exam_name}",
+            message=f"The exam '{exam_name}' has been updated. New details - Date: {exam_date}, Time: {exam_time}. Please check the portal for complete details.",
+            category="exam",
+            priority="medium",
+            triggerType="exam_updated",
+            relatedId=exam_id,
+            receiverIds=payload.affectedStudentIds,
+        )
+        
+        notification_doc = {
+            "title": notification.title,
+            "message": notification.message,
+            "category": notification.category,
+            "priority": notification.priority,
+            "senderRole": "system",
+            "receiverRole": None,
+            "receiverIds": notification.receiverIds,
+            "status": "unread",
+            "triggerType": notification.triggerType,
+            "relatedId": notification.relatedId,
+            "createdAt": datetime.utcnow(),
+            "updatedAt": None,
+        }
+        
+        notif_result = await db["notifications"].insert_one(notification_doc)
+        
+        # Broadcast in real-time
+        notification_payload = {
+            "type": "notification",
+            "notification": serialize_doc(await db["notifications"].find_one({"_id": notif_result.inserted_id})),
+        }
+        await connection_manager.broadcast_to_many(payload.affectedStudentIds, notification_payload)
 
     return {"success": True, "data": serialize_doc(updated)}
 

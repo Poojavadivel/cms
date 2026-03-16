@@ -18,7 +18,8 @@ class ExamBase(BaseModel):
 
 
 class ExamCreate(ExamBase):
-    pass
+    affectedStudentIds: Optional[List[str]] = None  # Students affected by this exam
+    notify: bool = False  # Send notification to affected students
 
 
 class ExamUpdate(BaseModel):
@@ -28,6 +29,8 @@ class ExamUpdate(BaseModel):
     time: Optional[str] = None
     room: Optional[str] = None
     type: Optional[str] = None
+    affectedStudentIds: Optional[List[str]] = None
+    notify: bool = False  # Send notification on update
     status: Optional[str] = None
     duration: Optional[str] = None
     maxMarks: Optional[str] = None
