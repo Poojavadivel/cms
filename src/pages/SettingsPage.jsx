@@ -33,6 +33,10 @@ export default function SettingsPage() {
 
   const title = role === 'student' || role === 'faculty' ? 'Settings' : 'System Settings';
 
+  if (role !== 'student' && role !== 'faculty' && role !== 'admin' && role !== 'finance') {
+    return <Navigate to={`/dashboard?role=${encodeURIComponent(role)}`} replace />;
+  }
+
   return (
     <Layout title={title}>
       {(role === 'student' || role === 'faculty') && (

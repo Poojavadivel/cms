@@ -12,7 +12,7 @@ export default function NotificationPage() {
   const role = getValidRole(session?.role || queryRole || 'student');
 
   useEffect(() => {
-    document.title = 'MIT Connect - Notifications';
+    document.title = 'EduCore - Notifications';
   }, []);
 
   return (
