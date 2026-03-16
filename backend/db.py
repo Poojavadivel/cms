@@ -33,7 +33,18 @@ async def lifespan(app):
 
     print(f"Connecting to MongoDB at {mask_mongodb_uri(MONGODB_URI)}...")
     try:
-        client = AsyncIOMotorClient(MONGODB_URI, serverSelectionTimeoutMS=5000)
+        # Prepare connection options with SSL handling for MongoDB Atlas
+        connection_kwargs = {
+            "serverSelectionTimeoutMS": 10000,
+        }
+        
+        # Add SSL/TLS configuration for MongoDB Atlas
+        if MONGODB_URI and "mongodb+srv" in MONGODB_URI:
+            # For development, allow invalid certificates
+            # This resolves SSL/TLS handshake issues on some Windows systems
+            connection_kwargs["tlsInsecure"] = True
+        
+        client = AsyncIOMotorClient(MONGODB_URI, **connection_kwargs)
         await client.admin.command("ping")
 
         try:

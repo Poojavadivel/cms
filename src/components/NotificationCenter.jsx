@@ -62,6 +62,8 @@ export default function NotificationCenter({ role = 'student' }) {
       let url = `/api/notifications/${role}`;
       const params = new URLSearchParams();
 
+      if (userId) params.append('userId', userId);
+
       if (selectedCategory) params.append('category', selectedCategory);
       if (selectedPriority) params.append('priority', selectedPriority);
       if (selectedStatus) params.append('status', selectedStatus);
@@ -127,8 +129,15 @@ export default function NotificationCenter({ role = 'student' }) {
   };
 
   const handleNotificationCreated = (newNotification) => {
-    setNotifications([newNotification, ...notifications]);
-    setShowCreateForm(false);
+    if (newNotification) {
+      setNotifications((prev) => {
+        const alreadyExists = prev.some((n) => (n.id || n._id) === (newNotification.id || newNotification._id));
+        if (alreadyExists) return prev;
+        return [newNotification, ...prev];
+      });
+    }
+    setShowSenderModal(false);
+    fetchNotifications();
   };
 
   const unreadCount = notifications.filter(n => n.status === 'unread').length;
@@ -247,6 +256,7 @@ export default function NotificationCenter({ role = 'student' }) {
           isOpen={showSenderModal}
           onClose={() => setShowSenderModal(false)}
           role={role}
+          onSent={handleNotificationCreated}
         />
       )}
 

@@ -34,7 +34,9 @@ export default function ExamsPage({ noLayout = false }) {
     type: 'Mid-Sem',
     status: 'Upcoming',
     duration: '',
-    maxMarks: ''
+    maxMarks: '',
+    notify: false,
+    affectedStudentIds: []
   })
   
   // Modal states for exam features
@@ -84,20 +86,22 @@ export default function ExamsPage({ noLayout = false }) {
   }, [])
 
   const fetchExams = async () => {
-    const localSampleExams = getAllExams()
-
     try {
       const res = await fetch('/api/exams')
-      const raw = await res.text()
-      const json = raw ? JSON.parse(raw) : null
+      const json = await res.json()
 
-      if (res.ok && json?.success && Array.isArray(json.data) && json.data.length > 0) {
+      // Always use backend data - only use seed data as last resort
+      if (res.ok && json?.success && Array.isArray(json.data)) {
         setExams(json.data)
       } else {
+        // Only fallback to seed data if backend completely fails
+        const localSampleExams = getAllExams()
         setExams(localSampleExams)
       }
     } catch (err) {
       console.error('Failed to fetch exams:', err)
+      // Only fallback to seed data if there's a network error
+      const localSampleExams = getAllExams()
       setExams(localSampleExams)
     } finally {
       setLoading(false)
@@ -129,14 +133,20 @@ export default function ExamsPage({ noLayout = false }) {
       type: 'Mid-Sem',
       status: 'Upcoming',
       duration: '',
-      maxMarks: ''
+      maxMarks: '',
+      notify: false,
+      affectedStudentIds: []
     })
     setShowModal(true)
   }
 
   const openEditModal = (exam) => {
     setEditingExam(exam)
-    setFormData({ ...exam })
+    setFormData({ 
+      ...exam,
+      notify: exam.notify || false,
+      affectedStudentIds: exam.affectedStudentIds || []
+    })
     setShowModal(true)
   }
 
@@ -149,33 +159,64 @@ export default function ExamsPage({ noLayout = false }) {
     if (e) e.preventDefault()
     
     try {
-      if (editingExam) {
-        const res = await fetch(`/api/exams/${editingExam._id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...formData, senderRole: session?.role || 'faculty' })
-        })
-        const json = await res.json()
-        if (json.success) {
-          const editingId = editingExam._id || editingExam.id
-          setExams(exams.map(exam => (exam._id || exam.id) === editingId ? json.data : exam))
+      // Prepare data to send - include all registered students if notify is enabled
+      const dataToSend = { ...formData, senderRole: session?.role || 'faculty' }
+      
+      // If notify is enabled, resolve target students (must match session userId values)
+      if (dataToSend.notify) {
+        try {
+          const res = await fetch('/api/students')
+          const data = await res.json()
+          const students = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : []
+          dataToSend.affectedStudentIds = students
+            .map((student) => student.id || student.userId || student._id)
+            .filter(Boolean)
+        } catch (err) {
+          console.warn('Could not fetch students for notification:', err)
+          dataToSend.affectedStudentIds = []
         }
       } else {
-        const res = await fetch('/api/exams', {
+        // If notify is disabled, remove the affectedStudentIds
+        dataToSend.affectedStudentIds = []
+      }
+      
+      let response
+      if (editingExam) {
+        response = await fetch(`/api/exams/${editingExam._id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(dataToSend)
+        })
+      } else {
+        response = await fetch('/api/exams', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...formData, senderRole: session?.role || 'faculty' })
+          body: JSON.stringify(dataToSend)
         })
-        const json = await res.json()
-        if (json.success) {
+      }
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.detail || `HTTP ${response.status}: Failed to save exam`)
+      }
+      
+      const json = await response.json()
+      
+      if (json.success) {
+        if (editingExam) {
+          const editingId = editingExam._id || editingExam.id
+          setExams(exams.map(exam => (exam._id || exam.id) === editingId ? json.data : exam))
+        } else {
           setExams([...exams, json.data])
         }
+        closeModal()
+      } else {
+        throw new Error(json.message || 'Failed to save exam')
       }
     } catch (err) {
       console.error('Failed to save exam:', err)
+      alert(`Error: ${err.message}`)
     }
-    
-    closeModal()
   }
 
   const handleDelete = async (id) => {
@@ -616,6 +657,22 @@ export default function ExamsPage({ noLayout = false }) {
               <option value="Completed">Completed</option>
               <option value="Cancelled">Cancelled</option>
             </select>
+          </div>
+          
+          <div className="md:col-span-2">
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                name="notify"
+                checked={formData.notify}
+                onChange={(e) => setFormData(prev => ({ ...prev, notify: e.target.checked }))}
+                className="w-4 h-4 rounded border-slate-300"
+              />
+              <span className="text-sm font-medium text-slate-700">Notify students about this exam</span>
+            </label>
+            <p className="text-xs text-slate-500 mt-1 ml-7">
+              Students enrolled in this course will receive a notification
+            </p>
           </div>
         </div>
       </Modal>

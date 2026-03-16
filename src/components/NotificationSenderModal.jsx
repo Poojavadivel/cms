@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-export default function NotificationSenderModal({ isOpen, onClose, role }) {
+export default function NotificationSenderModal({ isOpen, onClose, role, onSent }) {
   const [formData, setFormData] = useState({
     title: '',
     message: '',
@@ -53,6 +53,9 @@ export default function NotificationSenderModal({ isOpen, onClose, role }) {
       }
 
       setSuccess('Notification sent successfully!')
+      if (onSent) {
+        onSent(data.data)
+      }
       setFormData({
         title: '',
         message: '',

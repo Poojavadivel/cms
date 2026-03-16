@@ -167,10 +167,14 @@ def list_weekly_attendance():
     return deepcopy(DEV_STORE["attendance_weekly"])
 
 
-def list_notifications(role: str, limit: int | None = None, search: str | None = None):
+def list_notifications(role: str, limit: int | None = None, search: str | None = None, user_id: str | None = None):
     items = [
         item for item in DEV_STORE["notifications"]
-        if item.get("receiverRole") in {role, "ALL"} or item.get("senderRole") == role
+        if (
+            item.get("receiverRole") in {role, "ALL"}
+            or item.get("senderRole") == role
+            or (user_id and user_id in (item.get("receiverIds") or []))
+        )
     ]
     if search:
         needle = search.lower()
@@ -182,10 +186,17 @@ def list_notifications(role: str, limit: int | None = None, search: str | None =
     return deepcopy(items), unread
 
 
-def unread_notifications(role: str):
+def unread_notifications(role: str, user_id: str | None = None):
     return sum(
         1 for item in DEV_STORE["notifications"]
-        if (item.get("receiverRole") in {role, "ALL"} or item.get("senderRole") == role) and item.get("status") == "unread"
+        if (
+            (
+                item.get("receiverRole") in {role, "ALL"}
+                or item.get("senderRole") == role
+                or (user_id and user_id in (item.get("receiverIds") or []))
+            )
+            and item.get("status") == "unread"
+        )
     )
 
 

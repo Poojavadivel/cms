@@ -25,10 +25,9 @@ export async function fetchStudents() {
     const res = await fetch(`${API_BASE}/students`);
     if (!res.ok) throw new Error('Failed to fetch');
     const data = await res.json();
-    if (data.length > 0) {
-      setCachedStudents(data);
-      return data;
-    }
+    // Always use backend data if request succeeded
+    setCachedStudents(data);
+    return data;
   } catch {
     // Backend unavailable, fall through to cache
   }

@@ -1,9 +1,16 @@
 """Enhanced notifications router with real-time delivery"""
 from datetime import datetime
-from fastapi import APIRouter, HTTPException, WebSocket, Query, Body, Depends
+from fastapi import APIRouter, HTTPException, Query, WebSocket
 from pymongo import ReturnDocument
 
 from backend.db import get_db
+from backend.dev_store import create_notification as create_dev_notification
+from backend.dev_store import list_notifications as list_dev_notifications
+from backend.dev_store import mark_notification_read as mark_dev_notification_read
+from backend.dev_store import mark_role_notifications_read as mark_dev_role_notifications_read
+from backend.dev_store import delete_notification as delete_dev_notification
+from backend.dev_store import clear_notifications as clear_dev_notifications
+from backend.dev_store import unread_notifications as unread_dev_notifications
 from backend.schemas.notifications import (
     NotificationCreate,
     NotificationAutoTrigger,
@@ -71,15 +78,26 @@ async def send_notification(payload: NotificationCreate):
     try:
         db = get_db()
     except HTTPException:
-        # Fallback for when MongoDB is unavailable
-        return {
-            "success": True,
-            "message": "Notification queued (database unavailable, will retry)",
-            "data": {
-                "id": "temp-" + str(datetime.now().timestamp()),
+        # Fallback for when MongoDB is unavailable: persist to dev store
+        created = create_dev_notification(
+            {
                 "title": payload.title,
                 "message": payload.message,
+                "category": payload.category,
+                "priority": payload.priority,
+                "senderRole": payload.senderRole,
+                "receiverRole": payload.receiverRole,
+                "receiverIds": payload.receiverIds,
+                "triggerType": None,
+                "relatedId": None,
+                "createdAt": datetime.utcnow().isoformat(),
+                "updatedAt": None,
             }
+        )
+        return {
+            "success": True,
+            "message": "Notification sent (dev store)",
+            "data": created,
         }
     
     # Create notification document
@@ -179,19 +197,27 @@ async def create_auto_notification(payload: NotificationAutoTrigger):
 
 
 @router.get("/{role}")
-async def list_notifications(role: str, limit: int | None = None, search: str | None = None):
+async def list_notifications(
+    role: str,
+    limit: int | None = None,
+    search: str | None = None,
+    user_id: str | None = Query(default=None, alias="userId"),
+):
     """List notifications for a role"""
     try:
         db = get_db()
     except HTTPException:
-        return {"success": True, "role": role, "data": [], "count": 0, "unreadCount": 0}
-    
-    query = {
-        "$or": [
-            {"receiverRole": role},
-            {"receiverRole": "ALL"},
-        ]
-    }
+        data, unread_count = list_dev_notifications(role, limit, search, user_id)
+        return {"success": True, "role": role, "data": data, "count": len(data), "unreadCount": unread_count}
+
+    base_or = [
+        {"receiverRole": role},
+        {"receiverRole": "ALL"},
+    ]
+    if user_id:
+        base_or.append({"receiverIds": user_id})
+
+    query = {"$or": base_or}
     
     if search:
         query["$and"] = [
@@ -211,15 +237,14 @@ async def list_notifications(role: str, limit: int | None = None, search: str | 
     async for row in cursor:
         data.append(serialize_doc(row))
     
-    unread_count = await db["notifications"].count_documents(
-        {
-            "$or": [
-                {"receiverRole": role},
-                {"receiverRole": "ALL"},
-            ],
-            "status": "unread",
-        }
-    )
+    unread_or = [
+        {"receiverRole": role},
+        {"receiverRole": "ALL"},
+    ]
+    if user_id:
+        unread_or.append({"receiverIds": user_id})
+
+    unread_count = await db["notifications"].count_documents({"$or": unread_or, "status": "unread"})
     
     return {
         "success": True,
@@ -230,13 +255,68 @@ async def list_notifications(role: str, limit: int | None = None, search: str | 
     }
 
 
+@router.get("/{role}/unread")
+async def unread_count(role: str):
+    """Get unread count for a role"""
+    try:
+        db = get_db()
+    except HTTPException:
+        return {"success": True, "role": role, "unreadCount": unread_dev_notifications(role)}
+
+    unread = await db["notifications"].count_documents(
+        {
+            "$or": [
+                {"receiverRole": role},
+                {"receiverRole": "ALL"},
+                {"senderRole": role},
+            ],
+            "status": "unread",
+        }
+    )
+    return {"success": True, "role": role, "unreadCount": unread}
+
+
+@router.put("/{role}/read-all")
+async def mark_all_read(role: str):
+    """Mark all notifications as read for a role"""
+    try:
+        db = get_db()
+    except HTTPException:
+        count = mark_dev_role_notifications_read(role)
+        return {"success": True, "message": "All notifications marked as read", "count": count}
+
+    result = await db["notifications"].update_many(
+        {"$or": [{"receiverRole": role}, {"receiverRole": "ALL"}], "status": "unread"},
+        {"$set": {"status": "read", "updatedAt": datetime.utcnow()}},
+    )
+    return {"success": True, "message": "All notifications marked as read", "count": result.modified_count}
+
+
+@router.post("/{role}/clear-all")
+async def clear_all(role: str):
+    """Clear all notifications for a role"""
+    try:
+        db = get_db()
+    except HTTPException:
+        deleted_count = clear_dev_notifications(role)
+        return {"success": True, "message": "All notifications cleared", "deletedCount": deleted_count}
+
+    result = await db["notifications"].delete_many(
+        {"$or": [{"receiverRole": role}, {"receiverRole": "ALL"}]}
+    )
+    return {"success": True, "message": "All notifications cleared", "deletedCount": result.deleted_count}
+
+
 @router.put("/{notification_id}/read")
 async def mark_as_read(notification_id: str):
     """Mark a notification as read"""
     try:
         db = get_db()
     except HTTPException:
-        return {"success": True, "message": "Marked as read"}
+        updated = mark_dev_notification_read(notification_id)
+        if not updated:
+            raise HTTPException(status_code=404, detail="Notification not found")
+        return {"success": True, "message": "Marked as read", "data": updated}
     
     from bson import ObjectId
     try:
@@ -267,6 +347,9 @@ async def delete_notification(notification_id: str):
     try:
         db = get_db()
     except HTTPException:
+        deleted = delete_dev_notification(notification_id)
+        if not deleted:
+            raise HTTPException(status_code=404, detail="Notification not found")
         return {"success": True, "message": "Notification deleted"}
     
     from bson import ObjectId
@@ -372,11 +455,20 @@ async def _broadcast_notification(db, notification_doc, receiver_role: str, rece
         # Send to specific user IDs
         await connection_manager.broadcast_to_many(receiver_ids, notification_data)
     elif receiver_role == "ALL":
-        # Send to all roles - this would require knowing all connected users
-        # For now, we'll rely on the next time users refresh/poll
-        pass
+        # Best-effort role broadcast to currently connected users
+        connected_user_ids = list(connection_manager.active_connections.keys())
+        await connection_manager.broadcast_to_many(connected_user_ids, notification_data)
     else:
-        # Send to all users of a specific role
-        # This requires getting all users of that role from the database
-        # For now, we'll rely on polling
-        pass
+        # Role-based targeting requires user-role mapping in DB; fallback to polling/list endpoint refresh
+        # If DB has users collection with role/userId, best-effort broadcast to matching connected users.
+        if db is not None:
+            matched_user_ids = []
+            try:
+                async for user in db["users"].find({"role": receiver_role}):
+                    user_id = user.get("id") or user.get("_id") or user.get("userId")
+                    if user_id is not None:
+                        matched_user_ids.append(str(user_id))
+            except Exception:
+                matched_user_ids = []
+            if matched_user_ids:
+                await connection_manager.broadcast_to_many(matched_user_ids, notification_data)

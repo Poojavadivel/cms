@@ -35,11 +35,20 @@ export function useRealtimeNotifications(userId) {
 
     ws.onmessage = (event) => {
       try {
-        const data = JSON.parse(event.data)
-        if (data.type === 'pong') {
-          // Keep-alive response
+        // Handle plain string messages (ping/pong)
+        if (typeof event.data === 'string' && (event.data === 'pong' || event.data === 'ping')) {
+          // Keep-alive response - ignore
           return
         }
+        
+        // Try parsing as JSON for notification messages
+        const data = JSON.parse(event.data)
+        
+        if (data.type === 'pong' || data.type === 'ping') {
+          // Keep-alive response (JSON format)
+          return
+        }
+        
         if (data.type === 'notification') {
           console.log('📬 Received notification:', data.notification)
           setNotifications((prev) => [data.notification, ...prev])
