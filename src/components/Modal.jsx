@@ -1,3 +1,9 @@
+import { useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
+
+const FOCUSABLE_SELECTOR =
+  'button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+
 export default function Modal({
   isOpen,
   onClose,
@@ -7,6 +13,53 @@ export default function Modal({
   footer,
   children,
 }) {
+  const dialogRef = useRef(null)
+
+  useEffect(() => {
+    if (!isOpen) return
+
+    // Lock body scroll while modal is open
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
+    // Move focus into the dialog
+    const focusable = dialogRef.current?.querySelector(FOCUSABLE_SELECTOR)
+    focusable?.focus()
+
+    // Trap focus within the dialog
+    function handleKeyDown(event) {
+      if (event.key === 'Escape') {
+        onClose?.()
+        return
+      }
+      if (event.key !== 'Tab') return
+      const focusableEls = Array.from(
+        dialogRef.current?.querySelectorAll(FOCUSABLE_SELECTOR) ?? []
+      )
+      if (focusableEls.length === 0) return
+      const first = focusableEls[0]
+      const last = focusableEls[focusableEls.length - 1]
+      if (event.shiftKey) {
+        if (document.activeElement === first) {
+          event.preventDefault()
+          last.focus()
+        }
+      } else {
+        if (document.activeElement === last) {
+          event.preventDefault()
+          first.focus()
+        }
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      document.body.style.overflow = previousOverflow
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [isOpen, onClose])
+
   if (!isOpen) return null
 
   const handleBackdropClick = (event) => {
@@ -15,7 +68,7 @@ export default function Modal({
     }
   }
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4"
       onClick={handleBackdropClick}
@@ -23,7 +76,10 @@ export default function Modal({
       aria-modal="true"
       aria-label={title || 'Modal'}
     >
-      <div className={`w-full ${maxWidth} rounded-xl bg-white shadow-xl border border-slate-200 overflow-hidden`}>
+      <div
+        ref={dialogRef}
+        className={`w-full ${maxWidth} rounded-xl bg-white shadow-xl border border-slate-200 overflow-hidden`}
+      >
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
           <div className="flex items-center gap-2">
             {icon && <span className="material-symbols-outlined text-slate-600">{icon}</span>}
@@ -43,6 +99,7 @@ export default function Modal({
 
         {footer && <div className="px-6 py-4 border-t border-slate-200 bg-slate-50">{footer}</div>}
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

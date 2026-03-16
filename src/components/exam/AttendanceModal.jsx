@@ -75,7 +75,7 @@ export default function AttendanceModal({ exam, onClose, onSave }) {
             <span className="material-symbols-outlined mr-2">fact_check</span>
             Mark Attendance - {exam.name}
           </h2>
-          <p className="text-sm mt-1 opacity-90">{exam.date} | {exam.startTime}</p>
+          <p className="text-sm mt-1 opacity-90">{exam.date} | {exam.time}</p>
         </div>
 
         <div className="p-6 overflow-y-auto max-h-[calc(90vh-180px)]">
