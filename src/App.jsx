@@ -35,11 +35,11 @@ export default function App() {
           </ProtectedRoute>
         }
       />
-      <Route path="/timetable" element={<ProtectedRoute><TimetablePage /></ProtectedRoute>} />
-      <Route path="/attendance" element={<ProtectedRoute><AttendancePage /></ProtectedRoute>} />
-      <Route path="/exams" element={<ProtectedRoute><ExamsPage /></ProtectedRoute>} />
-      <Route path="/placement" element={<ProtectedRoute><PlacementPage /></ProtectedRoute>} />
-      <Route path="/facility" element={<ProtectedRoute><FacilityPage /></ProtectedRoute>} />
+      <Route path="/timetable" element={<ProtectedRoute allowedRoles={['student', 'admin', 'faculty']}><TimetablePage /></ProtectedRoute>} />
+      <Route path="/attendance" element={<ProtectedRoute allowedRoles={['student', 'admin', 'faculty']}><AttendancePage /></ProtectedRoute>} />
+      <Route path="/exams" element={<ProtectedRoute allowedRoles={['student', 'admin', 'faculty']}><ExamsPage /></ProtectedRoute>} />
+      <Route path="/placement" element={<ProtectedRoute allowedRoles={['student', 'admin', 'faculty']}><PlacementPage /></ProtectedRoute>} />
+      <Route path="/facility" element={<ProtectedRoute allowedRoles={['student', 'admin', 'faculty']}><FacilityPage /></ProtectedRoute>} />
       <Route path="/analytics" element={<ProtectedRoute><AnalyticsPage /></ProtectedRoute>} />
       <Route path="/notifications" element={<ProtectedRoute><NotificationPage /></ProtectedRoute>} />
       <Route
@@ -52,23 +52,23 @@ export default function App() {
       />
       <Route
         path="/faculty"
-        element={<ProtectedRoute><ModulePlaceholderPage title="Faculty" description="Faculty listing and management dashboard will appear here." /></ProtectedRoute>}
+        element={<ProtectedRoute allowedRoles={['admin']}><ModulePlaceholderPage title="Faculty" description="Faculty listing and management dashboard will appear here." /></ProtectedRoute>}
       />
       <Route
         path="/fees"
-        element={<ProtectedRoute><ModulePlaceholderPage title="Fees" description="Fee summaries, due dates, and payment actions will appear here." /></ProtectedRoute>}
+        element={<ProtectedRoute allowedRoles={['student', 'admin', 'finance']}><ModulePlaceholderPage title="Fees" description="Fee summaries, due dates, and payment actions will appear here." /></ProtectedRoute>}
       />
       <Route
         path="/invoices"
-        element={<ProtectedRoute><ModulePlaceholderPage title="Invoices" description="Invoice generation and history will appear here." /></ProtectedRoute>}
+        element={<ProtectedRoute allowedRoles={['student', 'admin', 'finance']}><ModulePlaceholderPage title="Invoices" description="Invoice generation and history will appear here." /></ProtectedRoute>}
       />
       <Route
         path="/admission"
-        element={<ProtectedRoute><ModulePlaceholderPage title="Admission" description="Admission workflows and approvals will appear here." /></ProtectedRoute>}
+        element={<ProtectedRoute allowedRoles={['admin']}><ModulePlaceholderPage title="Admission" description="Admission workflows and approvals will appear here." /></ProtectedRoute>}
       />
       <Route
         path="/payroll"
-        element={<ProtectedRoute><ModulePlaceholderPage title="Payroll" description="Payroll processing and records will appear here." /></ProtectedRoute>}
+        element={<ProtectedRoute allowedRoles={['admin', 'finance']}><ModulePlaceholderPage title="Payroll" description="Payroll processing and records will appear here." /></ProtectedRoute>}
       />
       <Route
         path="/settings"
@@ -78,8 +78,8 @@ export default function App() {
           </ProtectedRoute>
         }
       />
-      <Route path="/students" element={<ProtectedRoute><StudentsPage /></ProtectedRoute>} />
-      <Route path="/students/:id" element={<ProtectedRoute><StudentDetailPage /></ProtectedRoute>} />
+      <Route path="/students" element={<ProtectedRoute allowedRoles={['admin', 'faculty']}><StudentsPage /></ProtectedRoute>} />
+      <Route path="/students/:id" element={<ProtectedRoute allowedRoles={['admin', 'faculty']}><StudentDetailPage /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

@@ -80,10 +80,10 @@ export default function StudentTable({ students }) {
                 </td>
                 <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
                   <div className="flex items-center justify-end gap-2">
-                    <button className="p-1.5 text-slate-400 hover:text-[#1162d4] hover:bg-[#1162d4]/10 rounded-lg transition-colors">
+                    <button disabled aria-disabled="true" className="p-1.5 text-slate-300 rounded-lg cursor-not-allowed" title="Edit (coming soon)">
                       <span className="material-symbols-outlined text-lg">edit</span>
                     </button>
-                    <button className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                    <button disabled aria-disabled="true" className="p-1.5 text-slate-300 rounded-lg cursor-not-allowed" title="Delete (coming soon)">
                       <span className="material-symbols-outlined text-lg">delete</span>
                     </button>
                   </div>

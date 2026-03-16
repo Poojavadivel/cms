@@ -10,6 +10,6 @@ router = APIRouter(prefix="/api/staff", tags=["staff"])
 async def get_all_staff():
     db = get_db()
     staff = []
-    async for member in db["staff_Details"].find():
+    async for member in db["staff_detail"].find():
         staff.append(serialize_doc(member))
     return staff

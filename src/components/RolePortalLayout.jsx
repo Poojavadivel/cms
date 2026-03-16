@@ -30,11 +30,20 @@ function LogoutIcon() {
 const itemRoutes = {
   Dashboard: '/dashboard',
   Students: '/students',
+  'My Courses': '/courses',
+  Department: '/department',
+  Faculty: '/faculty',
   Exams: '/exams',
   Timetable: '/timetable',
   Attendance: '/attendance',
   Placement: '/placement',
   Facility: '/facility',
+  Analytics: '/analytics',
+  Notifications: '/notifications',
+  Fees: '/fees',
+  Invoices: '/invoices',
+  Admission: '/admission',
+  Payroll: '/payroll',
   Settings: '/settings',
 };
 
@@ -95,7 +104,10 @@ export default function RolePortalLayout({ role, title, subtitle, children }) {
                 <div className="nav-section-label">{group.title}</div>
                 <ul>
                   {group.items.map((item) => {
-                    const active = item === 'Settings';
+                    const route = itemRoutes[item];
+                    const active = route
+                      ? location.pathname === route
+                      : false;
 
                     return (
                       <li key={item}>

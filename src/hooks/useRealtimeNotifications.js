@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 
 /**
  * Hook for real-time WebSocket notifications
- * Connects to ws://localhost:5000/api/notifications/ws/{userId}
+ * Connects to ws(s)://<host>/api/notifications/ws/{userId}
  * Receives notifications in real-time
  */
 export function useRealtimeNotifications(userId) {
@@ -13,9 +13,14 @@ export function useRealtimeNotifications(userId) {
   useEffect(() => {
     if (!userId) return
 
-    // Construct WebSocket URL
+    // Construct WebSocket URL from env variable or current host (works with Vite proxy)
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    const wsUrl = `${protocol}//127.0.0.1:5000/api/notifications/ws/${userId}`
+    const apiBase = import.meta.env.VITE_API_BASE_URL
+    const host = apiBase ? apiBase.replace(/^https?:\/\//, '') : window.location.host
+    const wsUrl = `${protocol}//${host}/api/notifications/ws/${userId}`
+
+    // Keep-alive interval — stored here so cleanup can always clear it
+    let keepAliveInterval = null
 
     // Connect to WebSocket
     const ws = new WebSocket(wsUrl)
@@ -25,12 +30,11 @@ export function useRealtimeNotifications(userId) {
       console.log('✓ Connected to notification WebSocket')
       setIsConnected(true)
       // Send keep-alive ping every 30 seconds
-      const interval = setInterval(() => {
+      keepAliveInterval = setInterval(() => {
         if (ws.readyState === WebSocket.OPEN) {
           ws.send('ping')
         }
       }, 30000)
-      return () => clearInterval(interval)
     }
 
     ws.onmessage = (event) => {
@@ -68,14 +72,7 @@ export function useRealtimeNotifications(userId) {
     ws.onclose = () => {
       console.log('✗ Disconnected from notification WebSocket')
       setIsConnected(false)
-      // Attempt to reconnect after 5 seconds
-      const timeout = setTimeout(() => {
-        if (wsRef.current?.readyState === WebSocket.CLOSED) {
-          console.log('Reconnecting to WebSocket...')
-          // This will be handled by the component remount or a manual reconnect
-        }
-      }, 5000)
-      return () => clearTimeout(timeout)
+      clearInterval(keepAliveInterval)
     }
 
     ws.onerror = (error) => {
@@ -85,6 +82,7 @@ export function useRealtimeNotifications(userId) {
 
     // Cleanup on unmount
     return () => {
+      clearInterval(keepAliveInterval)
       if (ws.readyState === WebSocket.OPEN) {
         ws.close()
       }
