@@ -9,6 +9,8 @@ import { cmsRoles } from '../data/roleConfig';
 import '../settings.css';
 import '../user-settings.css';
 
+const VALID_SETTINGS_ROLES = ['student', 'faculty', 'admin', 'finance'];
+
 export default function SettingsPage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -44,6 +46,9 @@ export default function SettingsPage() {
         <RoleGuard roles={['admin', 'finance']}>
           <SettingsLayout role={role} userId={session.userId} />
         </RoleGuard>
+      )}
+      {!VALID_SETTINGS_ROLES.includes(role) && (
+        <Navigate to="/" replace />
       )}
     </Layout>
   );

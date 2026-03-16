@@ -1,3 +1,6 @@
+import { useEffect } from 'react'
+import { createPortal } from 'react-dom'
+
 export default function Modal({
   isOpen,
   onClose,
@@ -7,6 +10,14 @@ export default function Modal({
   footer,
   children,
 }) {
+  useEffect(() => {
+    if (!isOpen) return
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [isOpen])
+
   if (!isOpen) return null
 
   const handleBackdropClick = (event) => {
@@ -15,7 +26,7 @@ export default function Modal({
     }
   }
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4"
       onClick={handleBackdropClick}
@@ -43,6 +54,7 @@ export default function Modal({
 
         {footer && <div className="px-6 py-4 border-t border-slate-200 bg-slate-50">{footer}</div>}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

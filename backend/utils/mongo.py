@@ -14,7 +14,11 @@ def serialize_doc(document: dict | None) -> dict | None:
         return document
 
     if "_id" in document:
-        document["id"] = str(document["_id"])
+        mongo_id = str(document["_id"])
         del document["_id"]
+        if "id" not in document:
+            document["id"] = mongo_id
+        else:
+            document["mongoId"] = mongo_id
 
     return document
