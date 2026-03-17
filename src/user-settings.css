@@ -9,10 +9,21 @@
   --user-settings-danger: #dc2626;
 }
 
+.user-settings-content-wrapper {
+  width: 100%;
+  padding: 20px;
+  min-height: 100%;
+  overflow-anchor: none;
+}
+
 .user-settings-page {
-  min-height: 100vh;
+  width: 100%;
+  height: 100%;
   background: var(--user-settings-bg);
   padding: 24px;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
 }
 
 .user-settings-header {
@@ -38,6 +49,8 @@
   grid-template-columns: 270px 1fr;
   gap: 18px;
   align-items: flex-start;
+  flex: 1;
+  min-height: 0;
 }
 
 .user-settings-sidebar {
@@ -69,7 +82,7 @@
   display: flex;
   flex-direction: column;
   padding: 10px;
-  max-height: calc(100vh - 220px);
+  max-height: none;
   overflow: auto;
 }
 
@@ -114,6 +127,7 @@
 .user-settings-main {
   display: grid;
   gap: 14px;
+  overflow-y: auto;
 }
 
 .user-settings-warning {
@@ -129,6 +143,7 @@
   border-radius: 14px;
   background: var(--user-settings-card);
   padding: 20px;
+  min-height: 520px;
 }
 
 .user-settings-section h3 {
@@ -147,6 +162,16 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
+}
+
+.user-settings-grid-span-2 {
+  grid-column: span 2;
+}
+
+.user-settings-divider {
+  height: 1px;
+  background: linear-gradient(90deg, var(--user-settings-border) 0%, rgba(217, 227, 241, 0.5) 50%, var(--user-settings-border) 100%);
+  margin: 20px 0 0 0;
 }
 
 .user-settings-grid label,
@@ -178,6 +203,14 @@
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.14);
 }
 
+.user-settings-grid input:disabled,
+.user-settings-grid select:disabled {
+  background: #f1f5f9;
+  color: #64748b;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
 .user-settings-grid-span-2 {
   grid-column: span 2;
 }
@@ -192,6 +225,10 @@
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+}
+
+.user-settings-actions-start {
+  justify-content: flex-start;
 }
 
 .user-settings-btn {
@@ -257,6 +294,15 @@
   border: 1px solid #fecaca;
   background: #fef2f2;
   color: #991b1b;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.user-settings-success {
+  margin-top: 12px;
+  border: 1px solid #a7f3d0;
+  background: #ecfdf5;
+  color: #065f46;
   border-radius: 10px;
   padding: 10px 12px;
 }
@@ -369,6 +415,62 @@
 .user-settings-panel h4 {
   color: #1e3a8a;
   margin-bottom: 6px;
+}
+
+.user-settings-photo-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.user-settings-photo-label {
+  color: #334155;
+  font-size: 13px;
+}
+
+.user-settings-photo-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.user-settings-photo-preview {
+  width: 72px;
+  height: 72px;
+  border-radius: 18px;
+  border: 1px solid var(--user-settings-border);
+  background: linear-gradient(135deg, #dbeafe, #eff6ff);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #1d4ed8;
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.user-settings-photo-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.user-settings-photo-upload {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid #dbe4f3;
+  background: #f8faff;
+  color: #334155;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.user-settings-photo-upload input {
+  display: none;
 }
 
 .user-settings-panel-head {

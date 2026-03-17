@@ -7,7 +7,13 @@ function resolveRoleAndUserId(roleOrUserId, maybeUserId) {
       ? roleOrUserId.toLowerCase()
       : '';
 
-  if ((normalizedRole === 'student' || normalizedRole === 'faculty') && typeof maybeUserId === 'string') {
+  if (
+    (normalizedRole === 'student' ||
+      normalizedRole === 'faculty' ||
+      normalizedRole === 'admin' ||
+      normalizedRole === 'finance') &&
+    typeof maybeUserId === 'string'
+  ) {
     return {
       role: roleOrUserId,
       userId: maybeUserId,
@@ -26,6 +32,17 @@ function buildSettingsPath(role, userId, section) {
   }
 
   return `/api/settings/${userId}/${section}`;
+}
+
+function buildProfilePath(role, userId) {
+  const normalizedRole = String(role || '').toLowerCase();
+  if (normalizedRole === 'student') {
+    return `/api/student/settings/${userId}`;
+  }
+  if (normalizedRole === 'admin') {
+    return `/api/admin/profile/${userId}`;
+  }
+  return `/api/settings/${normalizedRole}/${userId}/profile`;
 }
 
 async function request(path, options = {}) {
@@ -66,17 +83,25 @@ async function request(path, options = {}) {
 
 export const userSettingsApi = {
   getProfile(role, userId) {
-    return request(`/api/settings/${role}/${userId}/profile`);
+    return request(buildProfilePath(role, userId)).then((payload) => payload?.data ?? payload);
   },
 
   updateProfile(role, userId, data) {
-    return request(`/api/settings/${role}/${userId}/profile`, {
+    return request(buildProfilePath(role, userId), {
       method: 'PUT',
       body: JSON.stringify(data),
     });
   },
 
-  changePassword(userId, oldPassword, newPassword) {
+  changePassword(userId, oldPassword, newPassword, role = null) {
+    const normalizedRole = String(role || '').toLowerCase();
+    if (normalizedRole === 'admin') {
+      return request('/api/admin/change-password', {
+        method: 'PUT',
+        body: JSON.stringify({ userId, currentPassword: oldPassword, newPassword }),
+      });
+    }
+
     return request('/api/settings/change-password', {
       method: 'POST',
       body: JSON.stringify({ userId, oldPassword, newPassword }),

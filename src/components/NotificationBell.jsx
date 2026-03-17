@@ -10,7 +10,11 @@ export default function NotificationBell({ role = 'student', onBellClick }) {
     const fetchUnreadCount = async () => {
       try {
         const response = await fetch(`/api/notifications/${role}/unread`);
-        const data = await response.json();
+        const raw = await response.text();
+        const data = raw ? JSON.parse(raw) : {};
+        if (!response.ok) {
+          throw new Error(data?.error || `Failed with status ${response.status}`);
+        }
         setUnreadCount(data.unreadCount || 0);
         setLoading(false);
       } catch (error) {

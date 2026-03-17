@@ -13,6 +13,7 @@ export const cmsRoles = {
     focus: 'Academics',
     primaryAction: 'View Timetable',
     secondaryAction: 'Track Attendance',
+    subtitle: 'Track academics, attendance, and upcoming exams.',
     stats: [
       { value: '8.7', label: 'Current GPA', sub: 'Improved this term' },
       { value: '92%', label: 'Attendance', sub: 'Good standing' },
@@ -36,6 +37,7 @@ export const cmsRoles = {
     focus: 'Operations',
     primaryAction: 'Approve Admissions',
     secondaryAction: 'Manage Department',
+    subtitle: 'Manage students, faculty, admissions, and departments.',
     stats: [
       { value: '1840', label: 'Total Students', sub: 'Across all departments' },
       { value: '128', label: 'Faculty Members', sub: 'Active this semester' },
@@ -59,6 +61,7 @@ export const cmsRoles = {
     focus: 'Teaching',
     primaryAction: 'Mark Attendance',
     secondaryAction: 'Publish Internal Marks',
+    subtitle: 'Handle classes, evaluations, timetables, and student progress.',
     stats: [
       { value: '6', label: 'Classes Today', sub: '2 completed' },
       { value: '312', label: 'Students Mapped', sub: 'Across 4 subjects' },
@@ -82,6 +85,7 @@ export const cmsRoles = {
     focus: 'Billing',
     primaryAction: 'Generate Invoices',
     secondaryAction: 'Run Payroll',
+    subtitle: 'Monitor fees, payroll, invoices, and financial compliance.',
     stats: [
       { value: 'INR 2.4Cr', label: 'Fees Collected', sub: 'Current quarter' },
       { value: '148', label: 'Unpaid Invoices', sub: 'Requires follow-up' },
@@ -108,15 +112,11 @@ export const roleMenuGroups = {
     },
     {
       title: 'Academics',
-      items: ['Exams', 'Timetable', 'Attendance'],
+      items: ['Exams', 'Timetable', 'Attendance', 'Placement', 'Facility', 'Analytics', 'Notifications', 'Settings'],
     },
     {
       title: 'Administration',
       items: ['Fees', 'Invoices'],
-    },
-    {
-      title: 'Intelligence',
-      items: ['Notifications', 'Settings'],
     },
   ],
   admin: [
@@ -129,12 +129,8 @@ export const roleMenuGroups = {
       items: ['Admission', 'Fees', 'Payroll', 'Invoices'],
     },
     {
-      title: 'Intelligence',
-      items: ['Analytics', 'Notifications', 'Settings'],
-    },
-    {
       title: 'Academics',
-      items: ['Exams', 'Timetable', 'Attendance', 'Placement', 'Facility'],
+      items: ['Exams', 'Timetable', 'Attendance', 'Placement', 'Facility', 'Analytics', 'Notifications', 'Settings'],
     },
   ],
   faculty: [
@@ -144,11 +140,7 @@ export const roleMenuGroups = {
     },
     {
       title: 'Academics',
-      items: ['Exams', 'Timetable', 'Attendance', 'Placement'],
-    },
-    {
-      title: 'Intelligence',
-      items: ['Analytics', 'Notifications', 'Settings'],
+      items: ['Exams', 'Timetable', 'Attendance', 'Placement', 'Analytics', 'Notifications', 'Settings'],
     },
   ],
   finance: [
@@ -161,7 +153,7 @@ export const roleMenuGroups = {
       items: ['Fees', 'Payroll', 'Invoices'],
     },
     {
-      title: 'Intelligence',
+      title: 'Academics',
       items: ['Analytics', 'Notifications', 'Settings'],
     },
   ],
