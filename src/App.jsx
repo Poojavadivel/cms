@@ -14,6 +14,8 @@ import StudentDetailPage from './pages/StudentDetailPage';
 import AnalyticsPage from './pages/AnalyticsPage';
 import NotificationPage from './pages/NotificationPage';
 import ModulePlaceholderPage from './pages/ModulePlaceholderPage';
+import StudentSettings from './pages/student/StudentSettings';
+import AdminSettings from './pages/admin/AdminSettings';
 
 
 export default function App() {
@@ -78,6 +80,8 @@ export default function App() {
           </ProtectedRoute>
         }
       />
+      <Route path="/student/settings" element={<ProtectedRoute><StudentSettings /></ProtectedRoute>} />
+      <Route path="/admin/settings" element={<ProtectedRoute><AdminSettings /></ProtectedRoute>} />
       <Route path="/students" element={<ProtectedRoute><StudentsPage /></ProtectedRoute>} />
       <Route path="/students/:id" element={<ProtectedRoute><StudentDetailPage /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />

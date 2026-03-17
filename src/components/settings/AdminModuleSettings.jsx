@@ -82,8 +82,8 @@ export default function AdminModuleSettings({ role, userId }) {
       try {
         const [profileResult, generalResult, academicResult] = await Promise.allSettled([
           userSettingsApi.getProfile(role, userId),
-          settingsApi.getGeneralSettings(),
-          settingsApi.getAcademicSettings(),
+          settingsApi.getAdminSystemSettings(),
+          settingsApi.getAdminAcademicSettings(),
         ]);
 
         if (!mounted) {
@@ -335,7 +335,8 @@ export default function AdminModuleSettings({ role, userId }) {
       const response = await userSettingsApi.changePassword(
         userId,
         passwordForm.currentPassword,
-        passwordForm.newPassword
+        passwordForm.newPassword,
+        role
       );
 
       setPasswordForm({
@@ -369,7 +370,7 @@ export default function AdminModuleSettings({ role, userId }) {
         contactEmail: systemInfo.contactEmail,
         phoneNumber: systemInfo.phoneNumber,
       };
-      const updated = await settingsApi.updateGeneralSettings(payload);
+      const updated = await settingsApi.updateAdminSystemSettings(payload);
       const next = {
         collegeName: updated.collegeName || updated.portalName || '',
         collegeLogo: updated.collegeLogo || '',
@@ -428,7 +429,7 @@ export default function AdminModuleSettings({ role, userId }) {
         courses: academicInfo.courses,
         semesters: Number(academicInfo.semesters) || 1,
       };
-      const updated = await settingsApi.updateAcademicSettings(payload);
+      const updated = await settingsApi.updateAdminAcademicSettings(payload);
       const next = {
         departments: Array.isArray(updated.departments) ? updated.departments.join(', ') : String(updated.departments || ''),
         courses: Array.isArray(updated.courses) ? updated.courses.join(', ') : String(updated.courses || ''),

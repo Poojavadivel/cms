@@ -225,7 +225,8 @@ export default function ProfileSettings({ role, userId }) {
       const response = await userSettingsApi.changePassword(
         userId,
         passwordForm.currentPassword,
-        passwordForm.newPassword
+        passwordForm.newPassword,
+        role
       );
 
       setPasswordForm({
