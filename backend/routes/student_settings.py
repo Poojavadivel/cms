@@ -85,7 +85,8 @@ async def _update_student_settings_data(user_id: str, data: dict[str, Any]) -> d
 
 @router.get("/{user_id}")
 async def get_student_settings(user_id: str):
-    return await _get_student_settings_data(user_id)
+    data = await _get_student_settings_data(user_id)
+    return {"status": "success", "data": data}
 
 
 @router.put("/{user_id}")
@@ -97,7 +98,8 @@ async def update_student_settings(user_id: str, payload: StudentSettingsUpdate):
 
 @legacy_router.get("/{user_id}/profile")
 async def legacy_get_student_profile(user_id: str):
-    return await _get_student_settings_data(user_id)
+    data = await _get_student_settings_data(user_id)
+    return {"status": "success", "data": data}
 
 
 @legacy_router.put("/{user_id}/profile")

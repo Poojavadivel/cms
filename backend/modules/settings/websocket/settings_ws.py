@@ -1,25 +1,15 @@
-from fastapi import WebSocket
-
-connections: list[WebSocket] = []
+from backend.utils.websocket_manager import connection_manager
 
 
-async def connect(ws: WebSocket):
-    await ws.accept()
-    connections.append(ws)
+async def connect(user_id: str, ws):
+    await connection_manager.connect(user_id, ws)
 
 
-async def disconnect(ws: WebSocket):
-    if ws in connections:
-        connections.remove(ws)
+async def disconnect(user_id: str, ws):
+    await connection_manager.disconnect(user_id, ws)
 
 
 async def broadcast(message: dict):
-    stale_connections: list[WebSocket] = []
-    for conn in connections:
-        try:
-            await conn.send_json(message)
-        except Exception:
-            stale_connections.append(conn)
-
-    for conn in stale_connections:
-        await disconnect(conn)
+    user_id = message.get("user_id")
+    if user_id:
+        await connection_manager.broadcast_to_user(user_id, message)
