@@ -34,6 +34,13 @@ export function destroyUserSession() {
     sessionStorage.removeItem(key);
   });
 
+  // Clear admission data on logout
+  localStorage.removeItem('admissions_students');
+  localStorage.removeItem('admissions_faculty');
+  // Keep approved students for fees and fee assignments
+  // localStorage.removeItem('approved_students_for_fees');
+  // localStorage.removeItem('fee_assignments');
+
   // Clear any additional CMS auth/session attributes created in future modules.
   clearCmsStorage(localStorage);
   clearCmsStorage(sessionStorage);
