@@ -1,8 +1,7 @@
 import { SettingsProvider } from '../../context/SettingsContext';
-import RoleGuard from '../RoleGuard';
 import { cmsRoles } from '../../data/roleConfig';
 import AdminModuleSettings from './AdminModuleSettings';
-import GeneralSettings from './GeneralSettings';
+import FinanceModuleSettings from './FinanceModuleSettings';
 import ProfileSettings from '../user-settings/ProfileSettings';
 
 export default function SettingsLayout({ role, userId }) {
@@ -22,14 +21,14 @@ export default function SettingsLayout({ role, userId }) {
 
       <SettingsProvider>
         <div className="settings-card-grid">
-          <RoleGuard roles={['admin']}>
-            <AdminModuleSettings role={role} userId={userId} />
-          </RoleGuard>
+          {role === 'admin' ? <AdminModuleSettings role={role} userId={userId} /> : null}
 
-          <RoleGuard roles={['finance']}>
-            <ProfileSettings role={role} userId={userId} />
-            <GeneralSettings />
-          </RoleGuard>
+          {role === 'finance' ? (
+            <>
+              <ProfileSettings role={role} userId={userId} />
+              <FinanceModuleSettings userId={userId} />
+            </>
+          ) : null}
         </div>
       </SettingsProvider>
     </div>

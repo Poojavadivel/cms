@@ -17,6 +17,9 @@ from backend.routes.payroll import router as payroll_router
 from backend.routes.staff import router as staff_router
 from backend.routes.students import router as students_router
 from backend.routes.finance.fees import router as fees_router
+from backend.routes.student_settings import router as student_settings_router, legacy_router as student_settings_legacy_router
+from backend.routes.admin_settings import router as admin_settings_router
+from backend.modules.settings.routes import account_routes, faculty_routes, finance_routes, settings_ws_routes
 
 PORT = int(os.getenv("PORT", 5000))
 
@@ -61,6 +64,18 @@ app.include_router(facility_router)
 app.include_router(notifications_enhanced_router)
 app.include_router(fees_router)
 app.include_router(students_router)
+app.include_router(student_settings_router)
+app.include_router(student_settings_legacy_router)
+app.include_router(admin_settings_router)
+app.include_router(account_routes.router, prefix="/api/settings")
+app.include_router(faculty_routes.router, prefix="/api/settings")
+app.include_router(finance_routes.router, prefix="/api/settings")
+app.include_router(settings_ws_routes.router)
+
+
+@app.get("/api/settings/test")
+async def settings_test():
+    return {"status": "working", "module": "settings"}
 
 
 @app.get("/{full_path:path}")
