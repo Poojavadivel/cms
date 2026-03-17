@@ -23,14 +23,13 @@ def _model_to_dict(model: BaseModel) -> dict[str, Any]:
 @router.get("/{user_id}/profile")
 async def get_finance_profile(user_id: str):
     """GET /api/settings/finance/{user_id}/profile — used by userSettingsApi.getProfile"""
-    print("Finance settings API called", user_id)
     return await get_or_create_finance_settings(user_id)
 
 
 @router.put("/{user_id}/profile")
-async def put_finance_profile_v2(user_id: str, payload: dict):
+async def put_finance_profile_v2(user_id: str, payload: FinanceProfileUpdate):
     """PUT /api/settings/finance/{user_id}/profile — used by userSettingsApi.updateProfile"""
-    data = await update_finance_profile(user_id, payload)
+    data = await update_finance_profile(user_id, _model_to_dict(payload))
     await broadcast({"module": "settings", "user_id": user_id, "type": "UPDATED"})
     return {"status": "success", "data": data}
 

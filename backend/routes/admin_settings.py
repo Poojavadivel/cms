@@ -1,13 +1,15 @@
 from datetime import datetime
-from hashlib import sha256
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
+from passlib.context import CryptContext
 from pymongo import ReturnDocument
 from pydantic import BaseModel
 
 from backend.db import get_db
+
+_pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 router = APIRouter(prefix="/api/admin", tags=["admin:settings"])
 
@@ -86,7 +88,14 @@ def _default_admin_profile(user_id: str) -> dict[str, Any]:
 
 
 def _password_hash(password: str) -> str:
-    return sha256(password.encode("utf-8")).hexdigest()
+    return _pwd_context.hash(password)
+
+
+def _verify_password(plain: str, hashed: str) -> bool:
+    try:
+        return _pwd_context.verify(plain, hashed)
+    except Exception:
+        return False
 
 
 @router.get("/profile/{user_id}")
@@ -98,15 +107,15 @@ async def get_admin_profile(user_id: str):
     except HTTPException:
         if user_id not in ADMIN_PROFILE_FALLBACK:
             ADMIN_PROFILE_FALLBACK[user_id] = dict(default_data)
-        return dict(ADMIN_PROFILE_FALLBACK[user_id])
+        return {"status": "success", "data": dict(ADMIN_PROFILE_FALLBACK[user_id])}
 
     collection = db[ADMIN_PROFILE_COLLECTION]
     existing = await collection.find_one({"user_id": user_id})
     if not existing:
         await collection.insert_one(default_data)
-        return default_data
+        return {"status": "success", "data": default_data}
 
-    return _strip_mongo_id(existing) or default_data
+    return {"status": "success", "data": _strip_mongo_id(existing) or default_data}
 
 
 @router.put("/profile/{user_id}")
@@ -141,20 +150,33 @@ async def change_admin_password(payload: AdminPasswordUpdate):
     if payload.newPassword == payload.currentPassword:
         return JSONResponse(status_code=400, content={"message": "New password must be different from current password."})
 
+    try:
+        db = get_db()
+    except HTTPException:
+        existing = ADMIN_PASSWORD_FALLBACK.get(payload.userId)
+        if existing:
+            if not _verify_password(payload.currentPassword, existing["passwordHash"]):
+                return JSONResponse(status_code=400, content={"message": "Current password is incorrect."})
+        hashed = _password_hash(payload.newPassword)
+        ADMIN_PASSWORD_FALLBACK[payload.userId] = {
+            "user_id": payload.userId,
+            "passwordHash": hashed,
+            "updatedAt": datetime.utcnow().isoformat(),
+        }
+        return {"success": True, "message": "Password updated successfully."}
+
+    collection = db[ADMIN_PASSWORD_COLLECTION]
+    existing = await collection.find_one({"user_id": payload.userId})
+    if existing:
+        if not _verify_password(payload.currentPassword, existing.get("passwordHash", "")):
+            return JSONResponse(status_code=400, content={"message": "Current password is incorrect."})
+
     hashed = _password_hash(payload.newPassword)
     update_data = {
         "user_id": payload.userId,
         "passwordHash": hashed,
         "updatedAt": datetime.utcnow().isoformat(),
     }
-
-    try:
-        db = get_db()
-    except HTTPException:
-        ADMIN_PASSWORD_FALLBACK[payload.userId] = update_data
-        return {"success": True, "message": "Password updated successfully."}
-
-    collection = db[ADMIN_PASSWORD_COLLECTION]
     await collection.find_one_and_update(
         {"user_id": payload.userId},
         {"$set": update_data},

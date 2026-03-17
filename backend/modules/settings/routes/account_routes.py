@@ -1,14 +1,16 @@
 from datetime import datetime
-from hashlib import sha256
 
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
+from passlib.context import CryptContext
 from pydantic import BaseModel
 
 # Session-scoped fallback store used when this project runs without a user credential backend.
 PASSWORD_CACHE: dict[str, dict[str, str]] = {}
 
 router = APIRouter(tags=["Settings Account"])
+
+_pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 class ChangePasswordPayload(BaseModel):
@@ -18,7 +20,14 @@ class ChangePasswordPayload(BaseModel):
 
 
 def _hash_password(value: str) -> str:
-    return sha256(value.encode("utf-8")).hexdigest()
+    return _pwd_context.hash(value)
+
+
+def _verify_password(plain: str, hashed: str) -> bool:
+    try:
+        return _pwd_context.verify(plain, hashed)
+    except Exception:
+        return False
 
 
 @router.post("/change-password")
@@ -31,6 +40,11 @@ async def change_password(payload: ChangePasswordPayload):
 
     if payload.newPassword == payload.oldPassword:
         return JSONResponse(status_code=400, content={"message": "New password must be different from current password."})
+
+    existing = PASSWORD_CACHE.get(payload.userId)
+    if existing:
+        if not _verify_password(payload.oldPassword, existing["passwordHash"]):
+            return JSONResponse(status_code=400, content={"message": "Current password is incorrect."})
 
     PASSWORD_CACHE[payload.userId] = {
         "passwordHash": _hash_password(payload.newPassword),
