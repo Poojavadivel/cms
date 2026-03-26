@@ -14,6 +14,7 @@ import FacilityPage from './pages/FacilityPage';
 import SettingsPage from './pages/SettingsPage';
 import StudentsPage from './pages/StudentsPage';
 import StudentDetailPage from './pages/StudentDetailPage';
+import AnalyticsPage from './pages/AnalyticsPage';
 import NotificationsPage from './pages/NotificationsPage';
 
 export default function App() {
@@ -40,6 +41,7 @@ export default function App() {
       <Route path="/exams" element={<ProtectedRoute><ExamsPage /></ProtectedRoute>} />
       <Route path="/placement" element={<ProtectedRoute allowedRoles={['admin', 'faculty']}><PlacementPage /></ProtectedRoute>} />
       <Route path="/facility" element={<ProtectedRoute allowedRoles={['admin']}><FacilityPage /></ProtectedRoute>} />
+      <Route path="/analytics" element={<ProtectedRoute><AnalyticsPage /></ProtectedRoute>} />
       <Route
         path="/settings"
         element={
