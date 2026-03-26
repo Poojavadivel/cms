@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { userSettingsApi } from '../../api/userSettingsApi';
 import { useSettingsContext } from '../../context/SettingsContext';
 import { saveCurrentUserProfile } from '../../utils/currentUserProfile';
-import { SaveToast, SectionError, SectionLoader, isDirty } from './SettingsCommon';
+import { SaveToast, SectionError, SectionLoader, isDirty, PROFILE_PHOTO_MAX_SIZE_BYTES, PROFILE_PHOTO_ALLOWED_TYPES } from './SettingsCommon';
 
 function isEmail(value) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
@@ -88,18 +88,13 @@ export default function ProfileSettings({ role, userId }) {
       return;
     }
 
-    // Basic client-side validation to avoid reading and persisting
-    // very large or invalid files into local storage.
-    const maxSizeBytes = 2 * 1024 * 1024; // 2 MB
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
-
-    if (!allowedTypes.includes(file.type)) {
+    if (!PROFILE_PHOTO_ALLOWED_TYPES.includes(file.type)) {
       setProfileError('Please upload a JPEG, PNG, or GIF image.');
       event.target.value = '';
       return;
     }
 
-    if (file.size > maxSizeBytes) {
+    if (file.size > PROFILE_PHOTO_MAX_SIZE_BYTES) {
       setProfileError('Profile photos must be smaller than 2 MB.');
       event.target.value = '';
       return;
@@ -330,8 +325,6 @@ export default function ProfileSettings({ role, userId }) {
             {profileSaving ? 'Updating...' : 'Update Profile'}
           </button>
         </div>
-
-        {toast ? <div className="user-settings-success">{toast}</div> : null}
       </article>
 
       <article className="user-settings-panel">

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { settingsApi } from '../../api/settingsApi';
 import { userSettingsApi } from '../../api/userSettingsApi';
 import { saveCurrentUserProfile } from '../../utils/currentUserProfile';
+import { PROFILE_PHOTO_ALLOWED_TYPES, PROFILE_PHOTO_MAX_SIZE_BYTES } from '../user-settings/SettingsCommon';
 import SettingsActionBar from './SettingsActionBar';
 import SettingsToast from './SettingsToast';
 
@@ -137,6 +138,12 @@ export default function AdminModuleSettings({ role, userId }) {
       } catch (error) {
         if (mounted) {
           setProfileError(error.message || 'Failed to load admin settings.');
+          setProfile(defaultAdminProfile(userId));
+          setProfileBaseline(defaultAdminProfile(userId));
+          setSystemInfo(defaultSystemInfo());
+          setSystemBaseline(defaultSystemInfo());
+          setAcademicInfo(defaultAcademicInfo());
+          setAcademicBaseline(defaultAcademicInfo());
         }
       } finally {
         if (mounted) {
@@ -276,16 +283,38 @@ export default function AdminModuleSettings({ role, userId }) {
       return;
     }
 
+    const maxSizeBytes = PROFILE_PHOTO_MAX_SIZE_BYTES;
+    const allowedTypes = PROFILE_PHOTO_ALLOWED_TYPES;
+
+    if (!allowedTypes.includes(file.type)) {
+      setProfileError('Please upload a JPEG, PNG, or GIF image.');
+      event.target.value = '';
+      return;
+    }
+
+    if (file.size > maxSizeBytes) {
+      setProfileError('Profile photos must be smaller than 2 MB.');
+      event.target.value = '';
+      return;
+    }
+
+    setProfileError('');
+
     const reader = new FileReader();
     reader.onload = () => {
       const imageData = String(reader.result || '');
-      const nextProfile = {
-        ...profile,
-        profilePhoto: imageData,
-        avatar: imageData,
-      };
-      setProfile(nextProfile);
-      saveCurrentUserProfile(role, userId, nextProfile);
+      setProfile((current) => {
+        if (!current) {
+          return current;
+        }
+        const nextProfile = {
+          ...current,
+          profilePhoto: imageData,
+          avatar: imageData,
+        };
+        saveCurrentUserProfile(role, userId, nextProfile);
+        return nextProfile;
+      });
     };
     reader.readAsDataURL(file);
   }

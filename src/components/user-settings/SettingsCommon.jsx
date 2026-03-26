@@ -1,5 +1,8 @@
 import { useEffect } from 'react';
 
+export const PROFILE_PHOTO_MAX_SIZE_BYTES = 2 * 1024 * 1024; // 2 MB
+export const PROFILE_PHOTO_ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif'];
+
 export function SectionLoader({ label = 'Loading settings...' }) {
   return (
     <div className="user-settings-loader" role="status" aria-live="polite">

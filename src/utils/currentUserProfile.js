@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 const PROFILE_EVENT = 'cms-profile-updated';
 
@@ -40,20 +40,29 @@ export function saveCurrentUserProfile(role, userId, profile) {
     return;
   }
 
-  window.localStorage.setItem(getProfileStorageKey(role, userId), JSON.stringify(profile));
-  window.dispatchEvent(
-    new window.CustomEvent(PROFILE_EVENT, {
-      detail: { role, userId, profile },
-    })
-  );
+  try {
+    window.localStorage.setItem(getProfileStorageKey(role, userId), JSON.stringify(profile));
+    window.dispatchEvent(
+      new window.CustomEvent(PROFILE_EVENT, {
+        detail: { role, userId, profile },
+      })
+    );
+  } catch (error) {
+    // Degrade gracefully on storage quota errors, private mode restrictions, etc.
+    if (process.env.NODE_ENV !== 'production') {
+      // eslint-disable-next-line no-console
+      console.warn('[currentUserProfile] saveCurrentUserProfile failed:', error);
+    }
+  }
 }
 
 export function useCurrentUserProfile(role, userId, fallbackProfile = {}) {
-  const [profile, setProfile] = useState(() => getCurrentUserProfile(role, userId, fallbackProfile));
+  const fallbackRef = useRef(fallbackProfile);
+  const [profile, setProfile] = useState(() => getCurrentUserProfile(role, userId, fallbackRef.current));
 
   useEffect(() => {
-    setProfile(getCurrentUserProfile(role, userId, fallbackProfile));
-  }, [fallbackProfile, role, userId]);
+    setProfile(getCurrentUserProfile(role, userId, fallbackRef.current));
+  }, [role, userId]);
 
   useEffect(() => {
     function syncProfile(event) {
@@ -71,7 +80,7 @@ export function useCurrentUserProfile(role, userId, fallbackProfile = {}) {
         }
       }
 
-      setProfile(getCurrentUserProfile(role, userId, fallbackProfile));
+      setProfile(getCurrentUserProfile(role, userId, fallbackRef.current));
     }
 
     window.addEventListener('storage', syncProfile);
@@ -81,7 +90,7 @@ export function useCurrentUserProfile(role, userId, fallbackProfile = {}) {
       window.removeEventListener('storage', syncProfile);
       window.removeEventListener(PROFILE_EVENT, syncProfile);
     };
-  }, [fallbackProfile, role, userId]);
+  }, [role, userId]);
 
   return profile;
 }
