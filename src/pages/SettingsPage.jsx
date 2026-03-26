@@ -59,6 +59,9 @@ export default function SettingsPage() {
           <SettingsLayout role={role} userId={session.userId} />
         </RoleGuard>
       )}
+      {role !== 'student' && role !== 'faculty' && role !== 'admin' && role !== 'finance' && (
+        <Navigate to="/" replace />
+      )}
     </Layout>
   );
 }
