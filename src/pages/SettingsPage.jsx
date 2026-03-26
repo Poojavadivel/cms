@@ -59,6 +59,9 @@ export default function SettingsPage() {
           <SettingsLayout role={role} userId={session.userId} />
         </RoleGuard>
       )}
+      {!['student', 'faculty', 'admin', 'finance'].includes(role) && (
+        <Navigate to="/dashboard" replace />
+      )}
     </Layout>
   );
 }

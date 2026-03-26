@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import PriorityBadge from './PriorityBadge';
 import './NotificationDropdown.css';
 
 export default function NotificationDropdown({ role = 'student', isOpen = false, onClose }) {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!isOpen) return;
@@ -28,9 +30,9 @@ export default function NotificationDropdown({ role = 'student', isOpen = false,
   const handleMarkAsRead = async (notificationId) => {
     try {
       await fetch(`/api/notifications/${notificationId}/read`, { method: 'PUT' });
-      setNotifications(notifications.map(n =>
-        n.id === notificationId ? { ...n, status: 'read' } : n
-      ));
+      setNotifications(current =>
+        current.map(n => n.id === notificationId ? { ...n, status: 'read' } : n)
+      );
     } catch (error) {
       console.error('Error marking notification as read:', error);
     }
@@ -39,7 +41,7 @@ export default function NotificationDropdown({ role = 'student', isOpen = false,
   const handleDelete = async (notificationId) => {
     try {
       await fetch(`/api/notifications/${notificationId}`, { method: 'DELETE' });
-      setNotifications(notifications.filter(n => n.id !== notificationId));
+      setNotifications(current => current.filter(n => n.id !== notificationId));
     } catch (error) {
       console.error('Error deleting notification:', error);
     }
@@ -103,7 +105,8 @@ export default function NotificationDropdown({ role = 'student', isOpen = false,
         <div className="notification-dropdown-footer">
           <a href="#" className="view-all-link" onClick={(e) => {
             e.preventDefault();
-            window.location.href = `/notifications?role=${encodeURIComponent(role)}`;
+            onClose?.();
+            navigate(`/notifications?role=${encodeURIComponent(role)}`);
           }}>
             View All Notifications →
           </a>

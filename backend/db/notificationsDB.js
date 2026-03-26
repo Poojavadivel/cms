@@ -593,7 +593,7 @@ let notificationsDB = [
     receiverRole: ROLES.FINANCE,
     module: CATEGORIES.FINANCE,
     priority: PRIORITY.MEDIUM,
-    status: UNREAD,
+    status: STATUS.UNREAD,
     createdAt: '2026-03-09T14:50:00Z',
     actionId: 'refund_request_1',
     relatedData: {
